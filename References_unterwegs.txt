@@ -1,0 +1,8 @@
+Sockets:
+https://docs.python.org/3/howto/sockets.html
+Zero-mq:
+http://stackoverflow.com/questions/23374854/simplest-way-to-communicate-between-python-and-c-sharp-using-ipc
+Named pipes:
+http://stackoverflow.com/questions/1749001/named-pipes-between-c-sharp-and-python
+Which one to take:
+http://stackoverflow.com/questions/10872557/how-slow-are-tcp-sockets-compared-to-named-pipes-on-windows-for-localhost-ipc

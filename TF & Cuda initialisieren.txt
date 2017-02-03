@@ -1,0 +1,10 @@
+Conda aktivieren
+https://www.tensorflow.org/get_started/os_setup#anaconda_installation
+https://github.com/tensorflow/tensorflow/blob/master/tensorflow/g3doc/get_started/os_setup.md#optional-install-cuda-gpus-on-linux
+CUDA teil 2 der installation fehlt (cuDNN)
+how to install cudnn: http://ankivil.com/making-theano-faster-with-cudnn-and-cnmem-on-windows-10/
+Errors at installing https://github.com/tensorflow/tensorflow/issues/135
+C++ librarys necessary: https://www.microsoft.com/en-us/download/confirmation.aspx?id=53587
+
+
+ONCE AND FOR ALL http://www.heatonresearch.com/2017/01/01/tensorflow-windows-gpu.html

@@ -1,0 +1,12 @@
+-(zumindest synchron) haengt in Update, lauft aber in Fixedupdate
+-100 mal synchron und unelegant "hello world" von unity zu python dauert 900ms -> 5ms per send
+-9 ms fuer send and receive, aber 1000ms mehr wenn kein server da
+
+
+-hin und wieder gucken ob server da ist, wenn nein das senden ignorieren (die sekunde delay auflosen!)
+-den visionvector besser machen, wie gewollt (-> layer dafur verwenden!)
+-den thread asynchron machen
+-eine funktion machen die ALLES sendet
+-die vektoren in python so darstellen wie sie jetzt in unity sind
+-speedbenchmark!
+-nicht jedes mal ne neue Socketverbindung aufbauen sondern die alte weiternutzen, neuer speedbenchmark
