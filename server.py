@@ -87,8 +87,19 @@ class client_thread(threading.Thread):
         #print("Starting Thread")
         data = self.clientsocket.myreceive()
         if data: 
-            print("received data:", data)
-            self.clientsocket.mysend("answer: "+data)  #RETURN SOME KIND OF DATA
+            #print("received data:", data)
+            tmpstrings = data.split(" ")
+            tmpfloats = []
+            for i in tmpstrings:
+                tmp = i.replace(" ","")
+                if len(tmp) > 0:
+                    x = float(str(tmp))
+                    tmpfloats.append(x)
+            print("received inputs:", tmpfloats)
+            if (tmpfloats[2]) != 0:
+                self.clientsocket.mysend("turning")
+            else:
+                self.clientsocket.mysend("answer: "+data)  #RETURN SOME KIND OF DATA
         self.clientsocket.close()
 
 
