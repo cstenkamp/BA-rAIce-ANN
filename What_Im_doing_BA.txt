@@ -10,3 +10,10 @@
 -die vektoren in python so darstellen wie sie jetzt in unity sind
 -speedbenchmark!
 -nicht jedes mal ne neue Socketverbindung aufbauen sondern die alte weiternutzen, neuer speedbenchmark
+
+---------------------------------
+-auf der c#-seite mussen die threads asynchron sein, da der schon neue infos schicken muss wahrend python noch rechnet
+-5 mal pro sekunde daten mit ids an python senden, python checkt in extra thread immer nach neuen mit id, wannimmerneneue - forward step. Skript fragt immer nach neuestem Output vom Buffer wenn es fragt.
+-unity macht auf python-seite immer updateinput, wo es den letzten input an python updated, python macht sein krams, unity fragt ebenfalls immer wieder nach neuesten output
+-sobald asynchron kann das in fixedupdate
+-BIS MONTAG (hoffentlich)

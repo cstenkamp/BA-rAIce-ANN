@@ -2,6 +2,7 @@
 
 import socket
 import threading
+import time
 
 
 
@@ -87,6 +88,7 @@ class client_thread(threading.Thread):
         #print("Starting Thread")
         data = self.clientsocket.myreceive()
         if data: 
+            #time.sleep(200)
             #print("received data:", data)
             tmpstrings = data.split(" ")
             tmpfloats = []
