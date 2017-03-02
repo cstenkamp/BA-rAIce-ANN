@@ -17,3 +17,15 @@
 -unity macht auf python-seite immer updateinput, wo es den letzten input an python updated, python macht sein krams, unity fragt ebenfalls immer wieder nach neuesten output
 -sobald asynchron kann das in fixedupdate
 -BIS MONTAG (hoffentlich)
+
+
+PYTHON
+-ist server, connections-anfragen werden in asynchronem thread ausgelesen und ihr wert in der selben variable gespeichert
+-asynchroner thread ruft x mal pro sekunde einen Thread mit der reader-funktion auf
+	reader-funktion: -liest den aktuellen wert der inputs aus, started netzwerk, sendet über mitgelieferten socket netzwerk-result zurück
+
+
+
+UNITY
+-ist client, baut connection zu python auf, sendet aktuelle resultate
+-empfängt aktuelle resultate
