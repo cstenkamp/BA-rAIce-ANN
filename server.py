@@ -3,8 +3,11 @@
 import socket
 import threading
 import time
+import logging
 
-
+logging.basicConfig(level=logging.ERROR,
+                    format='(%(threadName)-10s) %(message)s',
+                    )
 
 
 TCP_IP = 'localhost'
@@ -13,14 +16,10 @@ MESSAGELONG = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 MESSAGESHORT = "OH MAN"
 
 class MySocket:
-    """demonstration class only
-      - coded for clarity, not efficiency
-    """
 
     def __init__(self, sock=None):
         if sock is None:
-            self.sock = socket.socket(
-                            socket.AF_INET, socket.SOCK_STREAM)
+            self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         else:
             self.sock = sock
 
@@ -59,8 +58,8 @@ class MySocket:
     def myreceive(self):
         chunks = []
         bytes_recd = 0
-        what = self.sock.recv(5)
-        if what[1] == " ":
+        what = self.sock.recv(5).decode('ascii')
+        if what[0] not in ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0"]:
             msglen = 1000;
         else:
             msglen = int(what)
@@ -74,14 +73,34 @@ class MySocket:
         final = final.decode()
         return final
 
-
-
-        
+  
         
 #-------------------------------------------------------
 
 
-class client_thread(threading.Thread):
+class ValContainer(object):
+    def __init__(self):
+        self.lock = threading.Lock()
+        self.value = ""
+        
+    def update(self, withwhat):
+        logging.debug('Waiting for lock')
+        self.lock.acquire()
+        try:
+            logging.debug('Acquired lock')
+            if self.value != withwhat:
+                self.value = withwhat
+                print("Updated value to",withwhat)
+        finally:
+            self.lock.release()
+
+
+
+#-------------------------------------------------------
+
+#the receiver-thread gets called when unity wants, and tries to update the 
+#global val, containing the race-info, as often as possible.
+class receiver_thread(threading.Thread):
     def __init__(self, clientsocket):
         threading.Thread.__init__(self)
         self.clientsocket = clientsocket
@@ -98,14 +117,64 @@ class client_thread(threading.Thread):
                 if len(tmp) > 0:
                     x = float(str(tmp))
                     tmpfloats.append(x)
-            print("received inputs:", tmpfloats)
-            if (tmpfloats[2]) != 0:
-                self.clientsocket.mysend("turning")
-            else:
-                self.clientsocket.mysend("answer: "+data)  #RETURN SOME KIND OF DATA
+            val.update(tmpfloats)
+            #jetzt das senden
         self.clientsocket.close()
+        
+        
+        
+#class sender_thread(threading.Thread):
+#    def __init__(self, clientsocket):
+#        threading.Thread.__init__(self)
+#        self.clientsocket = clientsocket
+#    def run(self):
+#        #print("Starting Thread")
+#        data = self.clientsocket.myreceive()
+#        if data: 
+#            #time.sleep(200)
+#            #print("received data:", data)
+#            tmpstrings = data.split(" ")
+#            tmpfloats = []
+#            for i in tmpstrings:
+#                tmp = i.replace(" ","")
+#                if len(tmp) > 0:
+#                    x = float(str(tmp))
+#                    tmpfloats.append(x)
+#            val.update(tmpfloats)
+#            if (tmpfloats[2]) != 0:
+#                self.clientsocket.mysend("turning")
+#            else:
+#                self.clientsocket.mysend("answer: "+data)  #RETURN SOME KIND OF DATA
+#        self.clientsocket.close()
 
 
+
+#class client_thread(threading.Thread):
+#    def __init__(self, clientsocket):
+#        threading.Thread.__init__(self)
+#        self.clientsocket = clientsocket
+#    def run(self):
+#        #print("Starting Thread")
+#        data = self.clientsocket.myreceive()
+#        if data: 
+#            #time.sleep(200)
+#            #print("received data:", data)
+#            tmpstrings = data.split(" ")
+#            tmpfloats = []
+#            for i in tmpstrings:
+#                tmp = i.replace(" ","")
+#                if len(tmp) > 0:
+#                    x = float(str(tmp))
+#                    tmpfloats.append(x)
+#            val.update(tmpfloats)
+#            if (tmpfloats[2]) != 0:
+#                self.clientsocket.mysend("turning")
+#            else:
+#                self.clientsocket.mysend("answer: "+data)  #RETURN SOME KIND OF DATA
+#        self.clientsocket.close()
+
+
+val = ValContainer()
 
 s = MySocket()
 s.bind(TCP_IP, TCP_PORT)
@@ -118,5 +187,5 @@ while True:
     (client, addr) = s.sock.accept()
     #print('Connection address:', addr)
     clt = MySocket(client)
-    ct = client_thread(clt)
+    ct = receiver_thread(clt)
     ct.start()
