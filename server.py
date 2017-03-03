@@ -11,9 +11,15 @@ logging.basicConfig(level=logging.ERROR,
 
 
 TCP_IP = 'localhost'
-TCP_PORT = 5005
-MESSAGELONG = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
-MESSAGESHORT = "OH MAN"
+
+TCP_RECEIVER_PORT = 6435
+TCP_SENDER_PORT = 6436
+
+ANNCHECKALL = 100
+ANNTAKESTIME = 1
+
+
+current_milli_time = lambda: int(round(time.time() * 1000))
 
 class MySocket:
 
@@ -38,10 +44,10 @@ class MySocket:
         
         
     def mysend(self, msg):
-        length = str(len(msg))
-        while len(length) < 5:
-            length = "0"+length
-        msg = length+msg
+#        length = str(len(msg))
+#        while len(length) < 5:
+#            length = "0"+length
+#        msg = length+msg  #TODO Eigentlich doch da, oder?
         
         msg = msg.encode()
         totalsent = 0
@@ -59,6 +65,8 @@ class MySocket:
         chunks = []
         bytes_recd = 0
         what = self.sock.recv(5).decode('ascii')
+        if not what:
+            return
         if what[0] not in ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0"]:
             msglen = 1000;
         else:
@@ -77,11 +85,15 @@ class MySocket:
         
 #-------------------------------------------------------
 
+# alle X sekunden kommt ein leser und liest den InputVal aus (immer der neueste, mit timestamp!!), und updated damit 
+# den OutputValContainer, falls der nicht schon einen neueren inputval-timestamp hat.
 
-class ValContainer(object):
+class InputValContainer(object):   
     def __init__(self):
         self.lock = threading.Lock()
         self.value = ""
+        self.timestamp = current_milli_time()
+        self.alreadyread = False
         
     def update(self, withwhat):
         logging.debug('Waiting for lock')
@@ -90,20 +102,85 @@ class ValContainer(object):
             logging.debug('Acquired lock')
             if self.value != withwhat:
                 self.value = withwhat
+                self.timestamp = current_milli_time()
+                self.alreadyread = False
                 print("Updated value to",withwhat)
         finally:
             self.lock.release()
 
+    def read(self):
+        self.alreadyread = True
+        return self.value
+    
 
+
+class NeuralNetworkPretenderThread(threading.Thread):
+    def __init__(self):
+        threading.Thread.__init__(self)
+        
+    def run(self):
+        if not inputval.alreadyread:   
+            print("Another ANN Starts")                   
+            returnstuff = self.performNetwork(inputval)
+            outputval.update(returnstuff, inputval.timestamp)    
+        
+
+    def performNetwork(self, inputval): 
+        inputdata = inputval.read()
+        
+        time.sleep(ANNTAKESTIME) #this is where the ann would come
+        if inputdata:
+            if (inputdata[2]) != 0:
+                return "turning"
+            else:
+                return ("answer: something")  #RETURN SOME KIND OF DATA
+        else:
+            return
+
+
+
+
+
+class OutputValContainer(object):    
+    def __init__(self):
+        self.lock = threading.Lock()
+        self.value = ""
+        self.timestamp = current_milli_time()
+        self.alreadysent = True #nen leeres ding braucht er nicht schicken
+        
+    #you update only if the new input-timestamp > der alte (in case on ANN-Thread was superslow and thus outdated)
+    def update(self, withwhatval, itstimestamp):
+        logging.debug('Waiting for lock')
+        self.lock.acquire()
+        try:
+            logging.debug('Acquired lock')
+            if self.timestamp < itstimestamp:
+                self.value = withwhatval
+                self.timestamp = current_milli_time()
+                self.alreadysent = False
+                print("Updated value to",withwhatval)
+        finally:
+            self.lock.release()
+
+
+    def read(self):
+        if not self.alreadysent:
+            self.alreadysent = True
+            return self.value
+        else:
+            return False
+
+  
 
 #-------------------------------------------------------
 
 #the receiver-thread gets called when unity wants, and tries to update the 
-#global val, containing the race-info, as often as possible.
+#global inputval, containing the race-info, as often as possible.
 class receiver_thread(threading.Thread):
     def __init__(self, clientsocket):
         threading.Thread.__init__(self)
         self.clientsocket = clientsocket
+        
     def run(self):
         #print("Starting Thread")
         data = self.clientsocket.myreceive()
@@ -117,13 +194,32 @@ class receiver_thread(threading.Thread):
                 if len(tmp) > 0:
                     x = float(str(tmp))
                     tmpfloats.append(x)
-            val.update(tmpfloats)
-            #jetzt das senden
+            inputval.update(tmpfloats)
         self.clientsocket.close()
         
         
         
-#class sender_thread(threading.Thread):
+#the sender-thread gets called when unity asks for the result of a new network iteration...
+#so python aks the ValContainer outputval if it the flag alreadysent is false, if so, it returns it, 
+#if not, it simply closes the connection.        
+class sender_thread(threading.Thread):
+    def __init__(self, clientsocket):
+        threading.Thread.__init__(self)
+        self.clientsocket = clientsocket
+        
+    def run(self):
+        #print("Starting Thread")
+        print("Unity asked for the result")
+        outputvaltxt = outputval.read() #false if already read.
+        if outputvaltxt:
+            print("Sending ANN result back, because Unity asked: ", outputvaltxt)
+            self.clientsocket.mysend(outputvaltxt)
+        else:
+            self.clientsocket.close()
+
+
+
+#class sendandreceive_client_thread(threading.Thread):
 #    def __init__(self, clientsocket):
 #        threading.Thread.__init__(self)
 #        self.clientsocket = clientsocket
@@ -148,44 +244,86 @@ class receiver_thread(threading.Thread):
 #        self.clientsocket.close()
 
 
+#-------------------------------------------------------
 
-#class client_thread(threading.Thread):
-#    def __init__(self, clientsocket):
+
+
+def create_socket(port):
+    server_socket = MySocket()
+    server_socket.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    server_socket.bind(TCP_IP, port)
+    server_socket.listen(1)
+    return server_socket
+
+inputval = InputValContainer()
+outputval = OutputValContainer()
+
+receiverportsocket = create_socket(TCP_RECEIVER_PORT)
+senderportsocket = create_socket(TCP_SENDER_PORT)
+
+
+
+
+#now I need too threads, one constantly looking for clients, the other constantly running a new ANN-thread...
+
+           
+    
+class NeuralNetStarterThread(threading.Thread):
+    def __init__(self):
+        threading.Thread.__init__(self)
+        self.laststart = current_milli_time()
+        
+    def run(self):
+        while True:
+            if current_milli_time() > self.laststart - ANNCHECKALL:
+                annthread = NeuralNetworkPretenderThread()
+                annthread.start()
+                self.laststart = current_milli_time()
+
+
+
+class ReceiverListenerThread(threading.Thread):
+    def __init__(self):
+        threading.Thread.__init__(self)
+        
+    def run(self):
+        while True:
+            #print "receiver connected"
+            (client, addr) = receiverportsocket.sock.accept()
+            clt = MySocket(client)
+            ct = receiver_thread(clt)
+            ct.start()
+
+
+
+#class SenderListenerThread(threading.Thread):
+#    def __init__(self):
 #        threading.Thread.__init__(self)
-#        self.clientsocket = clientsocket
+#        
 #    def run(self):
-#        #print("Starting Thread")
-#        data = self.clientsocket.myreceive()
-#        if data: 
-#            #time.sleep(200)
-#            #print("received data:", data)
-#            tmpstrings = data.split(" ")
-#            tmpfloats = []
-#            for i in tmpstrings:
-#                tmp = i.replace(" ","")
-#                if len(tmp) > 0:
-#                    x = float(str(tmp))
-#                    tmpfloats.append(x)
-#            val.update(tmpfloats)
-#            if (tmpfloats[2]) != 0:
-#                self.clientsocket.mysend("turning")
-#            else:
-#                self.clientsocket.mysend("answer: "+data)  #RETURN SOME KIND OF DATA
-#        self.clientsocket.close()
+#        while True:
+#            #print "sender connected"
+#            (client, addr) = s.sock.accept()
+#            clt = MySocket(client)
+#            ct = sender_thread(clt)
+#            ct.start()
 
 
-val = ValContainer()
 
-s = MySocket()
-s.bind(TCP_IP, TCP_PORT)
-s.listen(1)
 
-#my solution here is having a seperate thread for each client...
-#not sure if thats the best solution (-nonblocking zB.)
-amount = 0;
+
+ANNStarterThread = NeuralNetStarterThread()
+ANNStarterThread.start()
+
+ReceiverConnecterThread = ReceiverListenerThread()
+ReceiverConnecterThread.start()
+
+
 while True:
-    (client, addr) = s.sock.accept()
-    #print('Connection address:', addr)
+    #print "sender  connected"
+    (client, addr) = senderportsocket.sock.accept()
     clt = MySocket(client)
-    ct = receiver_thread(clt)
+    ct = sender_thread(clt)
     ct.start()
+            
+
