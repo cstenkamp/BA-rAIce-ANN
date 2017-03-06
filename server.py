@@ -192,8 +192,11 @@ class receiver_thread(threading.Thread):
             for i in tmpstrings:
                 tmp = i.replace(" ","")
                 if len(tmp) > 0:
-                    x = float(str(tmp))
-                    tmpfloats.append(x)
+                    try:
+                        x = float(str(tmp))
+                        tmpfloats.append(x)
+                    except ValueError:
+                        print(tmp)
             inputval.update(tmpfloats)
         self.clientsocket.close()
         
