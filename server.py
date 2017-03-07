@@ -6,20 +6,18 @@ import time
 import logging
 
 logging.basicConfig(level=logging.ERROR,
-                    format='(%(threadName)-10s) %(message)s',
-                    )
+                    format='(%(threadName)-10s) %(message)s',)
 
 
 TCP_IP = 'localhost'
 
 TCP_RECEIVER_PORT = 6435
 TCP_SENDER_PORT = 6436
-
 ANNCHECKALL = 100
 ANNTAKESTIME = 1
 
-
 current_milli_time = lambda: int(round(time.time() * 1000))
+
 
 class MySocket:
 
@@ -41,6 +39,7 @@ class MySocket:
         
     def close(self):
         self.sock.close()
+        
         
         
     def mysend(self, msg):
@@ -87,16 +86,15 @@ class MySocket:
 
 # alle X sekunden kommt ein leser und liest den InputVal aus (immer der neueste, mit timestamp!!), und updated damit 
 # den OutputValContainer, falls der nicht schon einen neueren inputval-timestamp hat.
-
 class InputValContainer(object):   
     def __init__(self):
         self.lock = threading.Lock()
         self.value = ""
         self.timestamp = current_milli_time()
-        self.alreadyread = False
+        self.alreadyread = True
         
     def update(self, withwhat):
-        logging.debug('Waiting for lock')
+        logging.debug('Inputval-Update: Waiting for lock')
         self.lock.acquire()
         try:
             logging.debug('Acquired lock')
@@ -104,7 +102,19 @@ class InputValContainer(object):
                 self.value = withwhat
                 self.timestamp = current_milli_time()
                 self.alreadyread = False
-                print("Updated value to",withwhat)
+                print("Updated input-value to",withwhat)
+        finally:
+            self.lock.release()
+            
+    def reset(self):
+        logging.debug('Inputval-Reset: Waiting for lock')
+        self.lock.acquire()
+        try:
+            logging.debug('Acquired lock')
+            self.value = ""
+            self.timestamp = current_milli_time()
+            self.alreadyread = True
+            logging.debug("Resettet input-value")
         finally:
             self.lock.release()
 
@@ -152,18 +162,30 @@ class OutputValContainer(object):
         
     #you update only if the new input-timestamp > der alte (in case on ANN-Thread was superslow and thus outdated)
     def update(self, withwhatval, itstimestamp):
-        logging.debug('Waiting for lock')
+        logging.debug('Outputval-Update: Waiting for lock')
         self.lock.acquire()
         try:
             logging.debug('Acquired lock')
             if self.timestamp < itstimestamp:
                 self.value = withwhatval
-                self.timestamp = current_milli_time()
+                self.timestamp = itstimestamp #es geht nicht um jetzt, sondern um dann als das ANN gestartet wurde
                 self.alreadysent = False
-                print("Updated value to",withwhatval)
+                print("Updated output-value to",withwhatval)
         finally:
             self.lock.release()
 
+    def reset(self):
+        logging.debug('Outputval-reset: Waiting for lock')
+        self.lock.acquire()
+        try:
+            logging.debug('Acquired lock')
+            self.value = ""
+            self.timestamp = current_milli_time() #so kann ich verhindern dass noch-laufende-ANNs den noch updaten
+            self.alreadysent = True
+            logging.debug("Resettet output-value")
+        finally:
+            self.lock.release()
+            
 
     def read(self):
         if not self.alreadysent:
@@ -197,8 +219,11 @@ class receiver_thread(threading.Thread):
                     try:
                         x = float(str(tmp))
                         tmpfloats.append(x)
-                    except ValueError:
-                        print(tmp)
+                    except ValueError: #falls es ein string war
+                        if data == "resetannvals":
+                            inputval.reset()
+                            outputval.reset()
+                            print("Resetting the ANN-Values")
             inputval.update(tmpfloats)
         self.clientsocket.close()
         
