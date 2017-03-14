@@ -1,10 +1,9 @@
+TODO
 -direkt die Positiontracking auskommentieren (also über jede Funktion nen doc) 
--die pythonval-please-reset-funktion
 -Den vision Vektor schicken können 
 -Den Pythonresetbefehl nicht bei start schicken, sondern dann wenn man das Spiel neu startet 
 -Funktion um das Spiel neu zu starten 
 -reset 2 mal, ein mal stehend auf die perpendicular, ein mal GENAU wie vorher 
--ne variable debugsriff aktivieren 
 -die perpendicular und den globalen finde für den ersten resetbefehl 
 -getperpendicular für ne gewisse Prozentzahl der Strecke (den passenden anchor von den showanchors raussuchen, peasy) 
 -bei Wandkontakt automatisch Resetten und Strafe geben , macht keinen Sinn da noch weiter zu fahren (da Kollisionsabfrage für Wand) 
@@ -19,5 +18,11 @@
 -bei unseren 44 outputneuronen haben wir ja eine Dimension in 11 Abstufungen für Lenkung, Gas und bremse jeweils binär. Der reward für die Bremswinkel ist ne Gaußkurve(/rbf) mit dem mean bei der supervisedly richtigen Einstellung um diese, und die Verteilung von Gas/bremse ist gesondert: keingaskeinbremsen ist abgeschwächt gaskeinbremsen und noch deutlich besser als bremsen, etc. 
 -beim aufnehmen soll der aber definitiv die tatsächlichen Inputs Speichern, die die unten rechts abgebildet sind. 
 -die slip-vektoren UND der speedvektor springen noch manchmal wahllos herum. Slip workaround ware zu sagen wenn speed kleiner epsilon dann slip gleich 0, bei speed... kp
+
+
+
+DONE
+-die pythonval-please-reset-funktion
 -das aufzeichnen der schnellsten runde klappt nicht mehr :o
+-ne variable debugstuff aktivieren 
 -uhm, und er checkt nicht mehr wenn ne runde vorbei ist? :o
