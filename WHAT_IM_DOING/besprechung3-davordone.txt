@@ -1,1 +1,5 @@
 -altes visiondisplay mit raycasting ersetzt durch ein viel schnelleres dass die unity-camera nutzt
+-sending actually every vector to python finally
+-redoing the threads that they end automatically
+-redoing the threads that its faster, efficient, doesn't freeze the game
+-

@@ -228,21 +228,31 @@ class receiver_thread(threading.Thread):
                 return string[string.find(letter)+2:string[string.find(letter):].find(")")+string.find(letter)]
             
             if data.find("P(") > -1:
-                #print("P",self.readOneDArrayFromString(cutout(data, "P(")))
+                #print("Progress as real Number",self.readOneDArrayFromString(cutout(data, "P(")))
                 alltwods.append(self.readOneDArrayFromString(cutout(data, "P(")))
+
+            if data.find("S(") > -1:
+                #print("SpeedStearVec",self.readOneDArrayFromString(cutout(data, "S(")))
+                alltwods.append(self.readOneDArrayFromString(cutout(data, "S(")))
+
                 
             if data.find("T(") > -1:
-                #print("T",self.readOneDArrayFromString(cutout(data, "T(")))
+                #print("CarStatusVec",self.readOneDArrayFromString(cutout(data, "T(")))
                 alltwods.append(self.readOneDArrayFromString(cutout(data, "T(")))
                 
+            if data.find("C(") > -1:
+                #print("Visionvec",self.readTwoDArrayFromString(cutout(data, "V(")))
+                alltwods.append(self.readOneDArrayFromString(cutout(data, "C(")))
+                
+            if data.find("L(") > -1:
+                #print("Visionvec",self.readTwoDArrayFromString(cutout(data, "V(")))
+                alltwods.append(self.readOneDArrayFromString(cutout(data, "L(")))
             
-            if data.find("S(") > -1:
-                #print("S",self.readOneDArrayFromString(cutout(data, "S(")))
-                alltwods.append(self.readOneDArrayFromString(cutout(data, "S(")))
             
             if data.find("V(") > -1:
-                #print("V",self.readTwoDArrayFromString(cutout(data, "V(")))
+                #print("Visionvec",self.readTwoDArrayFromString(cutout(data, "V(")))
                 visionvec = self.readTwoDArrayFromString(cutout(data, "V("))
+
             
             hashco = (hashlib.md5(data.encode('utf-8'))).hexdigest()
             
