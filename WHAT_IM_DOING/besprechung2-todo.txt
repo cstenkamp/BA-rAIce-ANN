@@ -18,7 +18,6 @@ TODO
 -die slip-vektoren UND der speedvektor springen noch manchmal wahllos herum. Slip workaround ware zu sagen wenn speed kleiner epsilon dann slip gleich 0, bei speed... kp
 -um sicher zu sein dass unity und python gleiche parametervalues haben (für zb. visionvecdimension), könnte unity die am anfang per socket an python schicken (another var wäre welche vectoren genutzt werden sollen)
 
-
 DONE
 -die pythonval-please-reset-funktion
 -das aufzeichnen der schnellsten runde klappt nicht mehr :o

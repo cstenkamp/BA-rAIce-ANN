@@ -1,0 +1,8 @@
+-Überhaupt erst mal gucken ob das auf einer zweiten Strecke funktioniert
+-Überhaupt mal stolz sein ein DeepQN mit continuus control zu haben
+-Statt dem DeepQN das netzwerk nehmen dass sich nen Model des Games aufbaut und speichert und vergleichen
+-Gucken inwieweit vorher-supervisedly-lernen hilft, mit und ohne probieren
+-Das mappen von Bildschirm auf minimap selber lernen, zusätzlich noch das ganze network mit nur-bildschirm-filmen probieren, und dann "model-free" mit "model-based" vergleichen
+  --> dann gucken ob da irgendwie transfer-learning auf TORCS geht
+-irgendwie ne Möglichkeit finden in Deep-Q-Learning so ne Art "kurzfristig, mittelfristig, langfristig" ziele zu haben, und dann "letzes frame, aktueller streckenabschnitt, gesamtzeit" als targets haben
+-
