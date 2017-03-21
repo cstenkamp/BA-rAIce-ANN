@@ -19,7 +19,6 @@ TODO
 -um sicher zu sein dass unity und python gleiche parametervalues haben (für zb. visionvecdimension), könnte unity die am anfang per socket an python schicken (another var wäre welche vectoren genutzt werden sollen)
 
 
-
 DONE
 -die pythonval-please-reset-funktion
 -das aufzeichnen der schnellsten runde klappt nicht mehr :o
