@@ -2,4 +2,5 @@
 -sending actually every vector to python finally
 -redoing the threads that they end automatically
 -redoing the threads that its faster, efficient, doesn't freeze the game
+--Supervisedly-learning-runden werden gespeichert, wenn auch ohne visionvector etc bisher
 -

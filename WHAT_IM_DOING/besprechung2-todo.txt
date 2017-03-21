@@ -25,3 +25,5 @@ DONE
 -uhm, und er checkt nicht mehr wenn ne runde vorbei ist? :o
 -direkt die Positiontracking auskommentieren (also über jede Funktion nen doc) 
 -Den vision Vektor schicken können 
+-Supervisedly-learning-runden werden gespeichert, wenn auch ohne visionvector etc bisher
+-Der Bug dass wenn der Server nicht da ist dass er dann mit zu vielen threads abschmeirt gefixt
