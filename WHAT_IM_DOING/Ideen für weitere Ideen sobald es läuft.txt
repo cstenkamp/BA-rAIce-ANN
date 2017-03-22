@@ -1,8 +1,11 @@
+-Überhaupt mal stolz sein ein DeepQN mit continuus control zu haben (Ziel: "Die Karre schnell um'n Kurs")
 -Überhaupt erst mal gucken ob das auf einer zweiten Strecke funktioniert
--Überhaupt mal stolz sein ein DeepQN mit continuus control zu haben
 -Statt dem DeepQN das netzwerk nehmen dass sich nen Model des Games aufbaut und speichert und vergleichen
 -Gucken inwieweit vorher-supervisedly-lernen hilft, mit und ohne probieren
 -Das mappen von Bildschirm auf minimap selber lernen, zusätzlich noch das ganze network mit nur-bildschirm-filmen probieren, und dann "model-free" mit "model-based" vergleichen
   --> dann gucken ob da irgendwie transfer-learning auf TORCS geht
 -irgendwie ne Möglichkeit finden in Deep-Q-Learning so ne Art "kurzfristig, mittelfristig, langfristig" ziele zu haben, und dann "letzes frame, aktueller streckenabschnitt, gesamtzeit" als targets haben
--
+-Leon: Netz soll easy adaptieren zu anderen conditions, bspw regen (also mehr slip)
+-Leons Step 2: Wie in InfoGAN semantische Parameter/"externe handles" Das gleiche Netz mit einem Parameter anders (zusätzliche Information encoded in its input neurons) funktioniert bspw bei Regen besser.
+-Leon: Prozedural generierte Strecke (dann aber kein Rundkurs sondern Rallye)
+-Automatisch mit der Physik spielen! (->den in verschiedenen runden die slipperiness  random einstellen lassen, das als param ins network mitsenden, gucken wie es klappt)
