@@ -1,4 +1,4 @@
--direkt die Positiontracking auskommentieren (also über jede Funktion nen doc) 
+TODO
 -die pythonval-please-reset-funktion
 -Den vision Vektor schicken können 
 -Den Pythonresetbefehl nicht bei start schicken, sondern dann wenn man das Spiel neu startet 
@@ -21,3 +21,6 @@
 -die slip-vektoren UND der speedvektor springen noch manchmal wahllos herum. Slip workaround ware zu sagen wenn speed kleiner epsilon dann slip gleich 0, bei speed... kp
 -das aufzeichnen der schnellsten runde klappt nicht mehr :o
 -uhm, und er checkt nicht mehr wenn ne runde vorbei ist? :o
+
+DONE
+-direkt die Positiontracking auskommentieren (also über jede Funktion nen doc) 
