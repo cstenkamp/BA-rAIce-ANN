@@ -1,0 +1,2 @@
+-Das DeepMind-Paper dass sich nen internes model der physik aufbaut?
+-Geht Reinforcement-Learnng irgendwie mit lang- mittel- und kurzfristigen zielen?

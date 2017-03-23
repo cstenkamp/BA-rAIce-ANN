@@ -6,3 +6,5 @@
 -...Jetzt auch mit Visonvektor etc.
 -verschiedene Game-Modi für driven, AI trainieren, AI driven lassen
 -Server heult nicht mehr rum mit exceptions
+-bei Wandkontakt automatisch Resetten und Strafe geben , macht keinen Sinn da noch weiter zu fahren (da Kollisionsabfrage für Wand) 
+-Reset-funktionen aufeinander abgestimmt und aufgeraumt
