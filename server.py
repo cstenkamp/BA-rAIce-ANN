@@ -1,9 +1,11 @@
 #!/usr/bin/env python
 
+import numpy as np
 import socket
 import threading
 import time
 import logging
+import hashlib
 
 logging.basicConfig(level=logging.ERROR,
                     format='(%(threadName)-10s) %(message)s',)
@@ -89,20 +91,24 @@ class MySocket:
 class InputValContainer(object):   
     def __init__(self):
         self.lock = threading.Lock()
-        self.value = ""
+        self.visionvec = np.zeros([20,20]) #TODO - gucken ob die größe gleich ist/wie ich die größe share
+        self.othervecs = np.zeros(50)    #TODO - same
         self.timestamp = current_milli_time()
+        self.hashco = ""
         self.alreadyread = True
         
-    def update(self, withwhat):
+    def update(self, visionvec, othervecs, hashco):
         logging.debug('Inputval-Update: Waiting for lock')
         self.lock.acquire()
         try:
             logging.debug('Acquired lock')
-            if self.value != withwhat:
-                self.value = withwhat
+            if self.hashco != hashco:
+                self.visionvec = visionvec
+                self.othervecs = othervecs
                 self.timestamp = current_milli_time()
                 self.alreadyread = False
-                print("Updated input-value to",withwhat)
+                self.hashco = hashco
+                print("Updated first vec to", self.othervecs)
         finally:
             self.lock.release()
             
@@ -111,8 +117,10 @@ class InputValContainer(object):
         self.lock.acquire()
         try:
             logging.debug('Acquired lock')
-            self.value = ""
+            self.visionvec = np.zeros(20,20) #TODO - gucken ob die größe gleich ist/wie ich die größe share
+            self.othervecs = np.zeros(50)    #TODO - same
             self.timestamp = current_milli_time()
+            self.hashco = ""
             self.alreadyread = True
             logging.debug("Resettet input-value")
         finally:
@@ -120,7 +128,7 @@ class InputValContainer(object):
 
     def read(self):
         self.alreadyread = True
-        return self.value
+        return self.othervecs, self.visionvec
     
 
 
@@ -136,14 +144,14 @@ class NeuralNetworkPretenderThread(threading.Thread):
         
 
     def performNetwork(self, inputval): 
-        inputdata = inputval.read()
+        inputvec, visionvec = inputval.read()
         
         time.sleep(ANNTAKESTIME) #this is where the ann would come
-        if inputdata:
-            if inputdata[0] > 30:
+        if inputvec:
+            if inputvec[0][0] > 30:
                 return "pleasereset"
-            if (inputdata[3]) != 0:
-                return "turning"
+#            if (inputvec[1][0]) != 0:
+#                return "turning"
             else:
                 return ("answer: something")  #RETURN SOME KIND OF DATA
         else:
@@ -209,24 +217,106 @@ class receiver_thread(threading.Thread):
         #print("Starting Thread")
         data = self.clientsocket.myreceive()
         if data: 
-            #time.sleep(200)
             #print("received data:", data)
-            tmpstrings = data.split(" ")
-            tmpfloats = []
-            for i in tmpstrings:
-                tmp = i.replace(" ","")
-                if len(tmp) > 0:
-                    try:
-                        x = float(str(tmp))
-                        tmpfloats.append(x)
-                    except ValueError: #falls es ein string war
-                        if data == "resetannvals":
-                            inputval.reset()
-                            outputval.reset()
-                            print("Resetting the ANN-Values")
-            inputval.update(tmpfloats)
+            
+            alltwods  = []
+            visionvec = [[]]
+            
+            #TODO - ERST den hash vom string vergleichen damit das updaten schneller geht?
+            
+            def cutout(string, letter):
+                return string[string.find(letter)+2:string[string.find(letter):].find(")")+string.find(letter)]
+            
+            if data.find("P(") > -1:
+                #print("Progress as real Number",self.readOneDArrayFromString(cutout(data, "P(")))
+                alltwods.append(self.readOneDArrayFromString(cutout(data, "P(")))
+
+            if data.find("S(") > -1:
+                #print("SpeedStearVec",self.readOneDArrayFromString(cutout(data, "S(")))
+                alltwods.append(self.readOneDArrayFromString(cutout(data, "S(")))
+
+                
+            if data.find("T(") > -1:
+                #print("CarStatusVec",self.readOneDArrayFromString(cutout(data, "T(")))
+                alltwods.append(self.readOneDArrayFromString(cutout(data, "T(")))
+                
+            if data.find("C(") > -1:
+                #print("Visionvec",self.readTwoDArrayFromString(cutout(data, "V(")))
+                alltwods.append(self.readOneDArrayFromString(cutout(data, "C(")))
+                
+            if data.find("L(") > -1:
+                #print("Visionvec",self.readTwoDArrayFromString(cutout(data, "V(")))
+                alltwods.append(self.readOneDArrayFromString(cutout(data, "L(")))
+            
+            
+            if data.find("V(") > -1:
+                #print("Visionvec",self.readTwoDArrayFromString(cutout(data, "V(")))
+                visionvec = self.readTwoDArrayFromString(cutout(data, "V("))
+
+            
+            hashco = (hashlib.md5(data.encode('utf-8'))).hexdigest()
+            
+            inputval.update(visionvec, alltwods, hashco)
         self.clientsocket.close()
         
+        
+    def readOneDArrayFromString(self, string):
+        tmpstrings = string.split(",")
+        tmpfloats = []
+        for i in tmpstrings:
+            tmp = i.replace(" ","")
+            if len(tmp) > 0:
+                try:
+                    x = float(str(tmp))
+                    tmpfloats.append(x)
+                except ValueError:
+                    print("I'm crying") #cry.
+        return tmpfloats
+    
+    
+    def ternary(self, n):
+        if n == 0:
+            return '0'
+        nums = []
+        if n < 0:
+            n*=-1
+        while n:
+            n, r = divmod(n, 3)
+            nums.append(str(r))
+        return ''.join(reversed(nums))
+    
+    
+        
+#    def readTwoDArrayFromString(self, string):
+#        tmpstrings = string.split(",")
+#        tmpreturn = []
+#        for i in tmpstrings:
+#            tmp = i.replace(" ","")
+#            if len(tmp) > 0:
+#                try:
+#                    x = self.ternary(int(tmp))
+#                    tmpreturn.append(x)
+#                    print(x)
+#                except ValueError:
+#                    print("I'm crying") #cry.
+#        return np.array(tmpreturn)
+
+    def readTwoDArrayFromString(self, string):
+        tmpstrings = string.split(",")
+        tmpreturn = []
+        for i in tmpstrings:
+            tmp = i.replace(" ","")
+            if len(tmp) > 0:
+                try:
+                    currline = []
+                    for j in tmp:
+                        currline.append(j)
+                    tmpreturn.append(currline)
+                except ValueError:
+                    print("I'm crying") #cry.
+        return np.array(tmpreturn)
+    
+    
         
         
 #the sender-thread gets called when unity asks for the result of a new network iteration...
@@ -249,34 +339,9 @@ class sender_thread(threading.Thread):
 
 
 
-#class sendandreceive_client_thread(threading.Thread):
-#    def __init__(self, clientsocket):
-#        threading.Thread.__init__(self)
-#        self.clientsocket = clientsocket
-#    def run(self):
-#        #print("Starting Thread")
-#        data = self.clientsocket.myreceive()
-#        if data: 
-#            #time.sleep(200)
-#            #print("received data:", data)
-#            tmpstrings = data.split(" ")
-#            tmpfloats = []
-#            for i in tmpstrings:
-#                tmp = i.replace(" ","")
-#                if len(tmp) > 0:
-#                    x = float(str(tmp))
-#                    tmpfloats.append(x)
-#            val.update(tmpfloats)
-#            if (tmpfloats[2]) != 0:
-#                self.clientsocket.mysend("turning")
-#            else:
-#                self.clientsocket.mysend("answer: "+data)  #RETURN SOME KIND OF DATA
-#        self.clientsocket.close()
-
-
-#-------------------------------------------------------
-
-
+###############################################################################
+##################### ACTUAL STARTING OF THE STUFF#############################
+###############################################################################
 
 def create_socket(port):
     server_socket = MySocket()
@@ -294,7 +359,10 @@ senderportsocket = create_socket(TCP_SENDER_PORT)
 
 
 
-#now I need too threads, one constantly looking for clients, the other constantly running a new ANN-thread...
+#now I need three threads:
+#   one constantly looking for clients sending information here
+#   one constantly running a new ANN-thread...
+#   one constantly looking for clients demanding information here
 
            
     
@@ -325,35 +393,18 @@ class ReceiverListenerThread(threading.Thread):
             ct.start()
 
 
-
-#class SenderListenerThread(threading.Thread):
-#    def __init__(self):
-#        threading.Thread.__init__(self)
-#        
-#    def run(self):
-#        while True:
-#            #print "sender connected"
-#            (client, addr) = s.sock.accept()
-#            clt = MySocket(client)
-#            ct = sender_thread(clt)
-#            ct.start()
-
-
-
-
-
+#THREAD 1
 ANNStarterThread = NeuralNetStarterThread()
 ANNStarterThread.start()
 
+#THREAD 2
 ReceiverConnecterThread = ReceiverListenerThread()
 ReceiverConnecterThread.start()
 
-
+#THREAD 3 (self)
 while True:
     #print "sender  connected"
     (client, addr) = senderportsocket.sock.accept()
     clt = MySocket(client)
     ct = sender_thread(clt)
     ct.start()
-            
-

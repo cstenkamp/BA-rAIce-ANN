@@ -1,0 +1,40 @@
+#class sendandreceive_client_thread(threading.Thread):
+#    def __init__(self, clientsocket):
+#        threading.Thread.__init__(self)
+#        self.clientsocket = clientsocket
+#    def run(self):
+#        #print("Starting Thread")
+#        data = self.clientsocket.myreceive()
+#        if data: 
+#            #time.sleep(200)
+#            #print("received data:", data)
+#            tmpstrings = data.split(" ")
+#            tmpfloats = []
+#            for i in tmpstrings:
+#                tmp = i.replace(" ","")
+#                if len(tmp) > 0:
+#                    x = float(str(tmp))
+#                    tmpfloats.append(x)
+#            val.update(tmpfloats)
+#            if (tmpfloats[2]) != 0:
+#                self.clientsocket.mysend("turning")
+#            else:
+#                self.clientsocket.mysend("answer: "+data)  #RETURN SOME KIND OF DATA
+#        self.clientsocket.close()
+
+
+
+
+
+
+#class SenderListenerThread(threading.Thread):
+#    def __init__(self):
+#        threading.Thread.__init__(self)
+#        
+#    def run(self):
+#        while True:
+#            #print "sender connected"
+#            (client, addr) = s.sock.accept()
+#            clt = MySocket(client)
+#            ct = sender_thread(clt)
+#            ct.start()
