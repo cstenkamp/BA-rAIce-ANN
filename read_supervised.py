@@ -1,4 +1,5 @@
 import xml.etree.ElementTree as ET
+from server import cutoutandreturnvectors
 
 FOLDERNAME = "SavedLaps/"
 
@@ -13,10 +14,14 @@ class TrackingPoint(object):
         self.steeringValue = steeringValue
         self.progress = progress
         self.vectors = vectors
+        
+    def make_vecs(self):
+       if self.vectors != "":
+           self.visionvec, self.alltwods = cutoutandreturnvectors(self.vectors)
+           self.vectors = ""
     
-        
-        
-
+            
+            
 def read_xml(FileName):
     all_trackingpoints = []
     tree = ET.parse(FileName)
@@ -30,10 +35,15 @@ def read_xml(FileName):
         all_trackingpoints.append(tp)
     return all_trackingpoints
 
+    
+    
 
 #sooo jetzt hab ich hier eine liste an trackingpoints. was ich tun muss ist jetzt dem vectors per ANN die brake, steering, throttlevalues zuzuweisen.
 
         
         
-if __name__ == '__main__':
-    read_xml(FOLDERNAME+"complete_17_03_22__03_52_12.svlap")
+if __name__ == '__main__':    
+    all_trackingpoints = read_xml(FOLDERNAME+"complete_17_03_22__03_52_12.svlap")
+    for currpoint in all_trackingpoints:
+        currpoint.make_vecs();
+    print(all_trackingpoints[0].alltwods)

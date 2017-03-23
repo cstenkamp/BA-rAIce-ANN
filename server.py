@@ -84,7 +84,7 @@ class MySocket:
 
   
         
-#-------------------------------------------------------
+###############################################################################
 
 # alle X sekunden kommt ein leser und liest den InputVal aus (immer der neueste, mit timestamp!!), und updated damit 
 # den OutputValContainer, falls der nicht schon einen neueren inputval-timestamp hat.
@@ -204,7 +204,7 @@ class OutputValContainer(object):
 
   
 
-#-------------------------------------------------------
+###############################################################################
 
 #the receiver-thread gets called when unity wants, and tries to update the 
 #global inputval, containing the race-info, as often as possible.
@@ -217,107 +217,109 @@ class receiver_thread(threading.Thread):
         #print("Starting Thread")
         data = self.clientsocket.myreceive()
         if data: 
-            #print("received data:", data)
-            
-            alltwods  = []
-            visionvec = [[]]
-            
+            #print("received data:", data)            
             #TODO - ERST den hash vom string vergleichen damit das updaten schneller geht?
-            
-            def cutout(string, letter):
-                return string[string.find(letter)+2:string[string.find(letter):].find(")")+string.find(letter)]
-            
-            if data.find("P(") > -1:
-                #print("Progress as real Number",self.readOneDArrayFromString(cutout(data, "P(")))
-                alltwods.append(self.readOneDArrayFromString(cutout(data, "P(")))
-
-            if data.find("S(") > -1:
-                #print("SpeedStearVec",self.readOneDArrayFromString(cutout(data, "S(")))
-                alltwods.append(self.readOneDArrayFromString(cutout(data, "S(")))
-
-                
-            if data.find("T(") > -1:
-                #print("CarStatusVec",self.readOneDArrayFromString(cutout(data, "T(")))
-                alltwods.append(self.readOneDArrayFromString(cutout(data, "T(")))
-                
-            if data.find("C(") > -1:
-                #print("Visionvec",self.readTwoDArrayFromString(cutout(data, "V(")))
-                alltwods.append(self.readOneDArrayFromString(cutout(data, "C(")))
-                
-            if data.find("L(") > -1:
-                #print("Visionvec",self.readTwoDArrayFromString(cutout(data, "V(")))
-                alltwods.append(self.readOneDArrayFromString(cutout(data, "L(")))
-            
-            
-            if data.find("V(") > -1:
-                #print("Visionvec",self.readTwoDArrayFromString(cutout(data, "V(")))
-                visionvec = self.readTwoDArrayFromString(cutout(data, "V("))
-
-            
+            visionvec, allOneDs = cutoutandreturnvectors(data) 
             hashco = (hashlib.md5(data.encode('utf-8'))).hexdigest()
             
-            inputval.update(visionvec, alltwods, hashco)
+            inputval.update(visionvec, allOneDs, hashco)
         self.clientsocket.close()
+   
         
-        
-    def readOneDArrayFromString(self, string):
-        tmpstrings = string.split(",")
-        tmpfloats = []
-        for i in tmpstrings:
-            tmp = i.replace(" ","")
-            if len(tmp) > 0:
-                try:
-                    x = float(str(tmp))
-                    tmpfloats.append(x)
-                except ValueError:
-                    print("I'm crying") #cry.
-        return tmpfloats
+def cutoutandreturnvectors(string):
+    allOneDs  = []
+    visionvec = [[]]    
+    def cutout(string, letter):
+        return string[string.find(letter)+2:string[string.find(letter):].find(")")+string.find(letter)]
     
-    
-    def ternary(self, n):
-        if n == 0:
-            return '0'
-        nums = []
-        if n < 0:
-            n*=-1
-        while n:
-            n, r = divmod(n, 3)
-            nums.append(str(r))
-        return ''.join(reversed(nums))
-    
-    
-        
-#    def readTwoDArrayFromString(self, string):
-#        tmpstrings = string.split(",")
-#        tmpreturn = []
-#        for i in tmpstrings:
-#            tmp = i.replace(" ","")
-#            if len(tmp) > 0:
-#                try:
-#                    x = self.ternary(int(tmp))
-#                    tmpreturn.append(x)
-#                    print(x)
-#                except ValueError:
-#                    print("I'm crying") #cry.
-#        return np.array(tmpreturn)
+    if string.find("P(") > -1:
+        #print("Progress as real Number",self.readOneDArrayFromString(cutout(data, "P(")))
+        allOneDs.append(readOneDArrayFromString(cutout(string, "P(")))
 
-    def readTwoDArrayFromString(self, string):
-        tmpstrings = string.split(",")
-        tmpreturn = []
-        for i in tmpstrings:
-            tmp = i.replace(" ","")
-            if len(tmp) > 0:
-                try:
-                    currline = []
-                    for j in tmp:
-                        currline.append(j)
-                    tmpreturn.append(currline)
-                except ValueError:
-                    print("I'm crying") #cry.
-        return np.array(tmpreturn)
+    if string.find("S(") > -1:
+        #print("SpeedStearVec",self.readOneDArrayFromString(cutout(data, "S(")))
+        allOneDs.append(readOneDArrayFromString(cutout(string, "S(")))
+
+    if string.find("T(") > -1:
+        #print("CarStatusVec",self.readOneDArrayFromString(cutout(data, "T(")))
+        allOneDs.append(readOneDArrayFromString(cutout(string, "T(")))
+        
+    if string.find("C(") > -1:
+        #print("Visionvec",self.readTwoDArrayFromString(cutout(data, "V(")))
+        allOneDs.append(readOneDArrayFromString(cutout(string, "C(")))
+        
+    if string.find("L(") > -1:
+        #print("Visionvec",self.readTwoDArrayFromString(cutout(data, "V(")))
+        allOneDs.append(readOneDArrayFromString(cutout(string, "L(")))
+    
+    if string.find("V(") > -1:
+        #print("Visionvec",self.readTwoDArrayFromString(cutout(data, "V(")))
+        visionvec = readTwoDArrayFromString(cutout(string, "V("))    
+        
+    return visionvec, allOneDs
+        
+
+def readOneDArrayFromString(string):
+    tmpstrings = string.split(",")
+    tmpfloats = []
+    for i in tmpstrings:
+        tmp = i.replace(" ","")
+        if len(tmp) > 0:
+            try:
+                x = float(str(tmp))
+                tmpfloats.append(x)
+            except ValueError:
+                print("I'm crying") #cry.
+    return tmpfloats
+
+
+def ternary(n):
+    if n == 0:
+        return '0'
+    nums = []
+    if n < 0:
+        n*=-1
+    while n:
+        n, r = divmod(n, 3)
+        nums.append(str(r))
+    return ''.join(reversed(nums))
+
+
+    
+#def readTwoDArrayFromString(string):
+#    tmpstrings = string.split(",")
+#    tmpreturn = []
+#    for i in tmpstrings:
+#        tmp = i.replace(" ","")
+#        if len(tmp) > 0:
+#            try:
+#                x = self.ternary(int(tmp))
+#                tmpreturn.append(x)
+#                print(x)
+#            except ValueError:
+#                print("I'm crying") #cry.
+#    return np.array(tmpreturn)
+
+
+def readTwoDArrayFromString(string):
+    tmpstrings = string.split(",")
+    tmpreturn = []
+    for i in tmpstrings:
+        tmp = i.replace(" ","")
+        if len(tmp) > 0:
+            try:
+                currline = []
+                for j in tmp:
+                    currline.append(j)
+                tmpreturn.append(currline)
+            except ValueError:
+                print("I'm crying") #cry.
+    return np.array(tmpreturn)
     
     
         
+
+###############################################################################
         
 #the sender-thread gets called when unity asks for the result of a new network iteration...
 #so python aks the ValContainer outputval if it the flag alreadysent is false, if so, it returns it, 
@@ -350,21 +352,13 @@ def create_socket(port):
     server_socket.listen(1)
     return server_socket
 
-inputval = InputValContainer()
-outputval = OutputValContainer()
-
-receiverportsocket = create_socket(TCP_RECEIVER_PORT)
-senderportsocket = create_socket(TCP_SENDER_PORT)
-
-
-
-
+    
+    
 #now I need three threads:
 #   one constantly looking for clients sending information here
 #   one constantly running a new ANN-thread...
 #   one constantly looking for clients demanding information here
-
-           
+    
     
 class NeuralNetStarterThread(threading.Thread):
     def __init__(self):
@@ -391,20 +385,29 @@ class ReceiverListenerThread(threading.Thread):
             clt = MySocket(client)
             ct = receiver_thread(clt)
             ct.start()
-
-
-#THREAD 1
-ANNStarterThread = NeuralNetStarterThread()
-ANNStarterThread.start()
-
-#THREAD 2
-ReceiverConnecterThread = ReceiverListenerThread()
-ReceiverConnecterThread.start()
-
-#THREAD 3 (self)
-while True:
-    #print "sender  connected"
-    (client, addr) = senderportsocket.sock.accept()
-    clt = MySocket(client)
-    ct = sender_thread(clt)
-    ct.start()
+    
+    
+    
+if __name__ == '__main__':        
+    inputval = InputValContainer()
+    outputval = OutputValContainer()
+    
+    receiverportsocket = create_socket(TCP_RECEIVER_PORT)
+    senderportsocket = create_socket(TCP_SENDER_PORT)
+    
+    
+    #THREAD 1
+    ANNStarterThread = NeuralNetStarterThread()
+    ANNStarterThread.start()
+    
+    #THREAD 2
+    ReceiverConnecterThread = ReceiverListenerThread()
+    ReceiverConnecterThread.start()
+    
+    #THREAD 3 (self)
+    while True:
+        #print "sender  connected"
+        (client, addr) = senderportsocket.sock.accept()
+        clt = MySocket(client)
+        ct = sender_thread(clt)
+        ct.start()
