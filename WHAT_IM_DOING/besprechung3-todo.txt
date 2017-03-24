@@ -1,0 +1,14 @@
+-5 mal pro sekunde schickt python unity sein result, und unity (also ich) interpoliert selbst dazwischen (oder "digital", springen, beides als möglichkeit)
+-statt absolute lenkradstellungen zu lernen kann er ja auch velocitys für lenkradbewegungen lernen?
+-Im ersten Schritt non-recurrent. Als Baseline. Dann gucken obs smarter wird wenns recurrent wird.
+-1.1 NUR das convnet auf das bild von oben. Theoretisch plus aktuelle geschwindigkeit... Wobei man diese ja auch ersetzen kann durch selbstgelerntes: geschwindigkeit selbst berechnen aus dem wissen was sich über die 2-3 letzten frames verändert hat
+  -> dafür nen convnet dass die letzten 3 (!!) aufeinander-folgenen frames nutzt. Daraus auf geschwindigkeit schließen. Und 
+-entweder 11*2*2 output neurons... ODER das continuus control paper!!! <-LESEN
+-Convnet macht seinen Conv-kram, macht daraus dann nach reshapen aus den letzten convlayer ein langes, darauf ist dann ein fully connected, und DAS mappt dann per fc auf die 11*2*2 aktionen. ZUSÄTZLICH zu den Featuremaps sind in dem langem andere infos drin. FALLS DAS KLAPPT könnte man den letzten vektor durch nen LSTM ersetzen. 
+-Zum Thema was ist der Q-learn-reward: WENN man NUR am ende der Runde nen reward gibt, ist der reward bei 5 steps per second und OPTIMISTISCHEN 60 sekunden rundenzeit schon 300 steps apart. Problem. 
+  -zu sagen wenn wir decay von 0 haben? dann pusht er am ende der runde ALLE weights und lernt IMMER NUR komplette rundne. bad.
+  -Problem an den kleinen Steps ist dass es manchmal klüger ist ne Kurve langsam zu fahren um gut raus zu kommen.
+
+-....ERST Supervisedly learnen um den statespace gehörig zu verkleinern.
+-Supervisedly learnen macht der auf nen 4-elementigen vektor (break, accelearate, left, right)... Aber mit DEM GLEICHEN Convnet wie später (this is the important part)
+-...und um dann auf das reinforcementlearning zu mappen sollte der ne per gaußkurve von dem genauem wert auf die diskretisierten 44 werte (FALLS NICHT CONTINUUS) mappen

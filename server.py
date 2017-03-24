@@ -149,7 +149,7 @@ class NeuralNetworkPretenderThread(threading.Thread):
         time.sleep(ANNTAKESTIME) #this is where the ann would come
         if inputvec:
             if inputvec[0][0] > 30:
-                return "pleasereset"
+                return "pleasereset2"
 #            if (inputvec[1][0]) != 0:
 #                return "turning"
             else:
@@ -310,7 +310,7 @@ def readTwoDArrayFromString(string):
             try:
                 currline = []
                 for j in tmp:
-                    currline.append(j)
+                    currline.append([int(j)])
                 tmpreturn.append(currline)
             except ValueError:
                 print("I'm crying") #cry.
