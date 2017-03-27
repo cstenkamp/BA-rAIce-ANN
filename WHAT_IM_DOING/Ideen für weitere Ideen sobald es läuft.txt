@@ -9,3 +9,4 @@
 -Leons Step 2: Wie in InfoGAN semantische Parameter/"externe handles" Das gleiche Netz mit einem Parameter anders (zusätzliche Information encoded in its input neurons) funktioniert bspw bei Regen besser.
 -Leon: Prozedural generierte Strecke (dann aber kein Rundkurs sondern Rallye)
 -Automatisch mit der Physik spielen! (->den in verschiedenen runden die slipperiness  random einstellen lassen, das als param ins network mitsenden, gucken wie es klappt)
+-Das auf TORCS mit dem Continuus control paper result vergleichen (soo gut sieht das nämlich gar nicht aus)

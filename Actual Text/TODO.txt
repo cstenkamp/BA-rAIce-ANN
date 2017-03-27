@@ -1,0 +1,5 @@
+-Sources for all design decision reason are all in Ravzhans IK-Talk!
+-Ganz am Anfang klare Definitionen, bspw was off-policy heißt (mit ner besseren version von valentins & melisas graph auch... nur halt mit genauen Definitionen und Beispielpapern die da jeweils Vorreiter waren, bzw. das implementiert haben... ist quasi ne "Einordnung")
+-Und auch quasi ne history, wo der Teil auch wieder bei steht dass Minh et al das wieder aufgenommen haben, was danach kam (bspw continuus control), etc.
+-Bei dem Continuous Control Paper kann man zb. ne schöne Grafik haben wie es von DQN & DPG stammt, mit zusätzlichem Einfluss von Batch normlization
+-Wie man Tensorflow zitiert steht in Appendix C vom metacontrol2017-paper!
