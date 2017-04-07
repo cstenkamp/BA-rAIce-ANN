@@ -12,3 +12,4 @@
 -....ERST Supervisedly learnen um den statespace gehörig zu verkleinern.
 -Supervisedly learnen macht der auf nen 4-elementigen vektor (break, accelearate, left, right)... Aber mit DEM GLEICHEN Convnet wie später (this is the important part)
 -...und um dann auf das reinforcementlearning zu mappen sollte der ne per gaußkurve von dem genauem wert auf die diskretisierten 44 werte (FALLS NICHT CONTINUUS) mappen
+-Ne zusätzliche Variable "humantakingcontrol", um bei der AI zu intervenieren

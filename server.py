@@ -148,12 +148,13 @@ class NeuralNetworkPretenderThread(threading.Thread):
         
         time.sleep(ANNTAKESTIME) #this is where the ann would come
         if inputvec:
-            if inputvec[0][0] > 30:
-                return "pleasereset2"
-#            if (inputvec[1][0]) != 0:
-#                return "turning"
-            else:
-                return ("answer: something")  #RETURN SOME KIND OF DATA
+#            if inputvec[0][0] > 30:
+#                return "pleasereset2"
+##            if (inputvec[1][0]) != 0:
+##                return "turning"
+#            else:
+#                return ("answer: something")  #RETURN SOME KIND OF DATA
+            return "[0.1, 0, 1.0]"
         else:
             return
 

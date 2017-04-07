@@ -19,6 +19,7 @@ UNITY
 -nen test, wo python den schon steered, naturlich nicht anhand von ANN-results (ZWISCHENZIEL!!!)
 -Pausemenu PAUSIERT timing, startet nicht neu
 -Die ganzen parameter (globalen vars) in den einzelnen funktionen aufraumen
+-Er zeigt time-punishments für wallhits nur an, speichert sie aber nicht mit
 
 
 PYTHON

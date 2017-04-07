@@ -5,6 +5,8 @@ np.set_printoptions(threshold=np.nan)
 #====own functions====
 from server import cutoutandreturnvectors
 
+NUMCATS = 11
+
 
 
 FOLDERNAME = "SavedLaps/"
@@ -36,6 +38,19 @@ class TrackingPoint(object):
         self.FlatOneDs -= np.array([item[0] for item in normalizers])
         self.FlatOneDs /= np.array([item[1] for item in normalizers])
     
+    
+    def discretize_steering(self, numcats):
+        limits = [(2/numcats)*i-1 for i in range(numcats+1)]
+        limits[0] = -2
+        val = numcats
+        for i in range(len(limits)):
+            if self.steeringValue > limits[i]:
+                val = i
+        self.discreteSteering = [0]*numcats
+        self.discreteSteering[val] = 1
+        
+        
+                  
     
     
 def read_all_xmls(foldername):
@@ -69,6 +84,7 @@ def prepare_tplist(all_trackingpoints):
     normalizers = find_normalizers(all_trackingpoints)
     for currpoint in all_trackingpoints:
         currpoint.normalize_oneDs(normalizers)
+        currpoint.discretize_steering(NUMCATS)
     return all_trackingpoints
 
 
@@ -95,12 +111,12 @@ def sample_batch(config, dataset, visions=True):
     for i in indices:
         vision = [dataset[(i-j) % len(dataset)].visionvec for j in range(config.history_frame_nr,-1,-1)]
         lookahead = [dataset[(i-j) % len(dataset)].FlatOneDs for j in range(config.history_frame_nr,-1,-1)]
-        target = [dataset[i].throttlePedalValue, dataset[i].brakePedalValue, dataset[i].steeringValue]
+        target = [dataset[i].throttlePedalValue, dataset[i].brakePedalValue, dataset[i].steeringValue, dataset[i].discreteSteering]
         if config.history_frame_nr == 1: 
             vision = vision[0]
             lookahead = lookahead[0]
         visions.append(vision)
-        targets.append(target)
+        targets.append(target[3])
         lookaheads.append(lookahead)
     return lookaheads, visions, targets
 

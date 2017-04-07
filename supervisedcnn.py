@@ -13,12 +13,13 @@ from read_supervised import read_all_xmls, sample_batch
 class Config(object):
     foldername = "SavedLaps/"
     history_frame_nr = 1
-    batch_size = 1
+    batch_size = 20
     image_dims = [30,42]
+    vector_len = 59
     keep_prob = 0.8
     initscale = 0.1
     iterations = 2
-    
+    num_steps = 100
     
 
 #what do we want? stride 1, SAME-padding
@@ -121,11 +122,44 @@ def run_CNN(dataset, config):
                 
                 
                 
-
-class FFNN_lookahead_accbreak(dataset, config):
-                
-                
-                
+class FFNN_lookahead_accbreak(object):
+    def __init__(self, config, is_training=False): 
+        self.config = config
+        self.batch_size = config.batch_size
+        self.num_steps = config.num_steps
+        
+        self.inputs = tf.placeholder(tf.float32, shape=[None, 59], name="inputs")  #TODO: eigentlich ist die letzte dimension ja config.history_frame_nr
+        self.targets = tf.placeholder(tf.float32, shape=[None, 4], name="targets") #two values, both of which become one-hot (0,0 = 0,1;0,1) etc
+     
+    #TODO: do.
+          
+                                      
+                                      
+class FFNN_lookahead_steer(object):
+    def __init__(self, config, is_training=False): 
+        self.config = config
+        self.batch_size = config.batch_size
+        self.num_steps = config.num_steps
+        
+        self.inputs = tf.placeholder(tf.float32, shape=[None, 59], name="inputs")  #TODO: eigentlich ist die letzte dimension ja config.history_frame_nr
+        self.targets = tf.placeholder(tf.float32, shape=[None, 11], name="targets") #for a start, we discretize steering into one of 11 possibilities
+    
+        W = tf.Variable(tf.zeros([59, 11]))
+        b = tf.Variable(tf.zeros([11]))
+        y = tf.nn.softmax(tf.matmul(self.inputs, W) + b)
+        cross_entropy = tf.reduce_mean(-tf.reduce_sum(self.targets * tf.log(y), reduction_indices=[1]))
+        train_step = tf.train.GradientDescentOptimizer(0.5).minimize(cross_entropy)
+        sess = tf.InteractiveSession()
+        tf.global_variables_initializer().run()
+        for i in range(1000):
+            lookaheads, _, targets = sample_batch(config, all_trackingpoints, False)
+            lookaheads = np.array(lookaheads)
+            targets = np.array(targets)
+            sess.run(train_step, feed_dict={self.inputs: lookaheads, self.targets: targets})
+        correct_prediction = tf.equal(tf.argmax(y,1), tf.argmax(self.targets,1))
+        accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
+        print(sess.run(accuracy, feed_dict={self.inputs: lookaheads, self.targets: targets}))
+        
                 
                 
                 
@@ -135,5 +169,6 @@ if __name__ == '__main__':
     print("Number of samples:",len(all_trackingpoints))
     #run_CNN(all_trackingpoints,config)
     lookaheads, _, targets = sample_batch(config, all_trackingpoints, False)
-    print(lookaheads)
-    print(targets)                
+    #print(len(lookaheads[0]))
+    #print(targets)                
+    a = FFNN_lookahead_steer(config, False)

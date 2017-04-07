@@ -22,3 +22,5 @@ Andere Frage: Was soll das Network überhaupt optimieren?
 -------------------------------------------------Design Decisions---------------------------------------------------------
 -Bei DQN war ja die gesamte bisherige history der State.. wie ist das gecodet? Weil prinzipiell, wenn man das so macht, brauche ich recurrent zu sein und die history des speedstears...
 Scheinen 2 verschiedene Möglichkeiten zu sein wenn ich das richtig sehe.
+
+-Wie viel hilft das aktuelles Speed und desired speed zu haben UND actual throttle und desired throttle? Ist das dann quasi model-based? Sowohl mit als auch ohne lernen lassen?
