@@ -144,23 +144,25 @@ class FFNN_lookahead_steer(object):
         self.inputs = tf.placeholder(tf.float32, shape=[None, 59], name="inputs")  #TODO: eigentlich ist die letzte dimension ja config.history_frame_nr
         self.targets = tf.placeholder(tf.float32, shape=[None, 11], name="targets") #for a start, we discretize steering into one of 11 possibilities
     
-        W = tf.Variable(tf.zeros([59, 11]))
-        b = tf.Variable(tf.zeros([11]))
-        y = tf.nn.softmax(tf.matmul(self.inputs, W) + b)
+        W = tf.Variable(tf.zeros([59, 11]), name="W")
+        b = tf.Variable(tf.zeros([11]), name="b")
+        y = tf.nn.softmax(tf.matmul(self.inputs, W) + b, name="y")
         cross_entropy = tf.reduce_mean(-tf.reduce_sum(self.targets * tf.log(y), reduction_indices=[1]))
         train_step = tf.train.GradientDescentOptimizer(0.5).minimize(cross_entropy)
-        sess = tf.InteractiveSession()
-        tf.global_variables_initializer().run()
-        for i in range(1000):
-            lookaheads, _, targets = sample_batch(config, all_trackingpoints, False)
-            lookaheads = np.array(lookaheads)
-            targets = np.array(targets)
-            sess.run(train_step, feed_dict={self.inputs: lookaheads, self.targets: targets})
-        correct_prediction = tf.equal(tf.argmax(y,1), tf.argmax(self.targets,1))
-        accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
-        print(sess.run(accuracy, feed_dict={self.inputs: lookaheads, self.targets: targets}))
-        
-                
+        with tf.Session() as sess:
+            saver = tf.train.Saver()
+            tf.global_variables_initializer().run()
+            for i in range(1000):
+                lookaheads, _, targets = sample_batch(config, all_trackingpoints, False)
+                lookaheads = np.array(lookaheads)
+                targets = np.array(targets)
+                sess.run(train_step, feed_dict={self.inputs: lookaheads, self.targets: targets})
+            correct_prediction = tf.equal(tf.argmax(y,1), tf.argmax(self.targets,1))
+            accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
+            print(sess.run(accuracy, feed_dict={self.inputs: lookaheads, self.targets: targets}))
+            saver.save(sess, "./checkpoint/model.ckpt", {"W":W, "b":b, "y":y})
+            
+                          
                 
                 
 if __name__ == '__main__':    

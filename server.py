@@ -6,6 +6,7 @@ import threading
 import time
 import logging
 import hashlib
+import tensorflow as tf
 
 logging.basicConfig(level=logging.ERROR,
                     format='(%(threadName)-10s) %(message)s',)
@@ -134,13 +135,25 @@ class InputValContainer(object):
 
 class NeuralNetworkPretenderThread(threading.Thread):
     def __init__(self):
+        self.containers = None
+        self.session = tf.Session()
+        with self.session:
+            self.inputs = tf.placeholder(tf.float32, shape=[None, 59], name="inputs")  #TODO: eigentlich ist die letzte dimension ja config.history_frame_nr
+            W = tf.Variable(tf.zeros([59, 11]))
+            b = tf.Variable(tf.zeros([11]))
+            y = tf.nn.softmax(tf.matmul(self.inputs, W) + b)            
+            saver = tf.train.Saver()
+            ckpt = tf.train.get_checkpoint_state("checkpoint/") 
+            if ckpt and ckpt.model_checkpoint_path:
+                print("Reading model parameters from %s" % ckpt.model_checkpoint_path)
+                saver.restore(self.session, ckpt.model_checkpoint_path)
         threading.Thread.__init__(self)
         
     def run(self):
-        if not inputval.alreadyread:   
+        if not self.containers.inputval.alreadyread:   
             print("Another ANN Starts")                   
-            returnstuff = self.performNetwork(inputval)
-            outputval.update(returnstuff, inputval.timestamp)    
+            returnstuff = self.performNetwork(self.containers.inputval)
+            self.containers.outputval.update(returnstuff, self.containers.inputval.timestamp)    
         
 
     def performNetwork(self, inputval): 
@@ -154,9 +167,14 @@ class NeuralNetworkPretenderThread(threading.Thread):
 ##                return "turning"
 #            else:
 #                return ("answer: something")  #RETURN SOME KIND OF DATA
-            return "[0.1, 0, 1.0]"
+            netresult = [0]*11
+            netresult[5] = 1
+            result = "[0.1, 0, "+str((2/len(netresult))*(netresult.index(1)+0.5)-1)+"]"
+            return result
         else:
             return
+
+
 
 
 
@@ -213,6 +231,7 @@ class receiver_thread(threading.Thread):
     def __init__(self, clientsocket):
         threading.Thread.__init__(self)
         self.clientsocket = clientsocket
+        self.containers = None
         
     def run(self):
         #print("Starting Thread")
@@ -223,7 +242,7 @@ class receiver_thread(threading.Thread):
             visionvec, allOneDs = cutoutandreturnvectors(data) 
             hashco = (hashlib.md5(data.encode('utf-8'))).hexdigest()
             
-            inputval.update(visionvec, allOneDs, hashco)
+            self.inputval.update(visionvec, allOneDs, hashco)
         self.clientsocket.close()
    
         
@@ -329,11 +348,12 @@ class sender_thread(threading.Thread):
     def __init__(self, clientsocket):
         threading.Thread.__init__(self)
         self.clientsocket = clientsocket
+        self.containers = None
         
     def run(self):
         #print("Starting Thread")
         print("Unity asked for the result")
-        outputvaltxt = outputval.read() #false if already read.
+        outputvaltxt = self.containers.outputval.read() #false if already read.
         if outputvaltxt:
             print("Sending ANN result back, because Unity asked: ", outputvaltxt)
             self.clientsocket.mysend(outputvaltxt)
@@ -365,11 +385,13 @@ class NeuralNetStarterThread(threading.Thread):
     def __init__(self):
         threading.Thread.__init__(self)
         self.laststart = current_milli_time()
+        self.containers = None
         
     def run(self):
         while True:
             if current_milli_time() > self.laststart - ANNCHECKALL:
                 annthread = NeuralNetworkPretenderThread()
+                annthread.containers = self.containers
                 annthread.start()
                 self.laststart = current_milli_time()
 
@@ -378,37 +400,53 @@ class NeuralNetStarterThread(threading.Thread):
 class ReceiverListenerThread(threading.Thread):
     def __init__(self):
         threading.Thread.__init__(self)
+        self.containers = None
         
     def run(self):
         while True:
             #print "receiver connected"
-            (client, addr) = receiverportsocket.sock.accept()
+            (client, addr) = self.containers.receiverportsocket.sock.accept()
             clt = MySocket(client)
             ct = receiver_thread(clt)
+            ct.containers = self.containers
             ct.start()
+
+
+class Containers():
+    def __init__(self):
+        self.IExist = True
     
     
+def main():
+    containers = Containers()
+    containers.inputval = InputValContainer()
+    containers.outputval = OutputValContainer()
     
-if __name__ == '__main__':        
-    inputval = InputValContainer()
-    outputval = OutputValContainer()
-    
-    receiverportsocket = create_socket(TCP_RECEIVER_PORT)
-    senderportsocket = create_socket(TCP_SENDER_PORT)
+    containers.receiverportsocket = create_socket(TCP_RECEIVER_PORT)
+    containers.senderportsocket = create_socket(TCP_SENDER_PORT)
     
     
     #THREAD 1
     ANNStarterThread = NeuralNetStarterThread()
+    ANNStarterThread.containers = containers
     ANNStarterThread.start()
     
     #THREAD 2
     ReceiverConnecterThread = ReceiverListenerThread()
+    ANNStarterThread.containers = containers
     ReceiverConnecterThread.start()
     
     #THREAD 3 (self)
     while True:
         #print "sender  connected"
-        (client, addr) = senderportsocket.sock.accept()
+        (client, addr) = containers.senderportsocket.sock.accept()
         clt = MySocket(client)
         ct = sender_thread(clt)
-        ct.start()
+        ct.containers = containers
+        ct.start()    
+    
+    
+if __name__ == '__main__':        
+    #main()
+    annthread = NeuralNetworkPretenderThread()
+    annthread.start()    
