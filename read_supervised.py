@@ -48,79 +48,112 @@ class TrackingPoint(object):
                 val = i
         self.discreteSteering = [0]*numcats
         self.discreteSteering[val] = 1
-        
-        
-                  
-    
-    
-def read_all_xmls(foldername):
-    assert os.path.isdir(foldername) 
-    all_trackingpoints = []
-    for file in os.listdir(foldername):
-        if file.endswith(".svlap"):
-            all_trackingpoints.extend(read_xml(os.path.join(foldername, file)))
-    all_trackingpoints = prepare_tplist(all_trackingpoints)
-    return all_trackingpoints        
+     
 
+   
+
+class TPList(object):
+    
+    @staticmethod
+    def read_xml(FileName):
+        this_trackingpoints = []
+        tree = ET.parse(FileName)
+        root = tree.getroot()
+        assert root.tag=="ArrayOfTrackingPoint", "that is not the kind of XML I thought it would be."
+        for currpoint in root:
+            inputdict = {}
+            for item in currpoint:
+                inputdict[item.tag] = item.text
+            tp = TrackingPoint(**inputdict) #ein dictionary mit kwargs, IM SO PYTHON!!
+            this_trackingpoints.append(tp)
+        return this_trackingpoints        
+            
+    def __init__(self, foldername):
+        assert os.path.isdir(foldername) 
+        self.all_trackingpoints = []
+        for file in os.listdir(foldername):
+            if file.endswith(".svlap"):
+                self.all_trackingpoints.extend(TPList.read_xml(os.path.join(foldername, file)))
+        self.prepare_tplist()          
+        self.numsamples = len(self.all_trackingpoints)
+        self.reset_batch()
+
+    def prepare_tplist(self):
+        for currpoint in self.all_trackingpoints:
+            currpoint.make_vecs();     
+        normalizers = self.find_normalizers()
+        for currpoint in self.all_trackingpoints:
+            currpoint.normalize_oneDs(normalizers)
+            currpoint.discretize_steering(NUMCATS)
+
+    def find_normalizers(self):
+        #was hier passiert: für jeden werte der FlatOneDs wird durchs gesamte array gegangen, das minimum gefundne, von allen subtrahiert, das maximum gefunden, dadurch geteilt.
+        normalizers = []
+        veclen = len(self.all_trackingpoints[0].FlatOneDs)
+        for i in range(veclen):
+            alle = np.array([curr.FlatOneDs[i] for curr in self.all_trackingpoints])
+            mini = min(alle)      #alle = np.subtract(alle,min(alle))
+            maxi = max(alle)-mini #alle = np.divide(alle,max(alle))
+            normalizers.append([mini,maxi])
+        return normalizers
+
+    def reset_batch(self):
+        self.batchindex = 0
+        self.randomindices = np.random.permutation(self.numsamples)
+        
+    def has_next(self, batch_size):
+        return self.batchindex + batch_size <= self.numsamples
+        
+    def num_batches(self, batch_size):
+        return self.numsamples//batch_size
+        
+    #TODO: sample according to information gain, what DQN didn't do yet.
+    #TODO: uhm, das st jezt simples ziehen mit zurücklegen, every time... ne richtige next_batch funktion, bei der jedes mal vorkommt wäre sinnvoller, oder?
+    #TODO: splitting into training and validation set??    
+    def next_batch(self, config, batch_size):
+        if self.batchindex + batch_size > self.numsamples:
+            raise IndexError("No more batches left")
+        visions = []
+        targets = []
+        lookaheads = []
+        for indexindex in range(self.batchindex,self.batchindex+batch_size):
+            i = self.randomindices[indexindex]
+            vision = [self.all_trackingpoints[(i-j) % len(self.all_trackingpoints)].visionvec for j in range(config.history_frame_nr,-1,-1)]
+            lookahead = [self.all_trackingpoints[(i-j) % len(self.all_trackingpoints)].FlatOneDs for j in range(config.history_frame_nr,-1,-1)]
+            target = [self.all_trackingpoints[i].throttlePedalValue, self.all_trackingpoints[i].brakePedalValue, self.all_trackingpoints[i].steeringValue, self.all_trackingpoints[i].discreteSteering]
+            if config.history_frame_nr == 1: 
+                vision = vision[0]
+                lookahead = lookahead[0]
+            visions.append(np.array(vision))
+            targets.append(np.array(target[3]))
+            lookaheads.append(lookahead)
+        self.batchindex += batch_size
+        return np.array(lookaheads), np.array(visions), np.array(targets)
+
+             
 
             
-def read_xml(FileName):
-    this_trackingpoints = []
-    tree = ET.parse(FileName)
-    root = tree.getroot()
-    assert root.tag=="ArrayOfTrackingPoint", "that is not the kind of XML I thought it would be."
-    for currpoint in root:
-        inputdict = {}
-        for item in currpoint:
-            inputdict[item.tag] = item.text
-        tp = TrackingPoint(**inputdict) #ein dictionary mit kwargs, IM SO PYTHON!!
-        this_trackingpoints.append(tp)
-    return this_trackingpoints
-
-
-def prepare_tplist(all_trackingpoints):
-    for currpoint in all_trackingpoints:
-        currpoint.make_vecs();     
-    normalizers = find_normalizers(all_trackingpoints)
-    for currpoint in all_trackingpoints:
-        currpoint.normalize_oneDs(normalizers)
-        currpoint.discretize_steering(NUMCATS)
-    return all_trackingpoints
-
-
-def find_normalizers(trackingpoints):
-    #was hier passiert: für jeden werte der FlatOneDs wird durchs gesamte array gegangen, das minimum gefundne, von allen subtrahiert, das maximum gefunden, dadurch geteilt.
-    normalizers = []
-    veclen = len(trackingpoints[0].FlatOneDs)
-    for i in range(veclen):
-        alle = np.array([curr.FlatOneDs[i] for curr in trackingpoints])
-        mini = min(alle)      #alle = np.subtract(alle,min(alle))
-        maxi = max(alle)-mini #alle = np.divide(alle,max(alle))
-        normalizers.append([mini,maxi])
-    return normalizers
 
 
 
-#TODO: sample according to information gain, what DQN didn't do yet.
-#TODO: uhm, das st jezt simples ziehen mit zurücklegen, every time... ne richtige next_batch funktion, bei der jedes mal vorkommt wäre sinnvoller, oder?
-def sample_batch(config, dataset, visions=True):
-    indices = np.random.choice(len(dataset), config.batch_size)
-    visions = []
-    targets = []
-    lookaheads = []
-    for i in indices:
-        vision = [dataset[(i-j) % len(dataset)].visionvec for j in range(config.history_frame_nr,-1,-1)]
-        lookahead = [dataset[(i-j) % len(dataset)].FlatOneDs for j in range(config.history_frame_nr,-1,-1)]
-        target = [dataset[i].throttlePedalValue, dataset[i].brakePedalValue, dataset[i].steeringValue, dataset[i].discreteSteering]
-        if config.history_frame_nr == 1: 
-            vision = vision[0]
-            lookahead = lookahead[0]
-        visions.append(vision)
-        targets.append(target[3])
-        lookaheads.append(lookahead)
-    return lookaheads, visions, targets
 
 
+#def sample_batch(batch_size, config, dataset):
+#    indices = np.random.choice(len(dataset), batch_size)
+#    visions = []
+#    targets = []
+#    lookaheads = []
+#    for i in indices:
+#        vision = [dataset[(i-j) % len(dataset)].visionvec for j in range(config.history_frame_nr,-1,-1)]
+#        lookahead = [dataset[(i-j) % len(dataset)].FlatOneDs for j in range(config.history_frame_nr,-1,-1)]
+#        target = [dataset[i].throttlePedalValue, dataset[i].brakePedalValue, dataset[i].steeringValue, dataset[i].discreteSteering]
+#        if config.history_frame_nr == 1: 
+#            vision = vision[0]
+#            lookahead = lookahead[0]
+#        visions.append(vision)
+#        targets.append(target[3])
+#        lookaheads.append(lookahead)
+#    return lookaheads, visions, targets
 
 
 
@@ -132,14 +165,13 @@ def sample_batch(config, dataset, visions=True):
 # -den output anzeigen lassen können
 
 
-
-
 if __name__ == '__main__':    
     import supervisedcnn
     config = supervisedcnn.Config()
-    all_trackingpoints = read_all_xmls(FOLDERNAME)
-    print("Number of samples:",len(all_trackingpoints))
-    lookaheads, _, targets = sample_batch(config, all_trackingpoints, False)
+    trackingpoints = TPList(FOLDERNAME)
+    print("Number of samples:",trackingpoints.numsamples)
+    while trackingpoints.has_next(10):
+        lookaheads, _, targets = trackingpoints.next_batch(config, 10)
     print(lookaheads)
     print(targets)
     

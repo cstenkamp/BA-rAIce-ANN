@@ -1,0 +1,2 @@
+-Get started mnist angucken und SO NACHCODEN
+-Programmers guide für sharing variables und supervisor anschauen, da steht wie man variablen mit checkpoints sinnvoll wieder einlädt

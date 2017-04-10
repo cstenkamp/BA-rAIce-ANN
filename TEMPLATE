@@ -1,0 +1,62 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Mon Apr 10 15:36:28 2017
+
+@author: nivradmin
+"""
+
+class FFNN_lookahead_steer(object):
+    def __init__(self, config):
+        #setzt num_steps undso... 
+        #erzeugt die leeren (dimension=none, für inference!!!) placeholder für input und ggf. output...
+        #kriegt auch info darüber was er speichern soll???
+    
+    def inference(self, inputs, for_training=False):
+        #infos über hidden1_units etc ziehen wir aus der config, die bei init mitgegeben wurde
+        #hier ist batch_size doch gleich 1, außer das gleiche wird fürs lernen genutzt!... DANN macht es aber den unterschied dass inference kein dropout nutzt!
+        #nutzt get_var und variable scopes
+    
+    def loss(self, logits, labels):
+        #calculates cross-entropy and returns den reduced_mean
+        
+    def training(self, loss, learning_rate):
+        #returns the minimizer op
+        
+    def evaluation(self, logits, labels):
+        #uhm well
+        
+    def run_epoch(self, session):
+        #achtung, ich wollte das ja eig mit ner supervised-session machen
+
+
+            
+       
+def run_training():
+    with tf.Graph().as_default():    
+        placeholders = placeholder_inputs(batchsize)
+        logits = self.inference(placeholder)
+        loss = self.loss
+        train_op = self.training
+        eval_correct = self.evaluation
+        summary = tf.summary.merge_all()      
+        init = tf.global_variables_initializer()
+        saver = tf.train.Saver() #der sollte ja nur einige werte machen
+        sess = tf.Session()
+        summary_writer = tf.summary.FileWriter(..)
+        sess.run(init)    
+        for step in range(steps):
+            feed_dict = fill_feed_dict()
+            _, loss = sess.run([train_op, loss])
+        
+        
+def main():
+    run_trianing()        
+        
+        
+def placeholder_inputs(batchsize):
+    feed = next_batch
+    feed_dict = nextbatch_parts
+    return feed_dict        
+        
+        
+def do_eval(sess, ...)  
