@@ -22,19 +22,27 @@ class FFNN(object):
         
         self.targets2 = tf.placeholder(tf.float32, shape=[None,3], name="targets2")    
         
-        correct = tf.equal(self.targets, self.targets2)
+        self.targets = tf.cast(self.targets, tf.bool)
+        self.targets2 = tf.cast(self.targets2, tf.bool)
         
-        self.compare = tf.cast(correct, tf.int32) #gucke wo das hier gleich der lenght ist
-        #tf.reduce_sum(
+        correct = tf.equal(self.targets, self.targets2)
+        self.compare = tf.reduce_all(correct,axis=1)
+        
+        
+        self.compare = tf.cast(self.compare, tf.float32) #gucke wo das hier gleich der lenght ist
+        self.compare = tf.reduce_mean(self.compare)
+                              
+        #self.compare = tf.shape(self.compare)[1]
+        #self.compare = tf.reduce_sum(self.compare, axis=1)
         
 
 
     def run_train_epoch(self, session):
         for i in range(1):
-            feed_dict = {self.targets: [[0,0,1],[0,1,0]], self.targets2: [[0,0,0],[0,0,1]]}
+            feed_dict = {self.targets: [[0,0,1],[0,1,0],[0,0,0]], self.targets2: [[0,0,0],[0,1,0],[0,0,0]]}
             t1, t2, compare = session.run([self.targets, self.targets2, self.compare], feed_dict=feed_dict)   
-            print(t1)
-            print(t2)
+            print(t1,"\n")
+            print(t2,"\n")
             print(compare)
             
             
@@ -61,6 +69,5 @@ if __name__ == '__main__':
                 
             for step in range(1):
                 train_loss = ffnn.run_train_epoch(sess)
-                print(train_loss)
                 
             
