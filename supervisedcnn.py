@@ -14,13 +14,12 @@ from read_supervised import TPList
 class Config(object):
     foldername = "SavedLaps/"
     history_frame_nr = 1
-    batch_size = 20
+    batch_size = 32
     image_dims = [30,42]
     vector_len = 59
     keep_prob = 0.8
     initscale = 0.1
-    iterations = 200
-    num_steps = 100
+    iterations = 20
     steering_steps = 11
     log_dir = "SummaryLogDir/"    
 
@@ -137,7 +136,16 @@ class Config(object):
 #     
 #    #TODO: do.
 #          
-                                      
+                             
+
+#was fehlt:
+#    -variable durch get_variable ersetzen
+#    -changing learning rate incorporaten
+#    -mit dem tf.train.saver nur das wichtige saven, aber alles mit dem supervisor 
+#    -beim saver/supervisor den global_step nutzen sodass er wirklich weniger macht anschließend
+#    -nen zweites model mit variable_scope mit reuse erzeugen
+#    -
+         
                                       
 class FFNN_lookahead_steer(object):
     
@@ -158,7 +166,7 @@ class FFNN_lookahead_steer(object):
         
     
     def set_placeholders(self):
-        inputs = tf.placeholder(tf.float32, shape=[None, 59], name="inputs")  #first dim is none since inference has another batchsize than training
+        inputs = tf.placeholder(tf.float32, shape=[None, self.config.vector_len], name="inputs")  #first dim is none since inference has another batchsize than training
         targets = tf.placeholder(tf.float32, shape=[None, self.config.steering_steps], name="targets")    
         return inputs, targets
     
@@ -167,10 +175,12 @@ class FFNN_lookahead_steer(object):
         #for_training wird benötigt, da wir, wenn wir dropout nutzen, nen neuen nicht-für-training initialisieren müssten!
         #nutzt get_var und variable scopes
         
-        #bei größeren Sachen würde man hier name_scopes verwenden!
-        W = tf.Variable(tf.zeros([59, self.config.steering_steps]), name="W") #TODO: diese hier rather mit get_variable?? #TODO: mir überlegen wie das stattdessen mit mehreren history-frames geht
-        b = tf.Variable(tf.zeros([self.config.steering_steps]), name="b")
-        y = tf.nn.softmax(tf.matmul(self.inputs, W) + b, name="y")
+        #bei größeren Sachen würde man hier variable_scopes/name_scopes verwenden!
+        #self.W = tf.Variable(tf.zeros([59, self.config.steering_steps]), name="W")  
+        #self.b = tf.Variable(tf.zeros([self.config.steering_steps]), name="b")
+        self.W = tf.get_variable("W", [59, self.config.steering_steps]) #TODO: mir überlegen wie das stattdessen mit mehreren history-frames geht
+        self.b = tf.get_variable("b", [self.config.steering_steps])
+        y = tf.nn.softmax(tf.matmul(self.inputs, self.W) + self.b, name="y")
         argm = tf.one_hot(tf.argmax(y, dimension=1), depth=self.config.steering_steps)
         return y, argm
         
@@ -237,14 +247,15 @@ class FFNN_lookahead_steer(object):
        
 def run_training(config, dataset):
     with tf.Graph().as_default():    
-        initializer = tf.constant_initializer(0) #bei variablescopes kann ich nen default-initializer für get_variables festlegen
-        
+        #initializer = tf.constant_initializer(0.0) #bei variablescopes kann ich nen default-initializer für get_variables festlegen
+        initializer = tf.random_uniform_initializer(-0.1, 0.1)
+                                             
         with tf.name_scope("train"):
             with tf.variable_scope("steermodel", reuse=None, initializer=initializer):
                 ffnn = FFNN_lookahead_steer(config)
         
         init = tf.global_variables_initializer()
-        saver = tf.train.Saver() #der sollte ja nur einige werte machen
+        saver = tf.train.Saver({"W": ffnn.W, "b": ffnn.b}) #der sollte ja nur einige werte machen
         
         sv = tf.train.Supervisor(logdir="./supervisortraining/")
         with sv.managed_session() as sess:
@@ -252,6 +263,8 @@ def run_training(config, dataset):
             sess.run(init)
                 
             for step in range(config.iterations):
+                if sv.should_stop():
+                    break
                 train_loss = ffnn.run_train_epoch(sess, dataset, 0.5, summary_writer)
                 print(train_loss)
                 

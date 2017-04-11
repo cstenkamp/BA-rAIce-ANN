@@ -3,7 +3,7 @@ import os
 import numpy as np
 np.set_printoptions(threshold=np.nan)
 #====own functions====
-from server import cutoutandreturnvectors
+import server #from server import cutoutandreturnvectors
 
 NUMCATS = 11
 
@@ -24,10 +24,10 @@ class TrackingPoint(object):
         self.steeringValue = float(steeringValue)
         self.progress = progress
         self.vectors = vectors
-        
+                
     def make_vecs(self):
        if self.vectors != "":
-           self.visionvec, self.AllOneDs = cutoutandreturnvectors(self.vectors)
+           self.visionvec, self.AllOneDs = server.cutoutandreturnvectors(self.vectors)
            self.vectors = ""
            self.flatten_oneDs()
     
@@ -49,6 +49,9 @@ class TrackingPoint(object):
         self.discreteSteering = [0]*numcats
         self.discreteSteering[val] = 1
      
+    @staticmethod
+    def dediscretize_steering(discrete_steer):
+        return -1+(2/len(discrete_steer))*(discrete_steer.index(1)+0.5)
 
    
 
@@ -85,7 +88,7 @@ class TPList(object):
         for currpoint in self.all_trackingpoints:
             currpoint.normalize_oneDs(normalizers)
             currpoint.discretize_steering(NUMCATS)
-
+            
     def find_normalizers(self):
         #was hier passiert: für jeden werte der FlatOneDs wird durchs gesamte array gegangen, das minimum gefundne, von allen subtrahiert, das maximum gefunden, dadurch geteilt.
         normalizers = []
@@ -170,11 +173,11 @@ if __name__ == '__main__':
     config = supervisedcnn.Config()
     trackingpoints = TPList(FOLDERNAME)
     print("Number of samples:",trackingpoints.numsamples)
-    while trackingpoints.has_next(10):
-        lookaheads, _, targets = trackingpoints.next_batch(config, 10)
-    print(lookaheads)
-    print(targets)
-    
+#    while trackingpoints.has_next(10):
+#        lookaheads, _, targets = trackingpoints.next_batch(config, 10)
+#    print(lookaheads)
+#    print(targets)
+#    
     
     
     #sooo jetzt hab ich hier eine liste an trackingpoints. was ich tun muss ist jetzt dem vectors per ANN die brake, steering, throttlevalues zuzuweisen.

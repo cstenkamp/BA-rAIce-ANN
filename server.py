@@ -7,13 +7,16 @@ import time
 import logging
 import hashlib
 import tensorflow as tf
+#====own functions====
+import supervisedcnn 
+import read_supervised
+
 
 logging.basicConfig(level=logging.ERROR,
                     format='(%(threadName)-10s) %(message)s',)
 
 
 TCP_IP = 'localhost'
-
 TCP_RECEIVER_PORT = 6435
 TCP_SENDER_PORT = 6436
 ANNCHECKALL = 100
@@ -29,7 +32,7 @@ class MySocket:
             self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         else:
             self.sock = sock
-
+        self.sock.settimeout(10.0)
             
     def connect(self, host, port):
         self.sock.connect((host, port))
@@ -93,7 +96,7 @@ class InputValContainer(object):
     def __init__(self):
         self.lock = threading.Lock()
         self.visionvec = np.zeros([20,20]) #TODO - gucken ob die größe gleich ist/wie ich die größe share
-        self.othervecs = np.zeros(50)    #TODO - same
+        self.othervecs = np.zeros(50)      #TODO - same
         self.timestamp = current_milli_time()
         self.hashco = ""
         self.alreadyread = True
@@ -133,49 +136,77 @@ class InputValContainer(object):
     
 
 
-class NeuralNetworkPretenderThread(threading.Thread):
+
+class NeuralNetworkThread(threading.Thread):
     def __init__(self):
         self.containers = None
-        self.session = tf.Session()
-        with self.session:
-            self.inputs = tf.placeholder(tf.float32, shape=[None, 59], name="inputs")  #TODO: eigentlich ist die letzte dimension ja config.history_frame_nr
-            W = tf.Variable(tf.zeros([59, 11]))
-            b = tf.Variable(tf.zeros([11]))
-            y = tf.nn.softmax(tf.matmul(self.inputs, W) + b)            
-            saver = tf.train.Saver()
-            ckpt = tf.train.get_checkpoint_state("checkpoint/") 
-            if ckpt and ckpt.model_checkpoint_path:
-                print("Reading model parameters from %s" % ckpt.model_checkpoint_path)
-                saver.restore(self.session, ckpt.model_checkpoint_path)
+        self.laststart = current_milli_time()                
         threading.Thread.__init__(self)
+        tps = read_supervised.TPList(read_supervised.FOLDERNAME)
+        self.normalizers = tps.find_normalizers()
+        self.initNetwork()
+
+    @staticmethod
+    def dediscretize_steering(discrete_steer):
+        return -1+(2/len(discrete_steer))*((np.where(discrete_steer==1)[0][0])+0.5)
+
+    #TODO: diese beiden von der read_supervised nehmen und nicht nochmal neu definieren!
+    @staticmethod
+    def flatten_oneDs(AllOneDs):
+        return np.array(read_supervised.flatten(AllOneDs))
+    
+    @staticmethod
+    def normalize_oneDs(FlatOneDs, normalizers):
+        FlatOneDs -= np.array([item[0] for item in normalizers])
+        NormalizedOneDs = FlatOneDs / np.array([item[1] for item in normalizers])
+        return NormalizedOneDs
         
+    
     def run(self):
-        if not self.containers.inputval.alreadyread:   
-            print("Another ANN Starts")                   
-            returnstuff = self.performNetwork(self.containers.inputval)
-            self.containers.outputval.update(returnstuff, self.containers.inputval.timestamp)    
-        
+        while self.containers.KeepRunning:          
+            if current_milli_time() > self.laststart - ANNCHECKALL:
+                if not self.containers.inputval.alreadyread:   
+                    print("Another ANN Starts")                   
+                    returnstuff = self.performNetwork(self.containers.inputval)
+                    self.containers.outputval.update(returnstuff, self.containers.inputval.timestamp)    
+                self.laststart = current_milli_time()
+
+
 
     def performNetwork(self, inputval): 
         inputvec, visionvec = inputval.read()
-        
-        time.sleep(ANNTAKESTIME) #this is where the ann would come
+
         if inputvec:
-#            if inputvec[0][0] > 30:
-#                return "pleasereset2"
-##            if (inputvec[1][0]) != 0:
-##                return "turning"
-#            else:
-#                return ("answer: something")  #RETURN SOME KIND OF DATA
-            netresult = [0]*11
-            netresult[5] = 1
-            result = "[0.1, 0, "+str((2/len(netresult))*(netresult.index(1)+0.5)-1)+"]"
-            return result
+            inputvec = np.array(NeuralNetworkThread.normalize_oneDs(NeuralNetworkThread.flatten_oneDs(inputvec),self.normalizers))
+            if inputvec[0] > 0.3 and inputvec[0] < 0.4:
+                return "pleasereset"
+            else:
+                steer = NeuralNetworkThread.dediscretize_steering((self.ffnn.run_inference(self.session, inputvec))[0])
+                print("lökjöalskdfjöalsdkfjöalkfj", self.ffnn.run_inference(self.session, inputvec))
+                if steer != 0.0:
+                    print("LÖKJLKÖLKJÖK", steer)
+                result = "[0.1, 0, "+str(steer)+"]"
+                return result
         else:
             return
 
 
-
+    def initNetwork(self):
+        config = supervisedcnn.Config()
+        
+        with tf.Graph().as_default():    
+            initializer = tf.random_uniform_initializer(-0.1, 0.1)
+                                                 
+            with tf.name_scope("runAsServ"):
+                with tf.variable_scope("steermodel", reuse=None, initializer=initializer): 
+                    self.ffnn = supervisedcnn.FFNN_lookahead_steer(config)
+            
+            self.saver = tf.train.Saver({"W": self.ffnn.W, "b": self.ffnn.b}) 
+            self.session = tf.Session()
+            ckpt = tf.train.get_checkpoint_state(config.log_dir) 
+            assert ckpt and ckpt.model_checkpoint_path
+            self.saver.restore(self.session, ckpt.model_checkpoint_path)
+            print("network should be initialized")
 
 
 
@@ -242,7 +273,7 @@ class receiver_thread(threading.Thread):
             visionvec, allOneDs = cutoutandreturnvectors(data) 
             hashco = (hashlib.md5(data.encode('utf-8'))).hexdigest()
             
-            self.inputval.update(visionvec, allOneDs, hashco)
+            self.containers.inputval.update(visionvec, allOneDs, hashco)
         self.clientsocket.close()
    
         
@@ -366,6 +397,12 @@ class sender_thread(threading.Thread):
 ##################### ACTUAL STARTING OF THE STUFF#############################
 ###############################################################################
 
+class Containers():
+    def __init__(self):
+        self.IExist = True
+        self.KeepRunning = True
+        
+        
 def create_socket(port):
     server_socket = MySocket()
     server_socket.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -377,24 +414,9 @@ def create_socket(port):
     
 #now I need three threads:
 #   one constantly looking for clients sending information here
-#   one constantly running a new ANN-thread...
+#   one constantly running the ANN...
 #   one constantly looking for clients demanding information here
     
-    
-class NeuralNetStarterThread(threading.Thread):
-    def __init__(self):
-        threading.Thread.__init__(self)
-        self.laststart = current_milli_time()
-        self.containers = None
-        
-    def run(self):
-        while True:
-            if current_milli_time() > self.laststart - ANNCHECKALL:
-                annthread = NeuralNetworkPretenderThread()
-                annthread.containers = self.containers
-                annthread.start()
-                self.laststart = current_milli_time()
-
 
 
 class ReceiverListenerThread(threading.Thread):
@@ -403,19 +425,36 @@ class ReceiverListenerThread(threading.Thread):
         self.containers = None
         
     def run(self):
-        while True:
-            #print "receiver connected"
-            (client, addr) = self.containers.receiverportsocket.sock.accept()
-            clt = MySocket(client)
-            ct = receiver_thread(clt)
-            ct.containers = self.containers
-            ct.start()
-
-
-class Containers():
+        while self.containers.KeepRunning:
+            #print("receiver connected")
+            try:
+                (client, addr) = self.containers.receiverportsocket.sock.accept()
+                clt = MySocket(client)
+                ct = receiver_thread(clt)
+                ct.containers = self.containers
+                ct.start()
+            except socket.timeout:
+                pass      
+        
+        
+            
+class SenderListenerThread(threading.Thread):
     def __init__(self):
-        self.IExist = True
-    
+        threading.Thread.__init__(self)
+        self.containers = None
+        
+    def run(self):
+        while self.containers.KeepRunning:
+            #print("sender connected")
+            try:
+                (client, addr) = self.containers.senderportsocket.sock.accept()
+                clt = MySocket(client)
+                ct = sender_thread(clt)
+                ct.containers = self.containers
+                ct.start()
+            except socket.timeout:
+                pass
+
     
 def main():
     containers = Containers()
@@ -427,26 +466,34 @@ def main():
     
     
     #THREAD 1
-    ANNStarterThread = NeuralNetStarterThread()
-    ANNStarterThread.containers = containers
-    ANNStarterThread.start()
+    ANNThread = NeuralNetworkThread()
+    ANNThread.containers = containers
+    ANNThread.start()
     
     #THREAD 2
     ReceiverConnecterThread = ReceiverListenerThread()
-    ANNStarterThread.containers = containers
+    ReceiverConnecterThread.containers = containers
     ReceiverConnecterThread.start()
     
-    #THREAD 3 (self)
-    while True:
-        #print "sender  connected"
-        (client, addr) = containers.senderportsocket.sock.accept()
-        clt = MySocket(client)
-        ct = sender_thread(clt)
-        ct.containers = containers
-        ct.start()    
+    #THREAD 3 
+    SenderConnecterThread = SenderListenerThread()
+    SenderConnecterThread.containers = containers
+    SenderConnecterThread.start()
+
+    try:        
+        while True:
+            None
+    except KeyboardInterrupt:
+        pass
     
+    print("Server shutting down...")
+    containers.KeepRunning = False
+    ANNThread.join()
+    ReceiverConnecterThread.join() #takes max. 10 seconds until socket timeouts
+    SenderConnecterThread.join()
+    print("Server shut down sucessfully.")
+
+
     
 if __name__ == '__main__':        
-    #main()
-    annthread = NeuralNetworkPretenderThread()
-    annthread.start()    
+    main()
