@@ -8,7 +8,7 @@ import tensorflow as tf
 import numpy as np
 import os
 #====own functions====
-from read_supervised import TPList
+import read_supervised
 
 
 class Config(object):
@@ -19,9 +19,10 @@ class Config(object):
     vector_len = 59
     keep_prob = 0.8
     initscale = 0.1
-    iterations = 20
+    iterations = 2000
     steering_steps = 11
-    log_dir = "SummaryLogDir/"    
+    log_dir = "SummaryLogDir/"  
+    layer1_neurons = 100
 
 
 
@@ -178,9 +179,15 @@ class FFNN_lookahead_steer(object):
         #bei größeren Sachen würde man hier variable_scopes/name_scopes verwenden!
         #self.W = tf.Variable(tf.zeros([59, self.config.steering_steps]), name="W")  
         #self.b = tf.Variable(tf.zeros([self.config.steering_steps]), name="b")
-        self.W = tf.get_variable("W", [59, self.config.steering_steps]) #TODO: mir überlegen wie das stattdessen mit mehreren history-frames geht
-        self.b = tf.get_variable("b", [self.config.steering_steps])
-        y = tf.nn.softmax(tf.matmul(self.inputs, self.W) + self.b, name="y")
+        with tf.name_scope("Layer1"):
+            self.W1 = tf.get_variable("W1", [59, self.config.layer1_neurons]) #TODO: mir überlegen wie das stattdessen mit mehreren history-frames geht
+            self.b1 = tf.get_variable("b1", [self.config.layer1_neurons])
+        with tf.name_scope("Layer2"):
+            self.W2 = tf.get_variable("W2", [self.config.layer1_neurons, self.config.steering_steps]) 
+            self.b2 = tf.get_variable("b2", [self.config.steering_steps])
+            
+        l1 = tf.nn.softmax(tf.matmul(self.inputs, self.W1) + self.b1)
+        y = tf.nn.softmax(tf.matmul(l1, self.W2) + self.b2, name="y")
         argm = tf.one_hot(tf.argmax(y, dimension=1), depth=self.config.steering_steps)
         return y, argm
         
@@ -193,7 +200,8 @@ class FFNN_lookahead_steer(object):
         
     def training(self, loss, learning_rate):
         #returns the minimizer op
-        train_op = tf.train.GradientDescentOptimizer(learning_rate).minimize(loss)
+        #train_op = tf.train.GradientDescentOptimizer(learning_rate).minimize(loss)
+        train_op = tf.train.AdamOptimizer().minimize(loss)
         return train_op
         
         
@@ -255,7 +263,7 @@ def run_training(config, dataset):
                 ffnn = FFNN_lookahead_steer(config)
         
         init = tf.global_variables_initializer()
-        saver = tf.train.Saver({"W": ffnn.W, "b": ffnn.b}) #der sollte ja nur einige werte machen
+        saver = tf.train.Saver({"W1": ffnn.W1, "b1": ffnn.b1, "W2": ffnn.W2, "b2": ffnn.b2}) #der sollte ja nur einige werte machen
         
         sv = tf.train.Supervisor(logdir="./supervisortraining/")
         with sv.managed_session() as sess:
@@ -288,7 +296,7 @@ def main():
         tf.gfile.DeleteRecursively(config.log_dir)
     tf.gfile.MakeDirs(config.log_dir)
     
-    trackingpoints = TPList(config.foldername)
+    trackingpoints = read_supervised.TPList(config.foldername)
     print("Number of samples:",trackingpoints.numsamples)  
     run_training(config, trackingpoints)        
     
