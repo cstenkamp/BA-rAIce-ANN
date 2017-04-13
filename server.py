@@ -149,6 +149,10 @@ class NeuralNetworkThread(threading.Thread):
     def dediscretize_steering(discrete_steer):
         return -1+(2/len(discrete_steer))*((np.where(discrete_steer==1)[0][0])+0.5)
 
+    @staticmethod
+    def dediscretize_acc_break(discrete):
+        return (1/len(discrete))*((np.where(discrete==1)[0][0])+0.5)
+    
     #TODO: diese beiden von der read_supervised nehmen und nicht nochmal neu definieren!
     @staticmethod
     def flatten_oneDs(AllOneDs):
@@ -357,7 +361,7 @@ def readTwoDArrayFromString(string):
             try:
                 currline = []
                 for j in tmp:
-                    currline.append([int(j)])
+                    currline.append(int(j))
                 tmpreturn.append(currline)
             except ValueError:
                 print("I'm crying") #cry.

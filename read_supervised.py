@@ -49,9 +49,30 @@ class TrackingPoint(object):
         self.discreteSteering = [0]*numcats
         self.discreteSteering[val] = 1
      
+        
+    def discretize_acc_break(self, numcats):
+        def return_discrete(fromwhat):
+            limits = [(1/numcats)*i for i in range(numcats+1)]
+            limits[0] = -2
+            val = numcats
+            for i in range(len(limits)):
+                if fromwhat > limits[i]:
+                    val = i
+            result = [0]*numcats
+            result[val] = 1
+            return result
+          
+        self.discreteThrottle = return_discrete(self.throttlePedalValue)
+        self.discreteBrake = return_discrete(self.brakePedalValue)          
+
+                             
     @staticmethod
-    def dediscretize_steering(discrete_steer):
-        return -1+(2/len(discrete_steer))*(discrete_steer.index(1)+0.5)
+    def dediscretize_steer(discrete):
+        return -1+(2/len(discrete))*(discrete.index(1)+0.5)
+    
+    @staticmethod
+    def dediscretize_acc_break(discrete):
+        return (1/len(discrete))*(discrete.index(1)+0.5)
 
    
 
@@ -87,7 +108,8 @@ class TPList(object):
         normalizers = self.find_normalizers()
         for currpoint in self.all_trackingpoints:
             currpoint.normalize_oneDs(normalizers)
-            currpoint.discretize_steering(NUMCATS)
+            currpoint.discretize_steering(NUMCATS)  #TODO: sollte nicht ne variable HIER sein
+            currpoint.discretize_acc_break(NUMCATS) #TODO: sollten auch andere sein
             
     def find_normalizers(self):
         #was hier passiert: für jeden werte der FlatOneDs wird durchs gesamte array gegangen, das minimum gefundne, von allen subtrahiert, das maximum gefunden, dadurch geteilt.
@@ -119,19 +141,22 @@ class TPList(object):
         visions = []
         targets = []
         lookaheads = []
+        discretetargets = []
         for indexindex in range(self.batchindex,self.batchindex+batch_size):
             i = self.randomindices[indexindex]
             vision = [self.all_trackingpoints[(i-j) % len(self.all_trackingpoints)].visionvec for j in range(config.history_frame_nr,-1,-1)]
             lookahead = [self.all_trackingpoints[(i-j) % len(self.all_trackingpoints)].FlatOneDs for j in range(config.history_frame_nr,-1,-1)]
-            target = [self.all_trackingpoints[i].throttlePedalValue, self.all_trackingpoints[i].brakePedalValue, self.all_trackingpoints[i].steeringValue, self.all_trackingpoints[i].discreteSteering]
+            target = [self.all_trackingpoints[i].throttlePedalValue, self.all_trackingpoints[i].brakePedalValue, self.all_trackingpoints[i].steeringValue]
+            discretetarget = flatten([self.all_trackingpoints[i].discreteThrottle, self.all_trackingpoints[i].discreteBrake, self.all_trackingpoints[i].discreteSteering])
             if config.history_frame_nr == 1: 
                 vision = vision[0]
                 lookahead = lookahead[0]
             visions.append(np.array(vision))
-            targets.append(np.array(target[3]))
+            targets.append(np.array(target))
+            discretetargets.append(np.array(discretetarget))
             lookaheads.append(lookahead)
         self.batchindex += batch_size
-        return np.array(lookaheads), np.array(visions), np.array(targets)
+        return np.array(lookaheads), np.array(visions), np.array(targets), np.array(discretetargets)
 
              
 
@@ -173,11 +198,12 @@ if __name__ == '__main__':
     config = supervisedcnn.Config()
     trackingpoints = TPList(FOLDERNAME)
     print("Number of samples:",trackingpoints.numsamples)
-#    while trackingpoints.has_next(10):
-#        lookaheads, _, targets = trackingpoints.next_batch(config, 10)
-#    print(lookaheads)
-#    print(targets)
-#    
+    print(trackingpoints.all_trackingpoints[220].throttlePedalValue)
+    print(trackingpoints.all_trackingpoints[220].discreteThrottle)
+    while trackingpoints.has_next(10):
+        lookaheads, _, _, dtargets = trackingpoints.next_batch(config, 10)
+    print(lookaheads)
+    print(dtargets[:,22:])
     
     
     #sooo jetzt hab ich hier eine liste an trackingpoints. was ich tun muss ist jetzt dem vectors per ANN die brake, steering, throttlevalues zuzuweisen.
