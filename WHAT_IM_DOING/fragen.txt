@@ -21,7 +21,7 @@ Scheinen 2 verschiedene Möglichkeiten zu sein wenn ich das richtig sehe.
 
 -Wie viel hilft das aktuelles Speed und desired speed zu haben UND actual throttle und desired throttle? Ist das dann quasi model-based? Sowohl mit als auch ohne lernen lassen?
 
-
+-Welche Optimizer steht auf https://www.tensorflow.org/api_guides/python/train#optimizers ne Auswahl PLUS paper-referenz das erklärt wie die each funktionieren!
 
 
 
