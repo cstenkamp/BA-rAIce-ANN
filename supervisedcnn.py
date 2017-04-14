@@ -19,7 +19,7 @@ class Config(object):
     vector_len = 59
     keep_prob = 0.8
     initscale = 0.1
-    iterations = 300
+    iterations = 100
     steering_steps = 11
     log_dir = "SummaryLogDir/"  
     layer1_neurons = 100
@@ -174,7 +174,7 @@ def run_CNN_training(config, dataset):
                 cnn = CNN(config)
         
         init = tf.global_variables_initializer()
-        #saver = tf.train.Saver({"W1": ffnn.W1, "b1": ffnn.b1, "W2": ffnn.W2, "b2": ffnn.b2}) #der sollte ja nur einige werte machen
+        saver = tf.train.Saver()
         
         sv = tf.train.Supervisor(logdir="./supervisortraining/")
         with sv.managed_session() as sess:
@@ -187,8 +187,8 @@ def run_CNN_training(config, dataset):
                 train_loss = cnn.run_train_epoch(sess, dataset, 0.5, summary_writer)
                 print(train_loss)
                 
-            #checkpoint_file = os.path.join(config.log_dir, 'model.ckpt')
-            #saver.save(sess, checkpoint_file, global_step=ffnn.stepsofar)                
+            checkpoint_file = os.path.join(config.log_dir, 'model.ckpt')
+            saver.save(sess, checkpoint_file, global_step=cnn.stepsofar)                
                 
             ev, loss, _ = cnn.run_eval(sess, dataset)
             print("Loss:", loss, " Percentage of correct ones:", ev)

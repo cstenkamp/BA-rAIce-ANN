@@ -96,19 +96,19 @@ def dediscretize_all(discrete):
     if discrete.index(1) > 33:
         throttle = 1
         brake = 1
-        steer = discrete.index(1) - 33
+        steer = dediscretize_steer(discrete[33:44])  #TODO: fuckdamn das sollte nicht fix auf 11 stehen sondern NUMCATS!
     elif discrete.index(1) > 22:
         throttle = 1
         brake = 0
-        steer = discrete.index(1) - 22
+        steer = dediscretize_steer(discrete[22:33])
     elif discrete.index(1) > 11:
         throttle = 0
         brake = 1
-        steer = discrete.index(1) - 11
+        steer = dediscretize_steer(discrete[11:22])
     else:
         throttle = 0
         brake = 0
-        steer = discrete.index(1)
+        steer = dediscretize_steer(discrete[0:11])
     return throttle, brake, steer
 
    

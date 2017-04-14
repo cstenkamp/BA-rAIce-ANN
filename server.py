@@ -168,7 +168,7 @@ class NeuralNetworkThread(threading.Thread):
 
 
 
-    def performNetwork(self, inputval): 
+    def performSteerNetwork(self, inputval): 
         inputvec, visionvec = inputval.read()
 
         if inputvec:
@@ -182,8 +182,19 @@ class NeuralNetworkThread(threading.Thread):
         else:
             return
 
+    def performNetwork(self, inputval):
+        _, visionvec = inputval.read()
 
-    def initNetwork(self):
+        if visionvec:
+            throttle, brake, steer = read_supervised.dediscretize_all((self.cnn.run_inference(self.session, visionvec))[0])
+            print(steer)
+            result = "["+str(throttle)+", "+str(brake)+", "+str(steer)+"]"
+            return result
+        else:
+            return
+
+
+    def initSteerNetwork(self):
         config = supervisedcnn.Config()
         
         with tf.Graph().as_default():    
@@ -194,6 +205,23 @@ class NeuralNetworkThread(threading.Thread):
                     self.ffnn = supervisedcnn.FFNN_lookahead_steer(config)
             
             self.saver = tf.train.Saver({"W1": self.ffnn.W1, "b1": self.ffnn.b1, "W2": self.ffnn.W2, "b2": self.ffnn.b2}) 
+            self.session = tf.Session()
+            ckpt = tf.train.get_checkpoint_state(config.log_dir) 
+            assert ckpt and ckpt.model_checkpoint_path
+            self.saver.restore(self.session, ckpt.model_checkpoint_path)
+            print("network should be initialized")
+
+    def initNetwork(self):
+        config = supervisedcnn.Config()
+        
+        with tf.Graph().as_default():    
+            initializer = tf.random_uniform_initializer(-0.1, 0.1)
+                                                 
+            with tf.name_scope("runAsServ"):
+                with tf.variable_scope("cnnmodel", reuse=None, initializer=initializer): 
+                    self.cnn = supervisedcnn.CNN(config)
+            
+            self.saver = tf.train.Saver()  #TODO: only the necessary stuff
             self.session = tf.Session()
             ckpt = tf.train.get_checkpoint_state(config.log_dir) 
             assert ckpt and ckpt.model_checkpoint_path
