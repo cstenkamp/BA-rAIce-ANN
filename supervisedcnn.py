@@ -19,7 +19,7 @@ class Config(object):
     vector_len = 59
     keep_prob = 0.8
     initscale = 0.1
-    iterations = 10
+    iterations = 300
     steering_steps = 11
     log_dir = "SummaryLogDir/"  
     layer1_neurons = 100
@@ -49,7 +49,7 @@ class CNN(object):
     
     def set_placeholders(self):
         inputs = tf.placeholder(tf.float32, shape=[None, self.config.image_dims[0], self.config.image_dims[1]], name="inputs")  #first dim is none since inference has another batchsize than training
-        targets = tf.placeholder(tf.float32, shape=[None, self.config.steering_steps*3], name="targets")    
+        targets = tf.placeholder(tf.float32, shape=[None, self.config.steering_steps*4], name="targets")    
         return inputs, targets
     
     def inference(self, for_training=False):
@@ -93,21 +93,21 @@ class CNN(object):
         if for_training:
             h_fc1 = tf.nn.dropout(h_fc1, self.config.keep_prob) 
         
-        W_fc2 = weight_variable([1024, self.config.steering_steps*3])
-        b_fc2 = bias_variable([self.config.steering_steps*3])
+        W_fc2 = weight_variable([1024, self.config.steering_steps*4])
+        b_fc2 = bias_variable([self.config.steering_steps*4])
                 
         y_conv = tf.nn.softmax(tf.matmul(h_fc1, W_fc2) + b_fc2, name="y")
-        argm = tf.one_hot(tf.argmax(y_conv, dimension=1), depth=self.config.steering_steps*3)
+        argm = tf.one_hot(tf.argmax(y_conv, dimension=1), depth=self.config.steering_steps*4)
         
         return y_conv, argm
     
     
     def loss_func(self, logits, argmaxs):
         #calculates cross-entropy 
-        cross_entropy = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(labels=self.targets, logits=logits))
-#        cross_entropy = -tf.reduce_sum(self.targets * tf.log(logits), reduction_indices=[1])
-#        return tf.reduce_mean(cross_entropy)        
-        return cross_entropy
+#        cross_entropy = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(labels=self.targets, logits=logits))
+#        return cross_entropy
+        cross_entropy = -tf.reduce_sum(self.targets * tf.log(logits), reduction_indices=[1])
+        return tf.reduce_mean(cross_entropy)        
         
         
     def training(self, loss, learning_rate):
@@ -127,8 +127,8 @@ class CNN(object):
     ######methods for RUNNING the computation graph######
     def train_fill_feed_dict(self, config, dataset, batchsize = 0):
         batchsize = config.batch_size if batchsize == 0 else batchsize
-        _, visionvec, _, dtargets = dataset.next_batch(config, batchsize)
-        feed_dict = {self.inputs: visionvec, self.targets: dtargets}
+        _, visionvec, targets, _ = dataset.next_batch(config, batchsize)
+        feed_dict = {self.inputs: visionvec, self.targets: targets}
         return feed_dict            
 
 

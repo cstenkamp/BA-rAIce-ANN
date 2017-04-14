@@ -145,14 +145,6 @@ class NeuralNetworkThread(threading.Thread):
         self.normalizers = tps.find_normalizers()
         self.initNetwork()
 
-    @staticmethod
-    def dediscretize_steering(discrete_steer):
-        return -1+(2/len(discrete_steer))*((np.where(discrete_steer==1)[0][0])+0.5)
-
-    @staticmethod
-    def dediscretize_acc_break(discrete):
-        return (1/len(discrete))*((np.where(discrete==1)[0][0])+0.5)
-    
     #TODO: diese beiden von der read_supervised nehmen und nicht nochmal neu definieren!
     @staticmethod
     def flatten_oneDs(AllOneDs):
@@ -184,7 +176,7 @@ class NeuralNetworkThread(threading.Thread):
             if inputvec[0] > 0.3 and inputvec[0] < 0.4:
                 return "pleasereset"
             else:
-                steer = NeuralNetworkThread.dediscretize_steering((self.ffnn.run_inference(self.session, inputvec))[0])
+                steer = read_supervised.dediscretize_steering((self.ffnn.run_inference(self.session, inputvec))[0])
                 result = "[0.1, 0, "+str(steer)+"]"
                 return result
         else:

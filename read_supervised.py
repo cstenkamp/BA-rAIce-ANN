@@ -65,14 +65,51 @@ class TrackingPoint(object):
         self.discreteThrottle = return_discrete(self.throttlePedalValue)
         self.discreteBrake = return_discrete(self.brakePedalValue)          
 
-                             
-    @staticmethod
-    def dediscretize_steer(discrete):
-        return -1+(2/len(discrete))*(discrete.index(1)+0.5)
-    
-    @staticmethod
-    def dediscretize_acc_break(discrete):
-        return (1/len(discrete))*(discrete.index(1)+0.5)
+    def discretize_all(self):
+        if self.throttlePedalValue > 0.5:
+            if self.brakePedalValue > 0.5:
+                self.discreteAll = [0]*33 + self.discreteSteering
+            else:
+                self.discreteAll = [0]*22 + self.discreteSteering + [0]*11
+        else:
+            if self.brakePedalValue > 0.5:
+                self.discreteAll = [0]*11 + self.discreteSteering + [0]*22
+            else:
+                self.discreteAll = self.discreteSteering + [0]*33
+        
+        
+        
+def dediscretize_steer(discrete):
+    if type(discrete).__module__ == np.__name__:
+        discrete = discrete.asList()
+    return -1+(2/len(discrete))*(discrete.index(1)+0.5)
+
+#probably not needed, cause its a bad idea anyway
+def dediscretize_acc_break(discrete):
+    if type(discrete).__module__ == np.__name__:
+        discrete = discrete.asList()
+    return (1/len(discrete))*(discrete.index(1)+0.5)
+
+def dediscretize_all(discrete):
+    if type(discrete).__module__ == np.__name__:
+        discrete = discrete.asList()
+    if discrete.index(1) > 33:
+        throttle = 1
+        brake = 1
+        steer = discrete.index(1) - 33
+    elif discrete.index(1) > 22:
+        throttle = 1
+        brake = 0
+        steer = discrete.index(1) - 22
+    elif discrete.index(1) > 11:
+        throttle = 0
+        brake = 1
+        steer = discrete.index(1) - 11
+    else:
+        throttle = 0
+        brake = 0
+        steer = discrete.index(1)
+    return throttle, brake, steer
 
    
 
@@ -108,8 +145,10 @@ class TPList(object):
         normalizers = self.find_normalizers()
         for currpoint in self.all_trackingpoints:
             currpoint.normalize_oneDs(normalizers)
-            currpoint.discretize_steering(NUMCATS)  #TODO: sollte nicht ne variable HIER sein
-            currpoint.discretize_acc_break(NUMCATS) #TODO: sollten auch andere sein
+            currpoint.discretize_steering(NUMCATS)  #TODO: numcats sollte nicht ne variable HIER sein
+            #currpoint.discretize_acc_break(NUMCATS) #TODO: sollten auch andere variablen sein
+            currpoint.discretize_all()
+            
             
     def find_normalizers(self):
         #was hier passiert: für jeden werte der FlatOneDs wird durchs gesamte array gegangen, das minimum gefundne, von allen subtrahiert, das maximum gefunden, dadurch geteilt.
@@ -146,8 +185,10 @@ class TPList(object):
             i = self.randomindices[indexindex]
             vision = [self.all_trackingpoints[(i-j) % len(self.all_trackingpoints)].visionvec for j in range(config.history_frame_nr,-1,-1)]
             lookahead = [self.all_trackingpoints[(i-j) % len(self.all_trackingpoints)].FlatOneDs for j in range(config.history_frame_nr,-1,-1)]
-            target = [self.all_trackingpoints[i].throttlePedalValue, self.all_trackingpoints[i].brakePedalValue, self.all_trackingpoints[i].steeringValue]
-            discretetarget = flatten([self.all_trackingpoints[i].discreteThrottle, self.all_trackingpoints[i].discreteBrake, self.all_trackingpoints[i].discreteSteering])
+            #target = [self.all_trackingpoints[i].throttlePedalValue, self.all_trackingpoints[i].brakePedalValue, self.all_trackingpoints[i].steeringValue]
+            target = self.all_trackingpoints[i].discreteAll
+            #discretetarget = flatten([self.all_trackingpoints[i].discreteThrottle, self.all_trackingpoints[i].discreteBrake, self.all_trackingpoints[i].discreteSteering])
+            discretetarget = flatten([[0]*22, self.all_trackingpoints[i].discreteSteering])
             if config.history_frame_nr == 1: 
                 vision = vision[0]
                 lookahead = lookahead[0]
@@ -198,12 +239,13 @@ if __name__ == '__main__':
     config = supervisedcnn.Config()
     trackingpoints = TPList(FOLDERNAME)
     print("Number of samples:",trackingpoints.numsamples)
-    print(trackingpoints.all_trackingpoints[220].throttlePedalValue)
-    print(trackingpoints.all_trackingpoints[220].discreteThrottle)
+    #print(trackingpoints.all_trackingpoints[220].throttlePedalValue)
+    #print(trackingpoints.all_trackingpoints[220].discreteThrottle)
     while trackingpoints.has_next(10):
-        lookaheads, _, _, dtargets = trackingpoints.next_batch(config, 10)
+        lookaheads, _, targets, dtargets = trackingpoints.next_batch(config, 10)
     print(lookaheads)
     print(dtargets[:,22:])
+    print(targets)
     
     
     #sooo jetzt hab ich hier eine liste an trackingpoints. was ich tun muss ist jetzt dem vectors per ANN die brake, steering, throttlevalues zuzuweisen.
