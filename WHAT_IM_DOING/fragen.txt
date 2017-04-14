@@ -9,10 +9,6 @@ One of the most relevant questions is: HOW do we define the reward at every time
    a) sich ne eigene Physik-Simulation bauen
    b) das tatsächlich fahren, Feedback angucken, Auto wieder resetten (Probleme: braucht ewig, bräuchte reset-funktion)
 
-TODO:
--maybe nicht anhand vom vision-vektor, sondern vom lookahead vektor gas, bremse, discrete steering erstmal unabhängig lernen als baseline?
- ->so einfach ist das nicht, weil er ja bisheriges speed & steer braucht.... ODER die history der letzten, daraus könnte er sich das ziehen
-
 
 Andere Frage: Was soll das Network überhaupt optimieren?
 -In the MNIST tutorial, this function is the sum of incorrect classifications. 
@@ -24,3 +20,16 @@ Andere Frage: Was soll das Network überhaupt optimieren?
 Scheinen 2 verschiedene Möglichkeiten zu sein wenn ich das richtig sehe.
 
 -Wie viel hilft das aktuelles Speed und desired speed zu haben UND actual throttle und desired throttle? Ist das dann quasi model-based? Sowohl mit als auch ohne lernen lassen?
+
+
+
+
+
+
+
+
+
+------------------------------------------EHEMALIGES----------------------------------------------
+TODO:
+-maybe nicht anhand vom vision-vektor, sondern vom lookahead vektor gas, bremse, discrete steering erstmal unabhängig lernen als baseline?
+ ->so einfach ist das nicht, weil er ja bisheriges speed & steer braucht.... ODER die history der letzten, daraus könnte er sich das ziehen

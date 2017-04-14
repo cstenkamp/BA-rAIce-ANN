@@ -184,14 +184,14 @@ class NeuralNetworkThread(threading.Thread):
 
     def performNetwork(self, inputval):
         _, visionvec = inputval.read()
-
-        if visionvec:
-            throttle, brake, steer = read_supervised.dediscretize_all((self.cnn.run_inference(self.session, visionvec))[0])
-            print(steer)
+        
+        check, networkresult = self.cnn.run_inference(self.session, visionvec)
+        if check:
+            throttle, brake, steer = read_supervised.dediscretize_all((networkresult)[0])
             result = "["+str(throttle)+", "+str(brake)+", "+str(steer)+"]"
             return result
         else:
-            return
+            return "[0,0,0.0]" #TODO: macht das sinn 0,0 als standard zu returnen?
 
 
     def initSteerNetwork(self):
@@ -211,6 +211,7 @@ class NeuralNetworkThread(threading.Thread):
             self.saver.restore(self.session, ckpt.model_checkpoint_path)
             print("network should be initialized")
 
+
     def initNetwork(self):
         config = supervisedcnn.Config()
         
@@ -219,9 +220,9 @@ class NeuralNetworkThread(threading.Thread):
                                                  
             with tf.name_scope("runAsServ"):
                 with tf.variable_scope("cnnmodel", reuse=None, initializer=initializer): 
-                    self.cnn = supervisedcnn.CNN(config)
+                    self.cnn = supervisedcnn.CNN(config, is_training=False)
             
-            self.saver = tf.train.Saver()  #TODO: only the necessary stuff
+            self.saver = tf.train.Saver({"WCon1": self.cnn.W_conv1, "bCon1": self.cnn.b_conv1, "WCon2": self.cnn.W_conv2, "bCon2": self.cnn.b_conv2, "WFc1": self.cnn.W_fc1, "bFc1": self.cnn.b_fc1, "WFc2": self.cnn.W_fc2, "bFc2": self.cnn.b_fc2, })
             self.session = tf.Session()
             ckpt = tf.train.get_checkpoint_state(config.log_dir) 
             assert ckpt and ckpt.model_checkpoint_path
@@ -356,22 +357,6 @@ def ternary(n):
     return ''.join(reversed(nums))
 
 
-    
-#def readTwoDArrayFromString(string):
-#    tmpstrings = string.split(",")
-#    tmpreturn = []
-#    for i in tmpstrings:
-#        tmp = i.replace(" ","")
-#        if len(tmp) > 0:
-#            try:
-#                x = self.ternary(int(tmp))
-#                tmpreturn.append(x)
-#                print(x)
-#            except ValueError:
-#                print("I'm crying") #cry.
-#    return np.array(tmpreturn)
-
-
 def readTwoDArrayFromString(string):
     tmpstrings = string.split(",")
     tmpreturn = []
@@ -409,7 +394,8 @@ class sender_thread(threading.Thread):
             print("Sending ANN result back, because Unity asked: ", outputvaltxt)
             self.clientsocket.mysend(outputvaltxt)
         else:
-            self.clientsocket.close()
+            self.clientsocket.mysend("[0.1, 0, 0.0]")
+            #self.clientsocket.close()
 
 
 

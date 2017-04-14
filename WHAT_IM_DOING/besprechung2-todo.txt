@@ -7,19 +7,14 @@ UNITY
 -Delta und Feedback beim SV-Learn mitspeichern und beim RL-learn mitschicken!!
 -wenn man sich perfekt Resetten kann (der totale hack), kann man dem network Feedback für jedes seiner output Neuronen geben indem man alle durchprobiert. Wenn nicht, dann nur von dem softmax (ODER CONTINUUS CONTROL DEEPMIND PAPER)
 -5 Datenpunkte pro Sekunde BEI ALLEM!
--für das supervised learning vielleicht die Menschen-inputs auf unser 44-neuron-model mappen/filtern? 
 -die slip-vektoren UND der speedvektor springen noch manchmal wahllos herum. Slip workaround ware zu sagen wenn speed kleiner epsilon dann slip gleich 0, bei speed... kp
 -um sicher zu sein dass unity und python gleiche parametervalues haben (für zb. visionvecdimension), könnte unity die am anfang per socket an python schicken (another var wäre welche vectoren genutzt werden sollen)
 -Die perfekt-resetten-funktion furs spiel (GENAU wie vorher, furs AI cheaten)
--Die Sachen furs reset fixen, sodass es nicht mehr rollt
 -Optionen hinzufugen
 -Pausenmenu ungleich startmenu
 -Am anfang des Spiels globale Params mitschicken
--Python muss das SV-learn-lap entpacken konnen
--nen test, wo python den schon steered, naturlich nicht anhand von ANN-results (ZWISCHENZIEL!!!)
--Pausemenu PAUSIERT timing, startet nicht neu
+-Pausenmenu PAUSIERT timing, startet nicht neu
 -Die ganzen parameter (globalen vars) in den einzelnen funktionen aufraumen
--Er zeigt time-punishments für wallhits nur an, speichert sie aber nicht mit
 
 
 PYTHON
@@ -31,6 +26,8 @@ PYTHON
 
 -------------------------------------------------------------------------------------------------------------
 DONE
+
+UNITY
 -direkt die Positiontracking auskommentieren (also über jede Funktion nen doc) 
 -die pythonval-please-reset-funktion
 -Den vision Vektor schicken können 
@@ -47,3 +44,11 @@ DONE
 -bei Wandkontakt automatisch Resetten und Strafe geben , macht keinen Sinn da noch weiter zu fahren (da Kollisionsabfrage für Wand) 
 -erst soll der supervisedly lernen, wo man sowohl den speed Lenkung bremsung die man betätigt als auch das ganze bekannte gibt, DANACH dann reinforcement learning. Dafür zum recorder und überhaupt zum ai-interface die Inputs von speed stear mitgeben 
 -beim aufnehmen soll der aber definitiv die tatsächlichen Inputs Speichern, die die unten rechts abgebildet sind. 
+-Die Sachen furs reset fixen, sodass es nicht mehr rollt
+-Er zeigt time-punishments für wallhits nur an, speichert sie aber nicht mit
+
+
+PYTHON
+-für das supervised learning vielleicht die Menschen-inputs auf unser 44-neuron-model mappen/filtern? 
+-Python muss das SV-learn-lap entpacken konnen
+-nen test, wo python den schon steered, naturlich nicht anhand von ANN-results (ZWISCHENZIEL!!!)

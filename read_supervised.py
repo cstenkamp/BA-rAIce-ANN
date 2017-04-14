@@ -68,47 +68,51 @@ class TrackingPoint(object):
     def discretize_all(self):
         if self.throttlePedalValue > 0.5:
             if self.brakePedalValue > 0.5:
-                self.discreteAll = [0]*33 + self.discreteSteering
+                self.discreteAll = [0]*(NUMCATS*3) + self.discreteSteering
             else:
-                self.discreteAll = [0]*22 + self.discreteSteering + [0]*11
+                self.discreteAll = [0]*(NUMCATS*2) + self.discreteSteering + [0]*NUMCATS
         else:
             if self.brakePedalValue > 0.5:
-                self.discreteAll = [0]*11 + self.discreteSteering + [0]*22
+                self.discreteAll = [0]*NUMCATS + self.discreteSteering + [0]*(NUMCATS*2)
             else:
-                self.discreteAll = self.discreteSteering + [0]*33
+                self.discreteAll = self.discreteSteering + [0]*(NUMCATS*3)
         
         
         
 def dediscretize_steer(discrete):
     if type(discrete).__module__ == np.__name__:
-        discrete = discrete.asList()
-    return -1+(2/len(discrete))*(discrete.index(1)+0.5)
+        discrete = discrete.tolist()
+    try:
+        result = -1+(2/len(discrete))*(discrete.index(1)+0.5)
+    except ValueError:
+        result = 0
+    return result
 
 #probably not needed, cause its a bad idea anyway
-def dediscretize_acc_break(discrete):
-    if type(discrete).__module__ == np.__name__:
-        discrete = discrete.asList()
-    return (1/len(discrete))*(discrete.index(1)+0.5)
+#def dediscretize_acc_break(discrete):
+#    if type(discrete).__module__ == np.__name__:
+#        discrete = discrete.tolist()
+#    return (1/len(discrete))*(discrete.index(1)+0.5)
 
 def dediscretize_all(discrete):
     if type(discrete).__module__ == np.__name__:
-        discrete = discrete.asList()
-    if discrete.index(1) > 33:
+        discrete = discrete.tolist()
+    if discrete.index(1) > NUMCATS*3:
         throttle = 1
         brake = 1
-        steer = dediscretize_steer(discrete[33:44])  #TODO: fuckdamn das sollte nicht fix auf 11 stehen sondern NUMCATS!
-    elif discrete.index(1) > 22:
+        steer = dediscretize_steer(discrete[(NUMCATS*3):(NUMCATS*4)])
+    elif discrete.index(1) > NUMCATS*2:
         throttle = 1
         brake = 0
-        steer = dediscretize_steer(discrete[22:33])
-    elif discrete.index(1) > 11:
+        steer = dediscretize_steer(discrete[(NUMCATS*2):(NUMCATS*3)])
+    elif discrete.index(1) > NUMCATS:
         throttle = 0
         brake = 1
-        steer = dediscretize_steer(discrete[11:22])
+        steer = dediscretize_steer(discrete[NUMCATS:(NUMCATS*2)])
     else:
         throttle = 0
         brake = 0
-        steer = dediscretize_steer(discrete[0:11])
+        steer = dediscretize_steer(discrete[0:NUMCATS])
     return throttle, brake, steer
 
    
@@ -188,7 +192,7 @@ class TPList(object):
             #target = [self.all_trackingpoints[i].throttlePedalValue, self.all_trackingpoints[i].brakePedalValue, self.all_trackingpoints[i].steeringValue]
             target = self.all_trackingpoints[i].discreteAll
             #discretetarget = flatten([self.all_trackingpoints[i].discreteThrottle, self.all_trackingpoints[i].discreteBrake, self.all_trackingpoints[i].discreteSteering])
-            discretetarget = flatten([[0]*22, self.all_trackingpoints[i].discreteSteering])
+            discretetarget = flatten([[0]*(NUMCATS*2), self.all_trackingpoints[i].discreteSteering])
             if config.history_frame_nr == 1: 
                 vision = vision[0]
                 lookahead = lookahead[0]
@@ -199,39 +203,7 @@ class TPList(object):
         self.batchindex += batch_size
         return np.array(lookaheads), np.array(visions), np.array(targets), np.array(discretetargets)
 
-             
 
-            
-
-
-
-
-
-#def sample_batch(batch_size, config, dataset):
-#    indices = np.random.choice(len(dataset), batch_size)
-#    visions = []
-#    targets = []
-#    lookaheads = []
-#    for i in indices:
-#        vision = [dataset[(i-j) % len(dataset)].visionvec for j in range(config.history_frame_nr,-1,-1)]
-#        lookahead = [dataset[(i-j) % len(dataset)].FlatOneDs for j in range(config.history_frame_nr,-1,-1)]
-#        target = [dataset[i].throttlePedalValue, dataset[i].brakePedalValue, dataset[i].steeringValue, dataset[i].discreteSteering]
-#        if config.history_frame_nr == 1: 
-#            vision = vision[0]
-#            lookahead = lookahead[0]
-#        visions.append(vision)
-#        targets.append(target[3])
-#        lookaheads.append(lookahead)
-#    return lookaheads, visions, targets
-
-
-
-
-
-#nächste schritte
-# -dafür sorgen dass das irgendwas sinvolles tut
-# -weights speichern
-# -den output anzeigen lassen können
 
 
 if __name__ == '__main__':    

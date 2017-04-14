@@ -353,7 +353,7 @@ node {
   }
 }
 node {
-  name: "train/cnnmodel/Variable"
+  name: "train/cnnmodel/WCon1"
   op: "VariableV2"
   attr {
     key: "_output_shapes"
@@ -415,9 +415,9 @@ node {
   }
 }
 node {
-  name: "train/cnnmodel/Variable/Assign"
+  name: "train/cnnmodel/WCon1/Assign"
   op: "Assign"
-  input: "train/cnnmodel/Variable"
+  input: "train/cnnmodel/WCon1"
   input: "train/cnnmodel/truncated_normal"
   attr {
     key: "T"
@@ -429,7 +429,7 @@ node {
     key: "_class"
     value {
       list {
-        s: "loc:@train/cnnmodel/Variable"
+        s: "loc:@train/cnnmodel/WCon1"
       }
     }
   }
@@ -468,9 +468,9 @@ node {
   }
 }
 node {
-  name: "train/cnnmodel/Variable/read"
+  name: "train/cnnmodel/WCon1/read"
   op: "Identity"
-  input: "train/cnnmodel/Variable"
+  input: "train/cnnmodel/WCon1"
   attr {
     key: "T"
     value {
@@ -481,7 +481,7 @@ node {
     key: "_class"
     value {
       list {
-        s: "loc:@train/cnnmodel/Variable"
+        s: "loc:@train/cnnmodel/WCon1"
       }
     }
   }
@@ -544,7 +544,7 @@ node {
   }
 }
 node {
-  name: "train/cnnmodel/Variable_1"
+  name: "train/cnnmodel/bCon1"
   op: "VariableV2"
   attr {
     key: "_output_shapes"
@@ -588,9 +588,9 @@ node {
   }
 }
 node {
-  name: "train/cnnmodel/Variable_1/Assign"
+  name: "train/cnnmodel/bCon1/Assign"
   op: "Assign"
-  input: "train/cnnmodel/Variable_1"
+  input: "train/cnnmodel/bCon1"
   input: "train/cnnmodel/Const"
   attr {
     key: "T"
@@ -602,7 +602,7 @@ node {
     key: "_class"
     value {
       list {
-        s: "loc:@train/cnnmodel/Variable_1"
+        s: "loc:@train/cnnmodel/bCon1"
       }
     }
   }
@@ -632,9 +632,9 @@ node {
   }
 }
 node {
-  name: "train/cnnmodel/Variable_1/read"
+  name: "train/cnnmodel/bCon1/read"
   op: "Identity"
-  input: "train/cnnmodel/Variable_1"
+  input: "train/cnnmodel/bCon1"
   attr {
     key: "T"
     value {
@@ -645,7 +645,7 @@ node {
     key: "_class"
     value {
       list {
-        s: "loc:@train/cnnmodel/Variable_1"
+        s: "loc:@train/cnnmodel/bCon1"
       }
     }
   }
@@ -666,7 +666,7 @@ node {
   name: "train/cnnmodel/Conv2D"
   op: "Conv2D"
   input: "train/cnnmodel/Reshape"
-  input: "train/cnnmodel/Variable/read"
+  input: "train/cnnmodel/WCon1/read"
   attr {
     key: "T"
     value {
@@ -728,7 +728,7 @@ node {
   name: "train/cnnmodel/add"
   op: "Add"
   input: "train/cnnmodel/Conv2D"
-  input: "train/cnnmodel/Variable_1/read"
+  input: "train/cnnmodel/bCon1/read"
   attr {
     key: "T"
     value {
@@ -1068,7 +1068,7 @@ node {
   }
 }
 node {
-  name: "train/cnnmodel/Variable_2"
+  name: "train/cnnmodel/WCon2"
   op: "VariableV2"
   attr {
     key: "_output_shapes"
@@ -1130,9 +1130,9 @@ node {
   }
 }
 node {
-  name: "train/cnnmodel/Variable_2/Assign"
+  name: "train/cnnmodel/WCon2/Assign"
   op: "Assign"
-  input: "train/cnnmodel/Variable_2"
+  input: "train/cnnmodel/WCon2"
   input: "train/cnnmodel/truncated_normal_1"
   attr {
     key: "T"
@@ -1144,7 +1144,7 @@ node {
     key: "_class"
     value {
       list {
-        s: "loc:@train/cnnmodel/Variable_2"
+        s: "loc:@train/cnnmodel/WCon2"
       }
     }
   }
@@ -1183,9 +1183,9 @@ node {
   }
 }
 node {
-  name: "train/cnnmodel/Variable_2/read"
+  name: "train/cnnmodel/WCon2/read"
   op: "Identity"
-  input: "train/cnnmodel/Variable_2"
+  input: "train/cnnmodel/WCon2"
   attr {
     key: "T"
     value {
@@ -1196,7 +1196,7 @@ node {
     key: "_class"
     value {
       list {
-        s: "loc:@train/cnnmodel/Variable_2"
+        s: "loc:@train/cnnmodel/WCon2"
       }
     }
   }
@@ -1259,7 +1259,7 @@ node {
   }
 }
 node {
-  name: "train/cnnmodel/Variable_3"
+  name: "train/cnnmodel/bCon2"
   op: "VariableV2"
   attr {
     key: "_output_shapes"
@@ -1303,9 +1303,9 @@ node {
   }
 }
 node {
-  name: "train/cnnmodel/Variable_3/Assign"
+  name: "train/cnnmodel/bCon2/Assign"
   op: "Assign"
-  input: "train/cnnmodel/Variable_3"
+  input: "train/cnnmodel/bCon2"
   input: "train/cnnmodel/Const_1"
   attr {
     key: "T"
@@ -1317,7 +1317,7 @@ node {
     key: "_class"
     value {
       list {
-        s: "loc:@train/cnnmodel/Variable_3"
+        s: "loc:@train/cnnmodel/bCon2"
       }
     }
   }
@@ -1347,9 +1347,9 @@ node {
   }
 }
 node {
-  name: "train/cnnmodel/Variable_3/read"
+  name: "train/cnnmodel/bCon2/read"
   op: "Identity"
-  input: "train/cnnmodel/Variable_3"
+  input: "train/cnnmodel/bCon2"
   attr {
     key: "T"
     value {
@@ -1360,7 +1360,7 @@ node {
     key: "_class"
     value {
       list {
-        s: "loc:@train/cnnmodel/Variable_3"
+        s: "loc:@train/cnnmodel/bCon2"
       }
     }
   }
@@ -1381,7 +1381,7 @@ node {
   name: "train/cnnmodel/Conv2D_1"
   op: "Conv2D"
   input: "train/cnnmodel/MaxPool"
-  input: "train/cnnmodel/Variable_2/read"
+  input: "train/cnnmodel/WCon2/read"
   attr {
     key: "T"
     value {
@@ -1443,7 +1443,7 @@ node {
   name: "train/cnnmodel/add_1"
   op: "Add"
   input: "train/cnnmodel/Conv2D_1"
-  input: "train/cnnmodel/Variable_3/read"
+  input: "train/cnnmodel/bCon2/read"
   attr {
     key: "T"
     value {
@@ -1765,7 +1765,7 @@ node {
   }
 }
 node {
-  name: "train/cnnmodel/Variable_4"
+  name: "train/cnnmodel/WFc1"
   op: "VariableV2"
   attr {
     key: "_output_shapes"
@@ -1815,9 +1815,9 @@ node {
   }
 }
 node {
-  name: "train/cnnmodel/Variable_4/Assign"
+  name: "train/cnnmodel/WFc1/Assign"
   op: "Assign"
-  input: "train/cnnmodel/Variable_4"
+  input: "train/cnnmodel/WFc1"
   input: "train/cnnmodel/truncated_normal_2"
   attr {
     key: "T"
@@ -1829,7 +1829,7 @@ node {
     key: "_class"
     value {
       list {
-        s: "loc:@train/cnnmodel/Variable_4"
+        s: "loc:@train/cnnmodel/WFc1"
       }
     }
   }
@@ -1862,9 +1862,9 @@ node {
   }
 }
 node {
-  name: "train/cnnmodel/Variable_4/read"
+  name: "train/cnnmodel/WFc1/read"
   op: "Identity"
-  input: "train/cnnmodel/Variable_4"
+  input: "train/cnnmodel/WFc1"
   attr {
     key: "T"
     value {
@@ -1875,7 +1875,7 @@ node {
     key: "_class"
     value {
       list {
-        s: "loc:@train/cnnmodel/Variable_4"
+        s: "loc:@train/cnnmodel/WFc1"
       }
     }
   }
@@ -1932,7 +1932,7 @@ node {
   }
 }
 node {
-  name: "train/cnnmodel/Variable_5"
+  name: "train/cnnmodel/bFc2"
   op: "VariableV2"
   attr {
     key: "_output_shapes"
@@ -1976,9 +1976,9 @@ node {
   }
 }
 node {
-  name: "train/cnnmodel/Variable_5/Assign"
+  name: "train/cnnmodel/bFc2/Assign"
   op: "Assign"
-  input: "train/cnnmodel/Variable_5"
+  input: "train/cnnmodel/bFc2"
   input: "train/cnnmodel/Const_2"
   attr {
     key: "T"
@@ -1990,7 +1990,7 @@ node {
     key: "_class"
     value {
       list {
-        s: "loc:@train/cnnmodel/Variable_5"
+        s: "loc:@train/cnnmodel/bFc2"
       }
     }
   }
@@ -2020,9 +2020,9 @@ node {
   }
 }
 node {
-  name: "train/cnnmodel/Variable_5/read"
+  name: "train/cnnmodel/bFc2/read"
   op: "Identity"
-  input: "train/cnnmodel/Variable_5"
+  input: "train/cnnmodel/bFc2"
   attr {
     key: "T"
     value {
@@ -2033,7 +2033,7 @@ node {
     key: "_class"
     value {
       list {
-        s: "loc:@train/cnnmodel/Variable_5"
+        s: "loc:@train/cnnmodel/bFc2"
       }
     }
   }
@@ -2123,7 +2123,7 @@ node {
   name: "train/cnnmodel/MatMul"
   op: "MatMul"
   input: "train/cnnmodel/Reshape_1"
-  input: "train/cnnmodel/Variable_4/read"
+  input: "train/cnnmodel/WFc1/read"
   attr {
     key: "T"
     value {
@@ -2162,7 +2162,7 @@ node {
   name: "train/cnnmodel/add_2"
   op: "Add"
   input: "train/cnnmodel/MatMul"
-  input: "train/cnnmodel/Variable_5/read"
+  input: "train/cnnmodel/bFc2/read"
   attr {
     key: "T"
     value {
@@ -2751,7 +2751,7 @@ node {
   }
 }
 node {
-  name: "train/cnnmodel/Variable_6"
+  name: "train/cnnmodel/WFc2"
   op: "VariableV2"
   attr {
     key: "_output_shapes"
@@ -2801,9 +2801,9 @@ node {
   }
 }
 node {
-  name: "train/cnnmodel/Variable_6/Assign"
+  name: "train/cnnmodel/WFc2/Assign"
   op: "Assign"
-  input: "train/cnnmodel/Variable_6"
+  input: "train/cnnmodel/WFc2"
   input: "train/cnnmodel/truncated_normal_3"
   attr {
     key: "T"
@@ -2815,7 +2815,7 @@ node {
     key: "_class"
     value {
       list {
-        s: "loc:@train/cnnmodel/Variable_6"
+        s: "loc:@train/cnnmodel/WFc2"
       }
     }
   }
@@ -2848,9 +2848,9 @@ node {
   }
 }
 node {
-  name: "train/cnnmodel/Variable_6/read"
+  name: "train/cnnmodel/WFc2/read"
   op: "Identity"
-  input: "train/cnnmodel/Variable_6"
+  input: "train/cnnmodel/WFc2"
   attr {
     key: "T"
     value {
@@ -2861,7 +2861,7 @@ node {
     key: "_class"
     value {
       list {
-        s: "loc:@train/cnnmodel/Variable_6"
+        s: "loc:@train/cnnmodel/WFc2"
       }
     }
   }
@@ -2918,7 +2918,7 @@ node {
   }
 }
 node {
-  name: "train/cnnmodel/Variable_7"
+  name: "train/cnnmodel/bfc2"
   op: "VariableV2"
   attr {
     key: "_output_shapes"
@@ -2962,9 +2962,9 @@ node {
   }
 }
 node {
-  name: "train/cnnmodel/Variable_7/Assign"
+  name: "train/cnnmodel/bfc2/Assign"
   op: "Assign"
-  input: "train/cnnmodel/Variable_7"
+  input: "train/cnnmodel/bfc2"
   input: "train/cnnmodel/Const_3"
   attr {
     key: "T"
@@ -2976,7 +2976,7 @@ node {
     key: "_class"
     value {
       list {
-        s: "loc:@train/cnnmodel/Variable_7"
+        s: "loc:@train/cnnmodel/bfc2"
       }
     }
   }
@@ -3006,9 +3006,9 @@ node {
   }
 }
 node {
-  name: "train/cnnmodel/Variable_7/read"
+  name: "train/cnnmodel/bfc2/read"
   op: "Identity"
-  input: "train/cnnmodel/Variable_7"
+  input: "train/cnnmodel/bfc2"
   attr {
     key: "T"
     value {
@@ -3019,7 +3019,7 @@ node {
     key: "_class"
     value {
       list {
-        s: "loc:@train/cnnmodel/Variable_7"
+        s: "loc:@train/cnnmodel/bfc2"
       }
     }
   }
@@ -3040,7 +3040,7 @@ node {
   name: "train/cnnmodel/MatMul_1"
   op: "MatMul"
   input: "train/cnnmodel/dropout/mul"
-  input: "train/cnnmodel/Variable_6/read"
+  input: "train/cnnmodel/WFc2/read"
   attr {
     key: "T"
     value {
@@ -3079,7 +3079,7 @@ node {
   name: "train/cnnmodel/add_3"
   op: "Add"
   input: "train/cnnmodel/MatMul_1"
-  input: "train/cnnmodel/Variable_7/read"
+  input: "train/cnnmodel/bfc2/read"
   attr {
     key: "T"
     value {
@@ -3103,7 +3103,7 @@ node {
   }
 }
 node {
-  name: "train/cnnmodel/y"
+  name: "train/cnnmodel/Softmax"
   op: "Softmax"
   input: "train/cnnmodel/add_3"
   attr {
@@ -3161,7 +3161,7 @@ node {
 node {
   name: "train/cnnmodel/ArgMax"
   op: "ArgMax"
-  input: "train/cnnmodel/y"
+  input: "train/cnnmodel/Softmax"
   input: "train/cnnmodel/ArgMax/dimension"
   attr {
     key: "T"
@@ -3322,7 +3322,7 @@ node {
 node {
   name: "train/cnnmodel/Log"
   op: "Log"
-  input: "train/cnnmodel/y"
+  input: "train/cnnmodel/Softmax"
   attr {
     key: "T"
     value {
@@ -4897,7 +4897,7 @@ node {
 node {
   name: "train/cnnmodel/gradients/train/cnnmodel/Log_grad/Reciprocal"
   op: "Reciprocal"
-  input: "train/cnnmodel/y"
+  input: "train/cnnmodel/Softmax"
   input: "^train/cnnmodel/gradients/train/cnnmodel/mul_grad/tuple/control_dependency_1"
   attr {
     key: "T"
@@ -4949,10 +4949,10 @@ node {
   }
 }
 node {
-  name: "train/cnnmodel/gradients/train/cnnmodel/y_grad/mul"
+  name: "train/cnnmodel/gradients/train/cnnmodel/Softmax_grad/mul"
   op: "Mul"
   input: "train/cnnmodel/gradients/train/cnnmodel/Log_grad/mul"
-  input: "train/cnnmodel/y"
+  input: "train/cnnmodel/Softmax"
   attr {
     key: "T"
     value {
@@ -4976,7 +4976,7 @@ node {
   }
 }
 node {
-  name: "train/cnnmodel/gradients/train/cnnmodel/y_grad/Sum/reduction_indices"
+  name: "train/cnnmodel/gradients/train/cnnmodel/Softmax_grad/Sum/reduction_indices"
   op: "Const"
   attr {
     key: "_output_shapes"
@@ -5012,10 +5012,10 @@ node {
   }
 }
 node {
-  name: "train/cnnmodel/gradients/train/cnnmodel/y_grad/Sum"
+  name: "train/cnnmodel/gradients/train/cnnmodel/Softmax_grad/Sum"
   op: "Sum"
-  input: "train/cnnmodel/gradients/train/cnnmodel/y_grad/mul"
-  input: "train/cnnmodel/gradients/train/cnnmodel/y_grad/Sum/reduction_indices"
+  input: "train/cnnmodel/gradients/train/cnnmodel/Softmax_grad/mul"
+  input: "train/cnnmodel/gradients/train/cnnmodel/Softmax_grad/Sum/reduction_indices"
   attr {
     key: "T"
     value {
@@ -5048,7 +5048,7 @@ node {
   }
 }
 node {
-  name: "train/cnnmodel/gradients/train/cnnmodel/y_grad/Reshape/shape"
+  name: "train/cnnmodel/gradients/train/cnnmodel/Softmax_grad/Reshape/shape"
   op: "Const"
   attr {
     key: "_output_shapes"
@@ -5084,10 +5084,10 @@ node {
   }
 }
 node {
-  name: "train/cnnmodel/gradients/train/cnnmodel/y_grad/Reshape"
+  name: "train/cnnmodel/gradients/train/cnnmodel/Softmax_grad/Reshape"
   op: "Reshape"
-  input: "train/cnnmodel/gradients/train/cnnmodel/y_grad/Sum"
-  input: "train/cnnmodel/gradients/train/cnnmodel/y_grad/Reshape/shape"
+  input: "train/cnnmodel/gradients/train/cnnmodel/Softmax_grad/Sum"
+  input: "train/cnnmodel/gradients/train/cnnmodel/Softmax_grad/Reshape/shape"
   attr {
     key: "T"
     value {
@@ -5117,10 +5117,10 @@ node {
   }
 }
 node {
-  name: "train/cnnmodel/gradients/train/cnnmodel/y_grad/sub"
+  name: "train/cnnmodel/gradients/train/cnnmodel/Softmax_grad/sub"
   op: "Sub"
   input: "train/cnnmodel/gradients/train/cnnmodel/Log_grad/mul"
-  input: "train/cnnmodel/gradients/train/cnnmodel/y_grad/Reshape"
+  input: "train/cnnmodel/gradients/train/cnnmodel/Softmax_grad/Reshape"
   attr {
     key: "T"
     value {
@@ -5144,10 +5144,10 @@ node {
   }
 }
 node {
-  name: "train/cnnmodel/gradients/train/cnnmodel/y_grad/mul_1"
+  name: "train/cnnmodel/gradients/train/cnnmodel/Softmax_grad/mul_1"
   op: "Mul"
-  input: "train/cnnmodel/gradients/train/cnnmodel/y_grad/sub"
-  input: "train/cnnmodel/y"
+  input: "train/cnnmodel/gradients/train/cnnmodel/Softmax_grad/sub"
+  input: "train/cnnmodel/Softmax"
   attr {
     key: "T"
     value {
@@ -5267,7 +5267,7 @@ node {
 node {
   name: "train/cnnmodel/gradients/train/cnnmodel/add_3_grad/Sum"
   op: "Sum"
-  input: "train/cnnmodel/gradients/train/cnnmodel/y_grad/mul_1"
+  input: "train/cnnmodel/gradients/train/cnnmodel/Softmax_grad/mul_1"
   input: "train/cnnmodel/gradients/train/cnnmodel/add_3_grad/BroadcastGradientArgs"
   attr {
     key: "T"
@@ -5334,7 +5334,7 @@ node {
 node {
   name: "train/cnnmodel/gradients/train/cnnmodel/add_3_grad/Sum_1"
   op: "Sum"
-  input: "train/cnnmodel/gradients/train/cnnmodel/y_grad/mul_1"
+  input: "train/cnnmodel/gradients/train/cnnmodel/Softmax_grad/mul_1"
   input: "train/cnnmodel/gradients/train/cnnmodel/add_3_grad/BroadcastGradientArgs:1"
   attr {
     key: "T"
@@ -5472,7 +5472,7 @@ node {
   name: "train/cnnmodel/gradients/train/cnnmodel/MatMul_1_grad/MatMul"
   op: "MatMul"
   input: "train/cnnmodel/gradients/train/cnnmodel/add_3_grad/tuple/control_dependency"
-  input: "train/cnnmodel/Variable_6/read"
+  input: "train/cnnmodel/WFc2/read"
   attr {
     key: "T"
     value {
@@ -6725,7 +6725,7 @@ node {
   name: "train/cnnmodel/gradients/train/cnnmodel/MatMul_grad/MatMul"
   op: "MatMul"
   input: "train/cnnmodel/gradients/train/cnnmodel/add_2_grad/tuple/control_dependency"
-  input: "train/cnnmodel/Variable_4/read"
+  input: "train/cnnmodel/WFc1/read"
   attr {
     key: "T"
     value {
@@ -7387,7 +7387,7 @@ node {
   name: "train/cnnmodel/gradients/train/cnnmodel/Conv2D_1_grad/Conv2DBackpropInput"
   op: "Conv2DBackpropInput"
   input: "train/cnnmodel/gradients/train/cnnmodel/Conv2D_1_grad/Shape"
-  input: "train/cnnmodel/Variable_2/read"
+  input: "train/cnnmodel/WCon2/read"
   input: "train/cnnmodel/gradients/train/cnnmodel/add_1_grad/tuple/control_dependency"
   attr {
     key: "T"
@@ -8077,7 +8077,7 @@ node {
   name: "train/cnnmodel/gradients/train/cnnmodel/Conv2D_grad/Conv2DBackpropInput"
   op: "Conv2DBackpropInput"
   input: "train/cnnmodel/gradients/train/cnnmodel/Conv2D_grad/Shape"
-  input: "train/cnnmodel/Variable/read"
+  input: "train/cnnmodel/WCon1/read"
   input: "train/cnnmodel/gradients/train/cnnmodel/add_grad/tuple/control_dependency"
   attr {
     key: "T"
@@ -8330,7 +8330,7 @@ node {
     key: "_class"
     value {
       list {
-        s: "loc:@train/cnnmodel/Variable"
+        s: "loc:@train/cnnmodel/WCon1"
       }
     }
   }
@@ -8368,7 +8368,7 @@ node {
     key: "_class"
     value {
       list {
-        s: "loc:@train/cnnmodel/Variable"
+        s: "loc:@train/cnnmodel/WCon1"
       }
     }
   }
@@ -8422,7 +8422,7 @@ node {
     key: "_class"
     value {
       list {
-        s: "loc:@train/cnnmodel/Variable"
+        s: "loc:@train/cnnmodel/WCon1"
       }
     }
   }
@@ -8462,7 +8462,7 @@ node {
     key: "_class"
     value {
       list {
-        s: "loc:@train/cnnmodel/Variable"
+        s: "loc:@train/cnnmodel/WCon1"
       }
     }
   }
@@ -8483,7 +8483,7 @@ node {
     key: "_class"
     value {
       list {
-        s: "loc:@train/cnnmodel/Variable"
+        s: "loc:@train/cnnmodel/WCon1"
       }
     }
   }
@@ -8521,7 +8521,7 @@ node {
     key: "_class"
     value {
       list {
-        s: "loc:@train/cnnmodel/Variable"
+        s: "loc:@train/cnnmodel/WCon1"
       }
     }
   }
@@ -8575,7 +8575,7 @@ node {
     key: "_class"
     value {
       list {
-        s: "loc:@train/cnnmodel/Variable"
+        s: "loc:@train/cnnmodel/WCon1"
       }
     }
   }
@@ -8615,7 +8615,7 @@ node {
     key: "_class"
     value {
       list {
-        s: "loc:@train/cnnmodel/Variable"
+        s: "loc:@train/cnnmodel/WCon1"
       }
     }
   }
@@ -8684,13 +8684,13 @@ node {
   }
 }
 node {
-  name: "cnnmodel/train/cnnmodel/Variable/Adam"
+  name: "cnnmodel/train/cnnmodel/WCon1/Adam"
   op: "VariableV2"
   attr {
     key: "_class"
     value {
       list {
-        s: "loc:@train/cnnmodel/Variable"
+        s: "loc:@train/cnnmodel/WCon1"
       }
     }
   }
@@ -8754,9 +8754,9 @@ node {
   }
 }
 node {
-  name: "cnnmodel/train/cnnmodel/Variable/Adam/Assign"
+  name: "cnnmodel/train/cnnmodel/WCon1/Adam/Assign"
   op: "Assign"
-  input: "cnnmodel/train/cnnmodel/Variable/Adam"
+  input: "cnnmodel/train/cnnmodel/WCon1/Adam"
   input: "train/cnnmodel/zeros"
   attr {
     key: "T"
@@ -8768,7 +8768,7 @@ node {
     key: "_class"
     value {
       list {
-        s: "loc:@train/cnnmodel/Variable"
+        s: "loc:@train/cnnmodel/WCon1"
       }
     }
   }
@@ -8807,9 +8807,9 @@ node {
   }
 }
 node {
-  name: "cnnmodel/train/cnnmodel/Variable/Adam/read"
+  name: "cnnmodel/train/cnnmodel/WCon1/Adam/read"
   op: "Identity"
-  input: "cnnmodel/train/cnnmodel/Variable/Adam"
+  input: "cnnmodel/train/cnnmodel/WCon1/Adam"
   attr {
     key: "T"
     value {
@@ -8820,7 +8820,7 @@ node {
     key: "_class"
     value {
       list {
-        s: "loc:@train/cnnmodel/Variable"
+        s: "loc:@train/cnnmodel/WCon1"
       }
     }
   }
@@ -8901,13 +8901,13 @@ node {
   }
 }
 node {
-  name: "cnnmodel/train/cnnmodel/Variable/Adam_1"
+  name: "cnnmodel/train/cnnmodel/WCon1/Adam_1"
   op: "VariableV2"
   attr {
     key: "_class"
     value {
       list {
-        s: "loc:@train/cnnmodel/Variable"
+        s: "loc:@train/cnnmodel/WCon1"
       }
     }
   }
@@ -8971,9 +8971,9 @@ node {
   }
 }
 node {
-  name: "cnnmodel/train/cnnmodel/Variable/Adam_1/Assign"
+  name: "cnnmodel/train/cnnmodel/WCon1/Adam_1/Assign"
   op: "Assign"
-  input: "cnnmodel/train/cnnmodel/Variable/Adam_1"
+  input: "cnnmodel/train/cnnmodel/WCon1/Adam_1"
   input: "train/cnnmodel/zeros_1"
   attr {
     key: "T"
@@ -8985,7 +8985,7 @@ node {
     key: "_class"
     value {
       list {
-        s: "loc:@train/cnnmodel/Variable"
+        s: "loc:@train/cnnmodel/WCon1"
       }
     }
   }
@@ -9024,9 +9024,9 @@ node {
   }
 }
 node {
-  name: "cnnmodel/train/cnnmodel/Variable/Adam_1/read"
+  name: "cnnmodel/train/cnnmodel/WCon1/Adam_1/read"
   op: "Identity"
-  input: "cnnmodel/train/cnnmodel/Variable/Adam_1"
+  input: "cnnmodel/train/cnnmodel/WCon1/Adam_1"
   attr {
     key: "T"
     value {
@@ -9037,7 +9037,7 @@ node {
     key: "_class"
     value {
       list {
-        s: "loc:@train/cnnmodel/Variable"
+        s: "loc:@train/cnnmodel/WCon1"
       }
     }
   }
@@ -9100,13 +9100,13 @@ node {
   }
 }
 node {
-  name: "cnnmodel/train/cnnmodel/Variable_1/Adam"
+  name: "cnnmodel/train/cnnmodel/bCon1/Adam"
   op: "VariableV2"
   attr {
     key: "_class"
     value {
       list {
-        s: "loc:@train/cnnmodel/Variable_1"
+        s: "loc:@train/cnnmodel/bCon1"
       }
     }
   }
@@ -9152,9 +9152,9 @@ node {
   }
 }
 node {
-  name: "cnnmodel/train/cnnmodel/Variable_1/Adam/Assign"
+  name: "cnnmodel/train/cnnmodel/bCon1/Adam/Assign"
   op: "Assign"
-  input: "cnnmodel/train/cnnmodel/Variable_1/Adam"
+  input: "cnnmodel/train/cnnmodel/bCon1/Adam"
   input: "train/cnnmodel/zeros_2"
   attr {
     key: "T"
@@ -9166,7 +9166,7 @@ node {
     key: "_class"
     value {
       list {
-        s: "loc:@train/cnnmodel/Variable_1"
+        s: "loc:@train/cnnmodel/bCon1"
       }
     }
   }
@@ -9196,9 +9196,9 @@ node {
   }
 }
 node {
-  name: "cnnmodel/train/cnnmodel/Variable_1/Adam/read"
+  name: "cnnmodel/train/cnnmodel/bCon1/Adam/read"
   op: "Identity"
-  input: "cnnmodel/train/cnnmodel/Variable_1/Adam"
+  input: "cnnmodel/train/cnnmodel/bCon1/Adam"
   attr {
     key: "T"
     value {
@@ -9209,7 +9209,7 @@ node {
     key: "_class"
     value {
       list {
-        s: "loc:@train/cnnmodel/Variable_1"
+        s: "loc:@train/cnnmodel/bCon1"
       }
     }
   }
@@ -9263,13 +9263,13 @@ node {
   }
 }
 node {
-  name: "cnnmodel/train/cnnmodel/Variable_1/Adam_1"
+  name: "cnnmodel/train/cnnmodel/bCon1/Adam_1"
   op: "VariableV2"
   attr {
     key: "_class"
     value {
       list {
-        s: "loc:@train/cnnmodel/Variable_1"
+        s: "loc:@train/cnnmodel/bCon1"
       }
     }
   }
@@ -9315,9 +9315,9 @@ node {
   }
 }
 node {
-  name: "cnnmodel/train/cnnmodel/Variable_1/Adam_1/Assign"
+  name: "cnnmodel/train/cnnmodel/bCon1/Adam_1/Assign"
   op: "Assign"
-  input: "cnnmodel/train/cnnmodel/Variable_1/Adam_1"
+  input: "cnnmodel/train/cnnmodel/bCon1/Adam_1"
   input: "train/cnnmodel/zeros_3"
   attr {
     key: "T"
@@ -9329,7 +9329,7 @@ node {
     key: "_class"
     value {
       list {
-        s: "loc:@train/cnnmodel/Variable_1"
+        s: "loc:@train/cnnmodel/bCon1"
       }
     }
   }
@@ -9359,9 +9359,9 @@ node {
   }
 }
 node {
-  name: "cnnmodel/train/cnnmodel/Variable_1/Adam_1/read"
+  name: "cnnmodel/train/cnnmodel/bCon1/Adam_1/read"
   op: "Identity"
-  input: "cnnmodel/train/cnnmodel/Variable_1/Adam_1"
+  input: "cnnmodel/train/cnnmodel/bCon1/Adam_1"
   attr {
     key: "T"
     value {
@@ -9372,7 +9372,7 @@ node {
     key: "_class"
     value {
       list {
-        s: "loc:@train/cnnmodel/Variable_1"
+        s: "loc:@train/cnnmodel/bCon1"
       }
     }
   }
@@ -9444,13 +9444,13 @@ node {
   }
 }
 node {
-  name: "cnnmodel/train/cnnmodel/Variable_2/Adam"
+  name: "cnnmodel/train/cnnmodel/WCon2/Adam"
   op: "VariableV2"
   attr {
     key: "_class"
     value {
       list {
-        s: "loc:@train/cnnmodel/Variable_2"
+        s: "loc:@train/cnnmodel/WCon2"
       }
     }
   }
@@ -9514,9 +9514,9 @@ node {
   }
 }
 node {
-  name: "cnnmodel/train/cnnmodel/Variable_2/Adam/Assign"
+  name: "cnnmodel/train/cnnmodel/WCon2/Adam/Assign"
   op: "Assign"
-  input: "cnnmodel/train/cnnmodel/Variable_2/Adam"
+  input: "cnnmodel/train/cnnmodel/WCon2/Adam"
   input: "train/cnnmodel/zeros_4"
   attr {
     key: "T"
@@ -9528,7 +9528,7 @@ node {
     key: "_class"
     value {
       list {
-        s: "loc:@train/cnnmodel/Variable_2"
+        s: "loc:@train/cnnmodel/WCon2"
       }
     }
   }
@@ -9567,9 +9567,9 @@ node {
   }
 }
 node {
-  name: "cnnmodel/train/cnnmodel/Variable_2/Adam/read"
+  name: "cnnmodel/train/cnnmodel/WCon2/Adam/read"
   op: "Identity"
-  input: "cnnmodel/train/cnnmodel/Variable_2/Adam"
+  input: "cnnmodel/train/cnnmodel/WCon2/Adam"
   attr {
     key: "T"
     value {
@@ -9580,7 +9580,7 @@ node {
     key: "_class"
     value {
       list {
-        s: "loc:@train/cnnmodel/Variable_2"
+        s: "loc:@train/cnnmodel/WCon2"
       }
     }
   }
@@ -9661,13 +9661,13 @@ node {
   }
 }
 node {
-  name: "cnnmodel/train/cnnmodel/Variable_2/Adam_1"
+  name: "cnnmodel/train/cnnmodel/WCon2/Adam_1"
   op: "VariableV2"
   attr {
     key: "_class"
     value {
       list {
-        s: "loc:@train/cnnmodel/Variable_2"
+        s: "loc:@train/cnnmodel/WCon2"
       }
     }
   }
@@ -9731,9 +9731,9 @@ node {
   }
 }
 node {
-  name: "cnnmodel/train/cnnmodel/Variable_2/Adam_1/Assign"
+  name: "cnnmodel/train/cnnmodel/WCon2/Adam_1/Assign"
   op: "Assign"
-  input: "cnnmodel/train/cnnmodel/Variable_2/Adam_1"
+  input: "cnnmodel/train/cnnmodel/WCon2/Adam_1"
   input: "train/cnnmodel/zeros_5"
   attr {
     key: "T"
@@ -9745,7 +9745,7 @@ node {
     key: "_class"
     value {
       list {
-        s: "loc:@train/cnnmodel/Variable_2"
+        s: "loc:@train/cnnmodel/WCon2"
       }
     }
   }
@@ -9784,9 +9784,9 @@ node {
   }
 }
 node {
-  name: "cnnmodel/train/cnnmodel/Variable_2/Adam_1/read"
+  name: "cnnmodel/train/cnnmodel/WCon2/Adam_1/read"
   op: "Identity"
-  input: "cnnmodel/train/cnnmodel/Variable_2/Adam_1"
+  input: "cnnmodel/train/cnnmodel/WCon2/Adam_1"
   attr {
     key: "T"
     value {
@@ -9797,7 +9797,7 @@ node {
     key: "_class"
     value {
       list {
-        s: "loc:@train/cnnmodel/Variable_2"
+        s: "loc:@train/cnnmodel/WCon2"
       }
     }
   }
@@ -9860,13 +9860,13 @@ node {
   }
 }
 node {
-  name: "cnnmodel/train/cnnmodel/Variable_3/Adam"
+  name: "cnnmodel/train/cnnmodel/bCon2/Adam"
   op: "VariableV2"
   attr {
     key: "_class"
     value {
       list {
-        s: "loc:@train/cnnmodel/Variable_3"
+        s: "loc:@train/cnnmodel/bCon2"
       }
     }
   }
@@ -9912,9 +9912,9 @@ node {
   }
 }
 node {
-  name: "cnnmodel/train/cnnmodel/Variable_3/Adam/Assign"
+  name: "cnnmodel/train/cnnmodel/bCon2/Adam/Assign"
   op: "Assign"
-  input: "cnnmodel/train/cnnmodel/Variable_3/Adam"
+  input: "cnnmodel/train/cnnmodel/bCon2/Adam"
   input: "train/cnnmodel/zeros_6"
   attr {
     key: "T"
@@ -9926,7 +9926,7 @@ node {
     key: "_class"
     value {
       list {
-        s: "loc:@train/cnnmodel/Variable_3"
+        s: "loc:@train/cnnmodel/bCon2"
       }
     }
   }
@@ -9956,9 +9956,9 @@ node {
   }
 }
 node {
-  name: "cnnmodel/train/cnnmodel/Variable_3/Adam/read"
+  name: "cnnmodel/train/cnnmodel/bCon2/Adam/read"
   op: "Identity"
-  input: "cnnmodel/train/cnnmodel/Variable_3/Adam"
+  input: "cnnmodel/train/cnnmodel/bCon2/Adam"
   attr {
     key: "T"
     value {
@@ -9969,7 +9969,7 @@ node {
     key: "_class"
     value {
       list {
-        s: "loc:@train/cnnmodel/Variable_3"
+        s: "loc:@train/cnnmodel/bCon2"
       }
     }
   }
@@ -10023,13 +10023,13 @@ node {
   }
 }
 node {
-  name: "cnnmodel/train/cnnmodel/Variable_3/Adam_1"
+  name: "cnnmodel/train/cnnmodel/bCon2/Adam_1"
   op: "VariableV2"
   attr {
     key: "_class"
     value {
       list {
-        s: "loc:@train/cnnmodel/Variable_3"
+        s: "loc:@train/cnnmodel/bCon2"
       }
     }
   }
@@ -10075,9 +10075,9 @@ node {
   }
 }
 node {
-  name: "cnnmodel/train/cnnmodel/Variable_3/Adam_1/Assign"
+  name: "cnnmodel/train/cnnmodel/bCon2/Adam_1/Assign"
   op: "Assign"
-  input: "cnnmodel/train/cnnmodel/Variable_3/Adam_1"
+  input: "cnnmodel/train/cnnmodel/bCon2/Adam_1"
   input: "train/cnnmodel/zeros_7"
   attr {
     key: "T"
@@ -10089,7 +10089,7 @@ node {
     key: "_class"
     value {
       list {
-        s: "loc:@train/cnnmodel/Variable_3"
+        s: "loc:@train/cnnmodel/bCon2"
       }
     }
   }
@@ -10119,9 +10119,9 @@ node {
   }
 }
 node {
-  name: "cnnmodel/train/cnnmodel/Variable_3/Adam_1/read"
+  name: "cnnmodel/train/cnnmodel/bCon2/Adam_1/read"
   op: "Identity"
-  input: "cnnmodel/train/cnnmodel/Variable_3/Adam_1"
+  input: "cnnmodel/train/cnnmodel/bCon2/Adam_1"
   attr {
     key: "T"
     value {
@@ -10132,7 +10132,7 @@ node {
     key: "_class"
     value {
       list {
-        s: "loc:@train/cnnmodel/Variable_3"
+        s: "loc:@train/cnnmodel/bCon2"
       }
     }
   }
@@ -10192,13 +10192,13 @@ node {
   }
 }
 node {
-  name: "cnnmodel/train/cnnmodel/Variable_4/Adam"
+  name: "cnnmodel/train/cnnmodel/WFc1/Adam"
   op: "VariableV2"
   attr {
     key: "_class"
     value {
       list {
-        s: "loc:@train/cnnmodel/Variable_4"
+        s: "loc:@train/cnnmodel/WFc1"
       }
     }
   }
@@ -10250,9 +10250,9 @@ node {
   }
 }
 node {
-  name: "cnnmodel/train/cnnmodel/Variable_4/Adam/Assign"
+  name: "cnnmodel/train/cnnmodel/WFc1/Adam/Assign"
   op: "Assign"
-  input: "cnnmodel/train/cnnmodel/Variable_4/Adam"
+  input: "cnnmodel/train/cnnmodel/WFc1/Adam"
   input: "train/cnnmodel/zeros_8"
   attr {
     key: "T"
@@ -10264,7 +10264,7 @@ node {
     key: "_class"
     value {
       list {
-        s: "loc:@train/cnnmodel/Variable_4"
+        s: "loc:@train/cnnmodel/WFc1"
       }
     }
   }
@@ -10297,9 +10297,9 @@ node {
   }
 }
 node {
-  name: "cnnmodel/train/cnnmodel/Variable_4/Adam/read"
+  name: "cnnmodel/train/cnnmodel/WFc1/Adam/read"
   op: "Identity"
-  input: "cnnmodel/train/cnnmodel/Variable_4/Adam"
+  input: "cnnmodel/train/cnnmodel/WFc1/Adam"
   attr {
     key: "T"
     value {
@@ -10310,7 +10310,7 @@ node {
     key: "_class"
     value {
       list {
-        s: "loc:@train/cnnmodel/Variable_4"
+        s: "loc:@train/cnnmodel/WFc1"
       }
     }
   }
@@ -10373,13 +10373,13 @@ node {
   }
 }
 node {
-  name: "cnnmodel/train/cnnmodel/Variable_4/Adam_1"
+  name: "cnnmodel/train/cnnmodel/WFc1/Adam_1"
   op: "VariableV2"
   attr {
     key: "_class"
     value {
       list {
-        s: "loc:@train/cnnmodel/Variable_4"
+        s: "loc:@train/cnnmodel/WFc1"
       }
     }
   }
@@ -10431,9 +10431,9 @@ node {
   }
 }
 node {
-  name: "cnnmodel/train/cnnmodel/Variable_4/Adam_1/Assign"
+  name: "cnnmodel/train/cnnmodel/WFc1/Adam_1/Assign"
   op: "Assign"
-  input: "cnnmodel/train/cnnmodel/Variable_4/Adam_1"
+  input: "cnnmodel/train/cnnmodel/WFc1/Adam_1"
   input: "train/cnnmodel/zeros_9"
   attr {
     key: "T"
@@ -10445,7 +10445,7 @@ node {
     key: "_class"
     value {
       list {
-        s: "loc:@train/cnnmodel/Variable_4"
+        s: "loc:@train/cnnmodel/WFc1"
       }
     }
   }
@@ -10478,9 +10478,9 @@ node {
   }
 }
 node {
-  name: "cnnmodel/train/cnnmodel/Variable_4/Adam_1/read"
+  name: "cnnmodel/train/cnnmodel/WFc1/Adam_1/read"
   op: "Identity"
-  input: "cnnmodel/train/cnnmodel/Variable_4/Adam_1"
+  input: "cnnmodel/train/cnnmodel/WFc1/Adam_1"
   attr {
     key: "T"
     value {
@@ -10491,7 +10491,7 @@ node {
     key: "_class"
     value {
       list {
-        s: "loc:@train/cnnmodel/Variable_4"
+        s: "loc:@train/cnnmodel/WFc1"
       }
     }
   }
@@ -10548,13 +10548,13 @@ node {
   }
 }
 node {
-  name: "cnnmodel/train/cnnmodel/Variable_5/Adam"
+  name: "cnnmodel/train/cnnmodel/bFc2/Adam"
   op: "VariableV2"
   attr {
     key: "_class"
     value {
       list {
-        s: "loc:@train/cnnmodel/Variable_5"
+        s: "loc:@train/cnnmodel/bFc2"
       }
     }
   }
@@ -10600,9 +10600,9 @@ node {
   }
 }
 node {
-  name: "cnnmodel/train/cnnmodel/Variable_5/Adam/Assign"
+  name: "cnnmodel/train/cnnmodel/bFc2/Adam/Assign"
   op: "Assign"
-  input: "cnnmodel/train/cnnmodel/Variable_5/Adam"
+  input: "cnnmodel/train/cnnmodel/bFc2/Adam"
   input: "train/cnnmodel/zeros_10"
   attr {
     key: "T"
@@ -10614,7 +10614,7 @@ node {
     key: "_class"
     value {
       list {
-        s: "loc:@train/cnnmodel/Variable_5"
+        s: "loc:@train/cnnmodel/bFc2"
       }
     }
   }
@@ -10644,9 +10644,9 @@ node {
   }
 }
 node {
-  name: "cnnmodel/train/cnnmodel/Variable_5/Adam/read"
+  name: "cnnmodel/train/cnnmodel/bFc2/Adam/read"
   op: "Identity"
-  input: "cnnmodel/train/cnnmodel/Variable_5/Adam"
+  input: "cnnmodel/train/cnnmodel/bFc2/Adam"
   attr {
     key: "T"
     value {
@@ -10657,7 +10657,7 @@ node {
     key: "_class"
     value {
       list {
-        s: "loc:@train/cnnmodel/Variable_5"
+        s: "loc:@train/cnnmodel/bFc2"
       }
     }
   }
@@ -10711,13 +10711,13 @@ node {
   }
 }
 node {
-  name: "cnnmodel/train/cnnmodel/Variable_5/Adam_1"
+  name: "cnnmodel/train/cnnmodel/bFc2/Adam_1"
   op: "VariableV2"
   attr {
     key: "_class"
     value {
       list {
-        s: "loc:@train/cnnmodel/Variable_5"
+        s: "loc:@train/cnnmodel/bFc2"
       }
     }
   }
@@ -10763,9 +10763,9 @@ node {
   }
 }
 node {
-  name: "cnnmodel/train/cnnmodel/Variable_5/Adam_1/Assign"
+  name: "cnnmodel/train/cnnmodel/bFc2/Adam_1/Assign"
   op: "Assign"
-  input: "cnnmodel/train/cnnmodel/Variable_5/Adam_1"
+  input: "cnnmodel/train/cnnmodel/bFc2/Adam_1"
   input: "train/cnnmodel/zeros_11"
   attr {
     key: "T"
@@ -10777,7 +10777,7 @@ node {
     key: "_class"
     value {
       list {
-        s: "loc:@train/cnnmodel/Variable_5"
+        s: "loc:@train/cnnmodel/bFc2"
       }
     }
   }
@@ -10807,9 +10807,9 @@ node {
   }
 }
 node {
-  name: "cnnmodel/train/cnnmodel/Variable_5/Adam_1/read"
+  name: "cnnmodel/train/cnnmodel/bFc2/Adam_1/read"
   op: "Identity"
-  input: "cnnmodel/train/cnnmodel/Variable_5/Adam_1"
+  input: "cnnmodel/train/cnnmodel/bFc2/Adam_1"
   attr {
     key: "T"
     value {
@@ -10820,7 +10820,7 @@ node {
     key: "_class"
     value {
       list {
-        s: "loc:@train/cnnmodel/Variable_5"
+        s: "loc:@train/cnnmodel/bFc2"
       }
     }
   }
@@ -10880,13 +10880,13 @@ node {
   }
 }
 node {
-  name: "cnnmodel/train/cnnmodel/Variable_6/Adam"
+  name: "cnnmodel/train/cnnmodel/WFc2/Adam"
   op: "VariableV2"
   attr {
     key: "_class"
     value {
       list {
-        s: "loc:@train/cnnmodel/Variable_6"
+        s: "loc:@train/cnnmodel/WFc2"
       }
     }
   }
@@ -10938,9 +10938,9 @@ node {
   }
 }
 node {
-  name: "cnnmodel/train/cnnmodel/Variable_6/Adam/Assign"
+  name: "cnnmodel/train/cnnmodel/WFc2/Adam/Assign"
   op: "Assign"
-  input: "cnnmodel/train/cnnmodel/Variable_6/Adam"
+  input: "cnnmodel/train/cnnmodel/WFc2/Adam"
   input: "train/cnnmodel/zeros_12"
   attr {
     key: "T"
@@ -10952,7 +10952,7 @@ node {
     key: "_class"
     value {
       list {
-        s: "loc:@train/cnnmodel/Variable_6"
+        s: "loc:@train/cnnmodel/WFc2"
       }
     }
   }
@@ -10985,9 +10985,9 @@ node {
   }
 }
 node {
-  name: "cnnmodel/train/cnnmodel/Variable_6/Adam/read"
+  name: "cnnmodel/train/cnnmodel/WFc2/Adam/read"
   op: "Identity"
-  input: "cnnmodel/train/cnnmodel/Variable_6/Adam"
+  input: "cnnmodel/train/cnnmodel/WFc2/Adam"
   attr {
     key: "T"
     value {
@@ -10998,7 +10998,7 @@ node {
     key: "_class"
     value {
       list {
-        s: "loc:@train/cnnmodel/Variable_6"
+        s: "loc:@train/cnnmodel/WFc2"
       }
     }
   }
@@ -11061,13 +11061,13 @@ node {
   }
 }
 node {
-  name: "cnnmodel/train/cnnmodel/Variable_6/Adam_1"
+  name: "cnnmodel/train/cnnmodel/WFc2/Adam_1"
   op: "VariableV2"
   attr {
     key: "_class"
     value {
       list {
-        s: "loc:@train/cnnmodel/Variable_6"
+        s: "loc:@train/cnnmodel/WFc2"
       }
     }
   }
@@ -11119,9 +11119,9 @@ node {
   }
 }
 node {
-  name: "cnnmodel/train/cnnmodel/Variable_6/Adam_1/Assign"
+  name: "cnnmodel/train/cnnmodel/WFc2/Adam_1/Assign"
   op: "Assign"
-  input: "cnnmodel/train/cnnmodel/Variable_6/Adam_1"
+  input: "cnnmodel/train/cnnmodel/WFc2/Adam_1"
   input: "train/cnnmodel/zeros_13"
   attr {
     key: "T"
@@ -11133,7 +11133,7 @@ node {
     key: "_class"
     value {
       list {
-        s: "loc:@train/cnnmodel/Variable_6"
+        s: "loc:@train/cnnmodel/WFc2"
       }
     }
   }
@@ -11166,9 +11166,9 @@ node {
   }
 }
 node {
-  name: "cnnmodel/train/cnnmodel/Variable_6/Adam_1/read"
+  name: "cnnmodel/train/cnnmodel/WFc2/Adam_1/read"
   op: "Identity"
-  input: "cnnmodel/train/cnnmodel/Variable_6/Adam_1"
+  input: "cnnmodel/train/cnnmodel/WFc2/Adam_1"
   attr {
     key: "T"
     value {
@@ -11179,7 +11179,7 @@ node {
     key: "_class"
     value {
       list {
-        s: "loc:@train/cnnmodel/Variable_6"
+        s: "loc:@train/cnnmodel/WFc2"
       }
     }
   }
@@ -11236,13 +11236,13 @@ node {
   }
 }
 node {
-  name: "cnnmodel/train/cnnmodel/Variable_7/Adam"
+  name: "cnnmodel/train/cnnmodel/bfc2/Adam"
   op: "VariableV2"
   attr {
     key: "_class"
     value {
       list {
-        s: "loc:@train/cnnmodel/Variable_7"
+        s: "loc:@train/cnnmodel/bfc2"
       }
     }
   }
@@ -11288,9 +11288,9 @@ node {
   }
 }
 node {
-  name: "cnnmodel/train/cnnmodel/Variable_7/Adam/Assign"
+  name: "cnnmodel/train/cnnmodel/bfc2/Adam/Assign"
   op: "Assign"
-  input: "cnnmodel/train/cnnmodel/Variable_7/Adam"
+  input: "cnnmodel/train/cnnmodel/bfc2/Adam"
   input: "train/cnnmodel/zeros_14"
   attr {
     key: "T"
@@ -11302,7 +11302,7 @@ node {
     key: "_class"
     value {
       list {
-        s: "loc:@train/cnnmodel/Variable_7"
+        s: "loc:@train/cnnmodel/bfc2"
       }
     }
   }
@@ -11332,9 +11332,9 @@ node {
   }
 }
 node {
-  name: "cnnmodel/train/cnnmodel/Variable_7/Adam/read"
+  name: "cnnmodel/train/cnnmodel/bfc2/Adam/read"
   op: "Identity"
-  input: "cnnmodel/train/cnnmodel/Variable_7/Adam"
+  input: "cnnmodel/train/cnnmodel/bfc2/Adam"
   attr {
     key: "T"
     value {
@@ -11345,7 +11345,7 @@ node {
     key: "_class"
     value {
       list {
-        s: "loc:@train/cnnmodel/Variable_7"
+        s: "loc:@train/cnnmodel/bfc2"
       }
     }
   }
@@ -11399,13 +11399,13 @@ node {
   }
 }
 node {
-  name: "cnnmodel/train/cnnmodel/Variable_7/Adam_1"
+  name: "cnnmodel/train/cnnmodel/bfc2/Adam_1"
   op: "VariableV2"
   attr {
     key: "_class"
     value {
       list {
-        s: "loc:@train/cnnmodel/Variable_7"
+        s: "loc:@train/cnnmodel/bfc2"
       }
     }
   }
@@ -11451,9 +11451,9 @@ node {
   }
 }
 node {
-  name: "cnnmodel/train/cnnmodel/Variable_7/Adam_1/Assign"
+  name: "cnnmodel/train/cnnmodel/bfc2/Adam_1/Assign"
   op: "Assign"
-  input: "cnnmodel/train/cnnmodel/Variable_7/Adam_1"
+  input: "cnnmodel/train/cnnmodel/bfc2/Adam_1"
   input: "train/cnnmodel/zeros_15"
   attr {
     key: "T"
@@ -11465,7 +11465,7 @@ node {
     key: "_class"
     value {
       list {
-        s: "loc:@train/cnnmodel/Variable_7"
+        s: "loc:@train/cnnmodel/bfc2"
       }
     }
   }
@@ -11495,9 +11495,9 @@ node {
   }
 }
 node {
-  name: "cnnmodel/train/cnnmodel/Variable_7/Adam_1/read"
+  name: "cnnmodel/train/cnnmodel/bfc2/Adam_1/read"
   op: "Identity"
-  input: "cnnmodel/train/cnnmodel/Variable_7/Adam_1"
+  input: "cnnmodel/train/cnnmodel/bfc2/Adam_1"
   attr {
     key: "T"
     value {
@@ -11508,7 +11508,7 @@ node {
     key: "_class"
     value {
       list {
-        s: "loc:@train/cnnmodel/Variable_7"
+        s: "loc:@train/cnnmodel/bfc2"
       }
     }
   }
@@ -11646,11 +11646,11 @@ node {
   }
 }
 node {
-  name: "train/cnnmodel/Adam/update_train/cnnmodel/Variable/ApplyAdam"
+  name: "train/cnnmodel/Adam/update_train/cnnmodel/WCon1/ApplyAdam"
   op: "ApplyAdam"
-  input: "train/cnnmodel/Variable"
-  input: "cnnmodel/train/cnnmodel/Variable/Adam"
-  input: "cnnmodel/train/cnnmodel/Variable/Adam_1"
+  input: "train/cnnmodel/WCon1"
+  input: "cnnmodel/train/cnnmodel/WCon1/Adam"
+  input: "cnnmodel/train/cnnmodel/WCon1/Adam_1"
   input: "train/cnnmodel/beta1_power/read"
   input: "train/cnnmodel/beta2_power/read"
   input: "train/cnnmodel/Adam/learning_rate"
@@ -11668,7 +11668,7 @@ node {
     key: "_class"
     value {
       list {
-        s: "loc:@train/cnnmodel/Variable"
+        s: "loc:@train/cnnmodel/WCon1"
       }
     }
   }
@@ -11701,11 +11701,11 @@ node {
   }
 }
 node {
-  name: "train/cnnmodel/Adam/update_train/cnnmodel/Variable_1/ApplyAdam"
+  name: "train/cnnmodel/Adam/update_train/cnnmodel/bCon1/ApplyAdam"
   op: "ApplyAdam"
-  input: "train/cnnmodel/Variable_1"
-  input: "cnnmodel/train/cnnmodel/Variable_1/Adam"
-  input: "cnnmodel/train/cnnmodel/Variable_1/Adam_1"
+  input: "train/cnnmodel/bCon1"
+  input: "cnnmodel/train/cnnmodel/bCon1/Adam"
+  input: "cnnmodel/train/cnnmodel/bCon1/Adam_1"
   input: "train/cnnmodel/beta1_power/read"
   input: "train/cnnmodel/beta2_power/read"
   input: "train/cnnmodel/Adam/learning_rate"
@@ -11723,7 +11723,7 @@ node {
     key: "_class"
     value {
       list {
-        s: "loc:@train/cnnmodel/Variable_1"
+        s: "loc:@train/cnnmodel/bCon1"
       }
     }
   }
@@ -11747,11 +11747,11 @@ node {
   }
 }
 node {
-  name: "train/cnnmodel/Adam/update_train/cnnmodel/Variable_2/ApplyAdam"
+  name: "train/cnnmodel/Adam/update_train/cnnmodel/WCon2/ApplyAdam"
   op: "ApplyAdam"
-  input: "train/cnnmodel/Variable_2"
-  input: "cnnmodel/train/cnnmodel/Variable_2/Adam"
-  input: "cnnmodel/train/cnnmodel/Variable_2/Adam_1"
+  input: "train/cnnmodel/WCon2"
+  input: "cnnmodel/train/cnnmodel/WCon2/Adam"
+  input: "cnnmodel/train/cnnmodel/WCon2/Adam_1"
   input: "train/cnnmodel/beta1_power/read"
   input: "train/cnnmodel/beta2_power/read"
   input: "train/cnnmodel/Adam/learning_rate"
@@ -11769,7 +11769,7 @@ node {
     key: "_class"
     value {
       list {
-        s: "loc:@train/cnnmodel/Variable_2"
+        s: "loc:@train/cnnmodel/WCon2"
       }
     }
   }
@@ -11802,11 +11802,11 @@ node {
   }
 }
 node {
-  name: "train/cnnmodel/Adam/update_train/cnnmodel/Variable_3/ApplyAdam"
+  name: "train/cnnmodel/Adam/update_train/cnnmodel/bCon2/ApplyAdam"
   op: "ApplyAdam"
-  input: "train/cnnmodel/Variable_3"
-  input: "cnnmodel/train/cnnmodel/Variable_3/Adam"
-  input: "cnnmodel/train/cnnmodel/Variable_3/Adam_1"
+  input: "train/cnnmodel/bCon2"
+  input: "cnnmodel/train/cnnmodel/bCon2/Adam"
+  input: "cnnmodel/train/cnnmodel/bCon2/Adam_1"
   input: "train/cnnmodel/beta1_power/read"
   input: "train/cnnmodel/beta2_power/read"
   input: "train/cnnmodel/Adam/learning_rate"
@@ -11824,7 +11824,7 @@ node {
     key: "_class"
     value {
       list {
-        s: "loc:@train/cnnmodel/Variable_3"
+        s: "loc:@train/cnnmodel/bCon2"
       }
     }
   }
@@ -11848,11 +11848,11 @@ node {
   }
 }
 node {
-  name: "train/cnnmodel/Adam/update_train/cnnmodel/Variable_4/ApplyAdam"
+  name: "train/cnnmodel/Adam/update_train/cnnmodel/WFc1/ApplyAdam"
   op: "ApplyAdam"
-  input: "train/cnnmodel/Variable_4"
-  input: "cnnmodel/train/cnnmodel/Variable_4/Adam"
-  input: "cnnmodel/train/cnnmodel/Variable_4/Adam_1"
+  input: "train/cnnmodel/WFc1"
+  input: "cnnmodel/train/cnnmodel/WFc1/Adam"
+  input: "cnnmodel/train/cnnmodel/WFc1/Adam_1"
   input: "train/cnnmodel/beta1_power/read"
   input: "train/cnnmodel/beta2_power/read"
   input: "train/cnnmodel/Adam/learning_rate"
@@ -11870,7 +11870,7 @@ node {
     key: "_class"
     value {
       list {
-        s: "loc:@train/cnnmodel/Variable_4"
+        s: "loc:@train/cnnmodel/WFc1"
       }
     }
   }
@@ -11897,11 +11897,11 @@ node {
   }
 }
 node {
-  name: "train/cnnmodel/Adam/update_train/cnnmodel/Variable_5/ApplyAdam"
+  name: "train/cnnmodel/Adam/update_train/cnnmodel/bFc2/ApplyAdam"
   op: "ApplyAdam"
-  input: "train/cnnmodel/Variable_5"
-  input: "cnnmodel/train/cnnmodel/Variable_5/Adam"
-  input: "cnnmodel/train/cnnmodel/Variable_5/Adam_1"
+  input: "train/cnnmodel/bFc2"
+  input: "cnnmodel/train/cnnmodel/bFc2/Adam"
+  input: "cnnmodel/train/cnnmodel/bFc2/Adam_1"
   input: "train/cnnmodel/beta1_power/read"
   input: "train/cnnmodel/beta2_power/read"
   input: "train/cnnmodel/Adam/learning_rate"
@@ -11919,7 +11919,7 @@ node {
     key: "_class"
     value {
       list {
-        s: "loc:@train/cnnmodel/Variable_5"
+        s: "loc:@train/cnnmodel/bFc2"
       }
     }
   }
@@ -11943,11 +11943,11 @@ node {
   }
 }
 node {
-  name: "train/cnnmodel/Adam/update_train/cnnmodel/Variable_6/ApplyAdam"
+  name: "train/cnnmodel/Adam/update_train/cnnmodel/WFc2/ApplyAdam"
   op: "ApplyAdam"
-  input: "train/cnnmodel/Variable_6"
-  input: "cnnmodel/train/cnnmodel/Variable_6/Adam"
-  input: "cnnmodel/train/cnnmodel/Variable_6/Adam_1"
+  input: "train/cnnmodel/WFc2"
+  input: "cnnmodel/train/cnnmodel/WFc2/Adam"
+  input: "cnnmodel/train/cnnmodel/WFc2/Adam_1"
   input: "train/cnnmodel/beta1_power/read"
   input: "train/cnnmodel/beta2_power/read"
   input: "train/cnnmodel/Adam/learning_rate"
@@ -11965,7 +11965,7 @@ node {
     key: "_class"
     value {
       list {
-        s: "loc:@train/cnnmodel/Variable_6"
+        s: "loc:@train/cnnmodel/WFc2"
       }
     }
   }
@@ -11992,11 +11992,11 @@ node {
   }
 }
 node {
-  name: "train/cnnmodel/Adam/update_train/cnnmodel/Variable_7/ApplyAdam"
+  name: "train/cnnmodel/Adam/update_train/cnnmodel/bfc2/ApplyAdam"
   op: "ApplyAdam"
-  input: "train/cnnmodel/Variable_7"
-  input: "cnnmodel/train/cnnmodel/Variable_7/Adam"
-  input: "cnnmodel/train/cnnmodel/Variable_7/Adam_1"
+  input: "train/cnnmodel/bfc2"
+  input: "cnnmodel/train/cnnmodel/bfc2/Adam"
+  input: "cnnmodel/train/cnnmodel/bfc2/Adam_1"
   input: "train/cnnmodel/beta1_power/read"
   input: "train/cnnmodel/beta2_power/read"
   input: "train/cnnmodel/Adam/learning_rate"
@@ -12014,7 +12014,7 @@ node {
     key: "_class"
     value {
       list {
-        s: "loc:@train/cnnmodel/Variable_7"
+        s: "loc:@train/cnnmodel/bfc2"
       }
     }
   }
@@ -12042,14 +12042,14 @@ node {
   op: "Mul"
   input: "train/cnnmodel/beta1_power/read"
   input: "train/cnnmodel/Adam/beta1"
-  input: "^train/cnnmodel/Adam/update_train/cnnmodel/Variable/ApplyAdam"
-  input: "^train/cnnmodel/Adam/update_train/cnnmodel/Variable_1/ApplyAdam"
-  input: "^train/cnnmodel/Adam/update_train/cnnmodel/Variable_2/ApplyAdam"
-  input: "^train/cnnmodel/Adam/update_train/cnnmodel/Variable_3/ApplyAdam"
-  input: "^train/cnnmodel/Adam/update_train/cnnmodel/Variable_4/ApplyAdam"
-  input: "^train/cnnmodel/Adam/update_train/cnnmodel/Variable_5/ApplyAdam"
-  input: "^train/cnnmodel/Adam/update_train/cnnmodel/Variable_6/ApplyAdam"
-  input: "^train/cnnmodel/Adam/update_train/cnnmodel/Variable_7/ApplyAdam"
+  input: "^train/cnnmodel/Adam/update_train/cnnmodel/WCon1/ApplyAdam"
+  input: "^train/cnnmodel/Adam/update_train/cnnmodel/bCon1/ApplyAdam"
+  input: "^train/cnnmodel/Adam/update_train/cnnmodel/WCon2/ApplyAdam"
+  input: "^train/cnnmodel/Adam/update_train/cnnmodel/bCon2/ApplyAdam"
+  input: "^train/cnnmodel/Adam/update_train/cnnmodel/WFc1/ApplyAdam"
+  input: "^train/cnnmodel/Adam/update_train/cnnmodel/bFc2/ApplyAdam"
+  input: "^train/cnnmodel/Adam/update_train/cnnmodel/WFc2/ApplyAdam"
+  input: "^train/cnnmodel/Adam/update_train/cnnmodel/bfc2/ApplyAdam"
   attr {
     key: "T"
     value {
@@ -12060,7 +12060,7 @@ node {
     key: "_class"
     value {
       list {
-        s: "loc:@train/cnnmodel/Variable"
+        s: "loc:@train/cnnmodel/WCon1"
       }
     }
   }
@@ -12089,7 +12089,7 @@ node {
     key: "_class"
     value {
       list {
-        s: "loc:@train/cnnmodel/Variable"
+        s: "loc:@train/cnnmodel/WCon1"
       }
     }
   }
@@ -12120,14 +12120,14 @@ node {
   op: "Mul"
   input: "train/cnnmodel/beta2_power/read"
   input: "train/cnnmodel/Adam/beta2"
-  input: "^train/cnnmodel/Adam/update_train/cnnmodel/Variable/ApplyAdam"
-  input: "^train/cnnmodel/Adam/update_train/cnnmodel/Variable_1/ApplyAdam"
-  input: "^train/cnnmodel/Adam/update_train/cnnmodel/Variable_2/ApplyAdam"
-  input: "^train/cnnmodel/Adam/update_train/cnnmodel/Variable_3/ApplyAdam"
-  input: "^train/cnnmodel/Adam/update_train/cnnmodel/Variable_4/ApplyAdam"
-  input: "^train/cnnmodel/Adam/update_train/cnnmodel/Variable_5/ApplyAdam"
-  input: "^train/cnnmodel/Adam/update_train/cnnmodel/Variable_6/ApplyAdam"
-  input: "^train/cnnmodel/Adam/update_train/cnnmodel/Variable_7/ApplyAdam"
+  input: "^train/cnnmodel/Adam/update_train/cnnmodel/WCon1/ApplyAdam"
+  input: "^train/cnnmodel/Adam/update_train/cnnmodel/bCon1/ApplyAdam"
+  input: "^train/cnnmodel/Adam/update_train/cnnmodel/WCon2/ApplyAdam"
+  input: "^train/cnnmodel/Adam/update_train/cnnmodel/bCon2/ApplyAdam"
+  input: "^train/cnnmodel/Adam/update_train/cnnmodel/WFc1/ApplyAdam"
+  input: "^train/cnnmodel/Adam/update_train/cnnmodel/bFc2/ApplyAdam"
+  input: "^train/cnnmodel/Adam/update_train/cnnmodel/WFc2/ApplyAdam"
+  input: "^train/cnnmodel/Adam/update_train/cnnmodel/bfc2/ApplyAdam"
   attr {
     key: "T"
     value {
@@ -12138,7 +12138,7 @@ node {
     key: "_class"
     value {
       list {
-        s: "loc:@train/cnnmodel/Variable"
+        s: "loc:@train/cnnmodel/WCon1"
       }
     }
   }
@@ -12167,7 +12167,7 @@ node {
     key: "_class"
     value {
       list {
-        s: "loc:@train/cnnmodel/Variable"
+        s: "loc:@train/cnnmodel/WCon1"
       }
     }
   }
@@ -12196,14 +12196,14 @@ node {
 node {
   name: "train/cnnmodel/Adam"
   op: "NoOp"
-  input: "^train/cnnmodel/Adam/update_train/cnnmodel/Variable/ApplyAdam"
-  input: "^train/cnnmodel/Adam/update_train/cnnmodel/Variable_1/ApplyAdam"
-  input: "^train/cnnmodel/Adam/update_train/cnnmodel/Variable_2/ApplyAdam"
-  input: "^train/cnnmodel/Adam/update_train/cnnmodel/Variable_3/ApplyAdam"
-  input: "^train/cnnmodel/Adam/update_train/cnnmodel/Variable_4/ApplyAdam"
-  input: "^train/cnnmodel/Adam/update_train/cnnmodel/Variable_5/ApplyAdam"
-  input: "^train/cnnmodel/Adam/update_train/cnnmodel/Variable_6/ApplyAdam"
-  input: "^train/cnnmodel/Adam/update_train/cnnmodel/Variable_7/ApplyAdam"
+  input: "^train/cnnmodel/Adam/update_train/cnnmodel/WCon1/ApplyAdam"
+  input: "^train/cnnmodel/Adam/update_train/cnnmodel/bCon1/ApplyAdam"
+  input: "^train/cnnmodel/Adam/update_train/cnnmodel/WCon2/ApplyAdam"
+  input: "^train/cnnmodel/Adam/update_train/cnnmodel/bCon2/ApplyAdam"
+  input: "^train/cnnmodel/Adam/update_train/cnnmodel/WFc1/ApplyAdam"
+  input: "^train/cnnmodel/Adam/update_train/cnnmodel/bFc2/ApplyAdam"
+  input: "^train/cnnmodel/Adam/update_train/cnnmodel/WFc2/ApplyAdam"
+  input: "^train/cnnmodel/Adam/update_train/cnnmodel/bfc2/ApplyAdam"
   input: "^train/cnnmodel/Adam/Assign"
   input: "^train/cnnmodel/Adam/Assign_1"
 }
@@ -12459,32 +12459,32 @@ node {
 node {
   name: "init"
   op: "NoOp"
-  input: "^train/cnnmodel/Variable/Assign"
-  input: "^train/cnnmodel/Variable_1/Assign"
-  input: "^train/cnnmodel/Variable_2/Assign"
-  input: "^train/cnnmodel/Variable_3/Assign"
-  input: "^train/cnnmodel/Variable_4/Assign"
-  input: "^train/cnnmodel/Variable_5/Assign"
-  input: "^train/cnnmodel/Variable_6/Assign"
-  input: "^train/cnnmodel/Variable_7/Assign"
+  input: "^train/cnnmodel/WCon1/Assign"
+  input: "^train/cnnmodel/bCon1/Assign"
+  input: "^train/cnnmodel/WCon2/Assign"
+  input: "^train/cnnmodel/bCon2/Assign"
+  input: "^train/cnnmodel/WFc1/Assign"
+  input: "^train/cnnmodel/bFc2/Assign"
+  input: "^train/cnnmodel/WFc2/Assign"
+  input: "^train/cnnmodel/bfc2/Assign"
   input: "^train/cnnmodel/beta1_power/Assign"
   input: "^train/cnnmodel/beta2_power/Assign"
-  input: "^cnnmodel/train/cnnmodel/Variable/Adam/Assign"
-  input: "^cnnmodel/train/cnnmodel/Variable/Adam_1/Assign"
-  input: "^cnnmodel/train/cnnmodel/Variable_1/Adam/Assign"
-  input: "^cnnmodel/train/cnnmodel/Variable_1/Adam_1/Assign"
-  input: "^cnnmodel/train/cnnmodel/Variable_2/Adam/Assign"
-  input: "^cnnmodel/train/cnnmodel/Variable_2/Adam_1/Assign"
-  input: "^cnnmodel/train/cnnmodel/Variable_3/Adam/Assign"
-  input: "^cnnmodel/train/cnnmodel/Variable_3/Adam_1/Assign"
-  input: "^cnnmodel/train/cnnmodel/Variable_4/Adam/Assign"
-  input: "^cnnmodel/train/cnnmodel/Variable_4/Adam_1/Assign"
-  input: "^cnnmodel/train/cnnmodel/Variable_5/Adam/Assign"
-  input: "^cnnmodel/train/cnnmodel/Variable_5/Adam_1/Assign"
-  input: "^cnnmodel/train/cnnmodel/Variable_6/Adam/Assign"
-  input: "^cnnmodel/train/cnnmodel/Variable_6/Adam_1/Assign"
-  input: "^cnnmodel/train/cnnmodel/Variable_7/Adam/Assign"
-  input: "^cnnmodel/train/cnnmodel/Variable_7/Adam_1/Assign"
+  input: "^cnnmodel/train/cnnmodel/WCon1/Adam/Assign"
+  input: "^cnnmodel/train/cnnmodel/WCon1/Adam_1/Assign"
+  input: "^cnnmodel/train/cnnmodel/bCon1/Adam/Assign"
+  input: "^cnnmodel/train/cnnmodel/bCon1/Adam_1/Assign"
+  input: "^cnnmodel/train/cnnmodel/WCon2/Adam/Assign"
+  input: "^cnnmodel/train/cnnmodel/WCon2/Adam_1/Assign"
+  input: "^cnnmodel/train/cnnmodel/bCon2/Adam/Assign"
+  input: "^cnnmodel/train/cnnmodel/bCon2/Adam_1/Assign"
+  input: "^cnnmodel/train/cnnmodel/WFc1/Adam/Assign"
+  input: "^cnnmodel/train/cnnmodel/WFc1/Adam_1/Assign"
+  input: "^cnnmodel/train/cnnmodel/bFc2/Adam/Assign"
+  input: "^cnnmodel/train/cnnmodel/bFc2/Adam_1/Assign"
+  input: "^cnnmodel/train/cnnmodel/WFc2/Adam/Assign"
+  input: "^cnnmodel/train/cnnmodel/WFc2/Adam_1/Assign"
+  input: "^cnnmodel/train/cnnmodel/bfc2/Adam/Assign"
+  input: "^cnnmodel/train/cnnmodel/bfc2/Adam_1/Assign"
 }
 node {
   name: "save/Const"
@@ -12525,7 +12525,7 @@ node {
       list {
         shape {
           dim {
-            size: 26
+            size: 8
           }
         }
       }
@@ -12544,35 +12544,17 @@ node {
         dtype: DT_STRING
         tensor_shape {
           dim {
-            size: 26
+            size: 8
           }
         }
-        string_val: "cnnmodel/train/cnnmodel/Variable/Adam"
-        string_val: "cnnmodel/train/cnnmodel/Variable/Adam_1"
-        string_val: "cnnmodel/train/cnnmodel/Variable_1/Adam"
-        string_val: "cnnmodel/train/cnnmodel/Variable_1/Adam_1"
-        string_val: "cnnmodel/train/cnnmodel/Variable_2/Adam"
-        string_val: "cnnmodel/train/cnnmodel/Variable_2/Adam_1"
-        string_val: "cnnmodel/train/cnnmodel/Variable_3/Adam"
-        string_val: "cnnmodel/train/cnnmodel/Variable_3/Adam_1"
-        string_val: "cnnmodel/train/cnnmodel/Variable_4/Adam"
-        string_val: "cnnmodel/train/cnnmodel/Variable_4/Adam_1"
-        string_val: "cnnmodel/train/cnnmodel/Variable_5/Adam"
-        string_val: "cnnmodel/train/cnnmodel/Variable_5/Adam_1"
-        string_val: "cnnmodel/train/cnnmodel/Variable_6/Adam"
-        string_val: "cnnmodel/train/cnnmodel/Variable_6/Adam_1"
-        string_val: "cnnmodel/train/cnnmodel/Variable_7/Adam"
-        string_val: "cnnmodel/train/cnnmodel/Variable_7/Adam_1"
-        string_val: "train/cnnmodel/Variable"
-        string_val: "train/cnnmodel/Variable_1"
-        string_val: "train/cnnmodel/Variable_2"
-        string_val: "train/cnnmodel/Variable_3"
-        string_val: "train/cnnmodel/Variable_4"
-        string_val: "train/cnnmodel/Variable_5"
-        string_val: "train/cnnmodel/Variable_6"
-        string_val: "train/cnnmodel/Variable_7"
-        string_val: "train/cnnmodel/beta1_power"
-        string_val: "train/cnnmodel/beta2_power"
+        string_val: "WCon1"
+        string_val: "WCon2"
+        string_val: "WFc1"
+        string_val: "WFc2"
+        string_val: "bCon1"
+        string_val: "bCon2"
+        string_val: "bFc1"
+        string_val: "bFc2"
       }
     }
   }
@@ -12586,7 +12568,7 @@ node {
       list {
         shape {
           dim {
-            size: 26
+            size: 8
           }
         }
       }
@@ -12605,27 +12587,9 @@ node {
         dtype: DT_STRING
         tensor_shape {
           dim {
-            size: 26
+            size: 8
           }
         }
-        string_val: ""
-        string_val: ""
-        string_val: ""
-        string_val: ""
-        string_val: ""
-        string_val: ""
-        string_val: ""
-        string_val: ""
-        string_val: ""
-        string_val: ""
-        string_val: ""
-        string_val: ""
-        string_val: ""
-        string_val: ""
-        string_val: ""
-        string_val: ""
-        string_val: ""
-        string_val: ""
         string_val: ""
         string_val: ""
         string_val: ""
@@ -12644,54 +12608,18 @@ node {
   input: "save/Const"
   input: "save/SaveV2/tensor_names"
   input: "save/SaveV2/shape_and_slices"
-  input: "cnnmodel/train/cnnmodel/Variable/Adam"
-  input: "cnnmodel/train/cnnmodel/Variable/Adam_1"
-  input: "cnnmodel/train/cnnmodel/Variable_1/Adam"
-  input: "cnnmodel/train/cnnmodel/Variable_1/Adam_1"
-  input: "cnnmodel/train/cnnmodel/Variable_2/Adam"
-  input: "cnnmodel/train/cnnmodel/Variable_2/Adam_1"
-  input: "cnnmodel/train/cnnmodel/Variable_3/Adam"
-  input: "cnnmodel/train/cnnmodel/Variable_3/Adam_1"
-  input: "cnnmodel/train/cnnmodel/Variable_4/Adam"
-  input: "cnnmodel/train/cnnmodel/Variable_4/Adam_1"
-  input: "cnnmodel/train/cnnmodel/Variable_5/Adam"
-  input: "cnnmodel/train/cnnmodel/Variable_5/Adam_1"
-  input: "cnnmodel/train/cnnmodel/Variable_6/Adam"
-  input: "cnnmodel/train/cnnmodel/Variable_6/Adam_1"
-  input: "cnnmodel/train/cnnmodel/Variable_7/Adam"
-  input: "cnnmodel/train/cnnmodel/Variable_7/Adam_1"
-  input: "train/cnnmodel/Variable"
-  input: "train/cnnmodel/Variable_1"
-  input: "train/cnnmodel/Variable_2"
-  input: "train/cnnmodel/Variable_3"
-  input: "train/cnnmodel/Variable_4"
-  input: "train/cnnmodel/Variable_5"
-  input: "train/cnnmodel/Variable_6"
-  input: "train/cnnmodel/Variable_7"
-  input: "train/cnnmodel/beta1_power"
-  input: "train/cnnmodel/beta2_power"
+  input: "train/cnnmodel/WCon1"
+  input: "train/cnnmodel/WCon2"
+  input: "train/cnnmodel/WFc1"
+  input: "train/cnnmodel/WFc2"
+  input: "train/cnnmodel/bCon1"
+  input: "train/cnnmodel/bCon2"
+  input: "train/cnnmodel/bFc2"
+  input: "train/cnnmodel/bfc2"
   attr {
     key: "dtypes"
     value {
       list {
-        type: DT_FLOAT
-        type: DT_FLOAT
-        type: DT_FLOAT
-        type: DT_FLOAT
-        type: DT_FLOAT
-        type: DT_FLOAT
-        type: DT_FLOAT
-        type: DT_FLOAT
-        type: DT_FLOAT
-        type: DT_FLOAT
-        type: DT_FLOAT
-        type: DT_FLOAT
-        type: DT_FLOAT
-        type: DT_FLOAT
-        type: DT_FLOAT
-        type: DT_FLOAT
-        type: DT_FLOAT
-        type: DT_FLOAT
         type: DT_FLOAT
         type: DT_FLOAT
         type: DT_FLOAT
@@ -12764,7 +12692,7 @@ node {
             size: 1
           }
         }
-        string_val: "cnnmodel/train/cnnmodel/Variable/Adam"
+        string_val: "WCon1"
       }
     }
   }
@@ -12833,7 +12761,7 @@ node {
 node {
   name: "save/Assign"
   op: "Assign"
-  input: "cnnmodel/train/cnnmodel/Variable/Adam"
+  input: "train/cnnmodel/WCon1"
   input: "save/RestoreV2"
   attr {
     key: "T"
@@ -12845,7 +12773,7 @@ node {
     key: "_class"
     value {
       list {
-        s: "loc:@train/cnnmodel/Variable"
+        s: "loc:@train/cnnmodel/WCon1"
       }
     }
   }
@@ -12914,7 +12842,7 @@ node {
             size: 1
           }
         }
-        string_val: "cnnmodel/train/cnnmodel/Variable/Adam_1"
+        string_val: "WCon2"
       }
     }
   }
@@ -12983,7 +12911,7 @@ node {
 node {
   name: "save/Assign_1"
   op: "Assign"
-  input: "cnnmodel/train/cnnmodel/Variable/Adam_1"
+  input: "train/cnnmodel/WCon2"
   input: "save/RestoreV2_1"
   attr {
     key: "T"
@@ -12995,7 +12923,7 @@ node {
     key: "_class"
     value {
       list {
-        s: "loc:@train/cnnmodel/Variable"
+        s: "loc:@train/cnnmodel/WCon2"
       }
     }
   }
@@ -13011,10 +12939,10 @@ node {
             size: 5
           }
           dim {
-            size: 1
+            size: 32
           }
           dim {
-            size: 32
+            size: 64
           }
         }
       }
@@ -13064,7 +12992,7 @@ node {
             size: 1
           }
         }
-        string_val: "cnnmodel/train/cnnmodel/Variable_1/Adam"
+        string_val: "WFc1"
       }
     }
   }
@@ -13133,7 +13061,7 @@ node {
 node {
   name: "save/Assign_2"
   op: "Assign"
-  input: "cnnmodel/train/cnnmodel/Variable_1/Adam"
+  input: "train/cnnmodel/WFc1"
   input: "save/RestoreV2_2"
   attr {
     key: "T"
@@ -13145,7 +13073,7 @@ node {
     key: "_class"
     value {
       list {
-        s: "loc:@train/cnnmodel/Variable_1"
+        s: "loc:@train/cnnmodel/WFc1"
       }
     }
   }
@@ -13155,7 +13083,10 @@ node {
       list {
         shape {
           dim {
-            size: 32
+            size: 5632
+          }
+          dim {
+            size: 1024
           }
         }
       }
@@ -13205,7 +13136,7 @@ node {
             size: 1
           }
         }
-        string_val: "cnnmodel/train/cnnmodel/Variable_1/Adam_1"
+        string_val: "WFc2"
       }
     }
   }
@@ -13274,7 +13205,7 @@ node {
 node {
   name: "save/Assign_3"
   op: "Assign"
-  input: "cnnmodel/train/cnnmodel/Variable_1/Adam_1"
+  input: "train/cnnmodel/WFc2"
   input: "save/RestoreV2_3"
   attr {
     key: "T"
@@ -13286,7 +13217,7 @@ node {
     key: "_class"
     value {
       list {
-        s: "loc:@train/cnnmodel/Variable_1"
+        s: "loc:@train/cnnmodel/WFc2"
       }
     }
   }
@@ -13296,7 +13227,10 @@ node {
       list {
         shape {
           dim {
-            size: 32
+            size: 1024
+          }
+          dim {
+            size: 44
           }
         }
       }
@@ -13346,7 +13280,7 @@ node {
             size: 1
           }
         }
-        string_val: "cnnmodel/train/cnnmodel/Variable_2/Adam"
+        string_val: "bCon1"
       }
     }
   }
@@ -13415,7 +13349,7 @@ node {
 node {
   name: "save/Assign_4"
   op: "Assign"
-  input: "cnnmodel/train/cnnmodel/Variable_2/Adam"
+  input: "train/cnnmodel/bCon1"
   input: "save/RestoreV2_4"
   attr {
     key: "T"
@@ -13427,7 +13361,7 @@ node {
     key: "_class"
     value {
       list {
-        s: "loc:@train/cnnmodel/Variable_2"
+        s: "loc:@train/cnnmodel/bCon1"
       }
     }
   }
@@ -13437,16 +13371,7 @@ node {
       list {
         shape {
           dim {
-            size: 5
-          }
-          dim {
-            size: 5
-          }
-          dim {
             size: 32
-          }
-          dim {
-            size: 64
           }
         }
       }
@@ -13496,7 +13421,7 @@ node {
             size: 1
           }
         }
-        string_val: "cnnmodel/train/cnnmodel/Variable_2/Adam_1"
+        string_val: "bCon2"
       }
     }
   }
@@ -13565,7 +13490,7 @@ node {
 node {
   name: "save/Assign_5"
   op: "Assign"
-  input: "cnnmodel/train/cnnmodel/Variable_2/Adam_1"
+  input: "train/cnnmodel/bCon2"
   input: "save/RestoreV2_5"
   attr {
     key: "T"
@@ -13577,7 +13502,7 @@ node {
     key: "_class"
     value {
       list {
-        s: "loc:@train/cnnmodel/Variable_2"
+        s: "loc:@train/cnnmodel/bCon2"
       }
     }
   }
@@ -13586,15 +13511,6 @@ node {
     value {
       list {
         shape {
-          dim {
-            size: 5
-          }
-          dim {
-            size: 5
-          }
-          dim {
-            size: 32
-          }
           dim {
             size: 64
           }
@@ -13646,7 +13562,7 @@ node {
             size: 1
           }
         }
-        string_val: "cnnmodel/train/cnnmodel/Variable_3/Adam"
+        string_val: "bFc1"
       }
     }
   }
@@ -13715,7 +13631,7 @@ node {
 node {
   name: "save/Assign_6"
   op: "Assign"
-  input: "cnnmodel/train/cnnmodel/Variable_3/Adam"
+  input: "train/cnnmodel/bFc2"
   input: "save/RestoreV2_6"
   attr {
     key: "T"
@@ -13727,7 +13643,7 @@ node {
     key: "_class"
     value {
       list {
-        s: "loc:@train/cnnmodel/Variable_3"
+        s: "loc:@train/cnnmodel/bFc2"
       }
     }
   }
@@ -13737,7 +13653,7 @@ node {
       list {
         shape {
           dim {
-            size: 64
+            size: 1024
           }
         }
       }
@@ -13787,7 +13703,7 @@ node {
             size: 1
           }
         }
-        string_val: "cnnmodel/train/cnnmodel/Variable_3/Adam_1"
+        string_val: "bFc2"
       }
     }
   }
@@ -13856,7 +13772,7 @@ node {
 node {
   name: "save/Assign_7"
   op: "Assign"
-  input: "cnnmodel/train/cnnmodel/Variable_3/Adam_1"
+  input: "train/cnnmodel/bfc2"
   input: "save/RestoreV2_7"
   attr {
     key: "T"
@@ -13868,1006 +13784,7 @@ node {
     key: "_class"
     value {
       list {
-        s: "loc:@train/cnnmodel/Variable_3"
-      }
-    }
-  }
-  attr {
-    key: "_output_shapes"
-    value {
-      list {
-        shape {
-          dim {
-            size: 64
-          }
-        }
-      }
-    }
-  }
-  attr {
-    key: "use_locking"
-    value {
-      b: true
-    }
-  }
-  attr {
-    key: "validate_shape"
-    value {
-      b: true
-    }
-  }
-}
-node {
-  name: "save/RestoreV2_8/tensor_names"
-  op: "Const"
-  attr {
-    key: "_output_shapes"
-    value {
-      list {
-        shape {
-          dim {
-            size: 1
-          }
-        }
-      }
-    }
-  }
-  attr {
-    key: "dtype"
-    value {
-      type: DT_STRING
-    }
-  }
-  attr {
-    key: "value"
-    value {
-      tensor {
-        dtype: DT_STRING
-        tensor_shape {
-          dim {
-            size: 1
-          }
-        }
-        string_val: "cnnmodel/train/cnnmodel/Variable_4/Adam"
-      }
-    }
-  }
-}
-node {
-  name: "save/RestoreV2_8/shape_and_slices"
-  op: "Const"
-  attr {
-    key: "_output_shapes"
-    value {
-      list {
-        shape {
-          dim {
-            size: 1
-          }
-        }
-      }
-    }
-  }
-  attr {
-    key: "dtype"
-    value {
-      type: DT_STRING
-    }
-  }
-  attr {
-    key: "value"
-    value {
-      tensor {
-        dtype: DT_STRING
-        tensor_shape {
-          dim {
-            size: 1
-          }
-        }
-        string_val: ""
-      }
-    }
-  }
-}
-node {
-  name: "save/RestoreV2_8"
-  op: "RestoreV2"
-  input: "save/Const"
-  input: "save/RestoreV2_8/tensor_names"
-  input: "save/RestoreV2_8/shape_and_slices"
-  attr {
-    key: "_output_shapes"
-    value {
-      list {
-        shape {
-          unknown_rank: true
-        }
-      }
-    }
-  }
-  attr {
-    key: "dtypes"
-    value {
-      list {
-        type: DT_FLOAT
-      }
-    }
-  }
-}
-node {
-  name: "save/Assign_8"
-  op: "Assign"
-  input: "cnnmodel/train/cnnmodel/Variable_4/Adam"
-  input: "save/RestoreV2_8"
-  attr {
-    key: "T"
-    value {
-      type: DT_FLOAT
-    }
-  }
-  attr {
-    key: "_class"
-    value {
-      list {
-        s: "loc:@train/cnnmodel/Variable_4"
-      }
-    }
-  }
-  attr {
-    key: "_output_shapes"
-    value {
-      list {
-        shape {
-          dim {
-            size: 5632
-          }
-          dim {
-            size: 1024
-          }
-        }
-      }
-    }
-  }
-  attr {
-    key: "use_locking"
-    value {
-      b: true
-    }
-  }
-  attr {
-    key: "validate_shape"
-    value {
-      b: true
-    }
-  }
-}
-node {
-  name: "save/RestoreV2_9/tensor_names"
-  op: "Const"
-  attr {
-    key: "_output_shapes"
-    value {
-      list {
-        shape {
-          dim {
-            size: 1
-          }
-        }
-      }
-    }
-  }
-  attr {
-    key: "dtype"
-    value {
-      type: DT_STRING
-    }
-  }
-  attr {
-    key: "value"
-    value {
-      tensor {
-        dtype: DT_STRING
-        tensor_shape {
-          dim {
-            size: 1
-          }
-        }
-        string_val: "cnnmodel/train/cnnmodel/Variable_4/Adam_1"
-      }
-    }
-  }
-}
-node {
-  name: "save/RestoreV2_9/shape_and_slices"
-  op: "Const"
-  attr {
-    key: "_output_shapes"
-    value {
-      list {
-        shape {
-          dim {
-            size: 1
-          }
-        }
-      }
-    }
-  }
-  attr {
-    key: "dtype"
-    value {
-      type: DT_STRING
-    }
-  }
-  attr {
-    key: "value"
-    value {
-      tensor {
-        dtype: DT_STRING
-        tensor_shape {
-          dim {
-            size: 1
-          }
-        }
-        string_val: ""
-      }
-    }
-  }
-}
-node {
-  name: "save/RestoreV2_9"
-  op: "RestoreV2"
-  input: "save/Const"
-  input: "save/RestoreV2_9/tensor_names"
-  input: "save/RestoreV2_9/shape_and_slices"
-  attr {
-    key: "_output_shapes"
-    value {
-      list {
-        shape {
-          unknown_rank: true
-        }
-      }
-    }
-  }
-  attr {
-    key: "dtypes"
-    value {
-      list {
-        type: DT_FLOAT
-      }
-    }
-  }
-}
-node {
-  name: "save/Assign_9"
-  op: "Assign"
-  input: "cnnmodel/train/cnnmodel/Variable_4/Adam_1"
-  input: "save/RestoreV2_9"
-  attr {
-    key: "T"
-    value {
-      type: DT_FLOAT
-    }
-  }
-  attr {
-    key: "_class"
-    value {
-      list {
-        s: "loc:@train/cnnmodel/Variable_4"
-      }
-    }
-  }
-  attr {
-    key: "_output_shapes"
-    value {
-      list {
-        shape {
-          dim {
-            size: 5632
-          }
-          dim {
-            size: 1024
-          }
-        }
-      }
-    }
-  }
-  attr {
-    key: "use_locking"
-    value {
-      b: true
-    }
-  }
-  attr {
-    key: "validate_shape"
-    value {
-      b: true
-    }
-  }
-}
-node {
-  name: "save/RestoreV2_10/tensor_names"
-  op: "Const"
-  attr {
-    key: "_output_shapes"
-    value {
-      list {
-        shape {
-          dim {
-            size: 1
-          }
-        }
-      }
-    }
-  }
-  attr {
-    key: "dtype"
-    value {
-      type: DT_STRING
-    }
-  }
-  attr {
-    key: "value"
-    value {
-      tensor {
-        dtype: DT_STRING
-        tensor_shape {
-          dim {
-            size: 1
-          }
-        }
-        string_val: "cnnmodel/train/cnnmodel/Variable_5/Adam"
-      }
-    }
-  }
-}
-node {
-  name: "save/RestoreV2_10/shape_and_slices"
-  op: "Const"
-  attr {
-    key: "_output_shapes"
-    value {
-      list {
-        shape {
-          dim {
-            size: 1
-          }
-        }
-      }
-    }
-  }
-  attr {
-    key: "dtype"
-    value {
-      type: DT_STRING
-    }
-  }
-  attr {
-    key: "value"
-    value {
-      tensor {
-        dtype: DT_STRING
-        tensor_shape {
-          dim {
-            size: 1
-          }
-        }
-        string_val: ""
-      }
-    }
-  }
-}
-node {
-  name: "save/RestoreV2_10"
-  op: "RestoreV2"
-  input: "save/Const"
-  input: "save/RestoreV2_10/tensor_names"
-  input: "save/RestoreV2_10/shape_and_slices"
-  attr {
-    key: "_output_shapes"
-    value {
-      list {
-        shape {
-          unknown_rank: true
-        }
-      }
-    }
-  }
-  attr {
-    key: "dtypes"
-    value {
-      list {
-        type: DT_FLOAT
-      }
-    }
-  }
-}
-node {
-  name: "save/Assign_10"
-  op: "Assign"
-  input: "cnnmodel/train/cnnmodel/Variable_5/Adam"
-  input: "save/RestoreV2_10"
-  attr {
-    key: "T"
-    value {
-      type: DT_FLOAT
-    }
-  }
-  attr {
-    key: "_class"
-    value {
-      list {
-        s: "loc:@train/cnnmodel/Variable_5"
-      }
-    }
-  }
-  attr {
-    key: "_output_shapes"
-    value {
-      list {
-        shape {
-          dim {
-            size: 1024
-          }
-        }
-      }
-    }
-  }
-  attr {
-    key: "use_locking"
-    value {
-      b: true
-    }
-  }
-  attr {
-    key: "validate_shape"
-    value {
-      b: true
-    }
-  }
-}
-node {
-  name: "save/RestoreV2_11/tensor_names"
-  op: "Const"
-  attr {
-    key: "_output_shapes"
-    value {
-      list {
-        shape {
-          dim {
-            size: 1
-          }
-        }
-      }
-    }
-  }
-  attr {
-    key: "dtype"
-    value {
-      type: DT_STRING
-    }
-  }
-  attr {
-    key: "value"
-    value {
-      tensor {
-        dtype: DT_STRING
-        tensor_shape {
-          dim {
-            size: 1
-          }
-        }
-        string_val: "cnnmodel/train/cnnmodel/Variable_5/Adam_1"
-      }
-    }
-  }
-}
-node {
-  name: "save/RestoreV2_11/shape_and_slices"
-  op: "Const"
-  attr {
-    key: "_output_shapes"
-    value {
-      list {
-        shape {
-          dim {
-            size: 1
-          }
-        }
-      }
-    }
-  }
-  attr {
-    key: "dtype"
-    value {
-      type: DT_STRING
-    }
-  }
-  attr {
-    key: "value"
-    value {
-      tensor {
-        dtype: DT_STRING
-        tensor_shape {
-          dim {
-            size: 1
-          }
-        }
-        string_val: ""
-      }
-    }
-  }
-}
-node {
-  name: "save/RestoreV2_11"
-  op: "RestoreV2"
-  input: "save/Const"
-  input: "save/RestoreV2_11/tensor_names"
-  input: "save/RestoreV2_11/shape_and_slices"
-  attr {
-    key: "_output_shapes"
-    value {
-      list {
-        shape {
-          unknown_rank: true
-        }
-      }
-    }
-  }
-  attr {
-    key: "dtypes"
-    value {
-      list {
-        type: DT_FLOAT
-      }
-    }
-  }
-}
-node {
-  name: "save/Assign_11"
-  op: "Assign"
-  input: "cnnmodel/train/cnnmodel/Variable_5/Adam_1"
-  input: "save/RestoreV2_11"
-  attr {
-    key: "T"
-    value {
-      type: DT_FLOAT
-    }
-  }
-  attr {
-    key: "_class"
-    value {
-      list {
-        s: "loc:@train/cnnmodel/Variable_5"
-      }
-    }
-  }
-  attr {
-    key: "_output_shapes"
-    value {
-      list {
-        shape {
-          dim {
-            size: 1024
-          }
-        }
-      }
-    }
-  }
-  attr {
-    key: "use_locking"
-    value {
-      b: true
-    }
-  }
-  attr {
-    key: "validate_shape"
-    value {
-      b: true
-    }
-  }
-}
-node {
-  name: "save/RestoreV2_12/tensor_names"
-  op: "Const"
-  attr {
-    key: "_output_shapes"
-    value {
-      list {
-        shape {
-          dim {
-            size: 1
-          }
-        }
-      }
-    }
-  }
-  attr {
-    key: "dtype"
-    value {
-      type: DT_STRING
-    }
-  }
-  attr {
-    key: "value"
-    value {
-      tensor {
-        dtype: DT_STRING
-        tensor_shape {
-          dim {
-            size: 1
-          }
-        }
-        string_val: "cnnmodel/train/cnnmodel/Variable_6/Adam"
-      }
-    }
-  }
-}
-node {
-  name: "save/RestoreV2_12/shape_and_slices"
-  op: "Const"
-  attr {
-    key: "_output_shapes"
-    value {
-      list {
-        shape {
-          dim {
-            size: 1
-          }
-        }
-      }
-    }
-  }
-  attr {
-    key: "dtype"
-    value {
-      type: DT_STRING
-    }
-  }
-  attr {
-    key: "value"
-    value {
-      tensor {
-        dtype: DT_STRING
-        tensor_shape {
-          dim {
-            size: 1
-          }
-        }
-        string_val: ""
-      }
-    }
-  }
-}
-node {
-  name: "save/RestoreV2_12"
-  op: "RestoreV2"
-  input: "save/Const"
-  input: "save/RestoreV2_12/tensor_names"
-  input: "save/RestoreV2_12/shape_and_slices"
-  attr {
-    key: "_output_shapes"
-    value {
-      list {
-        shape {
-          unknown_rank: true
-        }
-      }
-    }
-  }
-  attr {
-    key: "dtypes"
-    value {
-      list {
-        type: DT_FLOAT
-      }
-    }
-  }
-}
-node {
-  name: "save/Assign_12"
-  op: "Assign"
-  input: "cnnmodel/train/cnnmodel/Variable_6/Adam"
-  input: "save/RestoreV2_12"
-  attr {
-    key: "T"
-    value {
-      type: DT_FLOAT
-    }
-  }
-  attr {
-    key: "_class"
-    value {
-      list {
-        s: "loc:@train/cnnmodel/Variable_6"
-      }
-    }
-  }
-  attr {
-    key: "_output_shapes"
-    value {
-      list {
-        shape {
-          dim {
-            size: 1024
-          }
-          dim {
-            size: 44
-          }
-        }
-      }
-    }
-  }
-  attr {
-    key: "use_locking"
-    value {
-      b: true
-    }
-  }
-  attr {
-    key: "validate_shape"
-    value {
-      b: true
-    }
-  }
-}
-node {
-  name: "save/RestoreV2_13/tensor_names"
-  op: "Const"
-  attr {
-    key: "_output_shapes"
-    value {
-      list {
-        shape {
-          dim {
-            size: 1
-          }
-        }
-      }
-    }
-  }
-  attr {
-    key: "dtype"
-    value {
-      type: DT_STRING
-    }
-  }
-  attr {
-    key: "value"
-    value {
-      tensor {
-        dtype: DT_STRING
-        tensor_shape {
-          dim {
-            size: 1
-          }
-        }
-        string_val: "cnnmodel/train/cnnmodel/Variable_6/Adam_1"
-      }
-    }
-  }
-}
-node {
-  name: "save/RestoreV2_13/shape_and_slices"
-  op: "Const"
-  attr {
-    key: "_output_shapes"
-    value {
-      list {
-        shape {
-          dim {
-            size: 1
-          }
-        }
-      }
-    }
-  }
-  attr {
-    key: "dtype"
-    value {
-      type: DT_STRING
-    }
-  }
-  attr {
-    key: "value"
-    value {
-      tensor {
-        dtype: DT_STRING
-        tensor_shape {
-          dim {
-            size: 1
-          }
-        }
-        string_val: ""
-      }
-    }
-  }
-}
-node {
-  name: "save/RestoreV2_13"
-  op: "RestoreV2"
-  input: "save/Const"
-  input: "save/RestoreV2_13/tensor_names"
-  input: "save/RestoreV2_13/shape_and_slices"
-  attr {
-    key: "_output_shapes"
-    value {
-      list {
-        shape {
-          unknown_rank: true
-        }
-      }
-    }
-  }
-  attr {
-    key: "dtypes"
-    value {
-      list {
-        type: DT_FLOAT
-      }
-    }
-  }
-}
-node {
-  name: "save/Assign_13"
-  op: "Assign"
-  input: "cnnmodel/train/cnnmodel/Variable_6/Adam_1"
-  input: "save/RestoreV2_13"
-  attr {
-    key: "T"
-    value {
-      type: DT_FLOAT
-    }
-  }
-  attr {
-    key: "_class"
-    value {
-      list {
-        s: "loc:@train/cnnmodel/Variable_6"
-      }
-    }
-  }
-  attr {
-    key: "_output_shapes"
-    value {
-      list {
-        shape {
-          dim {
-            size: 1024
-          }
-          dim {
-            size: 44
-          }
-        }
-      }
-    }
-  }
-  attr {
-    key: "use_locking"
-    value {
-      b: true
-    }
-  }
-  attr {
-    key: "validate_shape"
-    value {
-      b: true
-    }
-  }
-}
-node {
-  name: "save/RestoreV2_14/tensor_names"
-  op: "Const"
-  attr {
-    key: "_output_shapes"
-    value {
-      list {
-        shape {
-          dim {
-            size: 1
-          }
-        }
-      }
-    }
-  }
-  attr {
-    key: "dtype"
-    value {
-      type: DT_STRING
-    }
-  }
-  attr {
-    key: "value"
-    value {
-      tensor {
-        dtype: DT_STRING
-        tensor_shape {
-          dim {
-            size: 1
-          }
-        }
-        string_val: "cnnmodel/train/cnnmodel/Variable_7/Adam"
-      }
-    }
-  }
-}
-node {
-  name: "save/RestoreV2_14/shape_and_slices"
-  op: "Const"
-  attr {
-    key: "_output_shapes"
-    value {
-      list {
-        shape {
-          dim {
-            size: 1
-          }
-        }
-      }
-    }
-  }
-  attr {
-    key: "dtype"
-    value {
-      type: DT_STRING
-    }
-  }
-  attr {
-    key: "value"
-    value {
-      tensor {
-        dtype: DT_STRING
-        tensor_shape {
-          dim {
-            size: 1
-          }
-        }
-        string_val: ""
-      }
-    }
-  }
-}
-node {
-  name: "save/RestoreV2_14"
-  op: "RestoreV2"
-  input: "save/Const"
-  input: "save/RestoreV2_14/tensor_names"
-  input: "save/RestoreV2_14/shape_and_slices"
-  attr {
-    key: "_output_shapes"
-    value {
-      list {
-        shape {
-          unknown_rank: true
-        }
-      }
-    }
-  }
-  attr {
-    key: "dtypes"
-    value {
-      list {
-        type: DT_FLOAT
-      }
-    }
-  }
-}
-node {
-  name: "save/Assign_14"
-  op: "Assign"
-  input: "cnnmodel/train/cnnmodel/Variable_7/Adam"
-  input: "save/RestoreV2_14"
-  attr {
-    key: "T"
-    value {
-      type: DT_FLOAT
-    }
-  }
-  attr {
-    key: "_class"
-    value {
-      list {
-        s: "loc:@train/cnnmodel/Variable_7"
+        s: "loc:@train/cnnmodel/bfc2"
       }
     }
   }
@@ -14879,1575 +13796,6 @@ node {
           dim {
             size: 44
           }
-        }
-      }
-    }
-  }
-  attr {
-    key: "use_locking"
-    value {
-      b: true
-    }
-  }
-  attr {
-    key: "validate_shape"
-    value {
-      b: true
-    }
-  }
-}
-node {
-  name: "save/RestoreV2_15/tensor_names"
-  op: "Const"
-  attr {
-    key: "_output_shapes"
-    value {
-      list {
-        shape {
-          dim {
-            size: 1
-          }
-        }
-      }
-    }
-  }
-  attr {
-    key: "dtype"
-    value {
-      type: DT_STRING
-    }
-  }
-  attr {
-    key: "value"
-    value {
-      tensor {
-        dtype: DT_STRING
-        tensor_shape {
-          dim {
-            size: 1
-          }
-        }
-        string_val: "cnnmodel/train/cnnmodel/Variable_7/Adam_1"
-      }
-    }
-  }
-}
-node {
-  name: "save/RestoreV2_15/shape_and_slices"
-  op: "Const"
-  attr {
-    key: "_output_shapes"
-    value {
-      list {
-        shape {
-          dim {
-            size: 1
-          }
-        }
-      }
-    }
-  }
-  attr {
-    key: "dtype"
-    value {
-      type: DT_STRING
-    }
-  }
-  attr {
-    key: "value"
-    value {
-      tensor {
-        dtype: DT_STRING
-        tensor_shape {
-          dim {
-            size: 1
-          }
-        }
-        string_val: ""
-      }
-    }
-  }
-}
-node {
-  name: "save/RestoreV2_15"
-  op: "RestoreV2"
-  input: "save/Const"
-  input: "save/RestoreV2_15/tensor_names"
-  input: "save/RestoreV2_15/shape_and_slices"
-  attr {
-    key: "_output_shapes"
-    value {
-      list {
-        shape {
-          unknown_rank: true
-        }
-      }
-    }
-  }
-  attr {
-    key: "dtypes"
-    value {
-      list {
-        type: DT_FLOAT
-      }
-    }
-  }
-}
-node {
-  name: "save/Assign_15"
-  op: "Assign"
-  input: "cnnmodel/train/cnnmodel/Variable_7/Adam_1"
-  input: "save/RestoreV2_15"
-  attr {
-    key: "T"
-    value {
-      type: DT_FLOAT
-    }
-  }
-  attr {
-    key: "_class"
-    value {
-      list {
-        s: "loc:@train/cnnmodel/Variable_7"
-      }
-    }
-  }
-  attr {
-    key: "_output_shapes"
-    value {
-      list {
-        shape {
-          dim {
-            size: 44
-          }
-        }
-      }
-    }
-  }
-  attr {
-    key: "use_locking"
-    value {
-      b: true
-    }
-  }
-  attr {
-    key: "validate_shape"
-    value {
-      b: true
-    }
-  }
-}
-node {
-  name: "save/RestoreV2_16/tensor_names"
-  op: "Const"
-  attr {
-    key: "_output_shapes"
-    value {
-      list {
-        shape {
-          dim {
-            size: 1
-          }
-        }
-      }
-    }
-  }
-  attr {
-    key: "dtype"
-    value {
-      type: DT_STRING
-    }
-  }
-  attr {
-    key: "value"
-    value {
-      tensor {
-        dtype: DT_STRING
-        tensor_shape {
-          dim {
-            size: 1
-          }
-        }
-        string_val: "train/cnnmodel/Variable"
-      }
-    }
-  }
-}
-node {
-  name: "save/RestoreV2_16/shape_and_slices"
-  op: "Const"
-  attr {
-    key: "_output_shapes"
-    value {
-      list {
-        shape {
-          dim {
-            size: 1
-          }
-        }
-      }
-    }
-  }
-  attr {
-    key: "dtype"
-    value {
-      type: DT_STRING
-    }
-  }
-  attr {
-    key: "value"
-    value {
-      tensor {
-        dtype: DT_STRING
-        tensor_shape {
-          dim {
-            size: 1
-          }
-        }
-        string_val: ""
-      }
-    }
-  }
-}
-node {
-  name: "save/RestoreV2_16"
-  op: "RestoreV2"
-  input: "save/Const"
-  input: "save/RestoreV2_16/tensor_names"
-  input: "save/RestoreV2_16/shape_and_slices"
-  attr {
-    key: "_output_shapes"
-    value {
-      list {
-        shape {
-          unknown_rank: true
-        }
-      }
-    }
-  }
-  attr {
-    key: "dtypes"
-    value {
-      list {
-        type: DT_FLOAT
-      }
-    }
-  }
-}
-node {
-  name: "save/Assign_16"
-  op: "Assign"
-  input: "train/cnnmodel/Variable"
-  input: "save/RestoreV2_16"
-  attr {
-    key: "T"
-    value {
-      type: DT_FLOAT
-    }
-  }
-  attr {
-    key: "_class"
-    value {
-      list {
-        s: "loc:@train/cnnmodel/Variable"
-      }
-    }
-  }
-  attr {
-    key: "_output_shapes"
-    value {
-      list {
-        shape {
-          dim {
-            size: 5
-          }
-          dim {
-            size: 5
-          }
-          dim {
-            size: 1
-          }
-          dim {
-            size: 32
-          }
-        }
-      }
-    }
-  }
-  attr {
-    key: "use_locking"
-    value {
-      b: true
-    }
-  }
-  attr {
-    key: "validate_shape"
-    value {
-      b: true
-    }
-  }
-}
-node {
-  name: "save/RestoreV2_17/tensor_names"
-  op: "Const"
-  attr {
-    key: "_output_shapes"
-    value {
-      list {
-        shape {
-          dim {
-            size: 1
-          }
-        }
-      }
-    }
-  }
-  attr {
-    key: "dtype"
-    value {
-      type: DT_STRING
-    }
-  }
-  attr {
-    key: "value"
-    value {
-      tensor {
-        dtype: DT_STRING
-        tensor_shape {
-          dim {
-            size: 1
-          }
-        }
-        string_val: "train/cnnmodel/Variable_1"
-      }
-    }
-  }
-}
-node {
-  name: "save/RestoreV2_17/shape_and_slices"
-  op: "Const"
-  attr {
-    key: "_output_shapes"
-    value {
-      list {
-        shape {
-          dim {
-            size: 1
-          }
-        }
-      }
-    }
-  }
-  attr {
-    key: "dtype"
-    value {
-      type: DT_STRING
-    }
-  }
-  attr {
-    key: "value"
-    value {
-      tensor {
-        dtype: DT_STRING
-        tensor_shape {
-          dim {
-            size: 1
-          }
-        }
-        string_val: ""
-      }
-    }
-  }
-}
-node {
-  name: "save/RestoreV2_17"
-  op: "RestoreV2"
-  input: "save/Const"
-  input: "save/RestoreV2_17/tensor_names"
-  input: "save/RestoreV2_17/shape_and_slices"
-  attr {
-    key: "_output_shapes"
-    value {
-      list {
-        shape {
-          unknown_rank: true
-        }
-      }
-    }
-  }
-  attr {
-    key: "dtypes"
-    value {
-      list {
-        type: DT_FLOAT
-      }
-    }
-  }
-}
-node {
-  name: "save/Assign_17"
-  op: "Assign"
-  input: "train/cnnmodel/Variable_1"
-  input: "save/RestoreV2_17"
-  attr {
-    key: "T"
-    value {
-      type: DT_FLOAT
-    }
-  }
-  attr {
-    key: "_class"
-    value {
-      list {
-        s: "loc:@train/cnnmodel/Variable_1"
-      }
-    }
-  }
-  attr {
-    key: "_output_shapes"
-    value {
-      list {
-        shape {
-          dim {
-            size: 32
-          }
-        }
-      }
-    }
-  }
-  attr {
-    key: "use_locking"
-    value {
-      b: true
-    }
-  }
-  attr {
-    key: "validate_shape"
-    value {
-      b: true
-    }
-  }
-}
-node {
-  name: "save/RestoreV2_18/tensor_names"
-  op: "Const"
-  attr {
-    key: "_output_shapes"
-    value {
-      list {
-        shape {
-          dim {
-            size: 1
-          }
-        }
-      }
-    }
-  }
-  attr {
-    key: "dtype"
-    value {
-      type: DT_STRING
-    }
-  }
-  attr {
-    key: "value"
-    value {
-      tensor {
-        dtype: DT_STRING
-        tensor_shape {
-          dim {
-            size: 1
-          }
-        }
-        string_val: "train/cnnmodel/Variable_2"
-      }
-    }
-  }
-}
-node {
-  name: "save/RestoreV2_18/shape_and_slices"
-  op: "Const"
-  attr {
-    key: "_output_shapes"
-    value {
-      list {
-        shape {
-          dim {
-            size: 1
-          }
-        }
-      }
-    }
-  }
-  attr {
-    key: "dtype"
-    value {
-      type: DT_STRING
-    }
-  }
-  attr {
-    key: "value"
-    value {
-      tensor {
-        dtype: DT_STRING
-        tensor_shape {
-          dim {
-            size: 1
-          }
-        }
-        string_val: ""
-      }
-    }
-  }
-}
-node {
-  name: "save/RestoreV2_18"
-  op: "RestoreV2"
-  input: "save/Const"
-  input: "save/RestoreV2_18/tensor_names"
-  input: "save/RestoreV2_18/shape_and_slices"
-  attr {
-    key: "_output_shapes"
-    value {
-      list {
-        shape {
-          unknown_rank: true
-        }
-      }
-    }
-  }
-  attr {
-    key: "dtypes"
-    value {
-      list {
-        type: DT_FLOAT
-      }
-    }
-  }
-}
-node {
-  name: "save/Assign_18"
-  op: "Assign"
-  input: "train/cnnmodel/Variable_2"
-  input: "save/RestoreV2_18"
-  attr {
-    key: "T"
-    value {
-      type: DT_FLOAT
-    }
-  }
-  attr {
-    key: "_class"
-    value {
-      list {
-        s: "loc:@train/cnnmodel/Variable_2"
-      }
-    }
-  }
-  attr {
-    key: "_output_shapes"
-    value {
-      list {
-        shape {
-          dim {
-            size: 5
-          }
-          dim {
-            size: 5
-          }
-          dim {
-            size: 32
-          }
-          dim {
-            size: 64
-          }
-        }
-      }
-    }
-  }
-  attr {
-    key: "use_locking"
-    value {
-      b: true
-    }
-  }
-  attr {
-    key: "validate_shape"
-    value {
-      b: true
-    }
-  }
-}
-node {
-  name: "save/RestoreV2_19/tensor_names"
-  op: "Const"
-  attr {
-    key: "_output_shapes"
-    value {
-      list {
-        shape {
-          dim {
-            size: 1
-          }
-        }
-      }
-    }
-  }
-  attr {
-    key: "dtype"
-    value {
-      type: DT_STRING
-    }
-  }
-  attr {
-    key: "value"
-    value {
-      tensor {
-        dtype: DT_STRING
-        tensor_shape {
-          dim {
-            size: 1
-          }
-        }
-        string_val: "train/cnnmodel/Variable_3"
-      }
-    }
-  }
-}
-node {
-  name: "save/RestoreV2_19/shape_and_slices"
-  op: "Const"
-  attr {
-    key: "_output_shapes"
-    value {
-      list {
-        shape {
-          dim {
-            size: 1
-          }
-        }
-      }
-    }
-  }
-  attr {
-    key: "dtype"
-    value {
-      type: DT_STRING
-    }
-  }
-  attr {
-    key: "value"
-    value {
-      tensor {
-        dtype: DT_STRING
-        tensor_shape {
-          dim {
-            size: 1
-          }
-        }
-        string_val: ""
-      }
-    }
-  }
-}
-node {
-  name: "save/RestoreV2_19"
-  op: "RestoreV2"
-  input: "save/Const"
-  input: "save/RestoreV2_19/tensor_names"
-  input: "save/RestoreV2_19/shape_and_slices"
-  attr {
-    key: "_output_shapes"
-    value {
-      list {
-        shape {
-          unknown_rank: true
-        }
-      }
-    }
-  }
-  attr {
-    key: "dtypes"
-    value {
-      list {
-        type: DT_FLOAT
-      }
-    }
-  }
-}
-node {
-  name: "save/Assign_19"
-  op: "Assign"
-  input: "train/cnnmodel/Variable_3"
-  input: "save/RestoreV2_19"
-  attr {
-    key: "T"
-    value {
-      type: DT_FLOAT
-    }
-  }
-  attr {
-    key: "_class"
-    value {
-      list {
-        s: "loc:@train/cnnmodel/Variable_3"
-      }
-    }
-  }
-  attr {
-    key: "_output_shapes"
-    value {
-      list {
-        shape {
-          dim {
-            size: 64
-          }
-        }
-      }
-    }
-  }
-  attr {
-    key: "use_locking"
-    value {
-      b: true
-    }
-  }
-  attr {
-    key: "validate_shape"
-    value {
-      b: true
-    }
-  }
-}
-node {
-  name: "save/RestoreV2_20/tensor_names"
-  op: "Const"
-  attr {
-    key: "_output_shapes"
-    value {
-      list {
-        shape {
-          dim {
-            size: 1
-          }
-        }
-      }
-    }
-  }
-  attr {
-    key: "dtype"
-    value {
-      type: DT_STRING
-    }
-  }
-  attr {
-    key: "value"
-    value {
-      tensor {
-        dtype: DT_STRING
-        tensor_shape {
-          dim {
-            size: 1
-          }
-        }
-        string_val: "train/cnnmodel/Variable_4"
-      }
-    }
-  }
-}
-node {
-  name: "save/RestoreV2_20/shape_and_slices"
-  op: "Const"
-  attr {
-    key: "_output_shapes"
-    value {
-      list {
-        shape {
-          dim {
-            size: 1
-          }
-        }
-      }
-    }
-  }
-  attr {
-    key: "dtype"
-    value {
-      type: DT_STRING
-    }
-  }
-  attr {
-    key: "value"
-    value {
-      tensor {
-        dtype: DT_STRING
-        tensor_shape {
-          dim {
-            size: 1
-          }
-        }
-        string_val: ""
-      }
-    }
-  }
-}
-node {
-  name: "save/RestoreV2_20"
-  op: "RestoreV2"
-  input: "save/Const"
-  input: "save/RestoreV2_20/tensor_names"
-  input: "save/RestoreV2_20/shape_and_slices"
-  attr {
-    key: "_output_shapes"
-    value {
-      list {
-        shape {
-          unknown_rank: true
-        }
-      }
-    }
-  }
-  attr {
-    key: "dtypes"
-    value {
-      list {
-        type: DT_FLOAT
-      }
-    }
-  }
-}
-node {
-  name: "save/Assign_20"
-  op: "Assign"
-  input: "train/cnnmodel/Variable_4"
-  input: "save/RestoreV2_20"
-  attr {
-    key: "T"
-    value {
-      type: DT_FLOAT
-    }
-  }
-  attr {
-    key: "_class"
-    value {
-      list {
-        s: "loc:@train/cnnmodel/Variable_4"
-      }
-    }
-  }
-  attr {
-    key: "_output_shapes"
-    value {
-      list {
-        shape {
-          dim {
-            size: 5632
-          }
-          dim {
-            size: 1024
-          }
-        }
-      }
-    }
-  }
-  attr {
-    key: "use_locking"
-    value {
-      b: true
-    }
-  }
-  attr {
-    key: "validate_shape"
-    value {
-      b: true
-    }
-  }
-}
-node {
-  name: "save/RestoreV2_21/tensor_names"
-  op: "Const"
-  attr {
-    key: "_output_shapes"
-    value {
-      list {
-        shape {
-          dim {
-            size: 1
-          }
-        }
-      }
-    }
-  }
-  attr {
-    key: "dtype"
-    value {
-      type: DT_STRING
-    }
-  }
-  attr {
-    key: "value"
-    value {
-      tensor {
-        dtype: DT_STRING
-        tensor_shape {
-          dim {
-            size: 1
-          }
-        }
-        string_val: "train/cnnmodel/Variable_5"
-      }
-    }
-  }
-}
-node {
-  name: "save/RestoreV2_21/shape_and_slices"
-  op: "Const"
-  attr {
-    key: "_output_shapes"
-    value {
-      list {
-        shape {
-          dim {
-            size: 1
-          }
-        }
-      }
-    }
-  }
-  attr {
-    key: "dtype"
-    value {
-      type: DT_STRING
-    }
-  }
-  attr {
-    key: "value"
-    value {
-      tensor {
-        dtype: DT_STRING
-        tensor_shape {
-          dim {
-            size: 1
-          }
-        }
-        string_val: ""
-      }
-    }
-  }
-}
-node {
-  name: "save/RestoreV2_21"
-  op: "RestoreV2"
-  input: "save/Const"
-  input: "save/RestoreV2_21/tensor_names"
-  input: "save/RestoreV2_21/shape_and_slices"
-  attr {
-    key: "_output_shapes"
-    value {
-      list {
-        shape {
-          unknown_rank: true
-        }
-      }
-    }
-  }
-  attr {
-    key: "dtypes"
-    value {
-      list {
-        type: DT_FLOAT
-      }
-    }
-  }
-}
-node {
-  name: "save/Assign_21"
-  op: "Assign"
-  input: "train/cnnmodel/Variable_5"
-  input: "save/RestoreV2_21"
-  attr {
-    key: "T"
-    value {
-      type: DT_FLOAT
-    }
-  }
-  attr {
-    key: "_class"
-    value {
-      list {
-        s: "loc:@train/cnnmodel/Variable_5"
-      }
-    }
-  }
-  attr {
-    key: "_output_shapes"
-    value {
-      list {
-        shape {
-          dim {
-            size: 1024
-          }
-        }
-      }
-    }
-  }
-  attr {
-    key: "use_locking"
-    value {
-      b: true
-    }
-  }
-  attr {
-    key: "validate_shape"
-    value {
-      b: true
-    }
-  }
-}
-node {
-  name: "save/RestoreV2_22/tensor_names"
-  op: "Const"
-  attr {
-    key: "_output_shapes"
-    value {
-      list {
-        shape {
-          dim {
-            size: 1
-          }
-        }
-      }
-    }
-  }
-  attr {
-    key: "dtype"
-    value {
-      type: DT_STRING
-    }
-  }
-  attr {
-    key: "value"
-    value {
-      tensor {
-        dtype: DT_STRING
-        tensor_shape {
-          dim {
-            size: 1
-          }
-        }
-        string_val: "train/cnnmodel/Variable_6"
-      }
-    }
-  }
-}
-node {
-  name: "save/RestoreV2_22/shape_and_slices"
-  op: "Const"
-  attr {
-    key: "_output_shapes"
-    value {
-      list {
-        shape {
-          dim {
-            size: 1
-          }
-        }
-      }
-    }
-  }
-  attr {
-    key: "dtype"
-    value {
-      type: DT_STRING
-    }
-  }
-  attr {
-    key: "value"
-    value {
-      tensor {
-        dtype: DT_STRING
-        tensor_shape {
-          dim {
-            size: 1
-          }
-        }
-        string_val: ""
-      }
-    }
-  }
-}
-node {
-  name: "save/RestoreV2_22"
-  op: "RestoreV2"
-  input: "save/Const"
-  input: "save/RestoreV2_22/tensor_names"
-  input: "save/RestoreV2_22/shape_and_slices"
-  attr {
-    key: "_output_shapes"
-    value {
-      list {
-        shape {
-          unknown_rank: true
-        }
-      }
-    }
-  }
-  attr {
-    key: "dtypes"
-    value {
-      list {
-        type: DT_FLOAT
-      }
-    }
-  }
-}
-node {
-  name: "save/Assign_22"
-  op: "Assign"
-  input: "train/cnnmodel/Variable_6"
-  input: "save/RestoreV2_22"
-  attr {
-    key: "T"
-    value {
-      type: DT_FLOAT
-    }
-  }
-  attr {
-    key: "_class"
-    value {
-      list {
-        s: "loc:@train/cnnmodel/Variable_6"
-      }
-    }
-  }
-  attr {
-    key: "_output_shapes"
-    value {
-      list {
-        shape {
-          dim {
-            size: 1024
-          }
-          dim {
-            size: 44
-          }
-        }
-      }
-    }
-  }
-  attr {
-    key: "use_locking"
-    value {
-      b: true
-    }
-  }
-  attr {
-    key: "validate_shape"
-    value {
-      b: true
-    }
-  }
-}
-node {
-  name: "save/RestoreV2_23/tensor_names"
-  op: "Const"
-  attr {
-    key: "_output_shapes"
-    value {
-      list {
-        shape {
-          dim {
-            size: 1
-          }
-        }
-      }
-    }
-  }
-  attr {
-    key: "dtype"
-    value {
-      type: DT_STRING
-    }
-  }
-  attr {
-    key: "value"
-    value {
-      tensor {
-        dtype: DT_STRING
-        tensor_shape {
-          dim {
-            size: 1
-          }
-        }
-        string_val: "train/cnnmodel/Variable_7"
-      }
-    }
-  }
-}
-node {
-  name: "save/RestoreV2_23/shape_and_slices"
-  op: "Const"
-  attr {
-    key: "_output_shapes"
-    value {
-      list {
-        shape {
-          dim {
-            size: 1
-          }
-        }
-      }
-    }
-  }
-  attr {
-    key: "dtype"
-    value {
-      type: DT_STRING
-    }
-  }
-  attr {
-    key: "value"
-    value {
-      tensor {
-        dtype: DT_STRING
-        tensor_shape {
-          dim {
-            size: 1
-          }
-        }
-        string_val: ""
-      }
-    }
-  }
-}
-node {
-  name: "save/RestoreV2_23"
-  op: "RestoreV2"
-  input: "save/Const"
-  input: "save/RestoreV2_23/tensor_names"
-  input: "save/RestoreV2_23/shape_and_slices"
-  attr {
-    key: "_output_shapes"
-    value {
-      list {
-        shape {
-          unknown_rank: true
-        }
-      }
-    }
-  }
-  attr {
-    key: "dtypes"
-    value {
-      list {
-        type: DT_FLOAT
-      }
-    }
-  }
-}
-node {
-  name: "save/Assign_23"
-  op: "Assign"
-  input: "train/cnnmodel/Variable_7"
-  input: "save/RestoreV2_23"
-  attr {
-    key: "T"
-    value {
-      type: DT_FLOAT
-    }
-  }
-  attr {
-    key: "_class"
-    value {
-      list {
-        s: "loc:@train/cnnmodel/Variable_7"
-      }
-    }
-  }
-  attr {
-    key: "_output_shapes"
-    value {
-      list {
-        shape {
-          dim {
-            size: 44
-          }
-        }
-      }
-    }
-  }
-  attr {
-    key: "use_locking"
-    value {
-      b: true
-    }
-  }
-  attr {
-    key: "validate_shape"
-    value {
-      b: true
-    }
-  }
-}
-node {
-  name: "save/RestoreV2_24/tensor_names"
-  op: "Const"
-  attr {
-    key: "_output_shapes"
-    value {
-      list {
-        shape {
-          dim {
-            size: 1
-          }
-        }
-      }
-    }
-  }
-  attr {
-    key: "dtype"
-    value {
-      type: DT_STRING
-    }
-  }
-  attr {
-    key: "value"
-    value {
-      tensor {
-        dtype: DT_STRING
-        tensor_shape {
-          dim {
-            size: 1
-          }
-        }
-        string_val: "train/cnnmodel/beta1_power"
-      }
-    }
-  }
-}
-node {
-  name: "save/RestoreV2_24/shape_and_slices"
-  op: "Const"
-  attr {
-    key: "_output_shapes"
-    value {
-      list {
-        shape {
-          dim {
-            size: 1
-          }
-        }
-      }
-    }
-  }
-  attr {
-    key: "dtype"
-    value {
-      type: DT_STRING
-    }
-  }
-  attr {
-    key: "value"
-    value {
-      tensor {
-        dtype: DT_STRING
-        tensor_shape {
-          dim {
-            size: 1
-          }
-        }
-        string_val: ""
-      }
-    }
-  }
-}
-node {
-  name: "save/RestoreV2_24"
-  op: "RestoreV2"
-  input: "save/Const"
-  input: "save/RestoreV2_24/tensor_names"
-  input: "save/RestoreV2_24/shape_and_slices"
-  attr {
-    key: "_output_shapes"
-    value {
-      list {
-        shape {
-          unknown_rank: true
-        }
-      }
-    }
-  }
-  attr {
-    key: "dtypes"
-    value {
-      list {
-        type: DT_FLOAT
-      }
-    }
-  }
-}
-node {
-  name: "save/Assign_24"
-  op: "Assign"
-  input: "train/cnnmodel/beta1_power"
-  input: "save/RestoreV2_24"
-  attr {
-    key: "T"
-    value {
-      type: DT_FLOAT
-    }
-  }
-  attr {
-    key: "_class"
-    value {
-      list {
-        s: "loc:@train/cnnmodel/Variable"
-      }
-    }
-  }
-  attr {
-    key: "_output_shapes"
-    value {
-      list {
-        shape {
-        }
-      }
-    }
-  }
-  attr {
-    key: "use_locking"
-    value {
-      b: true
-    }
-  }
-  attr {
-    key: "validate_shape"
-    value {
-      b: true
-    }
-  }
-}
-node {
-  name: "save/RestoreV2_25/tensor_names"
-  op: "Const"
-  attr {
-    key: "_output_shapes"
-    value {
-      list {
-        shape {
-          dim {
-            size: 1
-          }
-        }
-      }
-    }
-  }
-  attr {
-    key: "dtype"
-    value {
-      type: DT_STRING
-    }
-  }
-  attr {
-    key: "value"
-    value {
-      tensor {
-        dtype: DT_STRING
-        tensor_shape {
-          dim {
-            size: 1
-          }
-        }
-        string_val: "train/cnnmodel/beta2_power"
-      }
-    }
-  }
-}
-node {
-  name: "save/RestoreV2_25/shape_and_slices"
-  op: "Const"
-  attr {
-    key: "_output_shapes"
-    value {
-      list {
-        shape {
-          dim {
-            size: 1
-          }
-        }
-      }
-    }
-  }
-  attr {
-    key: "dtype"
-    value {
-      type: DT_STRING
-    }
-  }
-  attr {
-    key: "value"
-    value {
-      tensor {
-        dtype: DT_STRING
-        tensor_shape {
-          dim {
-            size: 1
-          }
-        }
-        string_val: ""
-      }
-    }
-  }
-}
-node {
-  name: "save/RestoreV2_25"
-  op: "RestoreV2"
-  input: "save/Const"
-  input: "save/RestoreV2_25/tensor_names"
-  input: "save/RestoreV2_25/shape_and_slices"
-  attr {
-    key: "_output_shapes"
-    value {
-      list {
-        shape {
-          unknown_rank: true
-        }
-      }
-    }
-  }
-  attr {
-    key: "dtypes"
-    value {
-      list {
-        type: DT_FLOAT
-      }
-    }
-  }
-}
-node {
-  name: "save/Assign_25"
-  op: "Assign"
-  input: "train/cnnmodel/beta2_power"
-  input: "save/RestoreV2_25"
-  attr {
-    key: "T"
-    value {
-      type: DT_FLOAT
-    }
-  }
-  attr {
-    key: "_class"
-    value {
-      list {
-        s: "loc:@train/cnnmodel/Variable"
-      }
-    }
-  }
-  attr {
-    key: "_output_shapes"
-    value {
-      list {
-        shape {
         }
       }
     }
@@ -16476,34 +13824,16 @@ node {
   input: "^save/Assign_5"
   input: "^save/Assign_6"
   input: "^save/Assign_7"
-  input: "^save/Assign_8"
-  input: "^save/Assign_9"
-  input: "^save/Assign_10"
-  input: "^save/Assign_11"
-  input: "^save/Assign_12"
-  input: "^save/Assign_13"
-  input: "^save/Assign_14"
-  input: "^save/Assign_15"
-  input: "^save/Assign_16"
-  input: "^save/Assign_17"
-  input: "^save/Assign_18"
-  input: "^save/Assign_19"
-  input: "^save/Assign_20"
-  input: "^save/Assign_21"
-  input: "^save/Assign_22"
-  input: "^save/Assign_23"
-  input: "^save/Assign_24"
-  input: "^save/Assign_25"
 }
 node {
   name: "report_uninitialized_variables/IsVariableInitialized"
   op: "IsVariableInitialized"
-  input: "train/cnnmodel/Variable"
+  input: "train/cnnmodel/WCon1"
   attr {
     key: "_class"
     value {
       list {
-        s: "loc:@train/cnnmodel/Variable"
+        s: "loc:@train/cnnmodel/WCon1"
       }
     }
   }
@@ -16526,12 +13856,12 @@ node {
 node {
   name: "report_uninitialized_variables/IsVariableInitialized_1"
   op: "IsVariableInitialized"
-  input: "train/cnnmodel/Variable_1"
+  input: "train/cnnmodel/bCon1"
   attr {
     key: "_class"
     value {
       list {
-        s: "loc:@train/cnnmodel/Variable_1"
+        s: "loc:@train/cnnmodel/bCon1"
       }
     }
   }
@@ -16554,12 +13884,12 @@ node {
 node {
   name: "report_uninitialized_variables/IsVariableInitialized_2"
   op: "IsVariableInitialized"
-  input: "train/cnnmodel/Variable_2"
+  input: "train/cnnmodel/WCon2"
   attr {
     key: "_class"
     value {
       list {
-        s: "loc:@train/cnnmodel/Variable_2"
+        s: "loc:@train/cnnmodel/WCon2"
       }
     }
   }
@@ -16582,12 +13912,12 @@ node {
 node {
   name: "report_uninitialized_variables/IsVariableInitialized_3"
   op: "IsVariableInitialized"
-  input: "train/cnnmodel/Variable_3"
+  input: "train/cnnmodel/bCon2"
   attr {
     key: "_class"
     value {
       list {
-        s: "loc:@train/cnnmodel/Variable_3"
+        s: "loc:@train/cnnmodel/bCon2"
       }
     }
   }
@@ -16610,12 +13940,12 @@ node {
 node {
   name: "report_uninitialized_variables/IsVariableInitialized_4"
   op: "IsVariableInitialized"
-  input: "train/cnnmodel/Variable_4"
+  input: "train/cnnmodel/WFc1"
   attr {
     key: "_class"
     value {
       list {
-        s: "loc:@train/cnnmodel/Variable_4"
+        s: "loc:@train/cnnmodel/WFc1"
       }
     }
   }
@@ -16638,12 +13968,12 @@ node {
 node {
   name: "report_uninitialized_variables/IsVariableInitialized_5"
   op: "IsVariableInitialized"
-  input: "train/cnnmodel/Variable_5"
+  input: "train/cnnmodel/bFc2"
   attr {
     key: "_class"
     value {
       list {
-        s: "loc:@train/cnnmodel/Variable_5"
+        s: "loc:@train/cnnmodel/bFc2"
       }
     }
   }
@@ -16666,12 +13996,12 @@ node {
 node {
   name: "report_uninitialized_variables/IsVariableInitialized_6"
   op: "IsVariableInitialized"
-  input: "train/cnnmodel/Variable_6"
+  input: "train/cnnmodel/WFc2"
   attr {
     key: "_class"
     value {
       list {
-        s: "loc:@train/cnnmodel/Variable_6"
+        s: "loc:@train/cnnmodel/WFc2"
       }
     }
   }
@@ -16694,12 +14024,12 @@ node {
 node {
   name: "report_uninitialized_variables/IsVariableInitialized_7"
   op: "IsVariableInitialized"
-  input: "train/cnnmodel/Variable_7"
+  input: "train/cnnmodel/bfc2"
   attr {
     key: "_class"
     value {
       list {
-        s: "loc:@train/cnnmodel/Variable_7"
+        s: "loc:@train/cnnmodel/bfc2"
       }
     }
   }
@@ -16727,7 +14057,7 @@ node {
     key: "_class"
     value {
       list {
-        s: "loc:@train/cnnmodel/Variable"
+        s: "loc:@train/cnnmodel/WCon1"
       }
     }
   }
@@ -16755,7 +14085,7 @@ node {
     key: "_class"
     value {
       list {
-        s: "loc:@train/cnnmodel/Variable"
+        s: "loc:@train/cnnmodel/WCon1"
       }
     }
   }
@@ -16778,12 +14108,12 @@ node {
 node {
   name: "report_uninitialized_variables/IsVariableInitialized_10"
   op: "IsVariableInitialized"
-  input: "cnnmodel/train/cnnmodel/Variable/Adam"
+  input: "cnnmodel/train/cnnmodel/WCon1/Adam"
   attr {
     key: "_class"
     value {
       list {
-        s: "loc:@train/cnnmodel/Variable"
+        s: "loc:@train/cnnmodel/WCon1"
       }
     }
   }
@@ -16806,12 +14136,12 @@ node {
 node {
   name: "report_uninitialized_variables/IsVariableInitialized_11"
   op: "IsVariableInitialized"
-  input: "cnnmodel/train/cnnmodel/Variable/Adam_1"
+  input: "cnnmodel/train/cnnmodel/WCon1/Adam_1"
   attr {
     key: "_class"
     value {
       list {
-        s: "loc:@train/cnnmodel/Variable"
+        s: "loc:@train/cnnmodel/WCon1"
       }
     }
   }
@@ -16834,12 +14164,12 @@ node {
 node {
   name: "report_uninitialized_variables/IsVariableInitialized_12"
   op: "IsVariableInitialized"
-  input: "cnnmodel/train/cnnmodel/Variable_1/Adam"
+  input: "cnnmodel/train/cnnmodel/bCon1/Adam"
   attr {
     key: "_class"
     value {
       list {
-        s: "loc:@train/cnnmodel/Variable_1"
+        s: "loc:@train/cnnmodel/bCon1"
       }
     }
   }
@@ -16862,12 +14192,12 @@ node {
 node {
   name: "report_uninitialized_variables/IsVariableInitialized_13"
   op: "IsVariableInitialized"
-  input: "cnnmodel/train/cnnmodel/Variable_1/Adam_1"
+  input: "cnnmodel/train/cnnmodel/bCon1/Adam_1"
   attr {
     key: "_class"
     value {
       list {
-        s: "loc:@train/cnnmodel/Variable_1"
+        s: "loc:@train/cnnmodel/bCon1"
       }
     }
   }
@@ -16890,12 +14220,12 @@ node {
 node {
   name: "report_uninitialized_variables/IsVariableInitialized_14"
   op: "IsVariableInitialized"
-  input: "cnnmodel/train/cnnmodel/Variable_2/Adam"
+  input: "cnnmodel/train/cnnmodel/WCon2/Adam"
   attr {
     key: "_class"
     value {
       list {
-        s: "loc:@train/cnnmodel/Variable_2"
+        s: "loc:@train/cnnmodel/WCon2"
       }
     }
   }
@@ -16918,12 +14248,12 @@ node {
 node {
   name: "report_uninitialized_variables/IsVariableInitialized_15"
   op: "IsVariableInitialized"
-  input: "cnnmodel/train/cnnmodel/Variable_2/Adam_1"
+  input: "cnnmodel/train/cnnmodel/WCon2/Adam_1"
   attr {
     key: "_class"
     value {
       list {
-        s: "loc:@train/cnnmodel/Variable_2"
+        s: "loc:@train/cnnmodel/WCon2"
       }
     }
   }
@@ -16946,12 +14276,12 @@ node {
 node {
   name: "report_uninitialized_variables/IsVariableInitialized_16"
   op: "IsVariableInitialized"
-  input: "cnnmodel/train/cnnmodel/Variable_3/Adam"
+  input: "cnnmodel/train/cnnmodel/bCon2/Adam"
   attr {
     key: "_class"
     value {
       list {
-        s: "loc:@train/cnnmodel/Variable_3"
+        s: "loc:@train/cnnmodel/bCon2"
       }
     }
   }
@@ -16974,12 +14304,12 @@ node {
 node {
   name: "report_uninitialized_variables/IsVariableInitialized_17"
   op: "IsVariableInitialized"
-  input: "cnnmodel/train/cnnmodel/Variable_3/Adam_1"
+  input: "cnnmodel/train/cnnmodel/bCon2/Adam_1"
   attr {
     key: "_class"
     value {
       list {
-        s: "loc:@train/cnnmodel/Variable_3"
+        s: "loc:@train/cnnmodel/bCon2"
       }
     }
   }
@@ -17002,12 +14332,12 @@ node {
 node {
   name: "report_uninitialized_variables/IsVariableInitialized_18"
   op: "IsVariableInitialized"
-  input: "cnnmodel/train/cnnmodel/Variable_4/Adam"
+  input: "cnnmodel/train/cnnmodel/WFc1/Adam"
   attr {
     key: "_class"
     value {
       list {
-        s: "loc:@train/cnnmodel/Variable_4"
+        s: "loc:@train/cnnmodel/WFc1"
       }
     }
   }
@@ -17030,12 +14360,12 @@ node {
 node {
   name: "report_uninitialized_variables/IsVariableInitialized_19"
   op: "IsVariableInitialized"
-  input: "cnnmodel/train/cnnmodel/Variable_4/Adam_1"
+  input: "cnnmodel/train/cnnmodel/WFc1/Adam_1"
   attr {
     key: "_class"
     value {
       list {
-        s: "loc:@train/cnnmodel/Variable_4"
+        s: "loc:@train/cnnmodel/WFc1"
       }
     }
   }
@@ -17058,12 +14388,12 @@ node {
 node {
   name: "report_uninitialized_variables/IsVariableInitialized_20"
   op: "IsVariableInitialized"
-  input: "cnnmodel/train/cnnmodel/Variable_5/Adam"
+  input: "cnnmodel/train/cnnmodel/bFc2/Adam"
   attr {
     key: "_class"
     value {
       list {
-        s: "loc:@train/cnnmodel/Variable_5"
+        s: "loc:@train/cnnmodel/bFc2"
       }
     }
   }
@@ -17086,12 +14416,12 @@ node {
 node {
   name: "report_uninitialized_variables/IsVariableInitialized_21"
   op: "IsVariableInitialized"
-  input: "cnnmodel/train/cnnmodel/Variable_5/Adam_1"
+  input: "cnnmodel/train/cnnmodel/bFc2/Adam_1"
   attr {
     key: "_class"
     value {
       list {
-        s: "loc:@train/cnnmodel/Variable_5"
+        s: "loc:@train/cnnmodel/bFc2"
       }
     }
   }
@@ -17114,12 +14444,12 @@ node {
 node {
   name: "report_uninitialized_variables/IsVariableInitialized_22"
   op: "IsVariableInitialized"
-  input: "cnnmodel/train/cnnmodel/Variable_6/Adam"
+  input: "cnnmodel/train/cnnmodel/WFc2/Adam"
   attr {
     key: "_class"
     value {
       list {
-        s: "loc:@train/cnnmodel/Variable_6"
+        s: "loc:@train/cnnmodel/WFc2"
       }
     }
   }
@@ -17142,12 +14472,12 @@ node {
 node {
   name: "report_uninitialized_variables/IsVariableInitialized_23"
   op: "IsVariableInitialized"
-  input: "cnnmodel/train/cnnmodel/Variable_6/Adam_1"
+  input: "cnnmodel/train/cnnmodel/WFc2/Adam_1"
   attr {
     key: "_class"
     value {
       list {
-        s: "loc:@train/cnnmodel/Variable_6"
+        s: "loc:@train/cnnmodel/WFc2"
       }
     }
   }
@@ -17170,12 +14500,12 @@ node {
 node {
   name: "report_uninitialized_variables/IsVariableInitialized_24"
   op: "IsVariableInitialized"
-  input: "cnnmodel/train/cnnmodel/Variable_7/Adam"
+  input: "cnnmodel/train/cnnmodel/bfc2/Adam"
   attr {
     key: "_class"
     value {
       list {
-        s: "loc:@train/cnnmodel/Variable_7"
+        s: "loc:@train/cnnmodel/bfc2"
       }
     }
   }
@@ -17198,12 +14528,12 @@ node {
 node {
   name: "report_uninitialized_variables/IsVariableInitialized_25"
   op: "IsVariableInitialized"
-  input: "cnnmodel/train/cnnmodel/Variable_7/Adam_1"
+  input: "cnnmodel/train/cnnmodel/bfc2/Adam_1"
   attr {
     key: "_class"
     value {
       list {
-        s: "loc:@train/cnnmodel/Variable_7"
+        s: "loc:@train/cnnmodel/bfc2"
       }
     }
   }
@@ -17331,32 +14661,32 @@ node {
             size: 26
           }
         }
-        string_val: "train/cnnmodel/Variable"
-        string_val: "train/cnnmodel/Variable_1"
-        string_val: "train/cnnmodel/Variable_2"
-        string_val: "train/cnnmodel/Variable_3"
-        string_val: "train/cnnmodel/Variable_4"
-        string_val: "train/cnnmodel/Variable_5"
-        string_val: "train/cnnmodel/Variable_6"
-        string_val: "train/cnnmodel/Variable_7"
+        string_val: "train/cnnmodel/WCon1"
+        string_val: "train/cnnmodel/bCon1"
+        string_val: "train/cnnmodel/WCon2"
+        string_val: "train/cnnmodel/bCon2"
+        string_val: "train/cnnmodel/WFc1"
+        string_val: "train/cnnmodel/bFc2"
+        string_val: "train/cnnmodel/WFc2"
+        string_val: "train/cnnmodel/bfc2"
         string_val: "train/cnnmodel/beta1_power"
         string_val: "train/cnnmodel/beta2_power"
-        string_val: "cnnmodel/train/cnnmodel/Variable/Adam"
-        string_val: "cnnmodel/train/cnnmodel/Variable/Adam_1"
-        string_val: "cnnmodel/train/cnnmodel/Variable_1/Adam"
-        string_val: "cnnmodel/train/cnnmodel/Variable_1/Adam_1"
-        string_val: "cnnmodel/train/cnnmodel/Variable_2/Adam"
-        string_val: "cnnmodel/train/cnnmodel/Variable_2/Adam_1"
-        string_val: "cnnmodel/train/cnnmodel/Variable_3/Adam"
-        string_val: "cnnmodel/train/cnnmodel/Variable_3/Adam_1"
-        string_val: "cnnmodel/train/cnnmodel/Variable_4/Adam"
-        string_val: "cnnmodel/train/cnnmodel/Variable_4/Adam_1"
-        string_val: "cnnmodel/train/cnnmodel/Variable_5/Adam"
-        string_val: "cnnmodel/train/cnnmodel/Variable_5/Adam_1"
-        string_val: "cnnmodel/train/cnnmodel/Variable_6/Adam"
-        string_val: "cnnmodel/train/cnnmodel/Variable_6/Adam_1"
-        string_val: "cnnmodel/train/cnnmodel/Variable_7/Adam"
-        string_val: "cnnmodel/train/cnnmodel/Variable_7/Adam_1"
+        string_val: "cnnmodel/train/cnnmodel/WCon1/Adam"
+        string_val: "cnnmodel/train/cnnmodel/WCon1/Adam_1"
+        string_val: "cnnmodel/train/cnnmodel/bCon1/Adam"
+        string_val: "cnnmodel/train/cnnmodel/bCon1/Adam_1"
+        string_val: "cnnmodel/train/cnnmodel/WCon2/Adam"
+        string_val: "cnnmodel/train/cnnmodel/WCon2/Adam_1"
+        string_val: "cnnmodel/train/cnnmodel/bCon2/Adam"
+        string_val: "cnnmodel/train/cnnmodel/bCon2/Adam_1"
+        string_val: "cnnmodel/train/cnnmodel/WFc1/Adam"
+        string_val: "cnnmodel/train/cnnmodel/WFc1/Adam_1"
+        string_val: "cnnmodel/train/cnnmodel/bFc2/Adam"
+        string_val: "cnnmodel/train/cnnmodel/bFc2/Adam_1"
+        string_val: "cnnmodel/train/cnnmodel/WFc2/Adam"
+        string_val: "cnnmodel/train/cnnmodel/WFc2/Adam_1"
+        string_val: "cnnmodel/train/cnnmodel/bfc2/Adam"
+        string_val: "cnnmodel/train/cnnmodel/bfc2/Adam_1"
       }
     }
   }
@@ -18129,32 +15459,32 @@ node {
 node {
   name: "init_1"
   op: "NoOp"
-  input: "^train/cnnmodel/Variable/Assign"
-  input: "^train/cnnmodel/Variable_1/Assign"
-  input: "^train/cnnmodel/Variable_2/Assign"
-  input: "^train/cnnmodel/Variable_3/Assign"
-  input: "^train/cnnmodel/Variable_4/Assign"
-  input: "^train/cnnmodel/Variable_5/Assign"
-  input: "^train/cnnmodel/Variable_6/Assign"
-  input: "^train/cnnmodel/Variable_7/Assign"
+  input: "^train/cnnmodel/WCon1/Assign"
+  input: "^train/cnnmodel/bCon1/Assign"
+  input: "^train/cnnmodel/WCon2/Assign"
+  input: "^train/cnnmodel/bCon2/Assign"
+  input: "^train/cnnmodel/WFc1/Assign"
+  input: "^train/cnnmodel/bFc2/Assign"
+  input: "^train/cnnmodel/WFc2/Assign"
+  input: "^train/cnnmodel/bfc2/Assign"
   input: "^train/cnnmodel/beta1_power/Assign"
   input: "^train/cnnmodel/beta2_power/Assign"
-  input: "^cnnmodel/train/cnnmodel/Variable/Adam/Assign"
-  input: "^cnnmodel/train/cnnmodel/Variable/Adam_1/Assign"
-  input: "^cnnmodel/train/cnnmodel/Variable_1/Adam/Assign"
-  input: "^cnnmodel/train/cnnmodel/Variable_1/Adam_1/Assign"
-  input: "^cnnmodel/train/cnnmodel/Variable_2/Adam/Assign"
-  input: "^cnnmodel/train/cnnmodel/Variable_2/Adam_1/Assign"
-  input: "^cnnmodel/train/cnnmodel/Variable_3/Adam/Assign"
-  input: "^cnnmodel/train/cnnmodel/Variable_3/Adam_1/Assign"
-  input: "^cnnmodel/train/cnnmodel/Variable_4/Adam/Assign"
-  input: "^cnnmodel/train/cnnmodel/Variable_4/Adam_1/Assign"
-  input: "^cnnmodel/train/cnnmodel/Variable_5/Adam/Assign"
-  input: "^cnnmodel/train/cnnmodel/Variable_5/Adam_1/Assign"
-  input: "^cnnmodel/train/cnnmodel/Variable_6/Adam/Assign"
-  input: "^cnnmodel/train/cnnmodel/Variable_6/Adam_1/Assign"
-  input: "^cnnmodel/train/cnnmodel/Variable_7/Adam/Assign"
-  input: "^cnnmodel/train/cnnmodel/Variable_7/Adam_1/Assign"
+  input: "^cnnmodel/train/cnnmodel/WCon1/Adam/Assign"
+  input: "^cnnmodel/train/cnnmodel/WCon1/Adam_1/Assign"
+  input: "^cnnmodel/train/cnnmodel/bCon1/Adam/Assign"
+  input: "^cnnmodel/train/cnnmodel/bCon1/Adam_1/Assign"
+  input: "^cnnmodel/train/cnnmodel/WCon2/Adam/Assign"
+  input: "^cnnmodel/train/cnnmodel/WCon2/Adam_1/Assign"
+  input: "^cnnmodel/train/cnnmodel/bCon2/Adam/Assign"
+  input: "^cnnmodel/train/cnnmodel/bCon2/Adam_1/Assign"
+  input: "^cnnmodel/train/cnnmodel/WFc1/Adam/Assign"
+  input: "^cnnmodel/train/cnnmodel/WFc1/Adam_1/Assign"
+  input: "^cnnmodel/train/cnnmodel/bFc2/Adam/Assign"
+  input: "^cnnmodel/train/cnnmodel/bFc2/Adam_1/Assign"
+  input: "^cnnmodel/train/cnnmodel/WFc2/Adam/Assign"
+  input: "^cnnmodel/train/cnnmodel/WFc2/Adam_1/Assign"
+  input: "^cnnmodel/train/cnnmodel/bfc2/Adam/Assign"
+  input: "^cnnmodel/train/cnnmodel/bfc2/Adam_1/Assign"
 }
 node {
   name: "init_2"
@@ -18231,32 +15561,32 @@ node {
             size: 26
           }
         }
-        string_val: "cnnmodel/train/cnnmodel/Variable/Adam"
-        string_val: "cnnmodel/train/cnnmodel/Variable/Adam_1"
-        string_val: "cnnmodel/train/cnnmodel/Variable_1/Adam"
-        string_val: "cnnmodel/train/cnnmodel/Variable_1/Adam_1"
-        string_val: "cnnmodel/train/cnnmodel/Variable_2/Adam"
-        string_val: "cnnmodel/train/cnnmodel/Variable_2/Adam_1"
-        string_val: "cnnmodel/train/cnnmodel/Variable_3/Adam"
-        string_val: "cnnmodel/train/cnnmodel/Variable_3/Adam_1"
-        string_val: "cnnmodel/train/cnnmodel/Variable_4/Adam"
-        string_val: "cnnmodel/train/cnnmodel/Variable_4/Adam_1"
-        string_val: "cnnmodel/train/cnnmodel/Variable_5/Adam"
-        string_val: "cnnmodel/train/cnnmodel/Variable_5/Adam_1"
-        string_val: "cnnmodel/train/cnnmodel/Variable_6/Adam"
-        string_val: "cnnmodel/train/cnnmodel/Variable_6/Adam_1"
-        string_val: "cnnmodel/train/cnnmodel/Variable_7/Adam"
-        string_val: "cnnmodel/train/cnnmodel/Variable_7/Adam_1"
-        string_val: "train/cnnmodel/Variable"
-        string_val: "train/cnnmodel/Variable_1"
-        string_val: "train/cnnmodel/Variable_2"
-        string_val: "train/cnnmodel/Variable_3"
-        string_val: "train/cnnmodel/Variable_4"
-        string_val: "train/cnnmodel/Variable_5"
-        string_val: "train/cnnmodel/Variable_6"
-        string_val: "train/cnnmodel/Variable_7"
+        string_val: "cnnmodel/train/cnnmodel/WCon1/Adam"
+        string_val: "cnnmodel/train/cnnmodel/WCon1/Adam_1"
+        string_val: "cnnmodel/train/cnnmodel/WCon2/Adam"
+        string_val: "cnnmodel/train/cnnmodel/WCon2/Adam_1"
+        string_val: "cnnmodel/train/cnnmodel/WFc1/Adam"
+        string_val: "cnnmodel/train/cnnmodel/WFc1/Adam_1"
+        string_val: "cnnmodel/train/cnnmodel/WFc2/Adam"
+        string_val: "cnnmodel/train/cnnmodel/WFc2/Adam_1"
+        string_val: "cnnmodel/train/cnnmodel/bCon1/Adam"
+        string_val: "cnnmodel/train/cnnmodel/bCon1/Adam_1"
+        string_val: "cnnmodel/train/cnnmodel/bCon2/Adam"
+        string_val: "cnnmodel/train/cnnmodel/bCon2/Adam_1"
+        string_val: "cnnmodel/train/cnnmodel/bFc2/Adam"
+        string_val: "cnnmodel/train/cnnmodel/bFc2/Adam_1"
+        string_val: "cnnmodel/train/cnnmodel/bfc2/Adam"
+        string_val: "cnnmodel/train/cnnmodel/bfc2/Adam_1"
+        string_val: "train/cnnmodel/WCon1"
+        string_val: "train/cnnmodel/WCon2"
+        string_val: "train/cnnmodel/WFc1"
+        string_val: "train/cnnmodel/WFc2"
+        string_val: "train/cnnmodel/bCon1"
+        string_val: "train/cnnmodel/bCon2"
+        string_val: "train/cnnmodel/bFc2"
         string_val: "train/cnnmodel/beta1_power"
         string_val: "train/cnnmodel/beta2_power"
+        string_val: "train/cnnmodel/bfc2"
       }
     }
   }
@@ -18328,32 +15658,32 @@ node {
   input: "save_1/Const"
   input: "save_1/SaveV2/tensor_names"
   input: "save_1/SaveV2/shape_and_slices"
-  input: "cnnmodel/train/cnnmodel/Variable/Adam"
-  input: "cnnmodel/train/cnnmodel/Variable/Adam_1"
-  input: "cnnmodel/train/cnnmodel/Variable_1/Adam"
-  input: "cnnmodel/train/cnnmodel/Variable_1/Adam_1"
-  input: "cnnmodel/train/cnnmodel/Variable_2/Adam"
-  input: "cnnmodel/train/cnnmodel/Variable_2/Adam_1"
-  input: "cnnmodel/train/cnnmodel/Variable_3/Adam"
-  input: "cnnmodel/train/cnnmodel/Variable_3/Adam_1"
-  input: "cnnmodel/train/cnnmodel/Variable_4/Adam"
-  input: "cnnmodel/train/cnnmodel/Variable_4/Adam_1"
-  input: "cnnmodel/train/cnnmodel/Variable_5/Adam"
-  input: "cnnmodel/train/cnnmodel/Variable_5/Adam_1"
-  input: "cnnmodel/train/cnnmodel/Variable_6/Adam"
-  input: "cnnmodel/train/cnnmodel/Variable_6/Adam_1"
-  input: "cnnmodel/train/cnnmodel/Variable_7/Adam"
-  input: "cnnmodel/train/cnnmodel/Variable_7/Adam_1"
-  input: "train/cnnmodel/Variable"
-  input: "train/cnnmodel/Variable_1"
-  input: "train/cnnmodel/Variable_2"
-  input: "train/cnnmodel/Variable_3"
-  input: "train/cnnmodel/Variable_4"
-  input: "train/cnnmodel/Variable_5"
-  input: "train/cnnmodel/Variable_6"
-  input: "train/cnnmodel/Variable_7"
+  input: "cnnmodel/train/cnnmodel/WCon1/Adam"
+  input: "cnnmodel/train/cnnmodel/WCon1/Adam_1"
+  input: "cnnmodel/train/cnnmodel/WCon2/Adam"
+  input: "cnnmodel/train/cnnmodel/WCon2/Adam_1"
+  input: "cnnmodel/train/cnnmodel/WFc1/Adam"
+  input: "cnnmodel/train/cnnmodel/WFc1/Adam_1"
+  input: "cnnmodel/train/cnnmodel/WFc2/Adam"
+  input: "cnnmodel/train/cnnmodel/WFc2/Adam_1"
+  input: "cnnmodel/train/cnnmodel/bCon1/Adam"
+  input: "cnnmodel/train/cnnmodel/bCon1/Adam_1"
+  input: "cnnmodel/train/cnnmodel/bCon2/Adam"
+  input: "cnnmodel/train/cnnmodel/bCon2/Adam_1"
+  input: "cnnmodel/train/cnnmodel/bFc2/Adam"
+  input: "cnnmodel/train/cnnmodel/bFc2/Adam_1"
+  input: "cnnmodel/train/cnnmodel/bfc2/Adam"
+  input: "cnnmodel/train/cnnmodel/bfc2/Adam_1"
+  input: "train/cnnmodel/WCon1"
+  input: "train/cnnmodel/WCon2"
+  input: "train/cnnmodel/WFc1"
+  input: "train/cnnmodel/WFc2"
+  input: "train/cnnmodel/bCon1"
+  input: "train/cnnmodel/bCon2"
+  input: "train/cnnmodel/bFc2"
   input: "train/cnnmodel/beta1_power"
   input: "train/cnnmodel/beta2_power"
+  input: "train/cnnmodel/bfc2"
   attr {
     key: "dtypes"
     value {
@@ -18448,7 +15778,7 @@ node {
             size: 1
           }
         }
-        string_val: "cnnmodel/train/cnnmodel/Variable/Adam"
+        string_val: "cnnmodel/train/cnnmodel/WCon1/Adam"
       }
     }
   }
@@ -18517,7 +15847,7 @@ node {
 node {
   name: "save_1/Assign"
   op: "Assign"
-  input: "cnnmodel/train/cnnmodel/Variable/Adam"
+  input: "cnnmodel/train/cnnmodel/WCon1/Adam"
   input: "save_1/RestoreV2"
   attr {
     key: "T"
@@ -18529,7 +15859,7 @@ node {
     key: "_class"
     value {
       list {
-        s: "loc:@train/cnnmodel/Variable"
+        s: "loc:@train/cnnmodel/WCon1"
       }
     }
   }
@@ -18598,7 +15928,7 @@ node {
             size: 1
           }
         }
-        string_val: "cnnmodel/train/cnnmodel/Variable/Adam_1"
+        string_val: "cnnmodel/train/cnnmodel/WCon1/Adam_1"
       }
     }
   }
@@ -18667,7 +15997,7 @@ node {
 node {
   name: "save_1/Assign_1"
   op: "Assign"
-  input: "cnnmodel/train/cnnmodel/Variable/Adam_1"
+  input: "cnnmodel/train/cnnmodel/WCon1/Adam_1"
   input: "save_1/RestoreV2_1"
   attr {
     key: "T"
@@ -18679,7 +16009,7 @@ node {
     key: "_class"
     value {
       list {
-        s: "loc:@train/cnnmodel/Variable"
+        s: "loc:@train/cnnmodel/WCon1"
       }
     }
   }
@@ -18748,7 +16078,7 @@ node {
             size: 1
           }
         }
-        string_val: "cnnmodel/train/cnnmodel/Variable_1/Adam"
+        string_val: "cnnmodel/train/cnnmodel/WCon2/Adam"
       }
     }
   }
@@ -18817,7 +16147,7 @@ node {
 node {
   name: "save_1/Assign_2"
   op: "Assign"
-  input: "cnnmodel/train/cnnmodel/Variable_1/Adam"
+  input: "cnnmodel/train/cnnmodel/WCon2/Adam"
   input: "save_1/RestoreV2_2"
   attr {
     key: "T"
@@ -18829,7 +16159,7 @@ node {
     key: "_class"
     value {
       list {
-        s: "loc:@train/cnnmodel/Variable_1"
+        s: "loc:@train/cnnmodel/WCon2"
       }
     }
   }
@@ -18839,7 +16169,16 @@ node {
       list {
         shape {
           dim {
+            size: 5
+          }
+          dim {
+            size: 5
+          }
+          dim {
             size: 32
+          }
+          dim {
+            size: 64
           }
         }
       }
@@ -18889,7 +16228,7 @@ node {
             size: 1
           }
         }
-        string_val: "cnnmodel/train/cnnmodel/Variable_1/Adam_1"
+        string_val: "cnnmodel/train/cnnmodel/WCon2/Adam_1"
       }
     }
   }
@@ -18958,7 +16297,7 @@ node {
 node {
   name: "save_1/Assign_3"
   op: "Assign"
-  input: "cnnmodel/train/cnnmodel/Variable_1/Adam_1"
+  input: "cnnmodel/train/cnnmodel/WCon2/Adam_1"
   input: "save_1/RestoreV2_3"
   attr {
     key: "T"
@@ -18970,7 +16309,7 @@ node {
     key: "_class"
     value {
       list {
-        s: "loc:@train/cnnmodel/Variable_1"
+        s: "loc:@train/cnnmodel/WCon2"
       }
     }
   }
@@ -18980,7 +16319,16 @@ node {
       list {
         shape {
           dim {
+            size: 5
+          }
+          dim {
+            size: 5
+          }
+          dim {
             size: 32
+          }
+          dim {
+            size: 64
           }
         }
       }
@@ -19030,7 +16378,7 @@ node {
             size: 1
           }
         }
-        string_val: "cnnmodel/train/cnnmodel/Variable_2/Adam"
+        string_val: "cnnmodel/train/cnnmodel/WFc1/Adam"
       }
     }
   }
@@ -19099,7 +16447,7 @@ node {
 node {
   name: "save_1/Assign_4"
   op: "Assign"
-  input: "cnnmodel/train/cnnmodel/Variable_2/Adam"
+  input: "cnnmodel/train/cnnmodel/WFc1/Adam"
   input: "save_1/RestoreV2_4"
   attr {
     key: "T"
@@ -19111,7 +16459,7 @@ node {
     key: "_class"
     value {
       list {
-        s: "loc:@train/cnnmodel/Variable_2"
+        s: "loc:@train/cnnmodel/WFc1"
       }
     }
   }
@@ -19121,16 +16469,10 @@ node {
       list {
         shape {
           dim {
-            size: 5
+            size: 5632
           }
           dim {
-            size: 5
-          }
-          dim {
-            size: 32
-          }
-          dim {
-            size: 64
+            size: 1024
           }
         }
       }
@@ -19180,7 +16522,7 @@ node {
             size: 1
           }
         }
-        string_val: "cnnmodel/train/cnnmodel/Variable_2/Adam_1"
+        string_val: "cnnmodel/train/cnnmodel/WFc1/Adam_1"
       }
     }
   }
@@ -19249,7 +16591,7 @@ node {
 node {
   name: "save_1/Assign_5"
   op: "Assign"
-  input: "cnnmodel/train/cnnmodel/Variable_2/Adam_1"
+  input: "cnnmodel/train/cnnmodel/WFc1/Adam_1"
   input: "save_1/RestoreV2_5"
   attr {
     key: "T"
@@ -19261,7 +16603,7 @@ node {
     key: "_class"
     value {
       list {
-        s: "loc:@train/cnnmodel/Variable_2"
+        s: "loc:@train/cnnmodel/WFc1"
       }
     }
   }
@@ -19271,16 +16613,10 @@ node {
       list {
         shape {
           dim {
-            size: 5
+            size: 5632
           }
           dim {
-            size: 5
-          }
-          dim {
-            size: 32
-          }
-          dim {
-            size: 64
+            size: 1024
           }
         }
       }
@@ -19330,7 +16666,7 @@ node {
             size: 1
           }
         }
-        string_val: "cnnmodel/train/cnnmodel/Variable_3/Adam"
+        string_val: "cnnmodel/train/cnnmodel/WFc2/Adam"
       }
     }
   }
@@ -19399,7 +16735,7 @@ node {
 node {
   name: "save_1/Assign_6"
   op: "Assign"
-  input: "cnnmodel/train/cnnmodel/Variable_3/Adam"
+  input: "cnnmodel/train/cnnmodel/WFc2/Adam"
   input: "save_1/RestoreV2_6"
   attr {
     key: "T"
@@ -19411,7 +16747,7 @@ node {
     key: "_class"
     value {
       list {
-        s: "loc:@train/cnnmodel/Variable_3"
+        s: "loc:@train/cnnmodel/WFc2"
       }
     }
   }
@@ -19421,7 +16757,10 @@ node {
       list {
         shape {
           dim {
-            size: 64
+            size: 1024
+          }
+          dim {
+            size: 44
           }
         }
       }
@@ -19471,7 +16810,7 @@ node {
             size: 1
           }
         }
-        string_val: "cnnmodel/train/cnnmodel/Variable_3/Adam_1"
+        string_val: "cnnmodel/train/cnnmodel/WFc2/Adam_1"
       }
     }
   }
@@ -19540,7 +16879,7 @@ node {
 node {
   name: "save_1/Assign_7"
   op: "Assign"
-  input: "cnnmodel/train/cnnmodel/Variable_3/Adam_1"
+  input: "cnnmodel/train/cnnmodel/WFc2/Adam_1"
   input: "save_1/RestoreV2_7"
   attr {
     key: "T"
@@ -19552,7 +16891,7 @@ node {
     key: "_class"
     value {
       list {
-        s: "loc:@train/cnnmodel/Variable_3"
+        s: "loc:@train/cnnmodel/WFc2"
       }
     }
   }
@@ -19562,7 +16901,10 @@ node {
       list {
         shape {
           dim {
-            size: 64
+            size: 1024
+          }
+          dim {
+            size: 44
           }
         }
       }
@@ -19612,7 +16954,7 @@ node {
             size: 1
           }
         }
-        string_val: "cnnmodel/train/cnnmodel/Variable_4/Adam"
+        string_val: "cnnmodel/train/cnnmodel/bCon1/Adam"
       }
     }
   }
@@ -19681,7 +17023,7 @@ node {
 node {
   name: "save_1/Assign_8"
   op: "Assign"
-  input: "cnnmodel/train/cnnmodel/Variable_4/Adam"
+  input: "cnnmodel/train/cnnmodel/bCon1/Adam"
   input: "save_1/RestoreV2_8"
   attr {
     key: "T"
@@ -19693,7 +17035,7 @@ node {
     key: "_class"
     value {
       list {
-        s: "loc:@train/cnnmodel/Variable_4"
+        s: "loc:@train/cnnmodel/bCon1"
       }
     }
   }
@@ -19703,10 +17045,7 @@ node {
       list {
         shape {
           dim {
-            size: 5632
-          }
-          dim {
-            size: 1024
+            size: 32
           }
         }
       }
@@ -19756,7 +17095,7 @@ node {
             size: 1
           }
         }
-        string_val: "cnnmodel/train/cnnmodel/Variable_4/Adam_1"
+        string_val: "cnnmodel/train/cnnmodel/bCon1/Adam_1"
       }
     }
   }
@@ -19825,7 +17164,7 @@ node {
 node {
   name: "save_1/Assign_9"
   op: "Assign"
-  input: "cnnmodel/train/cnnmodel/Variable_4/Adam_1"
+  input: "cnnmodel/train/cnnmodel/bCon1/Adam_1"
   input: "save_1/RestoreV2_9"
   attr {
     key: "T"
@@ -19837,7 +17176,7 @@ node {
     key: "_class"
     value {
       list {
-        s: "loc:@train/cnnmodel/Variable_4"
+        s: "loc:@train/cnnmodel/bCon1"
       }
     }
   }
@@ -19847,10 +17186,7 @@ node {
       list {
         shape {
           dim {
-            size: 5632
-          }
-          dim {
-            size: 1024
+            size: 32
           }
         }
       }
@@ -19900,7 +17236,7 @@ node {
             size: 1
           }
         }
-        string_val: "cnnmodel/train/cnnmodel/Variable_5/Adam"
+        string_val: "cnnmodel/train/cnnmodel/bCon2/Adam"
       }
     }
   }
@@ -19969,7 +17305,7 @@ node {
 node {
   name: "save_1/Assign_10"
   op: "Assign"
-  input: "cnnmodel/train/cnnmodel/Variable_5/Adam"
+  input: "cnnmodel/train/cnnmodel/bCon2/Adam"
   input: "save_1/RestoreV2_10"
   attr {
     key: "T"
@@ -19981,7 +17317,7 @@ node {
     key: "_class"
     value {
       list {
-        s: "loc:@train/cnnmodel/Variable_5"
+        s: "loc:@train/cnnmodel/bCon2"
       }
     }
   }
@@ -19991,7 +17327,7 @@ node {
       list {
         shape {
           dim {
-            size: 1024
+            size: 64
           }
         }
       }
@@ -20041,7 +17377,7 @@ node {
             size: 1
           }
         }
-        string_val: "cnnmodel/train/cnnmodel/Variable_5/Adam_1"
+        string_val: "cnnmodel/train/cnnmodel/bCon2/Adam_1"
       }
     }
   }
@@ -20110,7 +17446,7 @@ node {
 node {
   name: "save_1/Assign_11"
   op: "Assign"
-  input: "cnnmodel/train/cnnmodel/Variable_5/Adam_1"
+  input: "cnnmodel/train/cnnmodel/bCon2/Adam_1"
   input: "save_1/RestoreV2_11"
   attr {
     key: "T"
@@ -20122,7 +17458,7 @@ node {
     key: "_class"
     value {
       list {
-        s: "loc:@train/cnnmodel/Variable_5"
+        s: "loc:@train/cnnmodel/bCon2"
       }
     }
   }
@@ -20132,7 +17468,7 @@ node {
       list {
         shape {
           dim {
-            size: 1024
+            size: 64
           }
         }
       }
@@ -20182,7 +17518,7 @@ node {
             size: 1
           }
         }
-        string_val: "cnnmodel/train/cnnmodel/Variable_6/Adam"
+        string_val: "cnnmodel/train/cnnmodel/bFc2/Adam"
       }
     }
   }
@@ -20251,7 +17587,7 @@ node {
 node {
   name: "save_1/Assign_12"
   op: "Assign"
-  input: "cnnmodel/train/cnnmodel/Variable_6/Adam"
+  input: "cnnmodel/train/cnnmodel/bFc2/Adam"
   input: "save_1/RestoreV2_12"
   attr {
     key: "T"
@@ -20263,7 +17599,7 @@ node {
     key: "_class"
     value {
       list {
-        s: "loc:@train/cnnmodel/Variable_6"
+        s: "loc:@train/cnnmodel/bFc2"
       }
     }
   }
@@ -20274,9 +17610,6 @@ node {
         shape {
           dim {
             size: 1024
-          }
-          dim {
-            size: 44
           }
         }
       }
@@ -20326,7 +17659,7 @@ node {
             size: 1
           }
         }
-        string_val: "cnnmodel/train/cnnmodel/Variable_6/Adam_1"
+        string_val: "cnnmodel/train/cnnmodel/bFc2/Adam_1"
       }
     }
   }
@@ -20395,7 +17728,7 @@ node {
 node {
   name: "save_1/Assign_13"
   op: "Assign"
-  input: "cnnmodel/train/cnnmodel/Variable_6/Adam_1"
+  input: "cnnmodel/train/cnnmodel/bFc2/Adam_1"
   input: "save_1/RestoreV2_13"
   attr {
     key: "T"
@@ -20407,7 +17740,7 @@ node {
     key: "_class"
     value {
       list {
-        s: "loc:@train/cnnmodel/Variable_6"
+        s: "loc:@train/cnnmodel/bFc2"
       }
     }
   }
@@ -20418,9 +17751,6 @@ node {
         shape {
           dim {
             size: 1024
-          }
-          dim {
-            size: 44
           }
         }
       }
@@ -20470,7 +17800,7 @@ node {
             size: 1
           }
         }
-        string_val: "cnnmodel/train/cnnmodel/Variable_7/Adam"
+        string_val: "cnnmodel/train/cnnmodel/bfc2/Adam"
       }
     }
   }
@@ -20539,7 +17869,7 @@ node {
 node {
   name: "save_1/Assign_14"
   op: "Assign"
-  input: "cnnmodel/train/cnnmodel/Variable_7/Adam"
+  input: "cnnmodel/train/cnnmodel/bfc2/Adam"
   input: "save_1/RestoreV2_14"
   attr {
     key: "T"
@@ -20551,7 +17881,7 @@ node {
     key: "_class"
     value {
       list {
-        s: "loc:@train/cnnmodel/Variable_7"
+        s: "loc:@train/cnnmodel/bfc2"
       }
     }
   }
@@ -20611,7 +17941,7 @@ node {
             size: 1
           }
         }
-        string_val: "cnnmodel/train/cnnmodel/Variable_7/Adam_1"
+        string_val: "cnnmodel/train/cnnmodel/bfc2/Adam_1"
       }
     }
   }
@@ -20680,7 +18010,7 @@ node {
 node {
   name: "save_1/Assign_15"
   op: "Assign"
-  input: "cnnmodel/train/cnnmodel/Variable_7/Adam_1"
+  input: "cnnmodel/train/cnnmodel/bfc2/Adam_1"
   input: "save_1/RestoreV2_15"
   attr {
     key: "T"
@@ -20692,7 +18022,7 @@ node {
     key: "_class"
     value {
       list {
-        s: "loc:@train/cnnmodel/Variable_7"
+        s: "loc:@train/cnnmodel/bfc2"
       }
     }
   }
@@ -20752,7 +18082,7 @@ node {
             size: 1
           }
         }
-        string_val: "train/cnnmodel/Variable"
+        string_val: "train/cnnmodel/WCon1"
       }
     }
   }
@@ -20821,7 +18151,7 @@ node {
 node {
   name: "save_1/Assign_16"
   op: "Assign"
-  input: "train/cnnmodel/Variable"
+  input: "train/cnnmodel/WCon1"
   input: "save_1/RestoreV2_16"
   attr {
     key: "T"
@@ -20833,7 +18163,7 @@ node {
     key: "_class"
     value {
       list {
-        s: "loc:@train/cnnmodel/Variable"
+        s: "loc:@train/cnnmodel/WCon1"
       }
     }
   }
@@ -20902,7 +18232,7 @@ node {
             size: 1
           }
         }
-        string_val: "train/cnnmodel/Variable_1"
+        string_val: "train/cnnmodel/WCon2"
       }
     }
   }
@@ -20971,7 +18301,7 @@ node {
 node {
   name: "save_1/Assign_17"
   op: "Assign"
-  input: "train/cnnmodel/Variable_1"
+  input: "train/cnnmodel/WCon2"
   input: "save_1/RestoreV2_17"
   attr {
     key: "T"
@@ -20983,7 +18313,7 @@ node {
     key: "_class"
     value {
       list {
-        s: "loc:@train/cnnmodel/Variable_1"
+        s: "loc:@train/cnnmodel/WCon2"
       }
     }
   }
@@ -20993,7 +18323,16 @@ node {
       list {
         shape {
           dim {
+            size: 5
+          }
+          dim {
+            size: 5
+          }
+          dim {
             size: 32
+          }
+          dim {
+            size: 64
           }
         }
       }
@@ -21043,7 +18382,7 @@ node {
             size: 1
           }
         }
-        string_val: "train/cnnmodel/Variable_2"
+        string_val: "train/cnnmodel/WFc1"
       }
     }
   }
@@ -21112,7 +18451,7 @@ node {
 node {
   name: "save_1/Assign_18"
   op: "Assign"
-  input: "train/cnnmodel/Variable_2"
+  input: "train/cnnmodel/WFc1"
   input: "save_1/RestoreV2_18"
   attr {
     key: "T"
@@ -21124,7 +18463,7 @@ node {
     key: "_class"
     value {
       list {
-        s: "loc:@train/cnnmodel/Variable_2"
+        s: "loc:@train/cnnmodel/WFc1"
       }
     }
   }
@@ -21134,16 +18473,10 @@ node {
       list {
         shape {
           dim {
-            size: 5
+            size: 5632
           }
           dim {
-            size: 5
-          }
-          dim {
-            size: 32
-          }
-          dim {
-            size: 64
+            size: 1024
           }
         }
       }
@@ -21193,7 +18526,7 @@ node {
             size: 1
           }
         }
-        string_val: "train/cnnmodel/Variable_3"
+        string_val: "train/cnnmodel/WFc2"
       }
     }
   }
@@ -21262,7 +18595,7 @@ node {
 node {
   name: "save_1/Assign_19"
   op: "Assign"
-  input: "train/cnnmodel/Variable_3"
+  input: "train/cnnmodel/WFc2"
   input: "save_1/RestoreV2_19"
   attr {
     key: "T"
@@ -21274,7 +18607,7 @@ node {
     key: "_class"
     value {
       list {
-        s: "loc:@train/cnnmodel/Variable_3"
+        s: "loc:@train/cnnmodel/WFc2"
       }
     }
   }
@@ -21284,7 +18617,10 @@ node {
       list {
         shape {
           dim {
-            size: 64
+            size: 1024
+          }
+          dim {
+            size: 44
           }
         }
       }
@@ -21334,7 +18670,7 @@ node {
             size: 1
           }
         }
-        string_val: "train/cnnmodel/Variable_4"
+        string_val: "train/cnnmodel/bCon1"
       }
     }
   }
@@ -21403,7 +18739,7 @@ node {
 node {
   name: "save_1/Assign_20"
   op: "Assign"
-  input: "train/cnnmodel/Variable_4"
+  input: "train/cnnmodel/bCon1"
   input: "save_1/RestoreV2_20"
   attr {
     key: "T"
@@ -21415,7 +18751,7 @@ node {
     key: "_class"
     value {
       list {
-        s: "loc:@train/cnnmodel/Variable_4"
+        s: "loc:@train/cnnmodel/bCon1"
       }
     }
   }
@@ -21425,10 +18761,7 @@ node {
       list {
         shape {
           dim {
-            size: 5632
-          }
-          dim {
-            size: 1024
+            size: 32
           }
         }
       }
@@ -21478,7 +18811,7 @@ node {
             size: 1
           }
         }
-        string_val: "train/cnnmodel/Variable_5"
+        string_val: "train/cnnmodel/bCon2"
       }
     }
   }
@@ -21547,7 +18880,7 @@ node {
 node {
   name: "save_1/Assign_21"
   op: "Assign"
-  input: "train/cnnmodel/Variable_5"
+  input: "train/cnnmodel/bCon2"
   input: "save_1/RestoreV2_21"
   attr {
     key: "T"
@@ -21559,7 +18892,7 @@ node {
     key: "_class"
     value {
       list {
-        s: "loc:@train/cnnmodel/Variable_5"
+        s: "loc:@train/cnnmodel/bCon2"
       }
     }
   }
@@ -21569,7 +18902,7 @@ node {
       list {
         shape {
           dim {
-            size: 1024
+            size: 64
           }
         }
       }
@@ -21619,7 +18952,7 @@ node {
             size: 1
           }
         }
-        string_val: "train/cnnmodel/Variable_6"
+        string_val: "train/cnnmodel/bFc2"
       }
     }
   }
@@ -21688,7 +19021,7 @@ node {
 node {
   name: "save_1/Assign_22"
   op: "Assign"
-  input: "train/cnnmodel/Variable_6"
+  input: "train/cnnmodel/bFc2"
   input: "save_1/RestoreV2_22"
   attr {
     key: "T"
@@ -21700,7 +19033,7 @@ node {
     key: "_class"
     value {
       list {
-        s: "loc:@train/cnnmodel/Variable_6"
+        s: "loc:@train/cnnmodel/bFc2"
       }
     }
   }
@@ -21711,9 +19044,6 @@ node {
         shape {
           dim {
             size: 1024
-          }
-          dim {
-            size: 44
           }
         }
       }
@@ -21763,7 +19093,7 @@ node {
             size: 1
           }
         }
-        string_val: "train/cnnmodel/Variable_7"
+        string_val: "train/cnnmodel/beta1_power"
       }
     }
   }
@@ -21832,7 +19162,7 @@ node {
 node {
   name: "save_1/Assign_23"
   op: "Assign"
-  input: "train/cnnmodel/Variable_7"
+  input: "train/cnnmodel/beta1_power"
   input: "save_1/RestoreV2_23"
   attr {
     key: "T"
@@ -21844,7 +19174,7 @@ node {
     key: "_class"
     value {
       list {
-        s: "loc:@train/cnnmodel/Variable_7"
+        s: "loc:@train/cnnmodel/WCon1"
       }
     }
   }
@@ -21853,9 +19183,6 @@ node {
     value {
       list {
         shape {
-          dim {
-            size: 44
-          }
         }
       }
     }
@@ -21904,7 +19231,7 @@ node {
             size: 1
           }
         }
-        string_val: "train/cnnmodel/beta1_power"
+        string_val: "train/cnnmodel/beta2_power"
       }
     }
   }
@@ -21973,7 +19300,7 @@ node {
 node {
   name: "save_1/Assign_24"
   op: "Assign"
-  input: "train/cnnmodel/beta1_power"
+  input: "train/cnnmodel/beta2_power"
   input: "save_1/RestoreV2_24"
   attr {
     key: "T"
@@ -21985,7 +19312,7 @@ node {
     key: "_class"
     value {
       list {
-        s: "loc:@train/cnnmodel/Variable"
+        s: "loc:@train/cnnmodel/WCon1"
       }
     }
   }
@@ -22042,7 +19369,7 @@ node {
             size: 1
           }
         }
-        string_val: "train/cnnmodel/beta2_power"
+        string_val: "train/cnnmodel/bfc2"
       }
     }
   }
@@ -22111,7 +19438,7 @@ node {
 node {
   name: "save_1/Assign_25"
   op: "Assign"
-  input: "train/cnnmodel/beta2_power"
+  input: "train/cnnmodel/bfc2"
   input: "save_1/RestoreV2_25"
   attr {
     key: "T"
@@ -22123,7 +19450,7 @@ node {
     key: "_class"
     value {
       list {
-        s: "loc:@train/cnnmodel/Variable"
+        s: "loc:@train/cnnmodel/bfc2"
       }
     }
   }
@@ -22132,6 +19459,9 @@ node {
     value {
       list {
         shape {
+          dim {
+            size: 44
+          }
         }
       }
     }

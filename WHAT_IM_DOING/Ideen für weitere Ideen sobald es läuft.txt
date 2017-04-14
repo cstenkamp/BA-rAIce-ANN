@@ -1,4 +1,4 @@
--Überhaupt mal stolz sein ein DeepQN mit continuus control zu haben (Ziel: "Die Karre schnell um'n Kurs")
+-Überhaupt mal stolz sein ein DeepQN mit continuus control zu haben (Ziel: "Die Karre schnell um'n Kurs" - bzw. Ziel: erkennen dass er klug kurven fährt)
 -Überhaupt erst mal gucken ob das auf einer zweiten Strecke funktioniert
 -Statt dem DeepQN das netzwerk nehmen dass sich nen Model des Games aufbaut und speichert und vergleichen
 -Gucken inwieweit vorher-supervisedly-lernen hilft, mit und ohne probieren
