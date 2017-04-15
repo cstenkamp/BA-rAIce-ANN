@@ -8,6 +8,7 @@ import tensorflow as tf
 import numpy as np
 import os
 import time
+import math
 #====own functions====
 import read_supervised
 
@@ -23,7 +24,7 @@ class Config(object):
     vector_len = 59
     keep_prob = 0.8
     initscale = 0.1
-    iterations = 100 #100
+    iterations = 200 #100
     steering_steps = 11
     log_dir = "SummaryLogDir/"  
     checkpoint_dir = "Checkpoint/"
@@ -59,7 +60,7 @@ class CNN(object):
     def __init__(self, config, is_training=True):
         #builds the computation graph, using the next few functions (this is basically the interface)
         self.config = config
-        self.stepsofar = 0
+        self.iterations = 0
     
         self.inputs, self.targets = self.set_placeholders()
         
@@ -68,12 +69,11 @@ class CNN(object):
             self.loss = self.loss_func(self.logits, self.argmaxs)
             self.train_op = self.training(self.loss, 1e-4) #TODO: die learning rate muss sich verkleinern können
             self.accuracy = self.evaluation(self.argmaxs, self.targets)       
+            self.summary = tf.summary.merge_all() #aus dem toy-example
         else:
             with tf.device("/cpu:0"): #less overhead by not trying to switch to gpu
                 self.logits, self.argmaxs= self.inference(False) 
-        
-        self.summary = tf.summary.merge_all() #aus dem toy-example
-        
+            
     
     def set_placeholders(self):
         inputs = tf.placeholder(tf.float32, shape=[None, self.config.image_dims[0], self.config.image_dims[1]], name="inputs")  #first dim is none since inference has another batchsize than training
@@ -82,14 +82,12 @@ class CNN(object):
     
     def inference(self, for_training=False):
         
-        #TODO: das hier so much anders, mit variablescopes und get_variable -> ONLINE-SOURCECODE FINDEN!
         def weight_variable(shape, name):
-          initial = tf.truncated_normal(shape, stddev=0.1)
-          return tf.Variable(initial, name=name)
+          return tf.get_variable(name, shape, initializer= tf.truncated_normal_initializer(stddev=1.0 / math.sqrt(float(self.config.image_dims[0]*self.config.image_dims[1]))))
                 
         def bias_variable(shape, name):
-          initial = tf.constant(0.1, shape=shape) #Since we're using ReLU neurons, it is also good practice to initialize them with a slightly positive initial bias to avoid "dead neurons"
-          return tf.Variable(initial, name=name)
+          #Since we're using ReLU neurons, it is also good practice to initialize them with a slightly positive initial bias to avoid "dead neurons"
+          return tf.get_variable(name, shape, initializer=tf.constant_initializer(0.1))
         
         def conv2d(x, W):
           return tf.nn.conv2d(x, W, strides=[1, 1, 1, 1], padding='SAME')
@@ -98,35 +96,35 @@ class CNN(object):
           return tf.nn.max_pool(x, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding='SAME')
   
         rs_input = tf.reshape(self.inputs, [-1, self.config.image_dims[0], self.config.image_dims[1], 1]) #final dimension = number of color channels
-    
-        self.W_conv1 = weight_variable([5, 5, 1, 32], "WCon1") # patchsizey, patchsizey, #inputchannels, #outputchannels
-        self.b_conv1 = bias_variable([32], "bCon1")
-                
-        h_conv1 = tf.nn.relu(conv2d(rs_input, self.W_conv1) + self.b_conv1)
-        h_pool1 = max_pool_2x2(h_conv1)  #reduces in this case to 15*21
+  
+        with tf.name_scope("Conv1"):
+            self.W_conv1 = weight_variable([5, 5, 1, 32], "WCon1") # patchsizey, patchsizey, #inputchannels, #outputchannels
+            self.b_conv1 = bias_variable([32], "bCon1")
+            h_conv1 = tf.nn.relu(conv2d(rs_input, self.W_conv1) + self.b_conv1)
+            h_pool1 = max_pool_2x2(h_conv1)  #reduces in this case to 15*21
+ 
+        with tf.name_scope("Conv2"):       
+            self.W_conv2 = weight_variable([5, 5, 32, 64], "WCon2")
+            self.b_conv2 = bias_variable([64], "bCon2")
+            h_conv2 = tf.nn.relu(conv2d(h_pool1, self.W_conv2) + self.b_conv2)
+            h_pool2 = max_pool_2x2(h_conv2) #reduces to... 8*11?
         
-        self.W_conv2 = weight_variable([5, 5, 32, 64], "WCon2")
-        self.b_conv2 = bias_variable([64], "bCon2")
+        with tf.name_scope("FC1"):
+            self.W_fc1 = weight_variable([8 * 11 * 64, 1024], "WFc1")
+            self.b_fc1 = bias_variable([1024], "bFc2")
+            h_pool2_flat = tf.reshape(h_pool2, [-1, 8*11*64])
+            h_fc1 = tf.nn.relu(tf.matmul(h_pool2_flat, self.W_fc1) + self.b_fc1 )       
+            
+            if for_training: #TODO: warum nur hier dropout?
+                self.keep_prob = tf.Variable(tf.constant(1.0), trainable=False) #wenn nicht gefeedet ist sie standardmäßig 1
+                h_fc1 = tf.nn.dropout(h_fc1, self.keep_prob) 
         
-        h_conv2 = tf.nn.relu(conv2d(h_pool1, self.W_conv2) + self.b_conv2)
-        h_pool2 = max_pool_2x2(h_conv2) #reduces to... 8*11?
-        
-        self.W_fc1 = weight_variable([8 * 11 * 64, 1024], "WFc1")
-        self.b_fc1 = bias_variable([1024], "bFc2")
-        
-        h_pool2_flat = tf.reshape(h_pool2, [-1, 8*11*64])
-        h_fc1 = tf.nn.relu(tf.matmul(h_pool2_flat, self.W_fc1) + self.b_fc1 )       
-
-        if for_training: #TODO: warum nur hier dropout?
-            self.keep_prob = tf.Variable(tf.constant(1.0), trainable=False) #wenn nicht gefeedet ist sie standardmäßig 1
-            h_fc1 = tf.nn.dropout(h_fc1, self.keep_prob) 
-        
-        self.W_fc2 = weight_variable([1024, self.config.steering_steps*4], "WFc2")
-        self.b_fc2 = bias_variable([self.config.steering_steps*4], "bfc2")
-                
-        y_conv = tf.nn.softmax(tf.matmul(h_fc1, self.W_fc2) + self.b_fc2)
-        argm = tf.one_hot(tf.argmax(y_conv, dimension=1), depth=self.config.steering_steps*4)
-        
+        with tf.name_scope("FC2"):
+            self.W_fc2 = weight_variable([1024, self.config.steering_steps*4], "WFc2")
+            self.b_fc2 = bias_variable([self.config.steering_steps*4], "bfc2")
+            y_conv = tf.nn.softmax(tf.matmul(h_fc1, self.W_fc2) + self.b_fc2)
+            argm = tf.one_hot(tf.argmax(y_conv, dimension=1), depth=self.config.steering_steps*4)
+            
         return y_conv, argm
     
     
@@ -134,6 +132,7 @@ class CNN(object):
         #calculates cross-entropy 
 #        cross_entropy = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(labels=self.targets, logits=logits))
 #        return cross_entropy
+        #tf.nn.softmax_cross_entropy_with_logits  macht angeblich(!) 1-hot-labels. Diese vergelicht man MIT INTEGERS!! also onehot-label auf der einen seite, integer auf der anderen! ahaaa!
         #"Note that tf.nn.softmax_cross_entropy_with_logits internally applies the softmax on the model's unnormalized model prediction and sums across all classes"
         cross_entropy = -tf.reduce_sum(self.targets * tf.log(logits), reduction_indices=[1])
         return tf.reduce_mean(cross_entropy)        
@@ -141,14 +140,20 @@ class CNN(object):
         
     def training(self, loss, learning_rate):
         #returns the minimizer op
-
+        tf.summary.scalar('loss', loss) #angeblich für TensorBoard
+         
 # TODO: incorporate this!        
 #            tvars = tf.trainable_variables()
 #            grads, _ = tf.clip_by_global_norm(tf.gradients(self.cost, tvars), 5)
 #            self.train_op = tf.train.AdamOptimizer().minimize(self.cost)        
-        
-        train_op = tf.train.AdamOptimizer(learning_rate).minimize(loss)
+
+        optimizer = tf.train.AdamOptimizer(learning_rate)
+        #TODO: AUSSUCHEN können welchen optimizer, und meinen ausgesuchten verteidigen können
         #https://www.tensorflow.org/api_guides/python/train#optimizers
+        
+        self.global_step = tf.Variable(0, dtype=tf.int32, name='global_step', trainable=False) #wird hier: https://github.com/tensorflow/tensorflow/blob/master/tensorflow/examples/tutorials/mnist/mnist.py halt gemacht... warum hiernochmal weiß ich nicht.
+        
+        train_op = optimizer.minimize(loss, global_step=self.global_step)
         return train_op
         
         
@@ -169,20 +174,20 @@ class CNN(object):
 
 
     def run_train_epoch(self, session, dataset, learning_rate, summarywriter = None):
-        self.stepsofar += 1
         gesamtLoss = 0
+        self.iterations += 1
         
         dataset.reset_batch()
         for i in range(dataset.num_batches(self.config.batch_size)):
             feed_dict = self.train_fill_feed_dict(self.config, dataset)
-            _, loss = session.run([self.train_op, self.loss], feed_dict=feed_dict)   
+            if self.iterations % SUMMARYALL == 0 and summarywriter is not None:
+                _, loss, summary_str = session.run([self.train_op, self.loss, self.summary], feed_dict=feed_dict)   
+                summarywriter.add_summary(summary_str, session.run(self.global_step))
+                summarywriter.flush()
+            else:
+                _, loss = session.run([self.train_op, self.loss], feed_dict=feed_dict)   
             gesamtLoss += loss
         
-        if self.stepsofar % SUMMARYALL == 0 and summarywriter is not None: #aus dem toy-example
-            summary_str = session.run(self.summary, feed_dict=feed_dict)
-            summarywriter.add_summary(summary_str, self.stepsofar)
-            summarywriter.flush()
-            
         return gesamtLoss
             
     def run_eval(self, session, dataset):            
@@ -212,26 +217,46 @@ def run_CNN_training(config, dataset):
                 cnn = CNN(config, is_training=True)
         
         init = tf.global_variables_initializer()
-        saver = tf.train.Saver({"WCon1": cnn.W_conv1, "bCon1": cnn.b_conv1, "WCon2": cnn.W_conv2, "bCon2": cnn.b_conv2, "WFc1": cnn.W_fc1, "bFc1": cnn.b_fc1, "WFc2": cnn.W_fc2, "bFc2": cnn.b_fc2, })
+        saver = tf.train.Saver({"WCon1": cnn.W_conv1, "bCon1": cnn.b_conv1, "WCon2": cnn.W_conv2, "bCon2": cnn.b_conv2, "WFc1": cnn.W_fc1, "bFc1": cnn.b_fc1, "WFc2": cnn.W_fc2, "bFc2": cnn.b_fc2, "global_step":cnn.global_step},max_to_keep=3)
         
-        sv = tf.train.Supervisor(logdir="./supervisortraining/")
-        with sv.managed_session() as sess:
+#        sv = tf.train.Supervisor(logdir="./supervisortraining/")
+#        with sv.managed_session() as sess:
+        with tf.Session() as sess:
             summary_writer = tf.summary.FileWriter(config.log_dir, sess.graph) #aus dem toy-example
+            
+
             sess.run(init)
+            ckpt = tf.train.get_checkpoint_state(config.checkpoint_dir) 
+            if ckpt and ckpt.model_checkpoint_path:
+                saver.restore(sess, ckpt.model_checkpoint_path)
+                stepsPerIt = dataset.numsamples//config.batch_size
+                already_run_iterations = cnn.global_step.eval()//stepsPerIt
+                cnn.iterations = already_run_iterations
+                print("Restored checkpoint with",already_run_iterations,"Iterations run already") 
+            else:
+                already_run_iterations = 0
                 
-            for step in range(config.iterations):
+            num_iterations = config.iterations - already_run_iterations
+            print("Running for",num_iterations,"further iterations" if already_run_iterations>0 else "iterations")
+            for _ in range(num_iterations):
                 start_time = time.time()
-                if sv.should_stop():
-                    break
+#                if sv.should_stop():
+#                    break
+                step = cnn.global_step.eval() 
                 train_loss = cnn.run_train_epoch(sess, dataset, 0.5, summary_writer)
-                print('Step %d: loss = %.2f (%.3f sec)' % (step, train_loss, time.time()-start_time))
                 
-                if step % CHECKPOINTALL == 0 or step == config.iterations-1:
-                    checkpoint_file = os.path.join(config.checkpoint_dir, 'model.ckpt', global_step=step)
-                    saver.save(sess, checkpoint_file, global_step=cnn.stepsofar)                
+                savedpoint = ""
+                if cnn.iterations % CHECKPOINTALL == 0 or cnn.iterations == config.iterations:
+                    checkpoint_file = os.path.join(config.checkpoint_dir, 'model.ckpt')
+                    saver.save(sess, checkpoint_file, global_step=step)                
+                    savedpoint = "(checkpoint saved)"
+                
+                print('Iteration %3d (step %4d): loss = %.2f (%.3f sec)' % (cnn.iterations, step+1, train_loss, time.time()-start_time), savedpoint)
+                
                 
             ev, loss, _ = cnn.run_eval(sess, dataset)
-            print("Loss:", loss, " Percentage of correct ones:", ev)
+            print("Result of evaluation:")
+            print("Loss: %.2f,  Correct inferences: %.2f%%" % (loss, ev*100))
 
 #            dataset.reset_batch()
 #            _, visionvec, _, _ = dataset.next_batch(config, 1)
@@ -393,11 +418,7 @@ def run_CNN_training(config, dataset):
         
 def main(Steer=False):
     config = Config()
-    
-    if tf.gfile.Exists(config.log_dir):
-        tf.gfile.DeleteRecursively(config.log_dir)
-    tf.gfile.MakeDirs(config.log_dir)
-    
+        
     trackingpoints = read_supervised.TPList(config.foldername)
     print("Number of samples:",trackingpoints.numsamples)  
     if Steer:
