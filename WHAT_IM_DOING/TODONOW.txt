@@ -1,0 +1,10 @@
+Die Unity zu Python pipeline aufzeichnen! 
+-von wo bis wo sind es maximal 350ms?
+-was timed seit neuestem out?
+-warum kommt so oft 0.1
+
+
+Unity "interpolieren" lassen anhand der letzten 10 commands
+->OPTION IN PYTHON, dass der einfach das vom letztem result wieder-sendet, neu berechnet, oder halt nen placeholder für no-new-stuff (achtung, nicht nur auf den visionvec gucken, sondern auf alle inputvecs!)
+
+Alle socket/netzwerk/etc-funktionen müssen ordentlich erkennen ob sie failen, sodass da ne allgemeine "I-failed" raus wird, die EIN MAL (am besten je-nach-option) behandelt werden soll

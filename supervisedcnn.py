@@ -140,33 +140,6 @@ class CNN(object):
         h_fc1 = fc_layer(h_pool_flat, 8*11*64, 1024, "FC1", tf.nn.relu, do_dropout=for_training)                 
         y_pre = fc_layer(h_fc1, 1024, self.config.steering_steps*4, "FC2", None, do_dropout=False) #TODO: dropout nur beim letzten??
 
-#        with tf.name_scope("Conv1"):
-#            self.W_conv1 = weight_variable([5, 5, 1, 32], "WCon1") # patchsizey, patchsizey, #inputchannels, #outputchannels
-#            self.b_conv1 = bias_variable([32], "bCon1")
-#            h_conv1 = tf.nn.relu(conv2d(rs_input, self.W_conv1) + self.b_conv1)
-#            h_pool1 = max_pool_2x2(h_conv1)  #reduces in this case to 15*21
-# 
-#        with tf.name_scope("Conv2"):       
-#            self.W_conv2 = weight_variable([5, 5, 32, 64], "WCon2")
-#            self.b_conv2 = bias_variable([64], "bCon2")
-#            h_conv2 = tf.nn.relu(conv2d(h_pool1, self.W_conv2) + self.b_conv2)
-#            h_pool2 = max_pool_2x2(h_conv2) #reduces to... 8*11?
-#        
-#        with tf.name_scope("FC1"):
-#            self.W_fc1 = weight_variable([8 * 11 * 64, 1024], "WFc1")
-#            self.b_fc1 = bias_variable([1024], "bFc2")
-#            #h_pool2_flat = tf.reshape(h_pool2, [-1, 8*11*64])
-#            h_fc1 = tf.nn.relu(tf.matmul(h_pool_flat, self.W_fc1) + self.b_fc1 )       
-#            
-#            if for_training: #TODO: warum nur hier dropout?
-#                self.keep_prob = tf.Variable(tf.constant(1.0), trainable=False) #wenn nicht gefeedet ist sie standardmäßig 1
-#                h_fc1 = tf.nn.dropout(h_fc1, self.keep_prob) 
-#        
-#        with tf.name_scope("FC2"):
-#            self.W_fc2 = weight_variable([1024, self.config.steering_steps*4], "WFc2")
-#            self.b_fc2 = bias_variable([self.config.steering_steps*4], "bfc2")
-#            y_pre = tf.matmul(h_fc1, self.W_fc2) + self.b_fc2                      
-                         
         y_conv = tf.nn.softmax(y_pre)
         argm = tf.one_hot(tf.argmax(y_conv, dimension=1), depth=self.config.steering_steps*4)
         

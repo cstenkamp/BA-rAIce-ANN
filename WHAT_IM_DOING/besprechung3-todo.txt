@@ -51,6 +51,7 @@ ALLGEMEIN
 -Supervisedly learnen macht der auf nen 4-elementigen vektor (break, accelearate, left, right)... Aber mit DEM GLEICHEN Convnet wie später (this is the important part)
 -...und um dann auf das reinforcementlearning zu mappen sollte der ne per gaußkurve von dem genauem wert auf die diskretisierten 44 werte (FALLS NICHT CONTINUUS) mappen
 -A bunch of Todos im Quellcode...
+-Zum Thema exploration... wie wäre es mit nem reward dafür neue zustände zu erreichen? er bremst zu oft, und so nen reward könnte ihn daran hindern? ->paper dazu!
 
 -----------------------------------------DONE-----------------------------------------
 

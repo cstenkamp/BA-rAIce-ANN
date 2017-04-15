@@ -68,9 +68,12 @@ class MySocket:
     def myreceive(self):
         chunks = []
         bytes_recd = 0
-        what = self.sock.recv(5).decode('ascii')
+        try:
+            what = self.sock.recv(5).decode('ascii')
+        except socket.timeout:
+            return False
         if not what:
-            return
+            return False
         if what[0] not in ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0"]:
             msglen = 1000;
         else:
