@@ -222,7 +222,7 @@ class NeuralNetworkThread(threading.Thread):
                 with tf.variable_scope("cnnmodel", reuse=None, initializer=initializer): 
                     self.cnn = supervisedcnn.CNN(config, is_training=False)
             
-            self.saver = tf.train.Saver({"WCon1": self.cnn.W_conv1, "bCon1": self.cnn.b_conv1, "WCon2": self.cnn.W_conv2, "bCon2": self.cnn.b_conv2, "WFc1": self.cnn.W_fc1, "bFc1": self.cnn.b_fc1, "WFc2": self.cnn.W_fc2, "bFc2": self.cnn.b_fc2, })
+            self.saver = tf.train.Saver(self.cnn.trainvars)
             self.session = tf.Session()
             ckpt = tf.train.get_checkpoint_state(config.checkpoint_dir) 
             assert ckpt and ckpt.model_checkpoint_path

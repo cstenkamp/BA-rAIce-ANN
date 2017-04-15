@@ -3,7 +3,6 @@
 UNITY
 -Nach längerer Zeit kackt er immer noch mit "Too many threads" ab
 -Er hat noch 350ms responsetime, es würde bestimmt unglaublich helfen den selben Socket immer wieder zu nutzen anstatt immer neu zu connecten
--Recorder muss für das supervised-learning eigenen Speed mit-recorden, dass er daran mitlernen KANN
 -Den Recorder ein supervisedly-learn-target mitrecorden lassen (bzw. alle möglichen), kann man evtl nutzen!
 -Dass der am anfang, wenn man startet, alle variablen von unity nach python schickt (oder umgekehrt) damit sie garantiert gleich sind
 -Unity muss noch selbstständig(!!) zwischen 2 results vom netzwerk interpolieren 
@@ -12,7 +11,6 @@ UNITY
 -Den selben Socket immer wieder re-usen, sollte deutlich deutlich schneller sein als die 350ms
 -Dafür sorgen dass er an den richtigen Sachen die richtigen Sachen resettet
 -variablen zentralisieren, bspw alle wie-viel sekunden er supervised-learn-records macht (eher viel als wenig)
--der recorder muss mitspeichern ob ICH die runde gefahren bin oder das netz (und die gesamtzeit der runde im filename speichern)
 VON FRÜHER:
   -Die perfekter-reset-funktion
   -Funkion um genau an x (->parameter) prozent der strecke zu resetten
@@ -67,6 +65,8 @@ UNITY
 -Die Handles überarbeitet dass das Resultat des Netzwerk das tatsächliche fahren ist (und anderenfalls resetten)
 -Bugfix dass die time-punishs jetzt mit gespeichert werden
 -Die alte funktion fürs visiondisplay komplett entfernt
+-der recorder muss mitspeichern ob ICH die runde gefahren bin oder das netz (und die gesamtzeit der runde im filename speichern)
+-Recorder muss für das supervised-learning eigenen Speed mit-recorden, dass er daran mitlernen KANN
 
 PYTHON
 -ERST Supervisedly learnen um den statespace gehörig zu verkleinern.

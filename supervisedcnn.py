@@ -65,15 +65,25 @@ class CNN(object):
         self.inputs, self.targets = self.set_placeholders()
         
         if is_training:
-            self.logits, self.argmaxs= self.inference(True)         
-            self.loss = self.loss_func(self.logits, self.argmaxs)
+            self.logits, self.argmaxs = self.inference(True)         
+            self.loss = self.loss_func(self.logits)
             self.train_op = self.training(self.loss, 1e-4) #TODO: die learning rate muss sich verkleinern können
             self.accuracy = self.evaluation(self.argmaxs, self.targets)       
-            self.summary = tf.summary.merge_all() #aus dem toy-example
+            self.summary = tf.summary.merge_all() #für TensorBoard
         else:
             with tf.device("/cpu:0"): #less overhead by not trying to switch to gpu
-                self.logits, self.argmaxs= self.inference(False) 
+                self.logits, self.argmaxs = self.inference(False) 
             
+    def variable_summary(self, var, what=""):
+      with tf.name_scope('summaries_'+what):
+        mean = tf.reduce_mean(var)
+        tf.summary.scalar('mean', mean)
+        stddev = tf.sqrt(tf.reduce_mean(tf.square(var - mean)))
+        tf.summary.scalar('stddev', stddev)
+        tf.summary.scalar('max', tf.reduce_max(var))
+        tf.summary.scalar('min', tf.reduce_min(var))
+        tf.summary.histogram('histogram', var)
+    
     
     def set_placeholders(self):
         inputs = tf.placeholder(tf.float32, shape=[None, self.config.image_dims[0], self.config.image_dims[1]], name="inputs")  #first dim is none since inference has another batchsize than training
@@ -81,6 +91,7 @@ class CNN(object):
         return inputs, targets
     
     def inference(self, for_training=False):
+        self.trainvars = {}
         
         def weight_variable(shape, name):
           return tf.get_variable(name, shape, initializer= tf.truncated_normal_initializer(stddev=1.0 / math.sqrt(float(self.config.image_dims[0]*self.config.image_dims[1]))))
@@ -95,52 +106,84 @@ class CNN(object):
         def max_pool_2x2(x):
           return tf.nn.max_pool(x, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding='SAME')
   
+        def convolutional_layer(input_tensor, input_channels, output_channels, name, act):
+            with tf.name_scope(name):
+                self.trainvars["W_%s" % name] = weight_variable([5, 5, input_channels, output_channels], "W_%s" % name)
+                self.variable_summary(self.trainvars["W_%s" % name])
+                self.trainvars["b_%s" % name] = bias_variable([output_channels], "b_%s" % name)
+                self.variable_summary(self.trainvars["b_%s" % name])
+                h_act = act(conv2d(input_tensor, self.trainvars["W_%s" % name]) + self.trainvars["b_%s" % name])
+                h_pool = max_pool_2x2(h_act)
+                tf.summary.histogram("activations", h_pool)
+                return h_pool
+        
+        def fc_layer(input_tensor, input_size, output_size, name, act, do_dropout):
+            with tf.name_scope(name):
+                self.trainvars["W_%s" % name] = weight_variable([input_size, output_size], "W_%s" % name)
+                self.variable_summary(self.trainvars["W_%s" % name])
+                self.trainvars["b_%s" % name] = bias_variable([output_size], "b_%s" % name)
+                self.variable_summary(self.trainvars["b_%s" % name])
+                h_fc =  tf.matmul(input_tensor, self.trainvars["W_%s" % name]) + self.trainvars["b_%s" % name]
+                if act is not None:
+                    h_fc = act(h_fc)
+                tf.summary.histogram("activations", h_fc)
+                if do_dropout:
+                    h_fc = tf.nn.dropout(h_fc, self.keep_prob) 
+                return h_fc
+
         rs_input = tf.reshape(self.inputs, [-1, self.config.image_dims[0], self.config.image_dims[1], 1]) #final dimension = number of color channels
-  
-        with tf.name_scope("Conv1"):
-            self.W_conv1 = weight_variable([5, 5, 1, 32], "WCon1") # patchsizey, patchsizey, #inputchannels, #outputchannels
-            self.b_conv1 = bias_variable([32], "bCon1")
-            h_conv1 = tf.nn.relu(conv2d(rs_input, self.W_conv1) + self.b_conv1)
-            h_pool1 = max_pool_2x2(h_conv1)  #reduces in this case to 15*21
- 
-        with tf.name_scope("Conv2"):       
-            self.W_conv2 = weight_variable([5, 5, 32, 64], "WCon2")
-            self.b_conv2 = bias_variable([64], "bCon2")
-            h_conv2 = tf.nn.relu(conv2d(h_pool1, self.W_conv2) + self.b_conv2)
-            h_pool2 = max_pool_2x2(h_conv2) #reduces to... 8*11?
+      
+        self.keep_prob = tf.Variable(tf.constant(1.0), trainable=False) #wenn nicht gefeedet ist sie standardmäßig 1        
+        h1 = convolutional_layer(rs_input, 1, 32, "Conv1", tf.nn.relu) #reduces to 15*21
+        h2 = convolutional_layer(h1, 32, 64, "Conv2", tf.nn.relu)      #reduces to 8*11
+        h_pool_flat =  tf.reshape(h2, [-1, 8*11*64])
+        h_fc1 = fc_layer(h_pool_flat, 8*11*64, 1024, "FC1", tf.nn.relu, do_dropout=for_training)                 
+        y_pre = fc_layer(h_fc1, 1024, self.config.steering_steps*4, "FC2", None, do_dropout=False) #TODO: dropout nur beim letzten??
+
+#        with tf.name_scope("Conv1"):
+#            self.W_conv1 = weight_variable([5, 5, 1, 32], "WCon1") # patchsizey, patchsizey, #inputchannels, #outputchannels
+#            self.b_conv1 = bias_variable([32], "bCon1")
+#            h_conv1 = tf.nn.relu(conv2d(rs_input, self.W_conv1) + self.b_conv1)
+#            h_pool1 = max_pool_2x2(h_conv1)  #reduces in this case to 15*21
+# 
+#        with tf.name_scope("Conv2"):       
+#            self.W_conv2 = weight_variable([5, 5, 32, 64], "WCon2")
+#            self.b_conv2 = bias_variable([64], "bCon2")
+#            h_conv2 = tf.nn.relu(conv2d(h_pool1, self.W_conv2) + self.b_conv2)
+#            h_pool2 = max_pool_2x2(h_conv2) #reduces to... 8*11?
+#        
+#        with tf.name_scope("FC1"):
+#            self.W_fc1 = weight_variable([8 * 11 * 64, 1024], "WFc1")
+#            self.b_fc1 = bias_variable([1024], "bFc2")
+#            #h_pool2_flat = tf.reshape(h_pool2, [-1, 8*11*64])
+#            h_fc1 = tf.nn.relu(tf.matmul(h_pool_flat, self.W_fc1) + self.b_fc1 )       
+#            
+#            if for_training: #TODO: warum nur hier dropout?
+#                self.keep_prob = tf.Variable(tf.constant(1.0), trainable=False) #wenn nicht gefeedet ist sie standardmäßig 1
+#                h_fc1 = tf.nn.dropout(h_fc1, self.keep_prob) 
+#        
+#        with tf.name_scope("FC2"):
+#            self.W_fc2 = weight_variable([1024, self.config.steering_steps*4], "WFc2")
+#            self.b_fc2 = bias_variable([self.config.steering_steps*4], "bfc2")
+#            y_pre = tf.matmul(h_fc1, self.W_fc2) + self.b_fc2                      
+                         
+        y_conv = tf.nn.softmax(y_pre)
+        argm = tf.one_hot(tf.argmax(y_conv, dimension=1), depth=self.config.steering_steps*4)
         
-        with tf.name_scope("FC1"):
-            self.W_fc1 = weight_variable([8 * 11 * 64, 1024], "WFc1")
-            self.b_fc1 = bias_variable([1024], "bFc2")
-            h_pool2_flat = tf.reshape(h_pool2, [-1, 8*11*64])
-            h_fc1 = tf.nn.relu(tf.matmul(h_pool2_flat, self.W_fc1) + self.b_fc1 )       
-            
-            if for_training: #TODO: warum nur hier dropout?
-                self.keep_prob = tf.Variable(tf.constant(1.0), trainable=False) #wenn nicht gefeedet ist sie standardmäßig 1
-                h_fc1 = tf.nn.dropout(h_fc1, self.keep_prob) 
-        
-        with tf.name_scope("FC2"):
-            self.W_fc2 = weight_variable([1024, self.config.steering_steps*4], "WFc2")
-            self.b_fc2 = bias_variable([self.config.steering_steps*4], "bfc2")
-            y_conv = tf.nn.softmax(tf.matmul(h_fc1, self.W_fc2) + self.b_fc2)
-            argm = tf.one_hot(tf.argmax(y_conv, dimension=1), depth=self.config.steering_steps*4)
-            
-        return y_conv, argm
+        return y_pre, argm
     
     
-    def loss_func(self, logits, argmaxs):
-        #calculates cross-entropy 
-#        cross_entropy = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(labels=self.targets, logits=logits))
-#        return cross_entropy
-        #tf.nn.softmax_cross_entropy_with_logits  macht angeblich(!) 1-hot-labels. Diese vergelicht man MIT INTEGERS!! also onehot-label auf der einen seite, integer auf der anderen! ahaaa!
+    def loss_func(self, logits):
+        #tf.nn.softmax_cross_entropy_with_logits vergleicht 1-hot-labels mit integer-logits
         #"Note that tf.nn.softmax_cross_entropy_with_logits internally applies the softmax on the model's unnormalized model prediction and sums across all classes"
-        cross_entropy = -tf.reduce_sum(self.targets * tf.log(logits), reduction_indices=[1])
-        return tf.reduce_mean(cross_entropy)        
-        
+        #The raw formulation of cross-entropy (one line below) can be numerically unstable. -> use tf's function!
+        #cross_entropy = -tf.reduce_sum(self.targets * tf.log(tf.nn.softmax(logits)), reduction_indices=[1])       
+        cross_entropy = tf.nn.softmax_cross_entropy_with_logits(labels=self.targets, logits=logits)
+        return tf.reduce_mean(cross_entropy)
         
     def training(self, loss, learning_rate):
         #returns the minimizer op
-        tf.summary.scalar('loss', loss) #angeblich für TensorBoard
+        tf.summary.scalar('loss', loss) #für TensorBoard
          
 # TODO: incorporate this!        
 #            tvars = tf.trainable_variables()
@@ -162,6 +205,7 @@ class CNN(object):
         made = tf.cast(argmaxs, tf.bool)
         real = tf.cast(targets, tf.bool)
         compare = tf.reduce_mean(tf.cast(tf.reduce_all(tf.equal(made, real),axis=1), tf.float32))
+        tf.summary.scalar('accuracy', compare)
         return compare
         
         
@@ -217,8 +261,9 @@ def run_CNN_training(config, dataset):
                 cnn = CNN(config, is_training=True)
         
         init = tf.global_variables_initializer()
-        saver = tf.train.Saver({"WCon1": cnn.W_conv1, "bCon1": cnn.b_conv1, "WCon2": cnn.W_conv2, "bCon2": cnn.b_conv2, "WFc1": cnn.W_fc1, "bFc1": cnn.b_fc1, "WFc2": cnn.W_fc2, "bFc2": cnn.b_fc2, "global_step":cnn.global_step},max_to_keep=3)
-        
+        cnn.trainvars["global_step"] = cnn.global_step
+        saver = tf.train.Saver(cnn.trainvars, max_to_keep=3)
+
 #        sv = tf.train.Supervisor(logdir="./supervisortraining/")
 #        with sv.managed_session() as sess:
         with tf.Session() as sess:
