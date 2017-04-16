@@ -96,10 +96,13 @@ class MySocket:
 # alle X sekunden kommt ein leser und liest den InputVal aus (immer der neueste, mit timestamp!!), und updated damit 
 # den OutputValContainer, falls der nicht schon einen neueren inputval-timestamp hat.
 class InputValContainer(object):   
-    def __init__(self):
+    def __init__(self, config):
         self.lock = threading.Lock()
-        self.visionvec = np.zeros([20,20]) #TODO - gucken ob die größe gleich ist/wie ich die größe share
-        self.othervecs = np.zeros(50)      #TODO - same
+        self.config = config
+        self.visionvec = np.zeros([config.image_dims[0], config.image_dims[1]])
+        if self.config.history_frame_nr > 1:
+            self.vvec_hist = np.zeros([config.history_frame_nr, config.image_dims[0], config.image_dims[1]]) 
+        self.othervecs = np.zeros(config.vector_len)      
         self.timestamp = current_milli_time()
         self.hashco = ""
         self.alreadyread = True
@@ -111,6 +114,8 @@ class InputValContainer(object):
             logging.debug('Acquired lock')
             if self.hashco != hashco:
                 self.visionvec = visionvec
+                if self.config.history_frame_nr > 1:  #TODO: das ganze macht nur sinn wenn das im GLEICHEM MILLISECONDTAKT updated wie der recorder recordet!
+                    self.vvec_hist = [visionvec] + [i for i in self.vvec_hist[:-1]]
                 self.othervecs = othervecs
                 self.timestamp = current_milli_time()
                 self.alreadyread = False
@@ -124,8 +129,10 @@ class InputValContainer(object):
         self.lock.acquire()
         try:
             logging.debug('Acquired lock')
-            self.visionvec = np.zeros(20,20) #TODO - gucken ob die größe gleich ist/wie ich die größe share
-            self.othervecs = np.zeros(50)    #TODO - same
+            self.visionvec = np.zeros([self.config.image_dims[0], self.config.image_dims[1]])
+            if self.config.history_frame_nr > 1:
+                self.vvec_hist = np.zeros([self.config.history_frame_nr, self.config.image_dims[0], self.config.image_dims[1]]) 
+            self.othervecs = np.zeros(self.config.vector_len)
             self.timestamp = current_milli_time()
             self.hashco = ""
             self.alreadyread = True
@@ -135,7 +142,10 @@ class InputValContainer(object):
 
     def read(self):
         self.alreadyread = True
-        return self.othervecs, self.visionvec
+        if self.config.history_frame_nr > 1:
+            return self.othervecs, self.vvec_hist
+        else:
+            return self.othervecs, self.visionvec
     
 
 
@@ -435,9 +445,9 @@ class SenderListenerThread(threading.Thread):
                 pass
 
     
-def main():
+def main(conf):
     containers = Containers()
-    containers.inputval = InputValContainer()
+    containers.inputval = InputValContainer(conf)
     containers.outputval = OutputValContainer()
     
     containers.receiverportsocket = create_socket(TCP_RECEIVER_PORT)
@@ -474,5 +484,6 @@ def main():
 
 
     
-if __name__ == '__main__':        
-    main()
+if __name__ == '__main__':   
+    conf = supervisedcnn.Config()
+    main(conf)

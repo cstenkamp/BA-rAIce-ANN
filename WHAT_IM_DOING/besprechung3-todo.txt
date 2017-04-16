@@ -52,6 +52,7 @@ ALLGEMEIN
 -...und um dann auf das reinforcementlearning zu mappen sollte der ne per gaußkurve von dem genauem wert auf die diskretisierten 44 werte (FALLS NICHT CONTINUUS) mappen
 -A bunch of Todos im Quellcode...
 -Zum Thema exploration... wie wäre es mit nem reward dafür neue zustände zu erreichen? er bremst zu oft, und so nen reward könnte ihn daran hindern? ->paper dazu!
+-Im XML der supervisedrounds soll stehen alle wie viel ms aufgenommen wurde, und python soll asserten dass er damit was anfangen kann und dementsprechend jedes x-te nehmen!
 
 -----------------------------------------DONE-----------------------------------------
 

@@ -187,8 +187,8 @@ class TPList(object):
         discretetargets = []
         for indexindex in range(self.batchindex,self.batchindex+batch_size):
             i = self.randomindices[indexindex]
-            vision = [self.all_trackingpoints[(i-j) % len(self.all_trackingpoints)].visionvec for j in range(config.history_frame_nr,-1,-1)]
-            lookahead = [self.all_trackingpoints[(i-j) % len(self.all_trackingpoints)].FlatOneDs for j in range(config.history_frame_nr,-1,-1)]
+            vision = [self.all_trackingpoints[(i-j) % len(self.all_trackingpoints)].visionvec for j in range(config.history_frame_nr-1,-1,-1)]
+            lookahead = [self.all_trackingpoints[(i-j) % len(self.all_trackingpoints)].FlatOneDs for j in range(config.history_frame_nr-1,-1,-1)]
             #target = [self.all_trackingpoints[i].throttlePedalValue, self.all_trackingpoints[i].brakePedalValue, self.all_trackingpoints[i].steeringValue]
             target = self.all_trackingpoints[i].discreteAll
             #discretetarget = flatten([self.all_trackingpoints[i].discreteThrottle, self.all_trackingpoints[i].discreteBrake, self.all_trackingpoints[i].discreteSteering])
@@ -214,10 +214,11 @@ if __name__ == '__main__':
     #print(trackingpoints.all_trackingpoints[220].throttlePedalValue)
     #print(trackingpoints.all_trackingpoints[220].discreteThrottle)
     while trackingpoints.has_next(10):
-        lookaheads, _, targets, dtargets = trackingpoints.next_batch(config, 10)
+        lookaheads, vision, targets, dtargets = trackingpoints.next_batch(config, 10)
     print(lookaheads)
     print(dtargets[:,22:])
     print(targets)
+    print(vision.shape)
     
     
     #sooo jetzt hab ich hier eine liste an trackingpoints. was ich tun muss ist jetzt dem vectors per ANN die brake, steering, throttlevalues zuzuweisen.

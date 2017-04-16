@@ -19,9 +19,9 @@ CHECKPOINTALL = 5
 class Config(object):
     foldername = "SavedLaps/"
     log_dir = "SummaryLogDir/"  
-    checkpoint_dir = "Checkpoint/"
+    checkpoint_pre_dir = "Checkpoint"
     
-    history_frame_nr = 1
+    history_frame_nr = 1 #incl. dem jetzigem!
     steering_steps = 11
     image_dims = [30,42]
     vector_len = 59
@@ -31,16 +31,18 @@ class Config(object):
     initscale = 0.1
     max_grad_norm = 10
     
-    iterations = 120 
+    iterations = 60      #90, 120
     initial_lr = 0.005
     lr_decay = 0.9
-    lrdecayafter = iterations//3
+    lrdecayafter = iterations//2  #//3 für 90, 120
     minimal_lr = 1e-5 #mit diesen settings kommt er auf 0.01 loss, 99.7% correct inferences
     
     def __init__(self):
         assert os.path.exists(self.foldername), "No data to train on at all!"        
         if not os.path.exists(self.log_dir):
             os.makedirs(self.log_dir)         
+            
+        self.checkpoint_dir = self.checkpoint_pre_dir + "_hframes"+str(self.history_frame_nr)+"/"
         if not os.path.exists(self.checkpoint_dir):
             os.makedirs(self.checkpoint_dir) 
 
@@ -49,7 +51,7 @@ class Config(object):
                    
 
 #was fehlt am ANN:
-#    -nutzen: Tensorflow website's stuff, die 3(!) dinge von meinem TF-Project, Leons TF-Project
+#    -nutzen: Tensorflow website's stuff, Leons TF-Project
                                       
 class CNN(object):
     
@@ -84,7 +86,11 @@ class CNN(object):
     
     
     def set_placeholders(self, is_training):
-        inputs = tf.placeholder(tf.float32, shape=[None, self.config.image_dims[0], self.config.image_dims[1]], name="inputs")  #first dim is none since inference has another batchsize than training
+        if self.config.history_frame_nr == 1:
+            inputs = tf.placeholder(tf.float32, shape=[None, self.config.image_dims[0], self.config.image_dims[1]], name="inputs")  #first dim is none since inference has another batchsize than training
+        else:
+            inputs = tf.placeholder(tf.float32, shape=[None, self.config.history_frame_nr, self.config.image_dims[0], self.config.image_dims[1]], name="inputs")  #first dim is none since inference has another batchsize than training
+            
         if is_training:
             targets = tf.placeholder(tf.float32, shape=[None, self.config.steering_steps*4], name="targets")    
         else:
@@ -133,10 +139,11 @@ class CNN(object):
                     h_fc = tf.nn.dropout(h_fc, self.keep_prob) 
                 return h_fc
 
-        rs_input = tf.reshape(self.inputs, [-1, self.config.image_dims[0], self.config.image_dims[1], 1]) #final dimension = number of color channels
-      
+        #rs_input = tf.reshape(self.inputs, [-1, self.config.image_dims[0], self.config.image_dims[1],1]) #final dimension = number of color channels
+        rs_input = tf.reshape(self.inputs, [-1, self.config.image_dims[0], self.config.image_dims[1],self.config.history_frame_nr]) #final dimension = number of color channels
+                             
         self.keep_prob = tf.Variable(tf.constant(1.0), trainable=False) #wenn nicht gefeedet ist sie standardmäßig 1        
-        h1 = convolutional_layer(rs_input, 1, 32, "Conv1", tf.nn.relu) #reduces to 15*21
+        h1 = convolutional_layer(rs_input, self.config.history_frame_nr, 32, "Conv1", tf.nn.relu) #reduces to 15*21
         h2 = convolutional_layer(h1, 32, 64, "Conv2", tf.nn.relu)      #reduces to 8*11
         h_pool_flat =  tf.reshape(h2, [-1, 8*11*64])
         h_fc1 = fc_layer(h_pool_flat, 8*11*64, 1024, "FC1", tf.nn.relu, do_dropout=for_training)                 
@@ -304,7 +311,7 @@ def main(Steer=False):
     config = Config()
         
     trackingpoints = read_supervised.TPList(config.foldername)
-    print("Number of samples:",trackingpoints.numsamples)  
+    print("Number of samples:",trackingpoints.numsamples) 
     run_CNN_training(config, trackingpoints)        
     
                 
