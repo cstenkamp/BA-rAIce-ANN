@@ -172,19 +172,6 @@ class NeuralNetworkThread(threading.Thread):
 
 
 
-#    def performSteerNetwork(self, inputval): 
-#        inputvec, visionvec = inputval.read()
-#
-#        if inputvec:
-#            inputvec = np.array(NeuralNetworkThread.normalize_oneDs(NeuralNetworkThread.flatten_oneDs(inputvec),self.normalizers))
-#            if inputvec[0] > 0.3 and inputvec[0] < 0.4:
-#                return "pleasereset"
-#            else:
-#                steer = read_supervised.dediscretize_steering((self.ffnn.run_inference(self.session, inputvec))[0])
-#                result = "[0.1, 0, "+str(steer)+"]"
-#                return result
-#        else:
-#            return
 
     def performNetwork(self, inputval):
         _, visionvec = inputval.read()
@@ -196,24 +183,6 @@ class NeuralNetworkThread(threading.Thread):
             return result
         else:
             return "[0,0,0.0]" #TODO: macht das sinn 0,0 als standard zu returnen?
-
-
-#    def initSteerNetwork(self):
-#        config = supervisedcnn.Config()
-#        
-#        with tf.Graph().as_default():    
-#            initializer = tf.random_uniform_initializer(-0.1, 0.1)
-#                                                 
-#            with tf.name_scope("runAsServ"):
-#                with tf.variable_scope("steermodel", reuse=None, initializer=initializer): 
-#                    self.ffnn = supervisedcnn.FFNN_lookahead_steer(config)
-#            
-#            self.saver = tf.train.Saver({"W1": self.ffnn.W1, "b1": self.ffnn.b1, "W2": self.ffnn.W2, "b2": self.ffnn.b2}) 
-#            self.session = tf.Session()
-#            ckpt = tf.train.get_checkpoint_state(config.log_dir) 
-#            assert ckpt and ckpt.model_checkpoint_path
-#            self.saver.restore(self.session, ckpt.model_checkpoint_path)
-#            print("network should be initialized")
 
 
     def initNetwork(self):

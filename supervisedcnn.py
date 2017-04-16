@@ -49,16 +49,7 @@ class Config(object):
                    
 
 #was fehlt am ANN:
-#    -changing learning rate incorporaten
-#    -den supervisor und das andere nutzen, damit er bspw nach nem crash bereits mit global_step iterationen weitermacht
-#    -dass man nicht immer gleich die Konsole resetten muss bei nem neustart
-#    -TensorBoard integration!!
-#    -Name-Scopes für die einzelnen Convolutional layer
-#    -muss ich alle trainable sachen clippen?
 #    -nutzen: Tensorflow website's stuff, die 3(!) dinge von meinem TF-Project, Leons TF-Project
-
-#Funktioniert der SummaryWriter? Was macht er?                                               
-#Fragen ob er weitertrainieren soll am anfang!
                                       
 class CNN(object):
     
@@ -149,11 +140,9 @@ class CNN(object):
         h2 = convolutional_layer(h1, 32, 64, "Conv2", tf.nn.relu)      #reduces to 8*11
         h_pool_flat =  tf.reshape(h2, [-1, 8*11*64])
         h_fc1 = fc_layer(h_pool_flat, 8*11*64, 1024, "FC1", tf.nn.relu, do_dropout=for_training)                 
-        y_pre = fc_layer(h_fc1, 1024, self.config.steering_steps*4, "FC2", None, do_dropout=False) #TODO: dropout nur beim letzten??
-
+        y_pre = fc_layer(h_fc1, 1024, self.config.steering_steps*4, "FC2", None, do_dropout=False) 
         y_conv = tf.nn.softmax(y_pre)
         argm = tf.one_hot(tf.argmax(y_conv, dimension=1), depth=self.config.steering_steps*4)
-        
         return y_pre, argm
     
     
@@ -170,7 +159,7 @@ class CNN(object):
         self.variable_summary(loss, "loss") #tf.summary.scalar('loss', loss) #für TensorBoard
         
         self.learning_rate = tf.Variable(tf.constant(self.config.initial_lr), trainable=False)
-        self.new_lr = tf.placeholder(tf.float32, shape=[])
+        self.new_lr = tf.placeholder(tf.float32, shape=[]) #diese und die nächste zeile nur nötig falls man per extra-aufruf die lr verändern will, so wie ich das mache braucht man die nicht.
         self.lr_update = tf.assign(self.learning_rate, self.new_lr)        
 
         if self.config.max_grad_norm > 0:
@@ -198,11 +187,12 @@ class CNN(object):
         
         
     ######methods for RUNNING the computation graph######
-    def train_fill_feed_dict(self, config, dataset, batchsize = 0):
+    def train_fill_feed_dict(self, config, dataset, batchsize = 0, decay_lr = True):
         batchsize = config.batch_size if batchsize == 0 else batchsize
         _, visionvec, targets, _ = dataset.next_batch(config, batchsize)
-        lr_decay = config.lr_decay ** max(self.iterations-config.lrdecayafter, 0.0)
-        new_lr = max(config.initial_lr*lr_decay, config.minimal_lr)
+        if decay_lr:
+            lr_decay = config.lr_decay ** max(self.iterations-config.lrdecayafter, 0.0)
+            new_lr = max(config.initial_lr*lr_decay, config.minimal_lr)
         feed_dict = {self.inputs: visionvec, self.targets: targets, self.keep_prob: config.keep_prob, self.learning_rate: new_lr}
         return feed_dict            
 
@@ -219,7 +209,7 @@ class CNN(object):
         for i in range(dataset.num_batches(self.config.batch_size)):
             feed_dict = self.train_fill_feed_dict(self.config, dataset)
             if self.iterations % SUMMARYALL == 0 and summarywriter is not None:
-                _, loss, summary_str= session.run([self.train_op, self.loss, self.summary], feed_dict=feed_dict)   
+                _, loss, summary_str = session.run([self.train_op, self.loss, self.summary], feed_dict=feed_dict)   
                 summarywriter.add_summary(summary_str, session.run(self.global_step))
                 summarywriter.flush()
             else:
@@ -247,7 +237,8 @@ class CNN(object):
             
        
 def run_CNN_training(config, dataset):
-    with tf.Graph().as_default():    
+    graph = tf.Graph()
+    with graph.as_default():    
         #initializer = tf.constant_initializer(0.0) #bei variablescopes kann ich nen default-initializer für get_variables festlegen
         initializer = tf.random_uniform_initializer(-0.1, 0.1)
                                              
@@ -261,7 +252,7 @@ def run_CNN_training(config, dataset):
 
 #        sv = tf.train.Supervisor(logdir="./supervisortraining/")
 #        with sv.managed_session() as sess:
-        with tf.Session() as sess:
+        with tf.Session(graph=graph) as sess:
             summary_writer = tf.summary.FileWriter(config.log_dir, sess.graph) #aus dem toy-example
             
             sess.run(init)
@@ -306,153 +297,6 @@ def run_CNN_training(config, dataset):
 
 
 
-
-#
-#
-#                         
-#class FFNN_lookahead_steer(object):
-#    
-#    ######methods for BUILDING the computation graph######
-#    def __init__(self, config, is_training=True):
-#        #builds the computation graph, using the next few functions (this is basically the interface)
-#        self.config = config
-#        self.stepsofar = 0
-#    
-#        self.inputs, self.targets = self.set_placeholders()
-#        
-#        self.logits, self.argmaxs = self.inference(is_training)        
-#        
-#        if is_training:
-#            self.loss = self.loss_func(self.logits)
-#            self.train_op = self.training(self.loss, 0.5) #TODO: die learning rate muss sich verkleinern können
-#            self.accuracy = self.evaluation(self.argmaxs, self.targets)        
-#            
-#        self.summary = tf.summary.merge_all() #aus dem toy-example
-#        
-#    
-#    def set_placeholders(self):
-#        inputs = tf.placeholder(tf.float32, shape=[None, self.config.vector_len], name="inputs")  #first dim is none since inference has another batchsize than training
-#        targets = tf.placeholder(tf.float32, shape=[None, self.config.steering_steps], name="targets")    
-#        return inputs, targets
-#    
-#    def inference(self, for_training=False):
-#        #infos über hidden_units etc ziehen wir aus der config, die bei init mitgegeben wurde
-#        #for_training wird benötigt, da wir, wenn wir dropout nutzen, nen neuen nicht-für-training initialisieren müssten!
-#        #nutzt get_var und variable scopes
-#        
-#        #bei größeren Sachen würde man hier variable_scopes/name_scopes verwenden!
-#        #self.W = tf.Variable(tf.zeros([59, self.config.steering_steps]), name="W")  
-#        #self.b = tf.Variable(tf.zeros([self.config.steering_steps]), name="b")
-#        with tf.name_scope("Layer1"):
-#            self.W1 = tf.get_variable("W1", [59, self.config.layer1_neurons]) #TODO: mir überlegen wie das stattdessen mit mehreren history-frames geht
-#            self.b1 = tf.get_variable("b1", [self.config.layer1_neurons])
-#        with tf.name_scope("Layer2"):
-#            self.W2 = tf.get_variable("W2", [self.config.layer1_neurons, self.config.steering_steps]) 
-#            self.b2 = tf.get_variable("b2", [self.config.steering_steps])
-#            
-#        l1 = tf.nn.softmax(tf.matmul(self.inputs, self.W1) + self.b1)
-#        y = tf.nn.softmax(tf.matmul(l1, self.W2) + self.b2, name="y")
-#        argm = tf.one_hot(tf.argmax(y, dimension=1), depth=self.config.steering_steps)
-#        return y, argm
-#        
-#    
-#    def loss_func(self, logits):
-#        #calculates cross-entropy 
-#        cross_entropy = -tf.reduce_sum(self.targets * tf.log(logits), reduction_indices=[1])
-#        return tf.reduce_mean(cross_entropy)
-#        
-#        
-#    def training(self, loss, learning_rate):
-#        #returns the minimizer op
-#        #train_op = tf.train.GradientDescentOptimizer(learning_rate).minimize(loss)
-#        train_op = tf.train.AdamOptimizer().minimize(loss)
-#        return train_op
-#        
-#        
-#    def evaluation(self, argmaxs, labels):
-#        #returns how many percent it got correct.
-#        made = tf.cast(argmaxs, tf.bool)
-#        real = tf.cast(labels, tf.bool)
-#        compare = tf.reduce_mean(tf.cast(tf.reduce_all(tf.equal(made, real),axis=1), tf.float32))
-#        return compare
-#        
-#        
-#    ######methods for RUNNING the computation graph######
-#    def train_fill_feed_dict(self, config, dataset, batchsize = 0):
-#        batchsize = config.batch_size if batchsize == 0 else batchsize
-#        lookaheads, _, _, dtargets = dataset.next_batch(config, batchsize)
-#        targets = dtargets[:,22:] #nur steering
-#        feed_dict = {self.inputs: lookaheads, self.targets: targets}
-#        return feed_dict            
-#
-#
-#    def run_train_epoch(self, session, dataset, learning_rate, summarywriter = None):
-#        self.stepsofar += 1
-#        gesamtLoss = 0
-#        
-#        dataset.reset_batch()
-#        for i in range(dataset.num_batches(self.config.batch_size)):
-#            feed_dict = self.train_fill_feed_dict(self.config, dataset)
-#            _, loss = session.run([self.train_op, self.loss], feed_dict=feed_dict)   
-#            gesamtLoss += loss
-#            
-##        if summarywriter is not None: #aus dem toy-example
-##            summary_str = session.run(self.summary, feed_dict=feed_dict)
-##            summarywriter.add_summary(summary_str, self.stepsofar)
-##            summarywriter.flush()
-#            
-#        return gesamtLoss
-#            
-#    def run_eval(self, session, dataset):            
-#        dataset.reset_batch()
-#        feed_dict = self.train_fill_feed_dict(self.config, dataset, dataset.numsamples) #would be terribly slow if we learned, but luckily we only evaluate. should be fine.
-#        accuracy, loss = session.run([self.accuracy, self.loss], feed_dict=feed_dict)
-#        return accuracy, loss, dataset.numsamples
-#            
-#            
-#    def run_inference(self, session, inputvec):
-#        assert np.array(inputvec.shape) == np.array(self.inputs.get_shape().as_list()[1:])
-#        inputvec = np.expand_dims(inputvec, axis=0)
-#        feed_dict = {self.inputs: inputvec}  
-#        return session.run(self.argmaxs, feed_dict=feed_dict)
-#
-#            
-#    
-#       
-#def run_FFNNSteer_training(config, dataset):
-#    with tf.Graph().as_default():    
-#        #initializer = tf.constant_initializer(0.0) #bei variablescopes kann ich nen default-initializer für get_variables festlegen
-#        initializer = tf.random_uniform_initializer(-0.1, 0.1)
-#                                             
-#        with tf.name_scope("train"):
-#            with tf.variable_scope("steermodel", reuse=None, initializer=initializer):
-#                ffnn = FFNN_lookahead_steer(config)
-#        
-#        init = tf.global_variables_initializer()
-#        saver = tf.train.Saver({"W1": ffnn.W1, "b1": ffnn.b1, "W2": ffnn.W2, "b2": ffnn.b2}) #der sollte ja nur einige werte machen
-#        
-#        sv = tf.train.Supervisor(logdir="./supervisortraining/")
-#        with sv.managed_session() as sess:
-#            summary_writer = tf.summary.FileWriter(config.log_dir, sess.graph) #aus dem toy-example
-#            sess.run(init)
-#                
-#            for step in range(config.iterations):
-#                if sv.should_stop():
-#                    break
-#                train_loss = ffnn.run_train_epoch(sess, dataset, 0.5, summary_writer)
-#                print(train_loss)
-#                
-#            checkpoint_file = os.path.join(config.log_dir, 'model.ckpt')
-#            saver.save(sess, checkpoint_file, global_step=ffnn.stepsofar)                
-#                
-#            ev, loss, _ = ffnn.run_eval(sess, dataset)
-#            print("Loss:", loss, " Percentage of correct ones:", ev)
-#
-#            dataset.reset_batch()
-#            lookaheads, _, _, _ = dataset.next_batch(config, 1)
-#            lookaheads = np.array(lookaheads[0])
-#            print(ffnn.run_inference(sess,lookaheads))
-
         
         
         
@@ -461,11 +305,7 @@ def main(Steer=False):
         
     trackingpoints = read_supervised.TPList(config.foldername)
     print("Number of samples:",trackingpoints.numsamples)  
-    if Steer:
-#        run_FFNNSteer_training(config, trackingpoints)            
-        None
-    else:
-        run_CNN_training(config, trackingpoints)        
+    run_CNN_training(config, trackingpoints)        
     
                 
                 
