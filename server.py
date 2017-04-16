@@ -71,6 +71,7 @@ class MySocket:
         try:
             what = self.sock.recv(5).decode('ascii')
         except socket.timeout:
+            print("Socket timed out, please tell me you continue")
             return False
         if not what:
             return False

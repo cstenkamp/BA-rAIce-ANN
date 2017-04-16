@@ -18,18 +18,24 @@ CHECKPOINTALL = 5
 
 class Config(object):
     foldername = "SavedLaps/"
-    history_frame_nr = 1
-    batch_size = 32
-    image_dims = [30,42]
-    vector_len = 59
-    keep_prob = 0.8
-    initscale = 0.1
-    iterations = 200 #100
-    steering_steps = 11
     log_dir = "SummaryLogDir/"  
     checkpoint_dir = "Checkpoint/"
-    layer1_neurons = 100
+    
+    history_frame_nr = 1
+    steering_steps = 11
+    image_dims = [30,42]
+    vector_len = 59
+    
+    batch_size = 32
     keep_prob = 0.8
+    initscale = 0.1
+    max_grad_norm = 10
+    
+    iterations = 120 
+    initial_lr = 0.005
+    lr_decay = 0.9
+    lrdecayafter = iterations//3
+    minimal_lr = 1e-5 #mit diesen settings kommt er auf 0.01 loss, 99.7% correct inferences
     
     def __init__(self):
         assert os.path.exists(self.foldername), "No data to train on at all!"        
@@ -62,17 +68,18 @@ class CNN(object):
         self.config = config
         self.iterations = 0
     
-        self.inputs, self.targets = self.set_placeholders()
+        self.inputs, self.targets = self.set_placeholders(is_training)
         
         if is_training:
             self.logits, self.argmaxs = self.inference(True)         
             self.loss = self.loss_func(self.logits)
-            self.train_op = self.training(self.loss, 1e-4) #TODO: die learning rate muss sich verkleinern können
+            self.train_op = self.training(self.loss, config.initial_lr) 
             self.accuracy = self.evaluation(self.argmaxs, self.targets)       
             self.summary = tf.summary.merge_all() #für TensorBoard
         else:
             with tf.device("/cpu:0"): #less overhead by not trying to switch to gpu
                 self.logits, self.argmaxs = self.inference(False) 
+            
             
     def variable_summary(self, var, what=""):
       with tf.name_scope('summaries_'+what):
@@ -85,10 +92,14 @@ class CNN(object):
         tf.summary.histogram('histogram', var)
     
     
-    def set_placeholders(self):
+    def set_placeholders(self, is_training):
         inputs = tf.placeholder(tf.float32, shape=[None, self.config.image_dims[0], self.config.image_dims[1]], name="inputs")  #first dim is none since inference has another batchsize than training
-        targets = tf.placeholder(tf.float32, shape=[None, self.config.steering_steps*4], name="targets")    
+        if is_training:
+            targets = tf.placeholder(tf.float32, shape=[None, self.config.steering_steps*4], name="targets")    
+        else:
+            targets = None
         return inputs, targets
+    
     
     def inference(self, for_training=False):
         self.trainvars = {}
@@ -154,24 +165,28 @@ class CNN(object):
         cross_entropy = tf.nn.softmax_cross_entropy_with_logits(labels=self.targets, logits=logits)
         return tf.reduce_mean(cross_entropy)
         
-    def training(self, loss, learning_rate):
+    def training(self, loss, init_lr):
         #returns the minimizer op
-        tf.summary.scalar('loss', loss) #für TensorBoard
-         
-# TODO: incorporate this!        
-#            tvars = tf.trainable_variables()
-#            grads, _ = tf.clip_by_global_norm(tf.gradients(self.cost, tvars), 5)
-#            self.train_op = tf.train.AdamOptimizer().minimize(self.cost)        
+        self.variable_summary(loss, "loss") #tf.summary.scalar('loss', loss) #für TensorBoard
+        
+        self.learning_rate = tf.Variable(tf.constant(self.config.initial_lr), trainable=False)
+        self.new_lr = tf.placeholder(tf.float32, shape=[])
+        self.lr_update = tf.assign(self.learning_rate, self.new_lr)        
 
-        optimizer = tf.train.AdamOptimizer(learning_rate)
+        if self.config.max_grad_norm > 0:
+            tvars = tf.trainable_variables()
+            grads, _ = tf.clip_by_global_norm(tf.gradients(loss, tvars), self.config.max_grad_norm)
+            
+        optimizer = tf.train.AdamOptimizer(self.learning_rate)
         #TODO: AUSSUCHEN können welchen optimizer, und meinen ausgesuchten verteidigen können
         #https://www.tensorflow.org/api_guides/python/train#optimizers
         
         self.global_step = tf.Variable(0, dtype=tf.int32, name='global_step', trainable=False) #wird hier: https://github.com/tensorflow/tensorflow/blob/master/tensorflow/examples/tutorials/mnist/mnist.py halt gemacht... warum hiernochmal weiß ich nicht.
         
         train_op = optimizer.minimize(loss, global_step=self.global_step)
-        return train_op
         
+        return train_op
+    
         
     def evaluation(self, argmaxs, targets):
         #returns how many percent it got correct
@@ -186,11 +201,17 @@ class CNN(object):
     def train_fill_feed_dict(self, config, dataset, batchsize = 0):
         batchsize = config.batch_size if batchsize == 0 else batchsize
         _, visionvec, targets, _ = dataset.next_batch(config, batchsize)
-        feed_dict = {self.inputs: visionvec, self.targets: targets, self.keep_prob: config.keep_prob}
+        lr_decay = config.lr_decay ** max(self.iterations-config.lrdecayafter, 0.0)
+        new_lr = max(config.initial_lr*lr_decay, config.minimal_lr)
+        feed_dict = {self.inputs: visionvec, self.targets: targets, self.keep_prob: config.keep_prob, self.learning_rate: new_lr}
         return feed_dict            
 
 
-    def run_train_epoch(self, session, dataset, learning_rate, summarywriter = None):
+    def assign_lr(self, session, lr_value):
+        session.run(self.lr_update, feed_dict={self.new_lr: lr_value})
+     
+
+    def run_train_epoch(self, session, dataset, summarywriter = None):
         gesamtLoss = 0
         self.iterations += 1
         
@@ -198,7 +219,7 @@ class CNN(object):
         for i in range(dataset.num_batches(self.config.batch_size)):
             feed_dict = self.train_fill_feed_dict(self.config, dataset)
             if self.iterations % SUMMARYALL == 0 and summarywriter is not None:
-                _, loss, summary_str = session.run([self.train_op, self.loss, self.summary], feed_dict=feed_dict)   
+                _, loss, summary_str= session.run([self.train_op, self.loss, self.summary], feed_dict=feed_dict)   
                 summarywriter.add_summary(summary_str, session.run(self.global_step))
                 summarywriter.flush()
             else:
@@ -206,7 +227,8 @@ class CNN(object):
             gesamtLoss += loss
         
         return gesamtLoss
-            
+        
+    
     def run_eval(self, session, dataset):            
         dataset.reset_batch()
         feed_dict = self.train_fill_feed_dict(self.config, dataset, dataset.numsamples) #would be terribly slow if we learned, but luckily we only evaluate. should be fine.
@@ -242,7 +264,6 @@ def run_CNN_training(config, dataset):
         with tf.Session() as sess:
             summary_writer = tf.summary.FileWriter(config.log_dir, sess.graph) #aus dem toy-example
             
-
             sess.run(init)
             ckpt = tf.train.get_checkpoint_state(config.checkpoint_dir) 
             if ckpt and ckpt.model_checkpoint_path:
@@ -260,8 +281,9 @@ def run_CNN_training(config, dataset):
                 start_time = time.time()
 #                if sv.should_stop():
 #                    break
+
                 step = cnn.global_step.eval() 
-                train_loss = cnn.run_train_epoch(sess, dataset, 0.5, summary_writer)
+                train_loss = cnn.run_train_epoch(sess, dataset, summary_writer)
                 
                 savedpoint = ""
                 if cnn.iterations % CHECKPOINTALL == 0 or cnn.iterations == config.iterations:
