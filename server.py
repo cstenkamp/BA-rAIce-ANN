@@ -12,8 +12,7 @@ import supervisedcnn
 import read_supervised
 
 
-logging.basicConfig(level=logging.ERROR,
-                    format='(%(threadName)-10s) %(message)s',)
+logging.basicConfig(level=logging.ERROR, format='(%(threadName)-10s) %(message)s',)
 
 
 TCP_IP = 'localhost'
@@ -233,6 +232,7 @@ class OutputValContainer(object):
                 self.timestamp = itstimestamp #es geht nicht um jetzt, sondern um dann als das ANN gestartet wurde
                 self.alreadysent = False
                 print("Updated output-value to",withwhatval)
+                #hier muss er das direkt an unity zurück schicken.
         finally:
             self.lock.release()
 

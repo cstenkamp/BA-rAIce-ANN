@@ -25,6 +25,7 @@ class Config(object):
     steering_steps = 11
     image_dims = [30,42]
     vector_len = 59
+    msperframe = 500 #25   #ACHTUNG!!! Dieser wert wird von unity überschrieben!!!!! #TODO: dass soll mit unity abgeglichen werden!
     
     batch_size = 32
     keep_prob = 0.8
@@ -235,7 +236,7 @@ class CNN(object):
             
     def run_inference(self, session, visionvec):
         if not type(visionvec).__module__ == np.__name__:
-            return False, None
+            return False, None #dann ist das input-array leer
         assert (np.array(visionvec.shape) == np.array(self.inputs.get_shape().as_list()[1:])).all()
         visionvec = np.expand_dims(visionvec, axis=0)
         feed_dict = {self.inputs: visionvec}  
