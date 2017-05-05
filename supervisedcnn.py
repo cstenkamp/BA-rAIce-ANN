@@ -21,7 +21,7 @@ class Config(object):
     log_dir = "SummaryLogDir/"  
     checkpoint_pre_dir = "Checkpoint"
     
-    history_frame_nr = 4 #incl. dem jetzigem!
+    history_frame_nr = 7 #incl. dem jetzigem!
     steering_steps = 11
     image_dims = [30,42]
     vector_len = 59
@@ -32,7 +32,7 @@ class Config(object):
     initscale = 0.1
     max_grad_norm = 10
     
-    iterations = 60      #90, 120
+    iterations = 90     #90, 120
     initial_lr = 0.005
     lr_decay = 0.9
     lrdecayafter = iterations//2  #//3 für 90, 120
@@ -234,14 +234,19 @@ class CNN(object):
         return accuracy, loss, dataset.numsamples
             
             
-    def run_inference(self, session, visionvec):
-        KLAPPT NICHT BEI MEHREREN HISTORYFRAMES!!
-        if not type(visionvec).__module__ == np.__name__:
-            return False, None #dann ist das input-array leer
-        assert (np.array(visionvec.shape) == np.array(self.inputs.get_shape().as_list()[1:])).all()
-        visionvec = np.expand_dims(visionvec, axis=0)
-        feed_dict = {self.inputs: visionvec}  
-        return True, session.run(self.argmaxs, feed_dict=feed_dict)
+    def run_inference(self, session, visionvec, hframes):
+        if hframes > 1:
+            if not type(visionvec[0]).__module__ == np.__name__:
+                return False, None #dann ist das input-array leer
+        else:
+            if not type(visionvec).__module__ == np.__name__:
+                return False, None #dann ist das input-array leer
+            assert (np.array(visionvec.shape) == np.array(self.inputs.get_shape().as_list()[1:])).all()
+        
+        with tf.device("/cpu:0"):
+            visionvec = np.expand_dims(visionvec, axis=0)
+            feed_dict = {self.inputs: visionvec}  
+            return True, session.run(self.argmaxs, feed_dict=feed_dict)
 
             
        
@@ -298,7 +303,7 @@ def run_CNN_training(config, dataset):
 #            dataset.reset_batch()
 #            _, visionvec, _, _ = dataset.next_batch(config, 1)
 #            visionvec = np.array(visionvec[0])
-#            print(cnn.run_inference(sess,visionvec))
+#            print(cnn.run_inference(sess,visionvec, config.history_frame_nr))
  
 
 

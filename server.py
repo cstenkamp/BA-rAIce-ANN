@@ -16,8 +16,8 @@ logging.basicConfig(level=logging.ERROR, format='(%(threadName)-10s) %(message)s
 TCP_IP = 'localhost'
 TCP_RECEIVER_PORT = 6435
 TCP_SENDER_PORT = 6436
-NUMBER_ANNS = 2
-UPDATE_ONLY_IF_NEW = False #sendet immer nach jedem update -> Wenn False sendet er wann immer er was kriegt
+NUMBER_ANNS = 3
+UPDATE_ONLY_IF_NEW = True #sendet immer nach jedem update -> Wenn False sendet er wann immer er was kriegt
 
 current_milli_time = lambda: int(round(time.time() * 1000))
 
@@ -142,7 +142,7 @@ class receiver_thread(threading.Thread):
                         #print(data)
                         visionvec, allOneDs = cutoutandreturnvectors(data) 
                         self.containers.inputval.update(visionvec, allOneDs, self.timestamp) #we MUST have the inputval, otherwise there wouldn't be the possibility for historyframes.           
-                        thread = threading.Thread(target=self.runOneANN, args=())#TODO: das hier mit bis zu x instanzen, je nachdem welche gerade frei ist.
+                        thread = threading.Thread(target=self.runOneANN, args=())
                         thread.start() #immediately returns if UPDATE_ONLY_IF_NEW and alreadyread
                         
                         
@@ -308,7 +308,6 @@ class OutputValContainer(object):
 ###############################################################################        
 
 
-#TODO: mehrere Network-objects haben, und das immer ein gerade un-beschäftigtes ausführen lassen 
 class NeuralNetwork(object):
     def __init__(self, num, config):
         self.lock = threading.Lock()
@@ -317,6 +316,7 @@ class NeuralNetwork(object):
         self.number = num
         self.isbusy = False
         tps = read_supervised.TPList(read_supervised.FOLDERNAME, config.msperframe)
+        self.config = config
         self.normalizers = tps.find_normalizers()
         self.initNetwork()
 
@@ -353,7 +353,7 @@ class NeuralNetwork(object):
 
     def performNetwork(self, inputval):
         _, visionvec = inputval.read()
-        check, networkresult = self.cnn.run_inference(self.session, visionvec)
+        check, networkresult = self.cnn.run_inference(self.session, visionvec, self.config.history_frame_nr)
         if check:
             throttle, brake, steer = read_supervised.dediscretize_all((networkresult)[0])
             result = "["+str(throttle)+", "+str(brake)+", "+str(steer)+"]"
@@ -363,18 +363,17 @@ class NeuralNetwork(object):
 
 
     def initNetwork(self):
-        config = supervisedcnn.Config()
         
         with tf.Graph().as_default():    
             initializer = tf.random_uniform_initializer(-0.1, 0.1)
                                                  
             with tf.name_scope("runAsServ"):
                 with tf.variable_scope("cnnmodel", reuse=None, initializer=initializer): 
-                    self.cnn = supervisedcnn.CNN(config, is_training=False)
+                    self.cnn = supervisedcnn.CNN(self.config, is_training=False)
             
             self.saver = tf.train.Saver(self.cnn.trainvars)
             self.session = tf.Session()
-            ckpt = tf.train.get_checkpoint_state(config.checkpoint_dir) 
+            ckpt = tf.train.get_checkpoint_state(self.config.checkpoint_dir) 
             assert ckpt and ckpt.model_checkpoint_path
             self.saver.restore(self.session, ckpt.model_checkpoint_path)
             print("network %s initialized" %str(self.number+1))
