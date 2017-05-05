@@ -17,13 +17,14 @@ flatten = lambda l: [item for sublist in l for item in sublist]
     
 #this is supposed to resemble the TrackingPoint-Class from the recorder from Unity
 class TrackingPoint(object):
-    def __init__(self, time, throttlePedalValue, brakePedalValue, steeringValue, progress, vectors):
+    def __init__(self, time, throttlePedalValue, brakePedalValue, steeringValue, progress, vectors, speed):
         self.time = time
         self.throttlePedalValue = float(throttlePedalValue)
         self.brakePedalValue = float(brakePedalValue)
         self.steeringValue = float(steeringValue)
         self.progress = progress
         self.vectors = vectors
+        self.speed = speed
                 
     def make_vecs(self):
        if self.vectors != "":
@@ -125,6 +126,7 @@ class TPList(object):
         furtherinfo = {}
         tree = ET.parse(FileName)
         root = tree.getroot()
+        print(root.tag)
         assert root.tag=="TPMitInfoList", "that is not the kind of XML I thought it would be."
         for majorpoint in root:
             if majorpoint.tag == "TPList":
@@ -138,19 +140,34 @@ class TPList(object):
                 furtherinfo[majorpoint.tag] = majorpoint.text
         return this_trackingpoints, furtherinfo
             
-    def __init__(self, foldername):
+    def __init__(self, foldername, msperframe):
         assert os.path.isdir(foldername) 
         self.all_trackingpoints = []
         for file in os.listdir(foldername):
             if file.endswith(".svlap"):
                 currcontent, currinfo = TPList.read_xml(os.path.join(foldername, file))
-                self.all_trackingpoints.extend(currcontent)                        
-                #TODO: so einfach ist das hier nicht. er hat jetzt für jedes currcontent ein currinfo, und 
-                #daran sieht er alle wie viel ms getrackt wurde.... Diese function hier sollte jetzt wissen
-                #alle wie viel ms der server das haben will und dementsprechend jedes x-te rauspicken..
+                currcontent = self.extract_appropriate(currcontent, int(currinfo["trackAllXMS"]), msperframe, currinfo["filename"])    
+                if currcontent is not None:                 
+                    self.all_trackingpoints.extend(currcontent)
         self.prepare_tplist()          
         self.numsamples = len(self.all_trackingpoints)
         self.reset_batch()
+
+    def extract_appropriate(self, TPList, TPmsperframe, wishmsperframe, filename):
+        if float(TPmsperframe) > float(wishmsperframe)*1.05:
+            print("%s could not be used because it recorded not enough frames!" % filename)
+            return None
+        elif float(wishmsperframe)*0.95 < float(TPmsperframe) < float(wishmsperframe)*1.05:
+            return TPList
+        else:
+            fraction = round(wishmsperframe/TPmsperframe*100)/100
+            i = 0
+            returntp = []
+            while round(i) < len(TPList):
+                returntp.append(TPList[round(i)])
+                i += fraction
+        return returntp
+    
 
     def prepare_tplist(self):
         for currpoint in self.all_trackingpoints:
@@ -218,7 +235,7 @@ class TPList(object):
 if __name__ == '__main__':    
     import supervisedcnn
     config = supervisedcnn.Config()
-    trackingpoints = TPList(FOLDERNAME)
+    trackingpoints = TPList(FOLDERNAME, config.msperframe)
     print("Number of samples:",trackingpoints.numsamples)
     #print(trackingpoints.all_trackingpoints[220].throttlePedalValue)
     #print(trackingpoints.all_trackingpoints[220].discreteThrottle)

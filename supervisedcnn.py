@@ -25,7 +25,7 @@ class Config(object):
     steering_steps = 11
     image_dims = [30,42]
     vector_len = 59
-    msperframe = 50 #50   #ACHTUNG!!! Dieser wert wird von unity überschrieben!!!!! #TODO: dass soll mit unity abgeglichen werden!
+    msperframe = 100 #50   #ACHTUNG!!! Dieser wert wird von unity überschrieben!!!!! #TODO: dass soll mit unity abgeglichen werden!
     
     batch_size = 32
     keep_prob = 0.8
@@ -43,7 +43,7 @@ class Config(object):
         if not os.path.exists(self.log_dir):
             os.makedirs(self.log_dir)         
             
-        self.checkpoint_dir = self.checkpoint_pre_dir + "_hframes"+str(self.history_frame_nr)+"/"
+        self.checkpoint_dir = self.checkpoint_pre_dir + "_hframes"+str(self.history_frame_nr)+"_msperframe"+str(self.msperframe)+"/"
         if not os.path.exists(self.checkpoint_dir):
             os.makedirs(self.checkpoint_dir) 
 
@@ -258,8 +258,6 @@ def run_CNN_training(config, dataset):
         cnn.trainvars["global_step"] = cnn.global_step
         saver = tf.train.Saver(cnn.trainvars, max_to_keep=3)
 
-#        sv = tf.train.Supervisor(logdir="./supervisortraining/")
-#        with sv.managed_session() as sess:
         with tf.Session(graph=graph) as sess:
             summary_writer = tf.summary.FileWriter(config.log_dir, sess.graph) #aus dem toy-example
             
@@ -278,8 +276,6 @@ def run_CNN_training(config, dataset):
             print("Running for",num_iterations,"further iterations" if already_run_iterations>0 else "iterations")
             for _ in range(num_iterations):
                 start_time = time.time()
-#                if sv.should_stop():
-#                    break
 
                 step = cnn.global_step.eval() 
                 train_loss = cnn.run_train_epoch(sess, dataset, summary_writer)
@@ -287,7 +283,8 @@ def run_CNN_training(config, dataset):
                 savedpoint = ""
                 if cnn.iterations % CHECKPOINTALL == 0 or cnn.iterations == config.iterations:
                     checkpoint_file = os.path.join(config.checkpoint_dir, 'model.ckpt')
-                    saver.save(sess, checkpoint_file, global_step=step)                
+                    saver.save(sess, checkpoint_file, global_step=step)       
+                    
                     savedpoint = "(checkpoint saved)"
                 
                 print('Iteration %3d (step %4d): loss = %.2f (%.3f sec)' % (cnn.iterations, step+1, train_loss, time.time()-start_time), savedpoint)
@@ -311,7 +308,7 @@ def run_CNN_training(config, dataset):
 def main(Steer=False):
     config = Config()
         
-    trackingpoints = read_supervised.TPList(config.foldername)
+    trackingpoints = read_supervised.TPList(config.foldername, config.msperframe)
     print("Number of samples:",trackingpoints.numsamples) 
     run_CNN_training(config, trackingpoints)        
     
