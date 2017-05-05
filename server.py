@@ -197,7 +197,11 @@ class InputValContainer(object):
                 return not (np.all(self.visionvec == visionvec) and np.all(self.othervecs == othervecs))
             else:
                 tmp_vvec_hist = [visionvec] + [i for i in self.vvec_hist[:-1]]
-                return not (np.all(self.vvec_hist == tmp_vvec_hist) and np.all(self.othervecs == othervecs))
+                allequal = True
+                for i in range(len(tmp_vvec_hist)):
+                    if not np.all(self.vvec_hist[i] == tmp_vvec_hist[i]):
+                        allequal = False
+                return not (allequal and np.all(self.othervecs == othervecs))
         
         logging.debug('Inputval-Update: Waiting for lock')
         self.lock.acquire()
@@ -306,13 +310,13 @@ class OutputValContainer(object):
 
 #TODO: mehrere Network-objects haben, und das immer ein gerade un-beschäftigtes ausführen lassen 
 class NeuralNetwork(object):
-    def __init__(self, num):
+    def __init__(self, num, config):
         self.lock = threading.Lock()
         self.isinitialized = False
         self.containers = None        
         self.number = num
         self.isbusy = False
-        tps = read_supervised.TPList(read_supervised.FOLDERNAME)
+        tps = read_supervised.TPList(read_supervised.FOLDERNAME, config.msperframe)
         self.normalizers = tps.find_normalizers()
         self.initNetwork()
 
@@ -552,7 +556,7 @@ def main(conf):
     containers.senderportsocket = create_socket(TCP_SENDER_PORT)
     
     for i in range(NUMBER_ANNS):
-        ANN = NeuralNetwork(i)
+        ANN = NeuralNetwork(i, conf)
         ANN.containers = containers
         containers.ANNs.append(ANN)
     
@@ -576,6 +580,9 @@ def main(conf):
     
     print("Server shutting down...")
     containers.KeepRunning = False
+    for senderthread in containers.senderthreads:
+        senderthread.delete_me() 
+    time.sleep(0.1)
     ReceiverConnecterThread.join() #takes max. 1 second until socket timeouts
     SenderConnecterThread.join()
     print("Server shut down sucessfully.")

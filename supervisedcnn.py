@@ -12,7 +12,7 @@ import math
 #====own functions====
 import read_supervised
 
-SUMMARYALL = 5
+SUMMARYALL = 1000
 CHECKPOINTALL = 5
 
 
@@ -21,11 +21,11 @@ class Config(object):
     log_dir = "SummaryLogDir/"  
     checkpoint_pre_dir = "Checkpoint"
     
-    history_frame_nr = 1 #incl. dem jetzigem!
+    history_frame_nr = 4 #incl. dem jetzigem!
     steering_steps = 11
     image_dims = [30,42]
     vector_len = 59
-    msperframe = 100 #50   #ACHTUNG!!! Dieser wert wird von unity überschrieben!!!!! #TODO: dass soll mit unity abgeglichen werden!
+    msperframe = 50 #50   #ACHTUNG!!! Dieser wert wird von unity überschrieben!!!!! #TODO: dass soll mit unity abgeglichen werden!
     
     batch_size = 32
     keep_prob = 0.8
@@ -235,6 +235,7 @@ class CNN(object):
             
             
     def run_inference(self, session, visionvec):
+        KLAPPT NICHT BEI MEHREREN HISTORYFRAMES!!
         if not type(visionvec).__module__ == np.__name__:
             return False, None #dann ist das input-array leer
         assert (np.array(visionvec.shape) == np.array(self.inputs.get_shape().as_list()[1:])).all()
@@ -316,3 +317,4 @@ def main(Steer=False):
                 
 if __name__ == '__main__':    
     main()
+    time.sleep(5)
