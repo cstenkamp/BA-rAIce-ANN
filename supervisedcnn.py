@@ -309,7 +309,7 @@ def main(Steer=False):
     config = Config()
         
     trackingpoints = read_supervised.TPList(config.foldername, config.msperframe)
-    print("Number of samples:",trackingpoints.numsamples) 
+    print("Number of samples: %s | Tracking every %s ms with %s historyframes" % (trackingpoints.numsamples, str(config.msperframe), str(config.history_frame_nr)))
     run_CNN_training(config, trackingpoints)        
     
                 

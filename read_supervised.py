@@ -126,7 +126,6 @@ class TPList(object):
         furtherinfo = {}
         tree = ET.parse(FileName)
         root = tree.getroot()
-        print(root.tag)
         assert root.tag=="TPMitInfoList", "that is not the kind of XML I thought it would be."
         for majorpoint in root:
             if majorpoint.tag == "TPList":
