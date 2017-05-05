@@ -16,7 +16,8 @@ logging.basicConfig(level=logging.ERROR, format='(%(threadName)-10s) %(message)s
 TCP_IP = 'localhost'
 TCP_RECEIVER_PORT = 6435
 TCP_SENDER_PORT = 6436
-UPDATE_ONLY_IF_NEW = False #sendet immer nach jedem update -> Wenn False sendet er wannimmer er was kriegt
+NUMBER_ANNS = 2
+UPDATE_ONLY_IF_NEW = False #sendet immer nach jedem update -> Wenn False sendet er wann immer er was kriegt
 
 current_milli_time = lambda: int(round(time.time() * 1000))
 
@@ -130,8 +131,8 @@ class receiver_thread(threading.Thread):
                 data = self.clientsocket.myreceive()
                 if data: 
                     #print("received data:", data)       
-                    if data[:11] == "resetServer":
-                        self.containers.inputval.reset(data[11:])
+                    if self.handle_special_commands(data):
+                        continue
                     elif data[:5] == "Time(":
                         self.timestamp = float(data[5:data.find(")")])
                         for i in self.containers.receiverthreads:
@@ -141,8 +142,9 @@ class receiver_thread(threading.Thread):
                         #print(data)
                         visionvec, allOneDs = cutoutandreturnvectors(data) 
                         self.containers.inputval.update(visionvec, allOneDs, self.timestamp) #we MUST have the inputval, otherwise there wouldn't be the possibility for historyframes.           
-                        thread = threading.Thread(target=self.containers.ANN.runANN, args=())
-                        thread.start()
+                        thread = threading.Thread(target=self.runOneANN, args=())#TODO: das hier mit bis zu x instanzen, je nachdem welche gerade frei ist.
+                        thread.start() #immediately returns if UPDATE_ONLY_IF_NEW and alreadyread
+                        
                         
                     
             except TimeoutError:
@@ -155,6 +157,22 @@ class receiver_thread(threading.Thread):
         print("stopping receiver_thread")
         
         
+    def handle_special_commands(self, data):
+        specialcommand = False
+        if data[:11] == "resetServer":
+            self.containers.inputval.reset(data[11:])
+            self.containers.outputval.reset()
+            specialcommand = True    
+        return specialcommand
+    
+    
+    def runOneANN(self):
+        for currANN in self.containers.ANNs:
+            if not currANN.isbusy:
+                currANN.runANN()
+                break
+        
+    
         
         
 class InputValContainer(object):   
@@ -173,17 +191,28 @@ class InputValContainer(object):
         
         
     def update(self, visionvec, othervecs, timestamp):
+        
+        def is_new(visionvec, othervecs):
+            if self.config.history_frame_nr == 1:
+                return not (np.all(self.visionvec == visionvec) and np.all(self.othervecs == othervecs))
+            else:
+                tmp_vvec_hist = [visionvec] + [i for i in self.vvec_hist[:-1]]
+                return not (np.all(self.vvec_hist == tmp_vvec_hist) and np.all(self.othervecs == othervecs))
+        
         logging.debug('Inputval-Update: Waiting for lock')
         self.lock.acquire()
         try:
             logging.debug('Acquired lock')
-            self.visionvec = visionvec
-            if self.config.history_frame_nr > 1:
-                self.vvec_hist = [visionvec] + [i for i in self.vvec_hist[:-1]]            
-            self.othervecs = othervecs
-            self.alreadyread = False
-            self.timestamp = timestamp
-            print("Updated Input-Vec at", self.timestamp)
+            if is_new(visionvec, othervecs):
+                self.visionvec = visionvec
+                if self.config.history_frame_nr > 1:
+                    self.vvec_hist = [visionvec] + [i for i in self.vvec_hist[:-1]]            
+                self.othervecs = othervecs
+                self.alreadyread = False
+                self.timestamp = timestamp
+                print("Updated Input-Vec at", timestamp)
+            else:
+                print("No Input-Vec upgrading needed at", timestamp)
         finally:
             self.lock.release()
             
@@ -239,6 +268,8 @@ class OutputValContainer(object):
                 #self.alreadysent = False
                 print("Updated output-value to",withwhatval)
                 self.send_via_senderthread(self.value, self.timestamp)
+            else:
+                print("Didn't update output-value because the new one wouldn't be newer")
         finally:
             self.lock.release()
 
@@ -268,22 +299,6 @@ class OutputValContainer(object):
                     if i >= len(self.containers.senderthreads)-1:
                         break
                 
-#                try:
-#                    print("this should occur after restarting unity")
-#                    self.containers.senderthreads[i].delete_me();
-#                except AttributeError:
-#                    print("UHM")
-##                    So, das hier ist der Fall wo Unity nen weiteren senderthread hätte erstellen müssen, und python muss den vorher erkennen. 
-##                    HIERBEI NÄCHSTE MAL WEITERMAHCN!!!!
-                                                     
-        
-        
-#    def read(self):
-#        if not self.alreadysent:
-#            self.alreadysent = True
-#            return self.value
-#        else:
-#            return False
 
 
 ###############################################################################        
@@ -291,10 +306,12 @@ class OutputValContainer(object):
 
 #TODO: mehrere Network-objects haben, und das immer ein gerade un-beschäftigtes ausführen lassen 
 class NeuralNetwork(object):
-    def __init__(self):
+    def __init__(self, num):
         self.lock = threading.Lock()
         self.isinitialized = False
         self.containers = None        
+        self.number = num
+        self.isbusy = False
         tps = read_supervised.TPList(read_supervised.FOLDERNAME)
         self.normalizers = tps.find_normalizers()
         self.initNetwork()
@@ -318,9 +335,14 @@ class NeuralNetwork(object):
                 
             self.lock.acquire()
             try:
-                print("Another ANN Starts")                   
+                self.isbusy = True
+                print("Another ANN Starts")  
+#                if self.containers.inputval.othervecs[0][0] > 30 and self.containers.inputval.othervecs[0][0] < 40:
+#                    self.containers.outputval.send_via_senderthread("pleasereset", self.containers.inputval.timestamp)
+#                    return
                 returnstuff = self.performNetwork(self.containers.inputval)
                 self.containers.outputval.update(returnstuff, self.containers.inputval.timestamp)    
+                self.isbusy = False
             finally:
                 self.lock.release()
                 
@@ -351,7 +373,7 @@ class NeuralNetwork(object):
             ckpt = tf.train.get_checkpoint_state(config.checkpoint_dir) 
             assert ckpt and ckpt.model_checkpoint_path
             self.saver.restore(self.session, ckpt.model_checkpoint_path)
-            print("network should be initialized")
+            print("network %s initialized" %str(self.number+1))
             self.isinitialized = True
 
 
@@ -399,10 +421,6 @@ class sender_thread(threading.Thread):
         tosend = str(result) + "Time(" +str(timestamp)+")"
         print("Sending", tosend)
         self.clientsocket.mysend(tosend)
-        #TODO: Kann er das command "pleasereset" senden????
-#        while True:
-#            self.clientsocket.mysend("[0.1, 0, 0.0]")
-#                #self.clientsocket.close()
 
 
 
@@ -508,6 +526,7 @@ class Containers():
         self.KeepRunning = True
         self.receiverthreads = []
         self.senderthreads = []
+        self.ANNs = []
         
         
 def create_socket(port):
@@ -519,29 +538,8 @@ def create_socket(port):
 
     
 
-   
-        
-        
-            
-#class SenderListenerThread(threading.Thread):
-#    def __init__(self):
-#        threading.Thread.__init__(self)
-#        self.containers = None
-#        
-#    def run(self):
-#        while self.containers.KeepRunning:
-#            #print("sender connected")
-#            try:
-#                (client, addr) = self.containers.senderportsocket.sock.accept()
-#                clt = MySocket(client)
-#                ct = sender_thread(clt)
-#                ct.containers = self.containers
-#                ct.start()
-#            except socket.timeout:
-#                #simply restart and don't care
-#                pass
 
-    
+
 def main(conf):
     containers = Containers()
     containers.inputval = InputValContainer(conf)
@@ -553,8 +551,10 @@ def main(conf):
     containers.receiverportsocket = create_socket(TCP_RECEIVER_PORT)
     containers.senderportsocket = create_socket(TCP_SENDER_PORT)
     
-    containers.ANN = NeuralNetwork()
-    containers.ANN.containers = containers
+    for i in range(NUMBER_ANNS):
+        ANN = NeuralNetwork(i)
+        ANN.containers = containers
+        containers.ANNs.append(ANN)
     
     print("Everything initialized")
     
@@ -577,7 +577,7 @@ def main(conf):
     print("Server shutting down...")
     containers.KeepRunning = False
     ReceiverConnecterThread.join() #takes max. 1 second until socket timeouts
-#    SenderConnecterThread.join()
+    SenderConnecterThread.join()
     print("Server shut down sucessfully.")
 
 

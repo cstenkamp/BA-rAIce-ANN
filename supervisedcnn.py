@@ -25,7 +25,7 @@ class Config(object):
     steering_steps = 11
     image_dims = [30,42]
     vector_len = 59
-    msperframe = 500 #25   #ACHTUNG!!! Dieser wert wird von unity überschrieben!!!!! #TODO: dass soll mit unity abgeglichen werden!
+    msperframe = 50 #50   #ACHTUNG!!! Dieser wert wird von unity überschrieben!!!!! #TODO: dass soll mit unity abgeglichen werden!
     
     batch_size = 32
     keep_prob = 0.8

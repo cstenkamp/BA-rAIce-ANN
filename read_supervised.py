@@ -122,23 +122,32 @@ class TPList(object):
     @staticmethod
     def read_xml(FileName):
         this_trackingpoints = []
+        furtherinfo = {}
         tree = ET.parse(FileName)
         root = tree.getroot()
-        assert root.tag=="ArrayOfTrackingPoint", "that is not the kind of XML I thought it would be."
-        for currpoint in root:
-            inputdict = {}
-            for item in currpoint:
-                inputdict[item.tag] = item.text
-            tp = TrackingPoint(**inputdict) #ein dictionary mit kwargs, IM SO PYTHON!!
-            this_trackingpoints.append(tp)
-        return this_trackingpoints        
+        assert root.tag=="TPMitInfoList", "that is not the kind of XML I thought it would be."
+        for majorpoint in root:
+            if majorpoint.tag == "TPList":
+                for currpoint in majorpoint:
+                    inputdict = {}
+                    for item in currpoint:
+                        inputdict[item.tag] = item.text
+                    tp = TrackingPoint(**inputdict) #ein dictionary mit kwargs, IM SO PYTHON!!
+                    this_trackingpoints.append(tp)
+            else:
+                furtherinfo[majorpoint.tag] = majorpoint.text
+        return this_trackingpoints, furtherinfo
             
     def __init__(self, foldername):
         assert os.path.isdir(foldername) 
         self.all_trackingpoints = []
         for file in os.listdir(foldername):
             if file.endswith(".svlap"):
-                self.all_trackingpoints.extend(TPList.read_xml(os.path.join(foldername, file)))
+                currcontent, currinfo = TPList.read_xml(os.path.join(foldername, file))
+                self.all_trackingpoints.extend(currcontent)                        
+                #TODO: so einfach ist das hier nicht. er hat jetzt für jedes currcontent ein currinfo, und 
+                #daran sieht er alle wie viel ms getrackt wurde.... Diese function hier sollte jetzt wissen
+                #alle wie viel ms der server das haben will und dementsprechend jedes x-te rauspicken..
         self.prepare_tplist()          
         self.numsamples = len(self.all_trackingpoints)
         self.reset_batch()
