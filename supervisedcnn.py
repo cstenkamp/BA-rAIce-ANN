@@ -22,11 +22,11 @@ class Config(object):
     checkpoint_pre_dir = "Checkpoint"
     
     history_frame_nr = 4 #incl. dem jetzigem!
-    speed_neurons = 0 #wenn null nutzt er sie nicht
+    speed_neurons = 10 #wenn null nutzt er sie nicht
     steering_steps = 11
     image_dims = [30,42]
     vector_len = 61
-    msperframe = 200 #50   #ACHTUNG!!! Dieser wert wird von unity überschrieben!!!!! #TODO: dass soll mit unity abgeglichen werden!
+    msperframe = 50 #50   #ACHTUNG!!! Dieser wert wird von unity überschrieben!!!!! #TODO: dass soll mit unity abgeglichen werden!
     
     batch_size = 32
     keep_prob = 0.8
@@ -257,8 +257,8 @@ class CNN(object):
             visionvec = np.expand_dims(visionvec, axis=0)
             feed_dict = {self.inputs: visionvec}  
             if self.config.speed_neurons:
-                print(read_supervised.inflate_speed(othervecs[1][4], self.config.speed_neurons))
-                feed_dict[self.speed_input] = np.expand_dims(read_supervised.inflate_speed(othervecs[1][4], self.config.speed_neurons), axis=0)
+                speed_disc = read_supervised.inflate_speed(othervecs[1][4], self.config.speed_neurons)
+                feed_dict[self.speed_input] = np.expand_dims(speed_disc, axis=0)
 
             return True, session.run(self.argmaxs, feed_dict=feed_dict)
 

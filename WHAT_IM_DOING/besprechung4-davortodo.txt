@@ -7,7 +7,10 @@
   -den Delay von 150ms berücksichtigen (beim supervisedlearning schlicht jeweils den input von now mit dem frame in 150ms matchen)
   -Supervised-learning: Reward fürs auf-der-strecke-bleiben
   -some kind of intrinsic motivation für exploration - dass er nicht stehen bleiben will
-  
+  -kurven überrepräsentieren in der anzahl des vorkommens..!
+
+sowieso als nächstes:
+supervised-learning-target: centerdist kleiner 5 und wie viel prozent er voran gekommen ist.
 
 
 ----------

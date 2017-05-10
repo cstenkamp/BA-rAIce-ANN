@@ -8,7 +8,7 @@ import server #from server import cutoutandreturnvectors
 
 NUMCATS = 11
 MAXSPEED = 250
-DELAY_TO_CONSIDER = 3000
+DELAY_TO_CONSIDER = 100
 
 
 FOLDERNAME = "SavedLaps/"
