@@ -2,7 +2,7 @@ import xml.etree.ElementTree as ET
 import os
 import numpy as np
 np.set_printoptions(threshold=np.nan)
-#====own functions====
+#====own classes====
 import server #from server import cutoutandreturnvectors
 
 NUMCATS = 11

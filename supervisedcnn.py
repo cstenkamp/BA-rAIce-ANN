@@ -9,7 +9,7 @@ import numpy as np
 import os
 import time
 import math
-#====own functions====
+#====own classes====
 import read_supervised
 
 SUMMARYALL = 1000

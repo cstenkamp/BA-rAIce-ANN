@@ -528,5 +528,5 @@ def main(conf, play_only):
 
 if __name__ == '__main__':  
     conf = supervisedcnn.Config() #TODO: lass dir die infos instead von unity schicken.
-    main(conf, ("-play" in sys.argv))
+    main(conf, ("-playonly" in sys.argv))
     

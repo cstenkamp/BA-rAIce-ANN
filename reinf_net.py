@@ -15,6 +15,7 @@ Created on Wed May 10 13:31:54 2017
 import threading
 import numpy as np
 import tensorflow as tf
+from collections import deque
 
 #====own classes====
 import supervisedcnn 
@@ -22,6 +23,7 @@ import read_supervised
 
 
 STANDARDRETURN = "[0,0,0.0]"
+MEMORY_SIZE = 5000
 
 
 
@@ -78,6 +80,15 @@ class ReinfNet(object):
         else:
             return STANDARDRETURN
 
+            
+    def randomAction():
+        throttle = 1 if np.random.random(1)[0] > 0.5 else 0
+        brake = 1 if np.random.random(1)[0] > 0.5 else 0
+        steer = ((np.random.random(1)*2)-1)[0]
+        result = "["+str(throttle)+", "+str(brake)+", "+str(steer)+"]"
+        return result
+              
+            
 
     def initNetwork(self):
         with tf.Graph().as_default():    
