@@ -19,7 +19,7 @@ TCP_IP = 'localhost'
 TCP_RECEIVER_PORT = 6435
 TCP_SENDER_PORT = 6436
 NUMBER_ANNS = 1
-UPDATE_ONLY_IF_NEW = True #sendet immer nach jedem update -> Wenn False sendet er wann immer er was kriegt
+UPDATE_ONLY_IF_NEW = False #sendet immer nach jedem update -> Wenn False sendet er wann immer er was kriegt
 
 
 
@@ -195,6 +195,10 @@ class InputValContainer(object):
         self.timestamp = 0
         self.containers = None
         self.alreadyread = True
+        self.previous_action = None
+        self.previous_visionvec = None
+        self.previous_vvechist = None
+        self.previous_othervecs = None
         self.msperframe = config.msperframe
         
         
@@ -215,7 +219,8 @@ class InputValContainer(object):
         self.lock.acquire()
         try:
             logging.debug('Acquired lock')
-            if is_new(visionvec, othervecs):
+            if is_new(visionvec, othervecs):#
+            
                 self.visionvec = visionvec
                 if self.config.history_frame_nr > 1:
                     self.vvec_hist = [visionvec] + [i for i in self.vvec_hist[:-1]]            
@@ -228,7 +233,13 @@ class InputValContainer(object):
         finally:
             self.lock.release()
             
+    def addResultAndBackup(self, action):
+        self.previous_action = action
+        self.previous_visionvec = self.visionvec
+        self.previous_vvechist = self.vvec_hist
+        self.previous_othervecs = self.othervecs
             
+        
     def reset(self, interval):
         logging.debug('Inputval-Reset: Waiting for lock')
         self.lock.acquire()
@@ -239,7 +250,11 @@ class InputValContainer(object):
                 self.vvec_hist = np.zeros([self.config.history_frame_nr, self.config.image_dims[0], self.config.image_dims[1]]) 
             self.othervecs = np.zeros(self.config.vector_len)
             self.timestamp = MININT
-            self.msperframe = interval #da Unity im diesen Wert immer bei spielstart schickt, wird msperframe immer richtig sein
+            self.previous_action = None
+            self.previous_visionvec = None
+            self.previous_vvechist = None
+            self.previous_othervecs = None
+            self.msperframe = interval #da Unity im diesen Wert immer bei spielstart schickt, wird msperframe immer richtig sein            
             assert int(self.msperframe) == int(self.config.msperframe)
             self.alreadyread = True
             logging.debug("Resettet input-value")
@@ -274,7 +289,7 @@ class OutputValContainer(object):
         self.lock.acquire()
         try:
             logging.debug('Acquired lock')
-            if int(self.timestamp) < int(itstimestamp):
+            if (UPDATE_ONLY_IF_NEW and int(self.timestamp) < int(itstimestamp)) or (not UPDATE_ONLY_IF_NEW and int(self.timestamp) <= int(itstimestamp)):
                 self.value = withwhatval
                 self.timestamp = itstimestamp #es geht nicht um jetzt, sondern um dann als das ANN gestartet wurde
                 #self.alreadysent = False

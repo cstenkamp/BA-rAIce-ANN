@@ -8,3 +8,8 @@
   -Supervised-learning: Reward fürs auf-der-strecke-bleiben
   -some kind of intrinsic motivation für exploration - dass er nicht stehen bleiben will
   
+
+
+----------
+-speed mit als networkinput reinbringen - check
+-considered den 150ms delay beim supervisedtraining - check

@@ -22,9 +22,9 @@ import supervisedcnn
 import read_supervised
 
 
-STANDARDRETURN = "[0,0,0.0]"
+STANDARDRETURN = ("[0.5,0,0.0]", [0.5, 0, 0.0])
 MEMORY_SIZE = 5000
-
+epsilon = 0.001
 
 
 
@@ -35,20 +35,21 @@ class ReinfNet(object):
         self.containers = None        
         self.number = num
         self.isbusy = False
-        tps = read_supervised.TPList(read_supervised.FOLDERNAME, config.msperframe)
         self.config = config
-        self.normalizers = tps.find_normalizers()
+        #tps = read_supervised.TPList(read_supervised.FOLDERNAME, config.msperframe)
+        #self.normalizers = tps.find_normalizers()
+        self.memory = deque([], MEMORY_SIZE)
         self.initNetwork()
 
-    @staticmethod
-    def flatten_oneDs(AllOneDs):
-        return np.array(read_supervised.flatten(AllOneDs))
-    
-    @staticmethod
-    def normalize_oneDs(FlatOneDs, normalizers):
-        FlatOneDs -= np.array([item[0] for item in normalizers])
-        NormalizedOneDs = FlatOneDs / np.array([item[1] for item in normalizers])
-        return NormalizedOneDs
+#    @staticmethod
+#    def flatten_oneDs(AllOneDs):
+#        return np.array(read_supervised.flatten(AllOneDs))
+#    
+#    @staticmethod
+#    def normalize_oneDs(FlatOneDs, normalizers):
+#        FlatOneDs -= np.array([item[0] for item in normalizers])
+#        NormalizedOneDs = FlatOneDs / np.array([item[1] for item in normalizers])
+#        return NormalizedOneDs
         
     
     def runANN(self, update_only_if_new):
@@ -58,12 +59,16 @@ class ReinfNet(object):
                 
             self.lock.acquire()
             try:
-                self.isbusy = True
-                print("Another ANN Starts")  
+                self.isbusy = True 
 #                if self.containers.inputval.othervecs[0][0] > 30 and self.containers.inputval.othervecs[0][0] < 40:
 #                    self.containers.outputval.send_via_senderthread("pleasereset", self.containers.inputval.timestamp)
 #                    return
-                returnstuff = self.performNetwork(self.containers.inputval)
+                if np.random.random() > epsilon:
+                    returnstuff, original = self.performNetwork(self.containers.inputval)
+                else:
+                    returnstuff, original = self.randomAction()
+                    
+                self.containers.inputval.addResultAndBackup(original) 
                 self.containers.outputval.update(returnstuff, self.containers.inputval.timestamp)    
                 self.isbusy = False
             finally:
@@ -71,22 +76,24 @@ class ReinfNet(object):
                 
 
     def performNetwork(self, inputval):
-        _, visionvec = inputval.read()
-        check, networkresult = self.cnn.run_inference(self.session, visionvec, self.config.history_frame_nr)
+        othervecs, visionvec = inputval.read()
+        print("Another ANN Inference")
+        check, networkresult = self.cnn.run_inference(self.session, visionvec, othervecs, self.config.history_frame_nr)
         if check:
             throttle, brake, steer = read_supervised.dediscretize_all((networkresult)[0])
             result = "["+str(throttle)+", "+str(brake)+", "+str(steer)+"]"
-            return result
+            return result, [throttle, brake, steer]
         else:
             return STANDARDRETURN
 
             
-    def randomAction():
-        throttle = 1 if np.random.random(1)[0] > 0.5 else 0
-        brake = 1 if np.random.random(1)[0] > 0.5 else 0
-        steer = ((np.random.random(1)*2)-1)[0]
+    def randomAction(self):
+        print("Random Action!")
+        throttle = 1 if np.random.random() > 0.5 else 0
+        brake = 1 if np.random.random() > 0.5 else 0
+        steer = ((np.random.random()*2)-1)
         result = "["+str(throttle)+", "+str(brake)+", "+str(steer)+"]"
-        return result
+        return result, [throttle, brake, steer]
               
             
 

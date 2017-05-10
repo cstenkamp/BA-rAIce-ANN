@@ -1,12 +1,14 @@
 import xml.etree.ElementTree as ET
 import os
 import numpy as np
+from copy import deepcopy
 np.set_printoptions(threshold=np.nan)
 #====own classes====
 import server #from server import cutoutandreturnvectors
 
 NUMCATS = 11
-
+MAXSPEED = 250
+DELAY_TO_CONSIDER = 3000
 
 
 FOLDERNAME = "SavedLaps/"
@@ -140,6 +142,8 @@ class TPList(object):
         for file in os.listdir(foldername):
             if file.endswith(".svlap"):
                 currcontent, currinfo = TPList.read_xml(os.path.join(foldername, file))
+                if DELAY_TO_CONSIDER > 0:
+                    currcontent = self.consider_delay(currcontent, int(currinfo["trackAllXMS"]))
                 currcontent = self.extract_appropriate(currcontent, int(currinfo["trackAllXMS"]), msperframe, currinfo["filename"])    
                 if currcontent is not None:                 
                     self.all_trackingpoints.extend(currcontent)
@@ -162,7 +166,17 @@ class TPList(object):
                 i += fraction
         return returntp
     
-
+    def consider_delay(self, TPList, TPmsperframe):
+        result = deepcopy(TPList)
+        for i in range(len(TPList)):
+            j = max(i-(DELAY_TO_CONSIDER//TPmsperframe),0)
+            #the server is a bit delayed. We consider that by mapping the current vision to the output a few frames ago.
+            result[i].brakePedalValue = TPList[j].brakePedalValue #älterer output (output von j), neuerer vision (von i)!
+            result[i].throttlePedalValue = TPList[j].throttlePedalValue
+            result[i].steeringValue = TPList[j].steeringValue
+        return result
+    
+        
     def prepare_tplist(self):
         for currpoint in self.all_trackingpoints:
             currpoint.make_vecs();     
@@ -195,6 +209,7 @@ class TPList(object):
     def num_batches(self, batch_size):
         return self.numsamples//batch_size
         
+    
     #TODO: sample according to information gain, what DQN didn't do yet.
     #TODO: uhm, das st jezt simples ziehen mit zurücklegen, every time... ne richtige next_batch funktion, bei der jedes mal vorkommt wäre sinnvoller, oder?
     #TODO: splitting into training and validation set??    
@@ -205,6 +220,7 @@ class TPList(object):
         targets = []
         lookaheads = []
         discretetargets = []
+        speeds = []
         for indexindex in range(self.batchindex,self.batchindex+batch_size):
             i = self.randomindices[indexindex]
             vision = [self.all_trackingpoints[(i-j) % len(self.all_trackingpoints)].visionvec for j in range(config.history_frame_nr-1,-1,-1)]
@@ -220,12 +236,18 @@ class TPList(object):
             targets.append(np.array(target))
             discretetargets.append(np.array(discretetarget))
             lookaheads.append(lookahead)
+            if config.speed_neurons > 0:
+                speeds.append(inflate_speed(int(self.all_trackingpoints[i].speed), config.speed_neurons))
         self.batchindex += batch_size
-        return np.array(lookaheads), np.array(visions), np.array(targets), np.array(discretetargets)
+        return np.array(lookaheads), np.array(visions), np.array(targets), np.array(discretetargets), np.array(speeds)
 
 
+def inflate_speed(speed, numberneurons):
+    result = [0]*numberneurons
+    result[round((min([speed,MAXSPEED])/MAXSPEED)*numberneurons)] = 1
+    return result
 
-
+    
 if __name__ == '__main__':    
     import supervisedcnn
     config = supervisedcnn.Config()
@@ -234,12 +256,12 @@ if __name__ == '__main__':
     #print(trackingpoints.all_trackingpoints[220].throttlePedalValue)
     #print(trackingpoints.all_trackingpoints[220].discreteThrottle)
     while trackingpoints.has_next(10):
-        lookaheads, vision, targets, dtargets = trackingpoints.next_batch(config, 10)
+        lookaheads, vision, targets, dtargets, speeds = trackingpoints.next_batch(config, 10)
     print(lookaheads)
     print(dtargets[:,22:])
     print(targets)
     print(vision.shape)
-    
+    print(speeds)
     
     #sooo jetzt hab ich hier eine liste an trackingpoints. was ich tun muss ist jetzt dem vectors per ANN die brake, steering, throttlevalues zuzuweisen.
     
