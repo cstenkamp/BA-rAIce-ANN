@@ -12,7 +12,6 @@ NUMCATS = 11
 FOLDERNAME = "SavedLaps/"
 flatten = lambda l: [item for sublist in l for item in sublist]
 
-
     
     
 #this is supposed to resemble the TrackingPoint-Class from the recorder from Unity
@@ -89,11 +88,7 @@ def dediscretize_steer(discrete):
         result = 0
     return result
 
-#probably not needed, cause its a bad idea anyway
-#def dediscretize_acc_break(discrete):
-#    if type(discrete).__module__ == np.__name__:
-#        discrete = discrete.tolist()
-#    return (1/len(discrete))*(discrete.index(1)+0.5)
+
 
 def dediscretize_all(discrete):
     if type(discrete).__module__ == np.__name__:

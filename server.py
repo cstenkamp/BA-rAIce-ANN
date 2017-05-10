@@ -9,8 +9,8 @@ import sys
 
 #====own classes====
 import supervisedcnn 
-from cnn import PlayNet
-
+from playnet import PlayNet
+from reinf_net import ReinfNet
 
 logging.basicConfig(level=logging.ERROR, format='(%(threadName)-10s) %(message)s',)
 
@@ -489,10 +489,14 @@ def main(conf, play_only):
     containers.senderportsocket = create_socket(TCP_SENDER_PORT)
     
     if play_only:
-        for i in range(NUMBER_ANNS):
-            ANN = PlayNet(i, conf)
-            ANN.containers = containers
-            containers.ANNs.append(ANN)
+        NeuralNet = PlayNet
+    else:
+        NeuralNet = ReinfNet
+        
+    for i in range(NUMBER_ANNS):
+        ANN = NeuralNet(i, conf)
+        ANN.containers = containers
+        containers.ANNs.append(ANN)
     
     print("Everything initialized")
     

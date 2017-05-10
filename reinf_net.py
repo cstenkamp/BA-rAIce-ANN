@@ -21,10 +21,12 @@ import supervisedcnn
 import read_supervised
 
 
+STANDARDRETURN = "[0,0,0.0]"
 
 
 
-class PlayNet(object):
+
+class ReinfNet(object):
     def __init__(self, num, config):
         self.lock = threading.Lock()
         self.isinitialized = False
@@ -36,7 +38,6 @@ class PlayNet(object):
         self.normalizers = tps.find_normalizers()
         self.initNetwork()
 
-    #TODO: diese beiden von der read_supervised nehmen und nicht nochmal neu definieren!
     @staticmethod
     def flatten_oneDs(AllOneDs):
         return np.array(read_supervised.flatten(AllOneDs))
@@ -75,7 +76,7 @@ class PlayNet(object):
             result = "["+str(throttle)+", "+str(brake)+", "+str(steer)+"]"
             return result
         else:
-            return "[0,0,0.0]" #TODO: macht das sinn 0,0 als standard zu returnen? -> Exception stattdessen
+            return STANDARDRETURN
 
 
     def initNetwork(self):
