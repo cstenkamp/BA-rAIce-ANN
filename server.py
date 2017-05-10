@@ -5,10 +5,12 @@ import threading
 import time
 import logging
 import numpy as np
-import tensorflow as tf
-#====own functions====
+import sys
+
+#====own classes====
 import supervisedcnn 
-import read_supervised
+from cnn import PlayNet
+
 
 logging.basicConfig(level=logging.ERROR, format='(%(threadName)-10s) %(message)s',)
 
@@ -16,10 +18,13 @@ logging.basicConfig(level=logging.ERROR, format='(%(threadName)-10s) %(message)s
 TCP_IP = 'localhost'
 TCP_RECEIVER_PORT = 6435
 TCP_SENDER_PORT = 6436
-NUMBER_ANNS = 3
+NUMBER_ANNS = 1
 UPDATE_ONLY_IF_NEW = True #sendet immer nach jedem update -> Wenn False sendet er wann immer er was kriegt
 
+
+
 current_milli_time = lambda: int(round(time.time() * 1000))
+MININT = -sys.maxsize+1
 
 
 class MySocket:
@@ -142,8 +147,9 @@ class receiver_thread(threading.Thread):
                         #print(data)
                         visionvec, allOneDs = cutoutandreturnvectors(data) 
                         self.containers.inputval.update(visionvec, allOneDs, self.timestamp) #we MUST have the inputval, otherwise there wouldn't be the possibility for historyframes.           
-                        thread = threading.Thread(target=self.runOneANN, args=())
-                        thread.start() #immediately returns if UPDATE_ONLY_IF_NEW and alreadyread
+                        
+                        thread = threading.Thread(target=self.runOneANN, args=()) #immediately returns if UPDATE_ONLY_IF_NEW and alreadyreadthread = threading.Thread(target=self.runANN_SaveResult, args=())
+                        thread.start() 
                         
                         
                     
@@ -169,8 +175,10 @@ class receiver_thread(threading.Thread):
     def runOneANN(self):
         for currANN in self.containers.ANNs:
             if not currANN.isbusy:
-                currANN.runANN()
+                currANN.runANN(UPDATE_ONLY_IF_NEW)
                 break
+            
+        
         
     
         
@@ -230,7 +238,7 @@ class InputValContainer(object):
             if self.config.history_frame_nr > 1:
                 self.vvec_hist = np.zeros([self.config.history_frame_nr, self.config.image_dims[0], self.config.image_dims[1]]) 
             self.othervecs = np.zeros(self.config.vector_len)
-            self.timestamp = 0
+            self.timestamp = MININT
             self.msperframe = interval #da Unity im diesen Wert immer bei spielstart schickt, wird msperframe immer richtig sein
             assert int(self.msperframe) == int(self.config.msperframe)
             self.alreadyread = True
@@ -283,7 +291,7 @@ class OutputValContainer(object):
         try:
             logging.debug('Acquired lock')
             self.value = ""
-            self.timestamp = 0
+            self.timestamp = MININT
             #self.alreadysent = True
             logging.debug("Resettet output-value")
         finally:
@@ -303,81 +311,6 @@ class OutputValContainer(object):
                     if i >= len(self.containers.senderthreads)-1:
                         break
                 
-
-
-###############################################################################        
-
-
-class NeuralNetwork(object):
-    def __init__(self, num, config):
-        self.lock = threading.Lock()
-        self.isinitialized = False
-        self.containers = None        
-        self.number = num
-        self.isbusy = False
-        tps = read_supervised.TPList(read_supervised.FOLDERNAME, config.msperframe)
-        self.config = config
-        self.normalizers = tps.find_normalizers()
-        self.initNetwork()
-
-    #TODO: diese beiden von der read_supervised nehmen und nicht nochmal neu definieren!
-    @staticmethod
-    def flatten_oneDs(AllOneDs):
-        return np.array(read_supervised.flatten(AllOneDs))
-    
-    @staticmethod
-    def normalize_oneDs(FlatOneDs, normalizers):
-        FlatOneDs -= np.array([item[0] for item in normalizers])
-        NormalizedOneDs = FlatOneDs / np.array([item[1] for item in normalizers])
-        return NormalizedOneDs
-        
-    
-    def runANN(self):
-        if self.isinitialized:
-            if UPDATE_ONLY_IF_NEW and self.containers.inputval.alreadyread:
-                    return
-                
-            self.lock.acquire()
-            try:
-                self.isbusy = True
-                print("Another ANN Starts")  
-#                if self.containers.inputval.othervecs[0][0] > 30 and self.containers.inputval.othervecs[0][0] < 40:
-#                    self.containers.outputval.send_via_senderthread("pleasereset", self.containers.inputval.timestamp)
-#                    return
-                returnstuff = self.performNetwork(self.containers.inputval)
-                self.containers.outputval.update(returnstuff, self.containers.inputval.timestamp)    
-                self.isbusy = False
-            finally:
-                self.lock.release()
-                
-
-    def performNetwork(self, inputval):
-        _, visionvec = inputval.read()
-        check, networkresult = self.cnn.run_inference(self.session, visionvec, self.config.history_frame_nr)
-        if check:
-            throttle, brake, steer = read_supervised.dediscretize_all((networkresult)[0])
-            result = "["+str(throttle)+", "+str(brake)+", "+str(steer)+"]"
-            return result
-        else:
-            return "[0,0,0.0]" #TODO: macht das sinn 0,0 als standard zu returnen? -> Exception stattdessen
-
-
-    def initNetwork(self):
-        
-        with tf.Graph().as_default():    
-            initializer = tf.random_uniform_initializer(-0.1, 0.1)
-                                                 
-            with tf.name_scope("runAsServ"):
-                with tf.variable_scope("cnnmodel", reuse=None, initializer=initializer): 
-                    self.cnn = supervisedcnn.CNN(self.config, is_training=False)
-            
-            self.saver = tf.train.Saver(self.cnn.trainvars)
-            self.session = tf.Session()
-            ckpt = tf.train.get_checkpoint_state(self.config.checkpoint_dir) 
-            assert ckpt and ckpt.model_checkpoint_path
-            self.saver.restore(self.session, ckpt.model_checkpoint_path)
-            print("network %s initialized" %str(self.number+1))
-            self.isinitialized = True
 
 
 ###############################################################################
@@ -524,7 +457,8 @@ def readTwoDArrayFromString(string):
 ###############################################################################
 
 class Containers():
-    def __init__(self):
+    def __init__(self, play_only):
+        self.play_only = play_only
         self.IExist = True
         self.KeepRunning = True
         self.receiverthreads = []
@@ -543,8 +477,8 @@ def create_socket(port):
 
 
 
-def main(conf):
-    containers = Containers()
+def main(conf, play_only):
+    containers = Containers(play_only)
     containers.inputval = InputValContainer(conf)
     containers.inputval.containers = containers #lol.    
     containers.outputval = OutputValContainer()
@@ -554,10 +488,11 @@ def main(conf):
     containers.receiverportsocket = create_socket(TCP_RECEIVER_PORT)
     containers.senderportsocket = create_socket(TCP_SENDER_PORT)
     
-    for i in range(NUMBER_ANNS):
-        ANN = NeuralNetwork(i, conf)
-        ANN.containers = containers
-        containers.ANNs.append(ANN)
+    if play_only:
+        for i in range(NUMBER_ANNS):
+            ANN = PlayNet(i, conf)
+            ANN.containers = containers
+            containers.ANNs.append(ANN)
     
     print("Everything initialized")
     
@@ -589,5 +524,5 @@ def main(conf):
 
 if __name__ == '__main__':  
     conf = supervisedcnn.Config() #TODO: lass dir die infos instead von unity schicken.
-    main(conf)
+    main(conf, ("-play" in sys.argv))
     

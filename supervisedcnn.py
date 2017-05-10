@@ -21,7 +21,7 @@ class Config(object):
     log_dir = "SummaryLogDir/"  
     checkpoint_pre_dir = "Checkpoint"
     
-    history_frame_nr = 7 #incl. dem jetzigem!
+    history_frame_nr = 4 #incl. dem jetzigem!
     steering_steps = 11
     image_dims = [30,42]
     vector_len = 59
@@ -126,7 +126,7 @@ class CNN(object):
                 tf.summary.histogram("activations", h_pool)
                 return h_pool
         
-        def fc_layer(input_tensor, input_size, output_size, name, act, do_dropout):
+        def fc_layer(input_tensor, input_size, output_size, name, act=None, do_dropout=False):
             with tf.name_scope(name):
                 self.trainvars["W_%s" % name] = weight_variable([input_size, output_size], "W_%s" % name)
                 self.variable_summary(self.trainvars["W_%s" % name])
@@ -140,7 +140,6 @@ class CNN(object):
                     h_fc = tf.nn.dropout(h_fc, self.keep_prob) 
                 return h_fc
 
-        #rs_input = tf.reshape(self.inputs, [-1, self.config.image_dims[0], self.config.image_dims[1],1]) #final dimension = number of color channels
         rs_input = tf.reshape(self.inputs, [-1, self.config.image_dims[0], self.config.image_dims[1],self.config.history_frame_nr]) #final dimension = number of color channels
                              
         self.keep_prob = tf.Variable(tf.constant(1.0), trainable=False) #wenn nicht gefeedet ist sie standardmäßig 1        
@@ -311,7 +310,7 @@ def run_CNN_training(config, dataset):
         
         
         
-def main(Steer=False):
+def main():
     config = Config()
         
     trackingpoints = read_supervised.TPList(config.foldername, config.msperframe)

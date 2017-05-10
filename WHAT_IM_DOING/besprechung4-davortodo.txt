@@ -4,7 +4,7 @@
  Das grundsätzliche Problem beim SV-Lernen ist halt dass sich sein input quasi gar nicht ändert, selbst mit history-frames, aber ich in manchen situationen voll bremse, und in anderen nicht, was halt 1 pixel apart sein könnte...
  Lösungen dafür:
   -aktuellen speed als zusätzlichen Input im letzten Network-layer haben (kann aber sein dass das schlicht auch nicht hilft, sonst müssten die bereits integrierten historyframes ja auch eig helfen)
-  -den Delay von 150ms berücksichtigen (aber wie kann man in die Zukunft gucken?)
+  -den Delay von 150ms berücksichtigen (beim supervisedlearning schlicht jeweils den input von now mit dem frame in 150ms matchen)
   -Supervised-learning: Reward fürs auf-der-strecke-bleiben
   -some kind of intrinsic motivation für exploration - dass er nicht stehen bleiben will
   
