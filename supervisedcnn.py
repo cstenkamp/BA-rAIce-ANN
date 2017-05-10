@@ -12,7 +12,7 @@ import math
 #====own functions====
 import read_supervised
 
-SUMMARYALL = 5
+SUMMARYALL = 1000
 CHECKPOINTALL = 5
 
 
@@ -25,14 +25,14 @@ class Config(object):
     steering_steps = 11
     image_dims = [30,42]
     vector_len = 59
-    msperframe = 100 #50   #ACHTUNG!!! Dieser wert wird von unity überschrieben!!!!! #TODO: dass soll mit unity abgeglichen werden!
+    msperframe = 50 #50   #ACHTUNG!!! Dieser wert wird von unity überschrieben!!!!! #TODO: dass soll mit unity abgeglichen werden!
     
     batch_size = 32
     keep_prob = 0.8
     initscale = 0.1
     max_grad_norm = 10
     
-    iterations = 60      #90, 120
+    iterations = 90     #90, 120
     initial_lr = 0.005
     lr_decay = 0.9
     lrdecayafter = iterations//2  #//3 für 90, 120
@@ -234,13 +234,19 @@ class CNN(object):
         return accuracy, loss, dataset.numsamples
             
             
-    def run_inference(self, session, visionvec):
-        if not type(visionvec).__module__ == np.__name__:
-            return False, None #dann ist das input-array leer
-        assert (np.array(visionvec.shape) == np.array(self.inputs.get_shape().as_list()[1:])).all()
-        visionvec = np.expand_dims(visionvec, axis=0)
-        feed_dict = {self.inputs: visionvec}  
-        return True, session.run(self.argmaxs, feed_dict=feed_dict)
+    def run_inference(self, session, visionvec, hframes):
+        if hframes > 1:
+            if not type(visionvec[0]).__module__ == np.__name__:
+                return False, None #dann ist das input-array leer
+        else:
+            if not type(visionvec).__module__ == np.__name__:
+                return False, None #dann ist das input-array leer
+            assert (np.array(visionvec.shape) == np.array(self.inputs.get_shape().as_list()[1:])).all()
+        
+        with tf.device("/cpu:0"):
+            visionvec = np.expand_dims(visionvec, axis=0)
+            feed_dict = {self.inputs: visionvec}  
+            return True, session.run(self.argmaxs, feed_dict=feed_dict)
 
             
        
@@ -297,7 +303,7 @@ def run_CNN_training(config, dataset):
 #            dataset.reset_batch()
 #            _, visionvec, _, _ = dataset.next_batch(config, 1)
 #            visionvec = np.array(visionvec[0])
-#            print(cnn.run_inference(sess,visionvec))
+#            print(cnn.run_inference(sess,visionvec, config.history_frame_nr))
  
 
 
@@ -316,3 +322,4 @@ def main(Steer=False):
                 
 if __name__ == '__main__':    
     main()
+    time.sleep(5)

@@ -1,16 +1,12 @@
 -----------------------------------------TODO-----------------------------------------
 
 UNITY
--Nach längerer Zeit kackt er immer noch mit "Too many threads" ab
--Er hat noch 350ms responsetime, es würde bestimmt unglaublich helfen den selben Socket immer wieder zu nutzen anstatt immer neu zu connecten
 -Den Recorder ein supervisedly-learn-target mitrecorden lassen (bzw. alle möglichen), kann man evtl nutzen!
 -Dass der am anfang, wenn man startet, alle variablen von unity nach python schickt (oder umgekehrt) damit sie garantiert gleich sind
 -Unity muss noch selbstständig(!!) zwischen 2 results vom netzwerk interpolieren 
  -(momentan ist das so, dass WENN kein resultat von python kommt, python standardmäßig [0.1, 0, 0] schickt. Das muss weg, dafür muss unity selbst interpolieren anhand der letzten paar inputs von python(!))
  ->5 mal pro sekunde schickt python unity sein result, und unity interpoliert selbst dazwischen (OPTIONAL! andere möglichkeit ist "digital, aka springen!)
--Den selben Socket immer wieder re-usen, sollte deutlich deutlich schneller sein als die 350ms
 -Dafür sorgen dass er an den richtigen Sachen die richtigen Sachen resettet
--variablen zentralisieren, bspw alle wie-viel sekunden er supervised-learn-records macht (eher viel als wenig)
 VON FRÜHER:
   -Die perfekter-reset-funktion
   -Funkion um genau an x (->parameter) prozent der strecke zu resetten
@@ -23,12 +19,7 @@ VON FRÜHER:
 
 PYTHON
 -Das Netzwerk muss den eigenen Speed berücksichtigen (MÖGLICHKEIT 1) ODER die history-frames (MÖGLICHKEIT 2) ODER recurrent sein (MÖGLICHKEIT 3)!
--Das CNN brauche die Möglichkeit auf adaptable Learning rate
 -Andere Netzwerkstrukturen probieren! Außerdem stuff wie dropout etc
--Den Saver bzw den supervisor richtig nutzen können, sodass man nicht die Konsole resetten muss UND global_step so nutzen dass man unterbrechen & neustarten kann
--Im nur-inference-modus soll er nicht die GPU nutzen
--Tensorboard nutzen können!
--Noch ordentlicher und mehr anhand von TF-Tutorials und online-sourcecode den TF-Code strukturieren (->sämtliche TF-Tutorials von tensorflow.org anschauen und incorporaten!)
 -Netzwerk irgendwie continuous machen (wahrscheinlich aber erst NACH dem supervised learning)
 -bessere Idee wie er mit immer-dem-gleichem-visionvektor umgeht als stumpf speed 0.1 zu machen (->Unity interpolieren lassen!)
 -Das Trackingpoints-array per pickle speichern und nur neu-erzeugen wenn sich der hash der namen der files die er dafür auslesen soll verändert hat
@@ -52,7 +43,6 @@ ALLGEMEIN
 -...und um dann auf das reinforcementlearning zu mappen sollte der ne per gaußkurve von dem genauem wert auf die diskretisierten 44 werte (FALLS NICHT CONTINUUS) mappen
 -A bunch of Todos im Quellcode...
 -Zum Thema exploration... wie wäre es mit nem reward dafür neue zustände zu erreichen? er bremst zu oft, und so nen reward könnte ihn daran hindern? ->paper dazu!
--Im XML der supervisedrounds soll stehen alle wie viel ms aufgenommen wurde, und python soll asserten dass er damit was anfangen kann und dementsprechend jedes x-te nehmen!
 
 -----------------------------------------DONE-----------------------------------------
 
@@ -69,6 +59,11 @@ UNITY
 -Die alte funktion fürs visiondisplay komplett entfernt
 -der recorder muss mitspeichern ob ICH die runde gefahren bin oder das netz (und die gesamtzeit der runde im filename speichern)
 -Recorder muss für das supervised-learning eigenen Speed mit-recorden, dass er daran mitlernen KANN
+-Nach längerer Zeit kackt er immer noch mit "Too many threads" ab
+-Er hat noch 350ms responsetime, es würde bestimmt unglaublich helfen den selben Socket immer wieder zu nutzen anstatt immer neu zu connecten
+-Den selben Socket immer wieder re-usen, sollte deutlich deutlich schneller sein als die 350ms
+-variablen zentralisieren, bspw alle wie-viel sekunden er supervised-learn-records macht (eher viel als wenig)
+
 
 PYTHON
 -ERST Supervisedly learnen um den statespace gehörig zu verkleinern.
@@ -81,6 +76,13 @@ PYTHON
 -die alte datei client_für_servertest entfernt. Die "playground.py" ist übrigens nur zum ausprobieren von tensorflow-funktionen da.
 -Der Server hat jetzt 3 einzelne Threads, und der Hauptthread wartet auf einen Keyboardinterrupt, bei wessen auftreten er die anderen threads safely runterfahren lässt
 -Das Netzwerk hat global_step und saver und stellt sich wieder her mit passender anzahl restiterationen
+-Das CNN brauche die Möglichkeit auf adaptable Learning rate
+-Den Saver bzw den supervisor richtig nutzen können, sodass man nicht die Konsole resetten muss UND global_step so nutzen dass man unterbrechen & neustarten kann
+-Tensorboard nutzen können!
+-Noch ordentlicher und mehr anhand von TF-Tutorials und online-sourcecode den TF-Code strukturieren (->sämtliche TF-Tutorials von tensorflow.org anschauen und incorporaten!)
+-Im nur-inference-modus soll er nicht die GPU nutzen
+
 
 ALLGEMEIN
 -Wenn funktionen die vorher mal auskommentiert war jetzt weg sind, in DIESEM Update (14.04.) wars!!!
+-Im XML der supervisedrounds soll stehen alle wie viel ms aufgenommen wurde, und python soll asserten dass er damit was anfangen kann und dementsprechend jedes x-te nehmen!

@@ -6,7 +6,6 @@ UNITY
 -in welchen Winkel hat sich der Reifen vom letzten zum jetzigen frame bewegt und in welchem Winkel hat sich die Automitte bewegt 
 -Delta und Feedback beim SV-Learn mitspeichern und beim RL-learn mitschicken!!
 -wenn man sich perfekt Resetten kann (der totale hack), kann man dem network Feedback für jedes seiner output Neuronen geben indem man alle durchprobiert. Wenn nicht, dann nur von dem softmax (ODER CONTINUUS CONTROL DEEPMIND PAPER)
--5 Datenpunkte pro Sekunde BEI ALLEM!
 -die slip-vektoren UND der speedvektor springen noch manchmal wahllos herum. Slip workaround ware zu sagen wenn speed kleiner epsilon dann slip gleich 0, bei speed... kp
 -um sicher zu sein dass unity und python gleiche parametervalues haben (für zb. visionvecdimension), könnte unity die am anfang per socket an python schicken (another var wäre welche vectoren genutzt werden sollen)
 -Die perfekt-resetten-funktion furs spiel (GENAU wie vorher, furs AI cheaten)
@@ -14,7 +13,6 @@ UNITY
 -Pausenmenu ungleich startmenu
 -Am anfang des Spiels globale Params mitschicken
 -Pausenmenu PAUSIERT timing, startet nicht neu
--Die ganzen parameter (globalen vars) in den einzelnen funktionen aufraumen
 
 
 PYTHON
@@ -46,6 +44,8 @@ UNITY
 -beim aufnehmen soll der aber definitiv die tatsächlichen Inputs Speichern, die die unten rechts abgebildet sind. 
 -Die Sachen furs reset fixen, sodass es nicht mehr rollt
 -Er zeigt time-punishments für wallhits nur an, speichert sie aber nicht mit
+-5 Datenpunkte pro Sekunde BEI ALLEM!
+-Die ganzen parameter (globalen vars) in den einzelnen funktionen aufraumen
 
 
 PYTHON

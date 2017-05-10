@@ -16,8 +16,8 @@ logging.basicConfig(level=logging.ERROR, format='(%(threadName)-10s) %(message)s
 TCP_IP = 'localhost'
 TCP_RECEIVER_PORT = 6435
 TCP_SENDER_PORT = 6436
-NUMBER_ANNS = 2
-UPDATE_ONLY_IF_NEW = False #sendet immer nach jedem update -> Wenn False sendet er wann immer er was kriegt
+NUMBER_ANNS = 3
+UPDATE_ONLY_IF_NEW = True #sendet immer nach jedem update -> Wenn False sendet er wann immer er was kriegt
 
 current_milli_time = lambda: int(round(time.time() * 1000))
 
@@ -142,7 +142,7 @@ class receiver_thread(threading.Thread):
                         #print(data)
                         visionvec, allOneDs = cutoutandreturnvectors(data) 
                         self.containers.inputval.update(visionvec, allOneDs, self.timestamp) #we MUST have the inputval, otherwise there wouldn't be the possibility for historyframes.           
-                        thread = threading.Thread(target=self.runOneANN, args=())#TODO: das hier mit bis zu x instanzen, je nachdem welche gerade frei ist.
+                        thread = threading.Thread(target=self.runOneANN, args=())
                         thread.start() #immediately returns if UPDATE_ONLY_IF_NEW and alreadyread
                         
                         
@@ -197,7 +197,11 @@ class InputValContainer(object):
                 return not (np.all(self.visionvec == visionvec) and np.all(self.othervecs == othervecs))
             else:
                 tmp_vvec_hist = [visionvec] + [i for i in self.vvec_hist[:-1]]
-                return not (np.all(self.vvec_hist == tmp_vvec_hist) and np.all(self.othervecs == othervecs))
+                allequal = True
+                for i in range(len(tmp_vvec_hist)):
+                    if not np.all(self.vvec_hist[i] == tmp_vvec_hist[i]):
+                        allequal = False
+                return not (allequal and np.all(self.othervecs == othervecs))
         
         logging.debug('Inputval-Update: Waiting for lock')
         self.lock.acquire()
@@ -304,15 +308,15 @@ class OutputValContainer(object):
 ###############################################################################        
 
 
-#TODO: mehrere Network-objects haben, und das immer ein gerade un-beschäftigtes ausführen lassen 
 class NeuralNetwork(object):
-    def __init__(self, num):
+    def __init__(self, num, config):
         self.lock = threading.Lock()
         self.isinitialized = False
         self.containers = None        
         self.number = num
         self.isbusy = False
-        tps = read_supervised.TPList(read_supervised.FOLDERNAME)
+        tps = read_supervised.TPList(read_supervised.FOLDERNAME, config.msperframe)
+        self.config = config
         self.normalizers = tps.find_normalizers()
         self.initNetwork()
 
@@ -349,7 +353,7 @@ class NeuralNetwork(object):
 
     def performNetwork(self, inputval):
         _, visionvec = inputval.read()
-        check, networkresult = self.cnn.run_inference(self.session, visionvec)
+        check, networkresult = self.cnn.run_inference(self.session, visionvec, self.config.history_frame_nr)
         if check:
             throttle, brake, steer = read_supervised.dediscretize_all((networkresult)[0])
             result = "["+str(throttle)+", "+str(brake)+", "+str(steer)+"]"
@@ -359,18 +363,17 @@ class NeuralNetwork(object):
 
 
     def initNetwork(self):
-        config = supervisedcnn.Config()
         
         with tf.Graph().as_default():    
             initializer = tf.random_uniform_initializer(-0.1, 0.1)
                                                  
             with tf.name_scope("runAsServ"):
                 with tf.variable_scope("cnnmodel", reuse=None, initializer=initializer): 
-                    self.cnn = supervisedcnn.CNN(config, is_training=False)
+                    self.cnn = supervisedcnn.CNN(self.config, is_training=False)
             
             self.saver = tf.train.Saver(self.cnn.trainvars)
             self.session = tf.Session()
-            ckpt = tf.train.get_checkpoint_state(config.checkpoint_dir) 
+            ckpt = tf.train.get_checkpoint_state(self.config.checkpoint_dir) 
             assert ckpt and ckpt.model_checkpoint_path
             self.saver.restore(self.session, ckpt.model_checkpoint_path)
             print("network %s initialized" %str(self.number+1))
@@ -552,7 +555,7 @@ def main(conf):
     containers.senderportsocket = create_socket(TCP_SENDER_PORT)
     
     for i in range(NUMBER_ANNS):
-        ANN = NeuralNetwork(i)
+        ANN = NeuralNetwork(i, conf)
         ANN.containers = containers
         containers.ANNs.append(ANN)
     
@@ -576,6 +579,9 @@ def main(conf):
     
     print("Server shutting down...")
     containers.KeepRunning = False
+    for senderthread in containers.senderthreads:
+        senderthread.delete_me() 
+    time.sleep(0.1)
     ReceiverConnecterThread.join() #takes max. 1 second until socket timeouts
     SenderConnecterThread.join()
     print("Server shut down sucessfully.")
