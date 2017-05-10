@@ -21,7 +21,7 @@ class Config(object):
     log_dir = "SummaryLogDir/"  
     checkpoint_pre_dir = "Checkpoint"
     
-    history_frame_nr = 1 #incl. dem jetzigem!
+    history_frame_nr = 7 #incl. dem jetzigem!
     steering_steps = 11
     image_dims = [30,42]
     vector_len = 59
