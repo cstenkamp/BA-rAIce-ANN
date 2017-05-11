@@ -246,12 +246,17 @@ class InputValContainer(object):
     def get_previous_state(self):
         if self.previous_action is None or self.previous_othervecs is None:
             return None, False
+        try:
+            self.previous_othervecs[0][0]
+        except IndexError:
+            return None, False
         
         if self.config.history_frame_nr > 1:
             state = (self.previous_vvechist, self.previous_othervecs[1][4]) #vision plus speed
         else:
-            state = (self.previous_vvec, self.previous_othervecs[1][4]) #vision plus speed
+            state = (self.previous_visionvec, self.previous_othervecs[1][4]) #vision plus speed
         action = self.previous_action
+            
         return state, action
 
 

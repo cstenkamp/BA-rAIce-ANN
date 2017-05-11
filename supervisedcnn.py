@@ -21,12 +21,12 @@ class Config(object):
     log_dir = "SummaryLogDir/"  
     checkpoint_pre_dir = "Checkpoint"
     
-    history_frame_nr = 4 #incl. dem jetzigem!
+    history_frame_nr = 1 #incl. dem jetzigem!
     speed_neurons = 10 #wenn null nutzt er sie nicht
     steering_steps = 11
     image_dims = [30,42]
     vector_len = 61
-    msperframe = 50 #50   #ACHTUNG!!! Dieser wert wird von unity überschrieben!!!!! #TODO: dass soll mit unity abgeglichen werden!
+    msperframe = 200 #50   #ACHTUNG!!! Dieser wert wird von unity überschrieben!!!!! #TODO: dass soll mit unity abgeglichen werden!
     
     batch_size = 32
     keep_prob = 0.8
