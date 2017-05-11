@@ -6,11 +6,12 @@ import time
 import logging
 import numpy as np
 import sys
+from collections import deque
 
 #====own classes====
 import supervisedcnn 
 from playnet import PlayNet
-from reinf_net import ReinfNet
+import reinf_net
 
 logging.basicConfig(level=logging.ERROR, format='(%(threadName)-10s) %(message)s',)
 
@@ -235,10 +236,25 @@ class InputValContainer(object):
             
     def addResultAndBackup(self, action):
         self.previous_action = action
-        self.previous_visionvec = self.visionvec
-        self.previous_vvechist = self.vvec_hist
         self.previous_othervecs = self.othervecs
+        if self.config.history_frame_nr > 1:
+            self.previous_vvechist = self.vvec_hist
+        else:
+            self.previous_visionvec = self.visionvec
             
+        
+    def get_previous_state(self):
+        if self.previous_action is None or self.previous_othervecs is None:
+            return None, False
+        
+        if self.config.history_frame_nr > 1:
+            state = (self.previous_vvechist, self.previous_othervecs[1][4]) #vision plus speed
+        else:
+            state = (self.previous_vvec, self.previous_othervecs[1][4]) #vision plus speed
+        action = self.previous_action
+        return state, action
+
+
         
     def reset(self, interval):
         logging.debug('Inputval-Reset: Waiting for lock')
@@ -325,7 +341,23 @@ class OutputValContainer(object):
                     self.containers.senderthreads[i].delete_me();
                     if i >= len(self.containers.senderthreads)-1:
                         break
-                
+
+###############################################################################
+
+      
+
+class Memory(object):
+    def __init__(self, elemtype, size):
+        self.lock = threading.Lock()
+        self.memory = deque(elemtype, size)
+    
+    def append(self, obj):
+        self.lock.acquire()
+        try:
+            self.memory.append(obj)
+        finally:
+            self.lock.release()
+        
 
 
 ###############################################################################
@@ -506,7 +538,8 @@ def main(conf, play_only):
     if play_only:
         NeuralNet = PlayNet
     else:
-        NeuralNet = ReinfNet
+        NeuralNet = reinf_net.ReinfNet
+        containers.memory = Memory([], reinf_net.MEMORY_SIZE)
         
     for i in range(NUMBER_ANNS):
         ANN = NeuralNet(i, conf)
@@ -539,7 +572,7 @@ def main(conf, play_only):
     ReceiverConnecterThread.join() #takes max. 1 second until socket timeouts
     SenderConnecterThread.join()
     print("Server shut down sucessfully.")
-
+    
 
 if __name__ == '__main__':  
     conf = supervisedcnn.Config() #TODO: lass dir die infos instead von unity schicken.

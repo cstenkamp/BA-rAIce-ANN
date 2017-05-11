@@ -20,13 +20,14 @@ from collections import deque
 #====own classes====
 import supervisedcnn 
 import read_supervised
+import server
 
 
 STANDARDRETURN = ("[0.5,0,0.0]", [0.5, 0, 0.0])
 MEMORY_SIZE = 5000
 epsilon = 0.001
 
-
+#TODO: das memory muss auch ein gemeinsames object aller nets sein, sonst kann ich nicht mehr als 1 haben!
 
 class ReinfNet(object):
     def __init__(self, num, config):
@@ -38,7 +39,6 @@ class ReinfNet(object):
         self.config = config
         #tps = read_supervised.TPList(read_supervised.FOLDERNAME, config.msperframe)
         #self.normalizers = tps.find_normalizers()
-        self.memory = deque([], MEMORY_SIZE)
         self.initNetwork()
 
 #    @staticmethod
@@ -63,8 +63,19 @@ class ReinfNet(object):
 #                if self.containers.inputval.othervecs[0][0] > 30 and self.containers.inputval.othervecs[0][0] < 40:
 #                    self.containers.outputval.send_via_senderthread("pleasereset", self.containers.inputval.timestamp)
 #                    return
+                othervecs, visionvec = self.containers.inputval.read()
+                
+                #add to memory
+                oldstate, action = self.containers.inputval.get_previous_state()
+                if oldstate is not None:
+                    newstate = (visionvec, othervecs[1][4])
+                    reward = self.calculateReward()
+                    self.containers.memory.append([oldstate, action, reward, newstate]) 
+                
+
+                #run ANN
                 if np.random.random() > epsilon:
-                    returnstuff, original = self.performNetwork(self.containers.inputval)
+                    returnstuff, original = self.performNetwork(othervecs, visionvec)
                 else:
                     returnstuff, original = self.randomAction()
                     
@@ -74,9 +85,25 @@ class ReinfNet(object):
             finally:
                 self.lock.release()
                 
+                
+    def calculateReward(self):
+        progress_old = self.containers.inputval.previous_othervecs[0][0]
+        progress_new = self.containers.inputval.othervecs[0][0]
+        if progress_old > 90 and progress_new < 10:
+            progress_new += 100
+        progress = round(progress_new-progress_old,3)
+        
+        stay_on_street = abs(self.containers.inputval.othervecs[3][0])
+        stay_on_street = round(0 if stay_on_street < 5 else 100 if stay_on_street > 10 else stay_on_street-5, 3)
+        
+        
+        return progress-stay_on_street
 
-    def performNetwork(self, inputval):
-        othervecs, visionvec = inputval.read()
+        
+                        
+                
+
+    def performNetwork(self, othervecs, visionvec):
         print("Another ANN Inference")
         check, networkresult = self.cnn.run_inference(self.session, visionvec, othervecs, self.config.history_frame_nr)
         if check:
