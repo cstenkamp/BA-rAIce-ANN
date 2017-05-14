@@ -101,7 +101,7 @@ class ReinfNet(object):
                     train_states = []
                     train_q_targets = []
                     samples = np.random.permutation(len(mem))[:BATCHSIZE]
-                    for i in samples:
+                    for i in samples: #was spricht dagegen das als batch zu machen?
                         
                         oldstate, action, reward, newstate = mem[i]
 
@@ -110,7 +110,7 @@ class ReinfNet(object):
                         
                         action = np.argmax(action)
                         
-                        q[0][action] = reward + (Q_DECAY * q_max)
+                        q[0][action] = reward + (Q_DECAY * q_max) #uhm, soll der nicht das alte q bisschen behalten?
                         
                         train_states.append(oldstate)
                         train_q_targets.append(q[0])
