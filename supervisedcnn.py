@@ -275,7 +275,7 @@ def run_CNN_training(config, dataset):
                 cnn = CNN(config, is_training=True)
         
         init = tf.global_variables_initializer()
-        cnn.trainvars["global_step"] = cnn.global_step
+        cnn.trainvars["global_step"] = cnn.global_step #TODO: try to remove this and see if it still works, cause it should
         saver = tf.train.Saver(cnn.trainvars, max_to_keep=3)
 
         with tf.Session(graph=graph) as sess:

@@ -14,18 +14,18 @@ import math
 import read_supervised
 import supervisedcnn
 
-SUMMARYALL = 1000
-CHECKPOINTALL = 5
-
+#SUMMARYALL = 1000 TODO: do
 
 class RL_Config(object):
     log_dir = "SummaryLogDirRL/"  
     checkpoint_dir = "RL_Learn/"
     
+    
     keep_prob = 1
     max_grad_norm = 10
     initial_lr = 0.005
     lr_decay = 0.9
+    
     
     def __init__(self):     
         if not os.path.exists(self.log_dir):
@@ -33,26 +33,34 @@ class RL_Config(object):
         if not os.path.exists(self.checkpoint_dir):
             os.makedirs(self.checkpoint_dir)                 
             
+        self.history_frame_nr = supervisedcnn.Config().history_frame_nr
+        self.image_dims = supervisedcnn.Config().image_dims
+        self.steering_steps = supervisedcnn.Config().steering_steps
+        self.speed_neurons = supervisedcnn.Config().speed_neurons
+                                                  
         assert os.path.exists(supervisedcnn.Config().checkpoint_dir), "I need a pre-trained model"
 
 
 class CNN(object):
     
     ######methods for BUILDING the computation graph######
-    def __init__(self, config, initializer, is_training=True):
+    def __init__(self, config, initializer, is_training=True, continuing = False):
         #builds the computation graph, using the next few functions (this is basically the interface)
         self.config = config
         self.iterations = 0
     
         self.inputs, self.q_targets, self.speed_input = self.set_placeholders(is_training)
         
-        
-        with tf.variable_scope("cnnmodel", reuse=True, initializer=initializer):
+        if not continuing:
+            with tf.variable_scope("cnnmodel", reuse=True, initializer=initializer):
+                self.q, self.argmaxs, self.q_max, self.action = self.inference(is_training)         
+            with tf.variable_scope("cnnmodel", reuse=None, initializer=initializer):
+                self.rl_loss = self.loss_func(self.q, self.q_targets)
+                self.rl_train_op = self.training(self.rl_loss, config.initial_lr) 
+        else:
             self.q, self.argmaxs, self.q_max, self.action = self.inference(is_training)         
-        with tf.variable_scope("cnnmodel", reuse=None, initializer=initializer):
             self.rl_loss = self.loss_func(self.q, self.q_targets)
             self.rl_train_op = self.training(self.rl_loss, config.initial_lr) 
-
             
 
     

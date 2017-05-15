@@ -12,6 +12,7 @@ from collections import deque
 import supervisedcnn 
 from playnet import PlayNet
 import reinf_net
+import reinforcementcnn
 
 logging.basicConfig(level=logging.ERROR, format='(%(threadName)-10s) %(message)s',)
 
@@ -516,6 +517,7 @@ class Containers():
         self.receiverthreads = []
         self.senderthreads = []
         self.ANNs = []
+        self.reinfNetSteps = 0
         
         
 def create_socket(port):
@@ -529,9 +531,9 @@ def create_socket(port):
 
 
 
-def main(conf, play_only):
+def main(sv_conf, rl_conf, play_only):
     containers = Containers(play_only)
-    containers.inputval = InputValContainer(conf)
+    containers.inputval = InputValContainer(sv_conf)
     containers.inputval.containers = containers #lol.    
     containers.outputval = OutputValContainer()
     containers.outputval.containers = containers
@@ -547,8 +549,7 @@ def main(conf, play_only):
         containers.memory = Memory([], reinf_net.MEMORY_SIZE)
         
     for i in range(NUMBER_ANNS):
-        ANN = NeuralNet(i, conf)
-        ANN.containers = containers
+        ANN = NeuralNet(i, sv_conf, containers, rl_conf)
         containers.ANNs.append(ANN)
     
     print("Everything initialized")
@@ -580,6 +581,7 @@ def main(conf, play_only):
     
 
 if __name__ == '__main__':  
-    conf = supervisedcnn.Config() #TODO: lass dir die infos instead von unity schicken.
-    main(conf, ("-playonly" in sys.argv))
+    sv_conf = supervisedcnn.Config() #TODO: lass dir die infos instead von unity schicken.
+    rl_conf = reinforcementcnn.RL_Config()
+    main(sv_conf, rl_conf, ("-playonly" in sys.argv))
     

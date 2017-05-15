@@ -16,6 +16,7 @@ import threading
 import numpy as np
 import tensorflow as tf
 import time
+import os
 #====own classes====
 import supervisedcnn 
 import reinforcementcnn
@@ -26,21 +27,23 @@ current_milli_time = lambda: int(round(time.time() * 1000))
 STANDARDRETURN = ("[0.5,0,0.0]", 42)
 MEMORY_SIZE = 5000
 epsilon = 0.9
-BATCHSIZE = 32
+BATCHSIZE = 3
 Q_DECAY = 0.95
 repeat_random_action_for = 1000
 last_random_timestamp = 0
 last_random_action = None
+CHECKPOINTALL = 2
 
 
 class ReinfNet(object):
-    def __init__(self, num, config):
+    def __init__(self, num, sv_config, containers, rl_config):
         self.lock = threading.Lock()
         self.isinitialized = False
-        self.containers = None        
+        self.containers = containers
         self.number = num
         self.isbusy = False
-        self.config = config
+        self.sv_config = sv_config
+        self.rl_config = rl_config
         #tps = read_supervised.TPList(read_supervised.FOLDERNAME, config.msperframe)
         #self.normalizers = tps.find_normalizers()
         self.initNetwork()
@@ -65,67 +68,74 @@ class ReinfNet(object):
             self.lock.acquire()
             try:
                 self.isbusy = True 
-#                if self.containers.inputval.othervecs[0][0] > 30 and self.containers.inputval.othervecs[0][0] < 40:
-#                    self.containers.outputval.send_via_senderthread("pleasereset", self.containers.inputval.timestamp)
-#                    return
-                othervecs, visionvec = self.containers.inputval.read()
-                
-                #add to memory
-                oldstate, action = self.containers.inputval.get_previous_state()
-                if oldstate is not None:
-                    newstate = (visionvec, othervecs[1][4])
-                    reward = self.calculateReward()
-                    self.containers.memory.append([oldstate, action, reward, newstate]) 
-                
-                #run ANN
-                if np.random.random() > epsilon:
-                    returnstuff, original = self.performNetwork(othervecs, visionvec)
-                    epsilon -= 0.005
-                else:
-                    returnstuff, original = self.randomAction()
+                with self.graph.as_default(): 
+    #                if self.containers.inputval.othervecs[0][0] > 30 and self.containers.inputval.othervecs[0][0] < 40:
+    #                    self.containers.outputval.send_via_senderthread("pleasereset", self.containers.inputval.timestamp)
+    #                    return
+                    othervecs, visionvec = self.containers.inputval.read()
                     
-                self.containers.inputval.addResultAndBackup(original) 
-                self.containers.outputval.update(returnstuff, self.containers.inputval.timestamp)    
-
-
-                def prepare_feed_dict(state):
-                    feed_dict = {
-                      self.cnn.inputs: np.expand_dims(np.array(state[0]), axis=0),
-                      self.cnn.speed_input: np.expand_dims(np.array(read_supervised.inflate_speed(state[1], supervisedcnn.Config().speed_neurons)), axis=0)
-                    }
-                    return feed_dict
-                               
-                #learn ANN
-                if len(self.containers.memory.memory) > BATCHSIZE:
-                    mem = self.containers.memory.memory
-                    train_states = []
-                    train_q_targets = []
-                    samples = np.random.permutation(len(mem))[:BATCHSIZE]
-                    for i in samples: #was spricht dagegen das als batch zu machen?
-                        
-                        oldstate, action, reward, newstate = mem[i]
-
-                        q = self.session.run(self.cnn.q, feed_dict = prepare_feed_dict(oldstate))
-                        q_max = self.session.run(self.cnn.q_max, feed_dict=prepare_feed_dict(newstate))
-                        
-                        action = np.argmax(action)
-                        
-                        q[0][action] = reward + (Q_DECAY * q_max) #uhm, soll der nicht das alte q bisschen behalten?
-                        
-                        train_states.append(oldstate)
-                        train_q_targets.append(q[0])
-
-                    self.session.run(self.cnn.rl_train_op, feed_dict={
-                        self.cnn.inputs: np.array([curr[0] for curr in train_states]),
-                        self.cnn.speed_input: np.array([read_supervised.inflate_speed(curr[1], supervisedcnn.Config().speed_neurons) for curr in train_states]),
-                        self.cnn.q_targets: train_q_targets,
-                    })
+                    #add to memory
+                    oldstate, action = self.containers.inputval.get_previous_state()
+                    if oldstate is not None:
+                        newstate = (visionvec, othervecs[1][4])
+                        reward = self.calculateReward()
+                        self.containers.memory.append([oldstate, action, reward, newstate]) 
                     
-                
-                
-                
-                
-                
+                    #run ANN
+                    if np.random.random() > epsilon:
+                        returnstuff, original = self.performNetwork(othervecs, visionvec)
+                        epsilon -= 0.005
+                    else:
+                        returnstuff, original = self.randomAction()
+                        
+                    self.containers.inputval.addResultAndBackup(original) 
+                    self.containers.outputval.update(returnstuff, self.containers.inputval.timestamp)    
+    
+                    #learn ANN
+                    def prepare_feed_dict(state):
+                        feed_dict = {
+                          self.cnn.inputs: np.expand_dims(np.array(state[0]), axis=0),
+                          self.cnn.speed_input: np.expand_dims(np.array(read_supervised.inflate_speed(state[1], supervisedcnn.Config().speed_neurons)), axis=0)
+                        }
+                        return feed_dict
+                                   
+                    if len(self.containers.memory.memory) > BATCHSIZE:
+                              
+                        mem = self.containers.memory.memory
+                        train_states = []
+                        train_q_targets = []
+                        samples = np.random.permutation(len(mem))[:BATCHSIZE]
+                        for i in samples: #was spricht dagegen das als batch zu machen?
+                            
+                            oldstate, action, reward, newstate = mem[i]
+    
+                            q = self.session.run(self.cnn.q, feed_dict = prepare_feed_dict(oldstate))
+                            q_max = self.session.run(self.cnn.q_max, feed_dict=prepare_feed_dict(newstate))
+                            
+                            action = np.argmax(action)
+                            
+                            q[0][action] = reward + (Q_DECAY * q_max) #uhm, soll der nicht das alte q bisschen behalten?
+                            
+                            train_states.append(oldstate)
+                            train_q_targets.append(q[0])
+    
+                        self.session.run(self.cnn.rl_train_op, feed_dict={
+                            self.cnn.inputs: np.array([curr[0] for curr in train_states]),
+                            self.cnn.speed_input: np.array([read_supervised.inflate_speed(curr[1], supervisedcnn.Config().speed_neurons) for curr in train_states]),
+                            self.cnn.q_targets: train_q_targets,
+                        })
+                        
+                        self.containers.reinfNetSteps += 1
+                        print("ReinfLearnSteps:", self.containers.reinfNetSteps)
+                        
+                        if self.containers.reinfNetSteps % CHECKPOINTALL == 0:
+                            checkpoint_file = os.path.join(self.rl_config.checkpoint_dir, 'model.ckpt')
+                            self.saver.save(self.session, checkpoint_file, global_step=self.cnn.global_step.eval(session=self.session))       
+                            print("saved")
+                    
+                    
+                    
+                    
                 self.isbusy = False
             finally:
                 self.lock.release()
@@ -150,7 +160,7 @@ class ReinfNet(object):
 
     def performNetwork(self, othervecs, visionvec):
         print("Another ANN Inference")
-        check, networkresult = self.cnn.run_inference(self.session, visionvec, othervecs, self.config.history_frame_nr)
+        check, networkresult = self.cnn.run_inference(self.session, visionvec, othervecs, self.sv_config.history_frame_nr)
         if check:
             throttle, brake, steer = read_supervised.dediscretize_all((networkresult)[0])
             result = "["+str(throttle)+", "+str(brake)+", "+str(steer)+"]"
@@ -180,26 +190,40 @@ class ReinfNet(object):
             
 
     def initNetwork(self):
-        with tf.Graph().as_default():    
-            initializer = tf.random_uniform_initializer(-0.1, 0.1)
-
-
-            with tf.name_scope("SVPreLearn"):
-                with tf.variable_scope("cnnmodel", reuse=None, initializer=initializer): 
-                    self.svcnn = supervisedcnn.CNN(self.config, is_training=True)
-                           
-            self.saver = tf.train.Saver(self.svcnn.trainvars)
+        self.graph = tf.Graph()
+        with self.graph.as_default():    
+            
             self.session = tf.Session()
-            ckpt = tf.train.get_checkpoint_state(self.config.checkpoint_dir) 
-            assert ckpt and ckpt.model_checkpoint_path, "I need a supervisedly pre-trained net!"
-            self.saver.restore(self.session, ckpt.model_checkpoint_path)
-            #TODO: den quatsch soll der nur mahcen wenn der noch kein model vom reinforcementlearn hat!                      
+            ckpt = tf.train.get_checkpoint_state(self.rl_config.checkpoint_dir) 
+            initializer = tf.random_uniform_initializer(-0.1, 0.1)
             
-            
-            with tf.name_scope("ReinfLearn"): 
-                self.cnn = reinforcementcnn.CNN(self.config, initializer, is_training=True)
-            init = tf.global_variables_initializer()
-            self.session.run(init)
+            if not (ckpt and ckpt.model_checkpoint_path):
+                with tf.name_scope("ReinfLearn"):
+                    with tf.variable_scope("cnnmodel", reuse=None, initializer=initializer): 
+                        self.svcnn = supervisedcnn.CNN(self.sv_config, is_training=True)
+                        
+                self.pretrainsaver = tf.train.Saver(self.svcnn.trainvars)
+                sv_ckpt = tf.train.get_checkpoint_state(self.sv_config.checkpoint_dir) 
+                assert sv_ckpt and sv_ckpt.model_checkpoint_path, "I need at least a supervisedly pre-trained net!"
+                self.pretrainsaver.restore(self.session, sv_ckpt.model_checkpoint_path)
+
                 
-            print("network %s initialized" %str(self.number+1))
+                with tf.name_scope("ReinfLearn"): 
+                    with tf.variable_scope("cnnmodel", reuse=None, initializer=initializer):
+                        self.cnn = reinforcementcnn.CNN(self.rl_config, initializer, is_training=True, continuing = True)
+                
+                
+                init = tf.global_variables_initializer()
+                self.session.run(init)
+                self.saver = tf.train.Saver(max_to_keep=3)
+            else:
+                with tf.name_scope("ReinfLearn"): 
+                    with tf.variable_scope("cnnmodel", reuse=None, initializer=initializer):
+                        self.cnn = reinforcementcnn.CNN(self.rl_config, initializer, is_training=True, continuing = True)
+                self.saver = tf.train.Saver(max_to_keep=3)
+                self.saver.restore(self.session, ckpt.model_checkpoint_path)
+                self.containers.reinfNetSteps = self.cnn.global_step.eval(session=self.session)
+                                
+            
+            print("network %s initialized with %i iterations already run." %(str(self.number+1), self.containers.reinfNetSteps))
             self.isinitialized = True
