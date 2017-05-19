@@ -21,18 +21,21 @@ import os
 import supervisedcnn 
 import reinforcementcnn
 import read_supervised
+from myprint import myprint as print
 
 current_milli_time = lambda: int(round(time.time() * 1000))
 
-STANDARDRETURN = ("[0.5,0,0.0]", 42)
+STANDARDRETURN = ("[0.5,0,0.0]", [0]*42)
 MEMORY_SIZE = 5000
 epsilon = 0.5
+EPSILONDECREASE = 0.0005
 BATCHSIZE = 32
 Q_DECAY = 0.95
 repeat_random_action_for = 1000
 last_random_timestamp = 0
 last_random_action = None
 CHECKPOINTALL = 5
+DONT_COPY_WEIGHTS = ["FC1", "FC2"]
 
 
 class ReinfNet(object):
@@ -84,57 +87,75 @@ class ReinfNet(object):
                     #run ANN
                     if np.random.random() > epsilon:
                         returnstuff, original = self.performNetwork(othervecs, visionvec)
-                        epsilon -= 0.005
+                        epsilon -= EPSILONDECREASE
                     else:
                         returnstuff, original = self.randomAction()
                         
                     self.containers.inputval.addResultAndBackup(original) 
                     self.containers.outputval.update(returnstuff, self.containers.inputval.timestamp)    
-    
-                    #learn ANN
-                    def prepare_feed_dict(states):
-                        feed_dict = {
-                          self.cnn.inputs: np.array([state[0] for state in states]),
-                          self.cnn.speed_input: np.array([read_supervised.inflate_speed(state[1], supervisedcnn.Config().speed_neurons, supervisedcnn.Config().SPEED_AS_ONEHOT) for state in states])
-                        }
-                        return feed_dict
-                                   
-                    if len(self.containers.memory.memory) > BATCHSIZE:
-                              
-                        mem = self.containers.memory.memory
-                        samples = np.random.permutation(len(mem))[:BATCHSIZE]
-
-                        batch = [mem[i] for i in samples]
-                        oldstates, actions, rewards, newstates = zip(*batch)                        
-                        
-                        qs = self.session.run(self.cnn.q, feed_dict = prepare_feed_dict(oldstates))
-                        max_qs = self.session.run(self.cnn.q_max, feed_dict=prepare_feed_dict(newstates))
-                        
-                        argmactions = [np.argmax(i) for i in actions]
-                                                
-                        qs[np.arange(BATCHSIZE), argmactions] = rewards + Q_DECAY * max_qs 
-
-    
-                        self.session.run(self.cnn.rl_train_op, feed_dict={
-                            self.cnn.inputs: np.array([curr[0] for curr in oldstates]),
-                            self.cnn.speed_input: np.array([read_supervised.inflate_speed(curr[1], supervisedcnn.Config().speed_neurons, supervisedcnn.Config().SPEED_AS_ONEHOT) for curr in oldstates]),
-                            self.cnn.q_targets: qs,
-                        })
-                        
-                        self.containers.reinfNetSteps += 1
-                        print("ReinfLearnSteps:", self.containers.reinfNetSteps)
-                        
-                        if self.containers.reinfNetSteps % CHECKPOINTALL == 0:
-                            checkpoint_file = os.path.join(self.rl_config.checkpoint_dir, 'model.ckpt')
-                            self.saver.save(self.session, checkpoint_file, global_step=self.cnn.global_step.eval(session=self.session))       
-                            print("saved")
+                    if oldstate is not None:
+                        time.sleep(0.1)
+                        self.containers.outputval.send_via_senderthread("pleasereset", self.containers.inputval.timestamp)
                     
+                    #im original DQN learnt er halt jetzt direkt, aber er kann doch besser durchgehend lernen?
                     
-                    
-                    
-                self.isbusy = False
             finally:
+                self.isbusy = False
                 self.lock.release()
+    
+                
+    def dauerLearnANN(self):
+        while self.containers.KeepRunning:
+            self.learnANN()
+        print("Learn-Thread stopped")
+                
+                
+    def learnANN(self):
+        def prepare_feed_dict(states):
+            feed_dict = {
+              self.cnn.inputs: np.array([state[0] for state in states]),
+              self.cnn.speed_input: np.array([read_supervised.inflate_speed(state[1], supervisedcnn.Config().speed_neurons, supervisedcnn.Config().SPEED_AS_ONEHOT) for state in states])
+            }
+            return feed_dict
+            
+            
+        if len(self.containers.memory.memory) > BATCHSIZE:
+        
+            mem = self.containers.memory.memory
+            samples = np.random.permutation(len(mem))[:BATCHSIZE]
+
+            batch = [mem[i] for i in samples]
+            oldstates, actions, rewards, newstates = zip(*batch)                        
+            
+            argmactions = [np.argmax(i) for i in actions]
+            actualActions = [read_supervised.dediscretize_all(i, self.rl_config.steering_steps, self.rl_config.INCLUDE_ACCPLUSBREAK) for i in actions]
+
+            print(dict(zip(rewards,actualActions)), level=6)
+            
+            qs = self.session.run(self.cnn.q, feed_dict = prepare_feed_dict(oldstates))
+            max_qs = self.session.run(self.cnn.q_max, feed_dict=prepare_feed_dict(newstates))
+            
+                                    
+            qs[np.arange(BATCHSIZE), argmactions] = rewards + Q_DECAY * max_qs 
+
+
+            self.session.run(self.cnn.rl_train_op, feed_dict={
+                self.cnn.inputs: np.array([curr[0] for curr in oldstates]),
+                self.cnn.speed_input: np.array([read_supervised.inflate_speed(curr[1], supervisedcnn.Config().speed_neurons, supervisedcnn.Config().SPEED_AS_ONEHOT) for curr in oldstates]),
+                self.cnn.q_targets: qs,
+            })
+            
+            self.containers.reinfNetSteps += 1
+            print("ReinfLearnSteps:", self.containers.reinfNetSteps)
+            
+            if self.containers.reinfNetSteps % CHECKPOINTALL == 0:
+                checkpoint_file = os.path.join(self.rl_config.checkpoint_dir, 'model.ckpt')
+                self.saver.save(self.session, checkpoint_file, global_step=self.cnn.global_step.eval(session=self.session))       
+                print("saved")
+                    
+                    
+                    
+                    
                 
                 
     def calculateReward(self):
@@ -160,7 +181,7 @@ class ReinfNet(object):
         if check:
             throttle, brake, steer = read_supervised.dediscretize_all(networkresult[0], self.containers.rl_conf.steering_steps, self.containers.rl_conf.INCLUDE_ACCPLUSBREAK)
             result = "["+str(throttle)+", "+str(brake)+", "+str(steer)+"]"
-            return result, [throttle, brake, steer]
+            return result, networkresult[0]
         else:
             return STANDARDRETURN
 
@@ -183,7 +204,7 @@ class ReinfNet(object):
             
         throttle, brake, steer = 1, 0, 0
         result = "["+str(throttle)+", "+str(brake)+", "+str(steer)+"]"
-        return result, [throttle, brake, steer]
+        return result, read_supervised.discretize_all(throttle, brake, read_supervised.discretize_steering(steer, self.rl_config.steering_steps), self.rl_config.steering_steps, self.rl_config.INCLUDE_ACCPLUSBREAK) 
               
             
 
@@ -201,8 +222,9 @@ class ReinfNet(object):
                 pretrainvars = supervisedcnn.CNN(self.sv_config, is_training=True).trainvars
                 topop = []
                 for key, _ in pretrainvars.items():
-                    if "FC2" in key:
-                        topop.append(key)
+                    for curr in DONT_COPY_WEIGHTS:
+                        if curr in key:
+                            topop.append(key)
                 for i in topop:
                     pretrainvars.pop(i)
                 print(pretrainvars.keys())
@@ -210,7 +232,7 @@ class ReinfNet(object):
                 self.pretrainsaver = tf.train.Saver(pretrainvars)
                 with tf.name_scope("ReinfLearn"): 
                     with tf.variable_scope("cnnmodel", reuse=None, initializer=initializer):
-                        self.cnn = reinforcementcnn.CNN(self.rl_config, initializer, is_training=True, continuing = True)
+                        self.cnn = reinforcementcnn.CNN(self.rl_config, initializer, is_training=True)
                         
                 sv_ckpt = tf.train.get_checkpoint_state(self.sv_config.checkpoint_dir) 
                 assert sv_ckpt and sv_ckpt.model_checkpoint_path, "I need at least a supervisedly pre-trained net!"
@@ -222,7 +244,7 @@ class ReinfNet(object):
             else:
                 with tf.name_scope("ReinfLearn"): 
                     with tf.variable_scope("cnnmodel", reuse=None, initializer=initializer):
-                        self.cnn = reinforcementcnn.CNN(self.rl_config, initializer, is_training=True, continuing = True)
+                        self.cnn = reinforcementcnn.CNN(self.rl_config, initializer, is_training=True)
                 self.saver = tf.train.Saver(max_to_keep=3)
                 self.saver.restore(self.session, ckpt.model_checkpoint_path)
                 self.containers.reinfNetSteps = self.cnn.global_step.eval(session=self.session)

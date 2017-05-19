@@ -18,6 +18,7 @@ import tensorflow as tf
 #====own classes====
 import supervisedcnn 
 import read_supervised
+from myprint import myprint as print
 
 
 STANDARDRETURN = ("[0.5,0,0.0]", [0.5, 0, 0.0])

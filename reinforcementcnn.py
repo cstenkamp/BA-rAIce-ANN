@@ -8,11 +8,11 @@ Created on Thu May 11 14:05:44 2017
 import tensorflow as tf
 import numpy as np
 import os
-import time
 import math
 #====own classes====
 import read_supervised
 import supervisedcnn
+from myprint import myprint as print
 
 #SUMMARYALL = 1000 TODO: do
 
@@ -23,7 +23,7 @@ class RL_Config(object):
     
     keep_prob = 1
     max_grad_norm = 10
-    initial_lr = 0.005
+    initial_lr = 0.9
     lr_decay = 0.9
     
     
@@ -46,7 +46,7 @@ class RL_Config(object):
 class CNN(object):
     
     ######methods for BUILDING the computation graph######
-    def __init__(self, config, initializer, is_training=True, continuing = False):
+    def __init__(self, config, initializer, is_training=True):
         #builds the computation graph, using the next few functions (this is basically the interface)
         self.config = config
         self.iterations = 0
@@ -54,16 +54,9 @@ class CNN(object):
     
         self.inputs, self.q_targets, self.speed_input = self.set_placeholders(is_training, final_neuron_num)
         
-        if not continuing:
-            with tf.variable_scope("cnnmodel", reuse=True, initializer=initializer):
-                self.q, self.argmaxs, self.q_max, self.action = self.inference(final_neuron_num, is_training)         
-            with tf.variable_scope("cnnmodel", reuse=None, initializer=initializer):
-                self.rl_loss = self.loss_func(self.q, self.q_targets)
-                self.rl_train_op = self.training(self.rl_loss, config.initial_lr) 
-        else:
-            self.q, self.argmaxs, self.q_max, self.action = self.inference(final_neuron_num, is_training)         
-            self.rl_loss = self.loss_func(self.q, self.q_targets)
-            self.rl_train_op = self.training(self.rl_loss, config.initial_lr) 
+        self.q, self.argmaxs, self.q_max, self.action = self.inference(final_neuron_num, is_training)         
+        self.rl_loss = self.loss_func(self.q, self.q_targets)
+        self.rl_train_op = self.training(self.rl_loss, config.initial_lr) 
             
 
     

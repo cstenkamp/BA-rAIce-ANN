@@ -11,6 +11,7 @@ import time
 import math
 #====own classes====
 import read_supervised
+from myprint import myprint as print
 
 SUMMARYALL = 1000
 CHECKPOINTALL = 10
@@ -209,7 +210,7 @@ class CNN(object):
     ######methods for RUNNING the computation graph######
     def train_fill_feed_dict(self, config, dataset, batchsize = 0, decay_lr = True):
         batchsize = config.batch_size if batchsize == 0 else batchsize
-        _, visionvec, targets, _, speeds = dataset.next_batch(config, batchsize)
+        _, visionvec, targets, speeds = dataset.next_batch(config, batchsize)
         if decay_lr:
             lr_decay = config.lr_decay ** max(self.iterations-config.lrdecayafter, 0.0)
             new_lr = max(config.initial_lr*lr_decay, config.minimal_lr)
@@ -263,8 +264,7 @@ class CNN(object):
             if self.config.speed_neurons:
                 speed_disc = read_supervised.inflate_speed(othervecs[1][4], self.config.speed_neurons, self.config.SPEED_AS_ONEHOT)
                 feed_dict[self.speed_input] = np.expand_dims(speed_disc, axis=0)
-                print(speed_disc)
-
+            
             return True, session.run(self.argmaxs, feed_dict=feed_dict)
 
             

@@ -5,6 +5,7 @@ np.set_printoptions(threshold=np.nan)
 from copy import deepcopy
 #====own classes====
 import server #from server import cutoutandreturnvectors
+from myprint import myprint as print
 
 MAXSPEED = 250
 DELAY_TO_CONSIDER = 100
@@ -39,56 +40,49 @@ class TrackingPoint(object):
         self.FlatOneDs -= np.array([item[0] for item in normalizers])
         self.FlatOneDs /= np.array([item[1] for item in normalizers])
     
-    
     def discretize_steering(self, numcats):
-        limits = [(2/numcats)*i-1 for i in range(numcats+1)]
-        limits[0] = -2
-        val = numcats
-        for i in range(len(limits)):
-            if self.steeringValue > limits[i]:
-                val = i
-        self.discreteSteering = [0]*numcats
-        self.discreteSteering[val] = 1
-     
-        
-    def discretize_acc_break(self, numcats):
-        def return_discrete(fromwhat):
-            limits = [(1/numcats)*i for i in range(numcats+1)]
-            limits[0] = -2
-            val = numcats
-            for i in range(len(limits)):
-                if fromwhat > limits[i]:
-                    val = i
-            result = [0]*numcats
-            result[val] = 1
-            return result
-          
-        self.discreteThrottle = return_discrete(self.throttlePedalValue)
-        self.discreteBrake = return_discrete(self.brakePedalValue)          
+        self.discreteSteering = discretize_steering(self.steeringValue, numcats)
+
+    def discretize_all(self, numcats, include_apb):#
+        self.discreteAll = discretize_all(self.throttlePedalValue, self.brakePedalValue, self.discreteSteering, numcats, include_apb)
 
         
-    def discretize_all(self, numcats, include_apb):
-        if include_apb:
-            if self.throttlePedalValue > 0.5:
-                if self.brakePedalValue > 0.5:
-                    self.discreteAll = [0]*(numcats*3) + self.discreteSteering
-                else:
-                    self.discreteAll = [0]*(numcats*2) + self.discreteSteering + [0]*numcats
+        
+def discretize_steering(steeringVal, numcats):
+    limits = [(2/numcats)*i-1 for i in range(numcats+1)]
+    limits[0] = -2
+    val = numcats
+    for i in range(len(limits)):
+        if steeringVal > limits[i]:
+            val = i
+    discreteSteering = [0]*numcats
+    discreteSteering[val] = 1     
+    return discreteSteering                   
+
+                    
+def discretize_all(throttle, brake, discreteSteer, numcats, include_apb):
+    if include_apb:
+        if throttle > 0.5:
+            if brake > 0.5:
+                discreteAll = [0]*(numcats*3) + discreteSteer
             else:
-                if self.brakePedalValue > 0.5:
-                    self.discreteAll = [0]*numcats + self.discreteSteering + [0]*(numcats*2)
-                else:
-                    self.discreteAll = self.discreteSteering + [0]*(numcats*3)
+                discreteAll = [0]*(numcats*2) + discreteSteer + [0]*numcats
         else:
-            if self.brakePedalValue > 0.5:
-                self.discreteAll = [0]*(numcats*2) + self.discreteSteering 
+            if brake > 0.5:
+                discreteAll = [0]*numcats + discreteSteer + [0]*(numcats*2)
             else:
-                if self.throttlePedalValue > 0.5:
-                    self.discreteAll = [0]*numcats + self.discreteSteering + [0]*(numcats)
-                else:
-                    self.discreteAll = self.discreteSteering + [0]*(numcats*2)
-        
-        
+                discreteAll = discreteSteer + [0]*(numcats*3)
+    else:
+        if brake > 0.5:
+            discreteAll = [0]*(numcats*2) + discreteSteer
+        else:
+            if throttle > 0.5:
+                discreteAll = [0]*numcats + discreteSteer + [0]*(numcats)
+            else:
+                discreteAll = discreteSteer + [0]*(numcats*2)                
+    return discreteAll
+                
+    
         
 def dediscretize_steer(discrete):
     if type(discrete).__module__ == np.__name__:
@@ -246,27 +240,22 @@ class TPList(object):
         visions = []
         targets = []
         lookaheads = []
-        discretetargets = []
         speeds = []
         for indexindex in range(self.batchindex,self.batchindex+batch_size):
             i = self.randomindices[indexindex]
             vision = [self.all_trackingpoints[(i-j) % len(self.all_trackingpoints)].visionvec for j in range(config.history_frame_nr-1,-1,-1)]
             lookahead = [self.all_trackingpoints[(i-j) % len(self.all_trackingpoints)].FlatOneDs for j in range(config.history_frame_nr-1,-1,-1)]
-            #target = [self.all_trackingpoints[i].throttlePedalValue, self.all_trackingpoints[i].brakePedalValue, self.all_trackingpoints[i].steeringValue]
             target = self.all_trackingpoints[i].discreteAll
-            #discretetarget = flatten([self.all_trackingpoints[i].discreteThrottle, self.all_trackingpoints[i].discreteBrake, self.all_trackingpoints[i].discreteSteering])
-            discretetarget = flatten([[0]*(self.steering_steps*2), self.all_trackingpoints[i].discreteSteering])
             if config.history_frame_nr == 1: 
                 vision = vision[0]
                 lookahead = lookahead[0]
             visions.append(np.array(vision))
             targets.append(np.array(target))
-            discretetargets.append(np.array(discretetarget))
             lookaheads.append(lookahead)
             if config.speed_neurons > 0:
                 speeds.append(inflate_speed(int(self.all_trackingpoints[i].speed), config.speed_neurons, config.SPEED_AS_ONEHOT))
         self.batchindex += batch_size
-        return np.array(lookaheads), np.array(visions), np.array(targets), np.array(discretetargets), np.array(speeds)
+        return np.array(lookaheads), np.array(visions), np.array(targets), np.array(speeds)
 
 
 def inflate_speed(speed, numberneurons, asonehot):
@@ -289,9 +278,8 @@ if __name__ == '__main__':
     #print(trackingpoints.all_trackingpoints[220].throttlePedalValue)
     #print(trackingpoints.all_trackingpoints[220].discreteThrottle)
     while trackingpoints.has_next(10):
-        lookaheads, vision, targets, dtargets, speeds = trackingpoints.next_batch(config, 10)
+        lookaheads, vision, targets, speeds = trackingpoints.next_batch(config, 10)
     print(lookaheads)
-    print(dtargets[:,22:])
     print(targets)
     print(vision.shape)
     print(speeds)

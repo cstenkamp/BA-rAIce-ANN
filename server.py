@@ -13,6 +13,7 @@ import supervisedcnn
 from playnet import PlayNet
 import reinf_net
 import reinforcementcnn
+from myprint import myprint as print
 
 logging.basicConfig(level=logging.ERROR, format='(%(threadName)-10s) %(message)s',)
 
@@ -553,7 +554,7 @@ def main(sv_conf, rl_conf, play_only):
         ANN = NeuralNet(i, sv_conf, containers, rl_conf)
         containers.ANNs.append(ANN)
     
-    print("Everything initialized")
+    print("Everything initialized", level=10)
     
     #THREAD 1
     ReceiverConnecterThread = ReceiverListenerThread()
@@ -565,6 +566,13 @@ def main(sv_conf, rl_conf, play_only):
     SenderConnecterThread.containers = containers
     SenderConnecterThread.start()
 
+    #THREAD 3 (learning)
+    if not play_only:
+        learnthread = threading.Thread(target=containers.ANNs[0].dauerLearnANN)
+        learnthread.start()
+        
+    
+    
     try:        
         while True:
             None
@@ -575,9 +583,11 @@ def main(sv_conf, rl_conf, play_only):
     containers.KeepRunning = False
     for senderthread in containers.senderthreads:
         senderthread.delete_me() 
-    time.sleep(0.1)
     ReceiverConnecterThread.join() #takes max. 1 second until socket timeouts
     SenderConnecterThread.join()
+    if not play_only:
+        learnthread.join()
+    time.sleep(0.1)
     print("Server shut down sucessfully.")
     
 
