@@ -13,7 +13,7 @@ import math
 import read_supervised
 
 SUMMARYALL = 1000
-CHECKPOINTALL = 5
+CHECKPOINTALL = 10
 
 class Config(object):
     foldername = "SavedLaps/"
@@ -39,7 +39,7 @@ class Config(object):
     initial_lr = 0.005
     lr_decay = 0.9
     lrdecayafter = iterations//2  #//3 für 90, 120
-    minimal_lr = 1e-5 #mit diesen settings kommt er auf 0.01 loss, 99.7% correct inferences
+    minimal_lr = 1e-6 #mit diesen settings kommt er auf 0.01 loss, 99.7% correct inferences
     
     def __init__(self):
         assert os.path.exists(self.foldername), "No data to train on at all!"        
@@ -157,10 +157,10 @@ class CNN(object):
         h1 = convolutional_layer(rs_input, self.config.history_frame_nr, 32, "Conv1", tf.nn.relu) #reduces to 15*21
         h2 = convolutional_layer(h1, 32, 64, "Conv2", tf.nn.relu)      #reduces to 8*11
         h_pool_flat =  tf.reshape(h2, [-1, 8*11*64])         
-        h_fc1 = fc_layer(h_pool_flat, 8*11*64, 1024, "FC1", tf.nn.relu, do_dropout=for_training)                 
+        h_fc1 = fc_layer(h_pool_flat, 8*11*64, final_neuron_num*20, "FC1", tf.nn.relu, do_dropout=for_training)                 
         if self.config.speed_neurons:
             h_fc1 = tf.concat([h_fc1, self.speed_input], 1)   #its lengths is now in any case 1024+speed_neurons
-        y_pre = fc_layer(h_fc1, 1024+self.config.speed_neurons, final_neuron_num, "FC2", None, do_dropout=False) 
+        y_pre = fc_layer(h_fc1, final_neuron_num*20+self.config.speed_neurons, final_neuron_num, "FC2", None, do_dropout=False) 
         y_conv = tf.nn.softmax(y_pre)
         argm = tf.one_hot(tf.argmax(y_conv, dimension=1), depth=final_neuron_num)
         return y_pre, argm

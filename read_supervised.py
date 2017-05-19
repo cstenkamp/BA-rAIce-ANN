@@ -66,6 +66,7 @@ class TrackingPoint(object):
         self.discreteThrottle = return_discrete(self.throttlePedalValue)
         self.discreteBrake = return_discrete(self.brakePedalValue)          
 
+        
     def discretize_all(self, numcats, include_apb):
         if include_apb:
             if self.throttlePedalValue > 0.5:
@@ -123,12 +124,12 @@ def dediscretize_all(discrete, numcats, include_apb):
         return throttle, brake, steer
     else:
         if discrete.index(1) > numcats*2:
-            throttle = 1
-            brake = 0
-            steer = dediscretize_steer(discrete[(numcats*2):(numcats*3)])
-        elif discrete.index(1) > numcats:
             throttle = 0
             brake = 1
+            steer = dediscretize_steer(discrete[(numcats*2):(numcats*3)])
+        elif discrete.index(1) > numcats:
+            throttle = 1
+            brake = 0
             steer = dediscretize_steer(discrete[numcats:(numcats*2)])
         else:
             throttle = 0

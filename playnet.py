@@ -70,7 +70,7 @@ class PlayNet(object):
         print("Another ANN Inference")
         check, networkresult = self.cnn.run_inference(self.session, visionvec, othervecs, self.config.history_frame_nr)
         if check:
-            throttle, brake, steer = read_supervised.dediscretize_all((networkresult, self.config.steering_steps, self.config.INCLUDE_ACCPLUSBREAK)[0])
+            throttle, brake, steer = read_supervised.dediscretize_all(networkresult[0], self.config.steering_steps, self.config.INCLUDE_ACCPLUSBREAK)
             result = "["+str(throttle)+", "+str(brake)+", "+str(steer)+"]"
             return result, [throttle, brake, steer]
         else:

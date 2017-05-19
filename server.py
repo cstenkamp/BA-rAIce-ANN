@@ -537,7 +537,8 @@ def main(sv_conf, rl_conf, play_only):
     containers.inputval.containers = containers #lol.    
     containers.outputval = OutputValContainer()
     containers.outputval.containers = containers
-    
+    containers.sv_conf = sv_conf
+    containers.rl_conf = rl_conf
     
     containers.receiverportsocket = create_socket(TCP_RECEIVER_PORT)
     containers.senderportsocket = create_socket(TCP_SENDER_PORT)

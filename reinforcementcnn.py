@@ -37,6 +37,8 @@ class RL_Config(object):
         self.image_dims = supervisedcnn.Config().image_dims
         self.steering_steps = supervisedcnn.Config().steering_steps
         self.speed_neurons = supervisedcnn.Config().speed_neurons
+        self.INCLUDE_ACCPLUSBREAK = supervisedcnn.Config().INCLUDE_ACCPLUSBREAK
+        self.SPEED_AS_ONEHOT = supervisedcnn.Config().SPEED_AS_ONEHOT
                                                   
         assert os.path.exists(supervisedcnn.Config().checkpoint_dir), "I need a pre-trained model"
 
@@ -130,10 +132,10 @@ class CNN(object):
         h1 = convolutional_layer(rs_input, self.config.history_frame_nr, 32, "Conv1", tf.nn.relu) #reduces to 15*21
         h2 = convolutional_layer(h1, 32, 64, "Conv2", tf.nn.relu)      #reduces to 8*11
         h_pool_flat =  tf.reshape(h2, [-1, 8*11*64])         
-        h_fc1 = fc_layer(h_pool_flat, 8*11*64, 1024, "FC1", tf.nn.relu, do_dropout=for_training)                 
+        h_fc1 = fc_layer(h_pool_flat, 8*11*64, final_neuron_num*20, "FC1", tf.nn.relu, do_dropout=for_training)                 
         if self.config.speed_neurons:
             h_fc1 = tf.concat([h_fc1, self.speed_input], 1)   #its lengths is now in any case 1024+speed_neurons
-        q = fc_layer(h_fc1, 1024+self.config.speed_neurons, final_neuron_num, "FC2", None, do_dropout=False) 
+        q = fc_layer(h_fc1, final_neuron_num*20+self.config.speed_neurons, final_neuron_num, "FC2", None, do_dropout=False) 
         q_max = tf.reduce_max(q, axis=1)
         action = tf.argmax(q, axis=1) #Todo: kann gut sein dass ich action nicht brauche wenn ich argm hab
         y_conv = tf.nn.softmax(q)

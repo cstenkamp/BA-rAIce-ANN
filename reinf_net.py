@@ -92,37 +92,32 @@ class ReinfNet(object):
                     self.containers.outputval.update(returnstuff, self.containers.inputval.timestamp)    
     
                     #learn ANN
-                    def prepare_feed_dict(state):
+                    def prepare_feed_dict(states):
                         feed_dict = {
-                          self.cnn.inputs: np.expand_dims(np.array(state[0]), axis=0),
-                          self.cnn.speed_input: np.expand_dims(np.array(read_supervised.inflate_speed(state[1], supervisedcnn.Config().speed_neurons, supervisedcnn.Config().SPEED_AS_ONEHOT)), axis=0)
+                          self.cnn.inputs: np.array([state[0] for state in states]),
+                          self.cnn.speed_input: np.array([read_supervised.inflate_speed(state[1], supervisedcnn.Config().speed_neurons, supervisedcnn.Config().SPEED_AS_ONEHOT) for state in states])
                         }
                         return feed_dict
                                    
                     if len(self.containers.memory.memory) > BATCHSIZE:
                               
                         mem = self.containers.memory.memory
-                        train_states = []
-                        train_q_targets = []
                         samples = np.random.permutation(len(mem))[:BATCHSIZE]
-                        for i in samples: #was spricht dagegen das als batch zu machen?
-                            
-                            oldstate, action, reward, newstate = mem[i]
-    
-                            q = self.session.run(self.cnn.q, feed_dict = prepare_feed_dict(oldstate))
-                            q_max = self.session.run(self.cnn.q_max, feed_dict=prepare_feed_dict(newstate))
-                            
-                            action = np.argmax(action)
-                            
-                            q[0][action] = reward + (Q_DECAY * q_max) #uhm, soll der nicht das alte q bisschen behalten?
-                            
-                            train_states.append(oldstate)
-                            train_q_targets.append(q[0])
+
+                        batch = [mem[i] for i in samples]
+                        oldstates, actions, rewards, newstates = zip(*batch)                        
+                        
+                        qs = self.session.run(self.cnn.q, feed_dict = prepare_feed_dict(oldstates))
+                        max_qs = self.session.run(self.cnn.q_max, feed_dict=prepare_feed_dict(newstates))
+                        
+                                                
+                        qs[np.arange(BATCHSIZE), actions] = rewards + Q_DECAY * max_qs 
+
     
                         self.session.run(self.cnn.rl_train_op, feed_dict={
-                            self.cnn.inputs: np.array([curr[0] for curr in train_states]),
-                            self.cnn.speed_input: np.array([read_supervised.inflate_speed(curr[1], supervisedcnn.Config().speed_neurons, supervisedcnn.Config().SPEED_AS_ONEHOT) for curr in train_states]),
-                            self.cnn.q_targets: train_q_targets,
+                            self.cnn.inputs: np.array([curr[0] for curr in oldstates]),
+                            self.cnn.speed_input: np.array([read_supervised.inflate_speed(curr[1], supervisedcnn.Config().speed_neurons, supervisedcnn.Config().SPEED_AS_ONEHOT) for curr in oldstates]),
+                            self.cnn.q_targets: qs,
                         })
                         
                         self.containers.reinfNetSteps += 1
@@ -162,7 +157,7 @@ class ReinfNet(object):
         print("Another ANN Inference")
         check, networkresult = self.cnn.run_inference(self.session, visionvec, othervecs, self.sv_config.history_frame_nr)
         if check:
-            throttle, brake, steer = read_supervised.dediscretize_all((networkresult, self.containers.config.steering_steps, self.config.INCLUDE_ACCPLUSBREAK)[0])
+            throttle, brake, steer = read_supervised.dediscretize_all(networkresult[0], self.containers.rl_conf.steering_steps, self.containers.rl_conf.INCLUDE_ACCPLUSBREAK)
             result = "["+str(throttle)+", "+str(brake)+", "+str(steer)+"]"
             return result, [throttle, brake, steer]
         else:
