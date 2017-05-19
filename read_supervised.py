@@ -1,12 +1,11 @@
 import xml.etree.ElementTree as ET
 import os
 import numpy as np
-from copy import deepcopy
 np.set_printoptions(threshold=np.nan)
+from copy import deepcopy
 #====own classes====
 import server #from server import cutoutandreturnvectors
 
-NUMCATS = 11
 MAXSPEED = 250
 DELAY_TO_CONSIDER = 100
 
@@ -67,17 +66,26 @@ class TrackingPoint(object):
         self.discreteThrottle = return_discrete(self.throttlePedalValue)
         self.discreteBrake = return_discrete(self.brakePedalValue)          
 
-    def discretize_all(self):
-        if self.throttlePedalValue > 0.5:
-            if self.brakePedalValue > 0.5:
-                self.discreteAll = [0]*(NUMCATS*3) + self.discreteSteering
+    def discretize_all(self, numcats, include_apb):
+        if include_apb:
+            if self.throttlePedalValue > 0.5:
+                if self.brakePedalValue > 0.5:
+                    self.discreteAll = [0]*(numcats*3) + self.discreteSteering
+                else:
+                    self.discreteAll = [0]*(numcats*2) + self.discreteSteering + [0]*numcats
             else:
-                self.discreteAll = [0]*(NUMCATS*2) + self.discreteSteering + [0]*NUMCATS
+                if self.brakePedalValue > 0.5:
+                    self.discreteAll = [0]*numcats + self.discreteSteering + [0]*(numcats*2)
+                else:
+                    self.discreteAll = self.discreteSteering + [0]*(numcats*3)
         else:
             if self.brakePedalValue > 0.5:
-                self.discreteAll = [0]*NUMCATS + self.discreteSteering + [0]*(NUMCATS*2)
+                self.discreteAll = [0]*(numcats*2) + self.discreteSteering 
             else:
-                self.discreteAll = self.discreteSteering + [0]*(NUMCATS*3)
+                if self.throttlePedalValue > 0.5:
+                    self.discreteAll = [0]*numcats + self.discreteSteering + [0]*(numcats)
+                else:
+                    self.discreteAll = self.discreteSteering + [0]*(numcats*2)
         
         
         
@@ -92,26 +100,42 @@ def dediscretize_steer(discrete):
 
 
 
-def dediscretize_all(discrete):
+def dediscretize_all(discrete, numcats, include_apb):
     if type(discrete).__module__ == np.__name__:
         discrete = discrete.tolist()
-    if discrete.index(1) > NUMCATS*3:
-        throttle = 1
-        brake = 1
-        steer = dediscretize_steer(discrete[(NUMCATS*3):(NUMCATS*4)])
-    elif discrete.index(1) > NUMCATS*2:
-        throttle = 1
-        brake = 0
-        steer = dediscretize_steer(discrete[(NUMCATS*2):(NUMCATS*3)])
-    elif discrete.index(1) > NUMCATS:
-        throttle = 0
-        brake = 1
-        steer = dediscretize_steer(discrete[NUMCATS:(NUMCATS*2)])
+    if include_apb:
+        if discrete.index(1) > numcats*3:
+            throttle = 1
+            brake = 1
+            steer = dediscretize_steer(discrete[(numcats*3):(numcats*4)])
+        elif discrete.index(1) > numcats*2:
+            throttle = 1
+            brake = 0
+            steer = dediscretize_steer(discrete[(numcats*2):(numcats*3)])
+        elif discrete.index(1) > numcats:
+            throttle = 0
+            brake = 1
+            steer = dediscretize_steer(discrete[numcats:(numcats*2)])
+        else:
+            throttle = 0
+            brake = 0
+            steer = dediscretize_steer(discrete[0:numcats])
+        return throttle, brake, steer
     else:
-        throttle = 0
-        brake = 0
-        steer = dediscretize_steer(discrete[0:NUMCATS])
-    return throttle, brake, steer
+        if discrete.index(1) > numcats*2:
+            throttle = 1
+            brake = 0
+            steer = dediscretize_steer(discrete[(numcats*2):(numcats*3)])
+        elif discrete.index(1) > numcats:
+            throttle = 0
+            brake = 1
+            steer = dediscretize_steer(discrete[numcats:(numcats*2)])
+        else:
+            throttle = 0
+            brake = 0
+            steer = dediscretize_steer(discrete[0:numcats])
+        return throttle, brake, steer
+        #TODO: das dediscretize_steer und das ganze unnötige wegmachen!
 
    
 
@@ -136,9 +160,11 @@ class TPList(object):
                 furtherinfo[majorpoint.tag] = majorpoint.text
         return this_trackingpoints, furtherinfo
             
-    def __init__(self, foldername, msperframe):
+    def __init__(self, foldername, msperframe, steering_steps, include_accplusbreak):
         assert os.path.isdir(foldername) 
         self.all_trackingpoints = []
+        self.steering_steps = steering_steps
+        self.include_accplusbreak = include_accplusbreak
         for file in os.listdir(foldername):
             if file.endswith(".svlap"):
                 currcontent, currinfo = TPList.read_xml(os.path.join(foldername, file))
@@ -183,9 +209,9 @@ class TPList(object):
         normalizers = self.find_normalizers()
         for currpoint in self.all_trackingpoints:
             currpoint.normalize_oneDs(normalizers)
-            currpoint.discretize_steering(NUMCATS)  #TODO: numcats sollte nicht ne variable HIER sein
+            currpoint.discretize_steering(self.steering_steps)  #TODO: numcats sollte nicht ne variable HIER sein
             #currpoint.discretize_acc_break(NUMCATS) #TODO: sollten auch andere variablen sein
-            currpoint.discretize_all()
+            currpoint.discretize_all(self.steering_steps, self.include_accplusbreak)
             
             
     def find_normalizers(self):
@@ -228,7 +254,7 @@ class TPList(object):
             #target = [self.all_trackingpoints[i].throttlePedalValue, self.all_trackingpoints[i].brakePedalValue, self.all_trackingpoints[i].steeringValue]
             target = self.all_trackingpoints[i].discreteAll
             #discretetarget = flatten([self.all_trackingpoints[i].discreteThrottle, self.all_trackingpoints[i].discreteBrake, self.all_trackingpoints[i].discreteSteering])
-            discretetarget = flatten([[0]*(NUMCATS*2), self.all_trackingpoints[i].discreteSteering])
+            discretetarget = flatten([[0]*(self.steering_steps*2), self.all_trackingpoints[i].discreteSteering])
             if config.history_frame_nr == 1: 
                 vision = vision[0]
                 lookahead = lookahead[0]
@@ -237,21 +263,27 @@ class TPList(object):
             discretetargets.append(np.array(discretetarget))
             lookaheads.append(lookahead)
             if config.speed_neurons > 0:
-                speeds.append(inflate_speed(int(self.all_trackingpoints[i].speed), config.speed_neurons))
+                speeds.append(inflate_speed(int(self.all_trackingpoints[i].speed), config.speed_neurons, config.SPEED_AS_ONEHOT))
         self.batchindex += batch_size
         return np.array(lookaheads), np.array(visions), np.array(targets), np.array(discretetargets), np.array(speeds)
 
 
-def inflate_speed(speed, numberneurons):
+def inflate_speed(speed, numberneurons, asonehot):
     result = [0]*numberneurons
-    result[round((min([speed,MAXSPEED])/MAXSPEED)*numberneurons)] = 1
+    if asonehot:
+        result[round((min([speed,MAXSPEED])/MAXSPEED)*numberneurons)] = 1
+    else:
+        maxone = round((min([speed,MAXSPEED])/MAXSPEED)*numberneurons)
+        for i in range(maxone):
+            result[i] = 1
+        
     return result
 
     
 if __name__ == '__main__':    
     import supervisedcnn
     config = supervisedcnn.Config()
-    trackingpoints = TPList(FOLDERNAME, config.msperframe)
+    trackingpoints = TPList(FOLDERNAME, config.msperframe, config.steering_steps, config.INCLUDE_ACCPLUSBREAK)
     print("Number of samples:",trackingpoints.numsamples)
     #print(trackingpoints.all_trackingpoints[220].throttlePedalValue)
     #print(trackingpoints.all_trackingpoints[220].discreteThrottle)

@@ -15,7 +15,6 @@ import read_supervised
 SUMMARYALL = 1000
 CHECKPOINTALL = 5
 
-
 class Config(object):
     foldername = "SavedLaps/"
     log_dir = "SummaryLogDir/"  
@@ -23,7 +22,10 @@ class Config(object):
     
     history_frame_nr = 1 #incl. dem jetzigem!
     speed_neurons = 10 #wenn null nutzt er sie nicht
-    steering_steps = 11
+    SPEED_AS_ONEHOT = False
+    steering_steps = 7
+    INCLUDE_ACCPLUSBREAK = False
+    
     image_dims = [30,42]
     vector_len = 61
     msperframe = 200 #50   #ACHTUNG!!! Dieser wert wird von unity überschrieben!!!!! #TODO: dass soll mit unity abgeglichen werden!
@@ -62,18 +64,20 @@ class CNN(object):
         #builds the computation graph, using the next few functions (this is basically the interface)
         self.config = config
         self.iterations = 0
+        
+        final_neuron_num = self.config.steering_steps*4 if self.config.INCLUDE_ACCPLUSBREAK else self.config.steering_steps*3
     
-        self.inputs, self.targets, self.speed_input = self.set_placeholders(is_training)
+        self.inputs, self.targets, self.speed_input = self.set_placeholders(is_training, final_neuron_num)
         
         if is_training:
-            self.logits, self.argmaxs = self.inference(True)         
+            self.logits, self.argmaxs = self.inference(final_neuron_num, True)         
             self.loss = self.loss_func(self.logits)
             self.train_op = self.training(self.loss, config.initial_lr) 
             self.accuracy = self.evaluation(self.argmaxs, self.targets)       
             self.summary = tf.summary.merge_all() #für TensorBoard
         else:
             with tf.device("/cpu:0"): #less overhead by not trying to switch to gpu
-                self.logits, self.argmaxs = self.inference(False) 
+                self.logits, self.argmaxs = self.inference(final_neuron_num, False) 
             
             
     def variable_summary(self, var, what=""):
@@ -87,14 +91,14 @@ class CNN(object):
         tf.summary.histogram('histogram', var)
     
     
-    def set_placeholders(self, is_training):
+    def set_placeholders(self, is_training, final_neuron_num):
         if self.config.history_frame_nr == 1:
             inputs = tf.placeholder(tf.float32, shape=[None, self.config.image_dims[0], self.config.image_dims[1]], name="inputs")  #first dim is none since inference has another batchsize than training
         else:
             inputs = tf.placeholder(tf.float32, shape=[None, self.config.history_frame_nr, self.config.image_dims[0], self.config.image_dims[1]], name="inputs")  #first dim is none since inference has another batchsize than training
             
         if is_training:
-            targets = tf.placeholder(tf.float32, shape=[None, self.config.steering_steps*4], name="targets")    
+            targets = tf.placeholder(tf.float32, shape=[None, final_neuron_num], name="targets")    
         else:
             targets = None
             
@@ -106,7 +110,7 @@ class CNN(object):
         return inputs, targets, speeds
     
     
-    def inference(self, for_training=False):
+    def inference(self, final_neuron_num, for_training=False):
         self.trainvars = {}
         
         def weight_variable(shape, name):
@@ -156,9 +160,9 @@ class CNN(object):
         h_fc1 = fc_layer(h_pool_flat, 8*11*64, 1024, "FC1", tf.nn.relu, do_dropout=for_training)                 
         if self.config.speed_neurons:
             h_fc1 = tf.concat([h_fc1, self.speed_input], 1)   #its lengths is now in any case 1024+speed_neurons
-        y_pre = fc_layer(h_fc1, 1024+self.config.speed_neurons, self.config.steering_steps*4, "FC2", None, do_dropout=False) 
+        y_pre = fc_layer(h_fc1, 1024+self.config.speed_neurons, final_neuron_num, "FC2", None, do_dropout=False) 
         y_conv = tf.nn.softmax(y_pre)
-        argm = tf.one_hot(tf.argmax(y_conv, dimension=1), depth=self.config.steering_steps*4)
+        argm = tf.one_hot(tf.argmax(y_conv, dimension=1), depth=final_neuron_num)
         return y_pre, argm
     
     
@@ -257,7 +261,7 @@ class CNN(object):
             visionvec = np.expand_dims(visionvec, axis=0)
             feed_dict = {self.inputs: visionvec}  
             if self.config.speed_neurons:
-                speed_disc = read_supervised.inflate_speed(othervecs[1][4], self.config.speed_neurons)
+                speed_disc = read_supervised.inflate_speed(othervecs[1][4], self.config.speed_neurons, self.config.SPEED_AS_ONEHOT)
                 feed_dict[self.speed_input] = np.expand_dims(speed_disc, axis=0)
 
             return True, session.run(self.argmaxs, feed_dict=feed_dict)
@@ -328,7 +332,7 @@ def run_CNN_training(config, dataset):
 def main():
     config = Config()
         
-    trackingpoints = read_supervised.TPList(config.foldername, config.msperframe)
+    trackingpoints = read_supervised.TPList(config.foldername, config.msperframe, config.steering_steps, config.INCLUDE_ACCPLUSBREAK)
     print("Number of samples: %s | Tracking every %s ms with %s historyframes" % (trackingpoints.numsamples, str(config.msperframe), str(config.history_frame_nr)))
     run_CNN_training(config, trackingpoints)        
     

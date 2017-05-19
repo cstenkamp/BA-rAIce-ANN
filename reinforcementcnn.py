@@ -48,30 +48,31 @@ class CNN(object):
         #builds the computation graph, using the next few functions (this is basically the interface)
         self.config = config
         self.iterations = 0
+        final_neuron_num = self.config.steering_steps*4 if self.config.INCLUDE_ACCPLUSBREAK else self.config.steering_steps*3
     
-        self.inputs, self.q_targets, self.speed_input = self.set_placeholders(is_training)
+        self.inputs, self.q_targets, self.speed_input = self.set_placeholders(is_training, final_neuron_num)
         
         if not continuing:
             with tf.variable_scope("cnnmodel", reuse=True, initializer=initializer):
-                self.q, self.argmaxs, self.q_max, self.action = self.inference(is_training)         
+                self.q, self.argmaxs, self.q_max, self.action = self.inference(final_neuron_num, is_training)         
             with tf.variable_scope("cnnmodel", reuse=None, initializer=initializer):
                 self.rl_loss = self.loss_func(self.q, self.q_targets)
                 self.rl_train_op = self.training(self.rl_loss, config.initial_lr) 
         else:
-            self.q, self.argmaxs, self.q_max, self.action = self.inference(is_training)         
+            self.q, self.argmaxs, self.q_max, self.action = self.inference(final_neuron_num, is_training)         
             self.rl_loss = self.loss_func(self.q, self.q_targets)
             self.rl_train_op = self.training(self.rl_loss, config.initial_lr) 
             
 
     
-    def set_placeholders(self, is_training):
+    def set_placeholders(self, is_training, final_neuron_num):
         if self.config.history_frame_nr == 1:
             inputs = tf.placeholder(tf.float32, shape=[None, self.config.image_dims[0], self.config.image_dims[1]], name="inputs")  #first dim is none since inference has another batchsize than training
         else:
             inputs = tf.placeholder(tf.float32, shape=[None, self.config.history_frame_nr, self.config.image_dims[0], self.config.image_dims[1]], name="inputs")  #first dim is none since inference has another batchsize than training
             
         if is_training:
-            q_targets = tf.placeholder(tf.float32, shape=[None, self.config.steering_steps*4], name="targets")    
+            q_targets = tf.placeholder(tf.float32, shape=[None, final_neuron_num], name="targets")    
         else:
             q_targets = None
             
@@ -83,7 +84,7 @@ class CNN(object):
         return inputs, q_targets, speeds
     
     
-    def inference(self, for_training=False): 
+    def inference(self, final_neuron_num, for_training=False): 
     
     #TODO: das hier ist GENAU WIE supervisedcnn, nur dass die convolutional trainable = false haben -- dafür nen simplen parameter!!
     #und ypre heißt q, und q_max&action kamen dazu
@@ -132,11 +133,11 @@ class CNN(object):
         h_fc1 = fc_layer(h_pool_flat, 8*11*64, 1024, "FC1", tf.nn.relu, do_dropout=for_training)                 
         if self.config.speed_neurons:
             h_fc1 = tf.concat([h_fc1, self.speed_input], 1)   #its lengths is now in any case 1024+speed_neurons
-        q = fc_layer(h_fc1, 1024+self.config.speed_neurons, self.config.steering_steps*4, "FC2", None, do_dropout=False) 
+        q = fc_layer(h_fc1, 1024+self.config.speed_neurons, final_neuron_num, "FC2", None, do_dropout=False) 
         q_max = tf.reduce_max(q, axis=1)
         action = tf.argmax(q, axis=1) #Todo: kann gut sein dass ich action nicht brauche wenn ich argm hab
         y_conv = tf.nn.softmax(q)
-        argm = tf.one_hot(tf.argmax(y_conv, dimension=1), depth=self.config.steering_steps*4)
+        argm = tf.one_hot(tf.argmax(y_conv, dimension=1), depth=final_neuron_num)
         return q, argm, q_max, action
     
     
@@ -219,7 +220,7 @@ class CNN(object):
             visionvec = np.expand_dims(visionvec, axis=0)
             feed_dict = {self.inputs: visionvec}  
             if self.config.speed_neurons:
-                speed_disc = read_supervised.inflate_speed(othervecs[1][4], self.config.speed_neurons)
+                speed_disc = read_supervised.inflate_speed(othervecs[1][4], self.config.speed_neurons, self.config.SPEED_AS_ONEHOT)
                 feed_dict[self.speed_input] = np.expand_dims(speed_disc, axis=0)
 
             return True, session.run(self.argmaxs, feed_dict=feed_dict)

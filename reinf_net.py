@@ -26,13 +26,13 @@ current_milli_time = lambda: int(round(time.time() * 1000))
 
 STANDARDRETURN = ("[0.5,0,0.0]", 42)
 MEMORY_SIZE = 5000
-epsilon = 0.9
-BATCHSIZE = 3
+epsilon = 0.5
+BATCHSIZE = 32
 Q_DECAY = 0.95
 repeat_random_action_for = 1000
 last_random_timestamp = 0
 last_random_action = None
-CHECKPOINTALL = 2
+CHECKPOINTALL = 5
 
 
 class ReinfNet(object):
@@ -95,7 +95,7 @@ class ReinfNet(object):
                     def prepare_feed_dict(state):
                         feed_dict = {
                           self.cnn.inputs: np.expand_dims(np.array(state[0]), axis=0),
-                          self.cnn.speed_input: np.expand_dims(np.array(read_supervised.inflate_speed(state[1], supervisedcnn.Config().speed_neurons)), axis=0)
+                          self.cnn.speed_input: np.expand_dims(np.array(read_supervised.inflate_speed(state[1], supervisedcnn.Config().speed_neurons, supervisedcnn.Config().SPEED_AS_ONEHOT)), axis=0)
                         }
                         return feed_dict
                                    
@@ -121,7 +121,7 @@ class ReinfNet(object):
     
                         self.session.run(self.cnn.rl_train_op, feed_dict={
                             self.cnn.inputs: np.array([curr[0] for curr in train_states]),
-                            self.cnn.speed_input: np.array([read_supervised.inflate_speed(curr[1], supervisedcnn.Config().speed_neurons) for curr in train_states]),
+                            self.cnn.speed_input: np.array([read_supervised.inflate_speed(curr[1], supervisedcnn.Config().speed_neurons, supervisedcnn.Config().SPEED_AS_ONEHOT) for curr in train_states]),
                             self.cnn.q_targets: train_q_targets,
                         })
                         
@@ -162,7 +162,7 @@ class ReinfNet(object):
         print("Another ANN Inference")
         check, networkresult = self.cnn.run_inference(self.session, visionvec, othervecs, self.sv_config.history_frame_nr)
         if check:
-            throttle, brake, steer = read_supervised.dediscretize_all((networkresult)[0])
+            throttle, brake, steer = read_supervised.dediscretize_all((networkresult, self.containers.config.steering_steps, self.config.INCLUDE_ACCPLUSBREAK)[0])
             result = "["+str(throttle)+", "+str(brake)+", "+str(steer)+"]"
             return result, [throttle, brake, steer]
         else:
@@ -184,6 +184,8 @@ class ReinfNet(object):
             last_random_action = (throttle, brake, steer)
         else:
             throttle, brake, steer = last_random_action
+            
+        throttle, brake, steer = 1, 0, 0
         result = "["+str(throttle)+", "+str(brake)+", "+str(steer)+"]"
         return result, [throttle, brake, steer]
               
@@ -198,20 +200,25 @@ class ReinfNet(object):
             initializer = tf.random_uniform_initializer(-0.1, 0.1)
             
             if not (ckpt and ckpt.model_checkpoint_path):
-                with tf.name_scope("ReinfLearn"):
-                    with tf.variable_scope("cnnmodel", reuse=None, initializer=initializer): 
-                        self.svcnn = supervisedcnn.CNN(self.sv_config, is_training=True)
-                        
-                self.pretrainsaver = tf.train.Saver(self.svcnn.trainvars)
-                sv_ckpt = tf.train.get_checkpoint_state(self.sv_config.checkpoint_dir) 
-                assert sv_ckpt and sv_ckpt.model_checkpoint_path, "I need at least a supervisedly pre-trained net!"
-                self.pretrainsaver.restore(self.session, sv_ckpt.model_checkpoint_path)
-
                 
+
+                pretrainvars = supervisedcnn.CNN(self.sv_config, is_training=True).trainvars
+                topop = []
+                for key, _ in pretrainvars.items():
+                    if "FC2" in key:
+                        topop.append(key)
+                for i in topop:
+                    pretrainvars.pop(i)
+                print(pretrainvars.keys())
+                    
+                self.pretrainsaver = tf.train.Saver(pretrainvars)
                 with tf.name_scope("ReinfLearn"): 
                     with tf.variable_scope("cnnmodel", reuse=None, initializer=initializer):
                         self.cnn = reinforcementcnn.CNN(self.rl_config, initializer, is_training=True, continuing = True)
-                
+                        
+                sv_ckpt = tf.train.get_checkpoint_state(self.sv_config.checkpoint_dir) 
+                assert sv_ckpt and sv_ckpt.model_checkpoint_path, "I need at least a supervisedly pre-trained net!"
+                self.pretrainsaver.restore(self.session, sv_ckpt.model_checkpoint_path)
                 
                 init = tf.global_variables_initializer()
                 self.session.run(init)
