@@ -110,8 +110,9 @@ class ReinfNet(object):
                         qs = self.session.run(self.cnn.q, feed_dict = prepare_feed_dict(oldstates))
                         max_qs = self.session.run(self.cnn.q_max, feed_dict=prepare_feed_dict(newstates))
                         
+                        argmactions = [np.argmax(i) for i in actions]
                                                 
-                        qs[np.arange(BATCHSIZE), actions] = rewards + Q_DECAY * max_qs 
+                        qs[np.arange(BATCHSIZE), argmactions] = rewards + Q_DECAY * max_qs 
 
     
                         self.session.run(self.cnn.rl_train_op, feed_dict={

@@ -263,6 +263,7 @@ class CNN(object):
             if self.config.speed_neurons:
                 speed_disc = read_supervised.inflate_speed(othervecs[1][4], self.config.speed_neurons, self.config.SPEED_AS_ONEHOT)
                 feed_dict[self.speed_input] = np.expand_dims(speed_disc, axis=0)
+                print(speed_disc)
 
             return True, session.run(self.argmaxs, feed_dict=feed_dict)
 
