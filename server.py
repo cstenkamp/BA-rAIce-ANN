@@ -37,7 +37,7 @@ class MySocket:
             self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         else:
             self.sock = sock
-        self.sock.settimeout(1.0)
+        self.sock.settimeout(2.0)
             
     def connect(self, host, port):
         self.sock.connect((host, port))
@@ -151,8 +151,13 @@ class receiver_thread(threading.Thread):
                         visionvec, allOneDs = cutoutandreturnvectors(data) 
                         self.containers.inputval.update(visionvec, allOneDs, self.timestamp) #we MUST have the inputval, otherwise there wouldn't be the possibility for historyframes.           
                         
-                        thread = threading.Thread(target=self.runOneANN, args=()) #immediately returns if UPDATE_ONLY_IF_NEW and alreadyreadthread = threading.Thread(target=self.runANN_SaveResult, args=())
-                        thread.start() 
+                        if len(self.containers.ANNs) == 1:
+                            self.containers.ANNs[0].runANN(UPDATE_ONLY_IF_NEW)
+                        else:                                                       
+                            thread = threading.Thread(target=self.runOneANN, args=()) #immediately returns if UPDATE_ONLY_IF_NEW and alreadyreadthread = threading.Thread(target=self.runANN_SaveResult, args=())
+                            thread.start() 
+                        
+                        
                         
                         
                     
@@ -206,6 +211,7 @@ class InputValContainer(object):
         
         
     def update(self, visionvec, othervecs, timestamp):
+        
         
         def is_new(visionvec, othervecs):
             if self.config.history_frame_nr == 1:
@@ -352,18 +358,20 @@ class OutputValContainer(object):
 ###############################################################################
 
       
-
+#wenn ich hier thread-locks verwenden würde würde er jedes mal einen neuen receiver-thread starten. 
+#TODO: auf richtigere weise thread-safe machen.
 class Memory(object):
     def __init__(self, elemtype, size):
-        self.lock = threading.Lock()
+#        self.lock = threading.Lock()
         self.memory = deque(elemtype, size)
     
     def append(self, obj):
-        self.lock.acquire()
-        try:
-            self.memory.append(obj)
-        finally:
-            self.lock.release()
+        self.memory.append(obj)
+#        self.lock.acquire()
+#        try:
+#            self.memory.append(obj)
+#        finally:
+#            self.lock.release()
         
 
 

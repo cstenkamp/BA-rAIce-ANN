@@ -59,7 +59,8 @@ def discretize_steering(steeringVal, numcats):
     discreteSteering[val] = 1     
     return discreteSteering                   
 
-                    
+#input: throttle, brake, steer_AS_DISCRETE
+#output: 3*speed_neurons / 4*speed_neurons                  
 def discretize_all(throttle, brake, discreteSteer, numcats, include_apb):
     if include_apb:
         if throttle > 0.5:
@@ -94,7 +95,8 @@ def dediscretize_steer(discrete):
     return result
 
 
-
+#input:  3*speed_neurons / 4*speed_neurons
+#output: throttle, brake, steer
 def dediscretize_all(discrete, numcats, include_apb):
     if type(discrete).__module__ == np.__name__:
         discrete = discrete.tolist()

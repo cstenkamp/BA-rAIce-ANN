@@ -36,6 +36,8 @@ last_random_timestamp = 0
 last_random_action = None
 CHECKPOINTALL = 5
 DONT_COPY_WEIGHTS = ["FC1", "FC2"]
+ACTION_ALL_X_MS = 2000
+LAST_ACTION = 0
 
 
 class ReinfNet(object):
@@ -60,8 +62,16 @@ class ReinfNet(object):
 #        FlatOneDs -= np.array([item[0] for item in normalizers])
 #        NormalizedOneDs = FlatOneDs / np.array([item[1] for item in normalizers])
 #        return NormalizedOneDs
-        
+            
+    def resetUnity(self):
+        self.containers.outputval.send_via_senderthread("pleasereset", self.containers.inputval.timestamp)
+        self.containers.inputval.reset(self.containers.inputval.msperframe)
+        self.containers.outputval.reset()
     
+
+    def dediscretize(self, discrete):
+        return read_supervised.dediscretize_all(discrete, self.rl_config.steering_steps, self.rl_config.INCLUDE_ACCPLUSBREAK)
+
     def runANN(self, update_only_if_new):
         global epsilon
         if self.isinitialized:
@@ -71,6 +81,15 @@ class ReinfNet(object):
             self.lock.acquire()
             try:
                 self.isbusy = True 
+                
+                #delete this part
+                global LAST_ACTION
+                if current_milli_time()-LAST_ACTION < ACTION_ALL_X_MS:
+                    return
+                else:
+                    LAST_ACTION = current_milli_time()
+                
+                
                 with self.graph.as_default(): 
     #                if self.containers.inputval.othervecs[0][0] > 30 and self.containers.inputval.othervecs[0][0] < 40:
     #                    self.containers.outputval.send_via_senderthread("pleasereset", self.containers.inputval.timestamp)
@@ -83,7 +102,12 @@ class ReinfNet(object):
                         newstate = (visionvec, othervecs[1][4])
                         reward = self.calculateReward()
                         self.containers.memory.append([oldstate, action, reward, newstate]) 
+                        print(self.dediscretize(action), reward, level=6)
+                        self.resetUnity()
+                        LAST_ACTION -= ACTION_ALL_X_MS
+                        return
                     
+
                     #run ANN
                     if np.random.random() > epsilon:
                         returnstuff, original = self.performNetwork(othervecs, visionvec)
@@ -92,11 +116,9 @@ class ReinfNet(object):
                         returnstuff, original = self.randomAction()
                         
                     self.containers.inputval.addResultAndBackup(original) 
-                    self.containers.outputval.update(returnstuff, self.containers.inputval.timestamp)    
-                    if oldstate is not None:
-                        time.sleep(0.1)
-                        self.containers.outputval.send_via_senderthread("pleasereset", self.containers.inputval.timestamp)
-                    
+                    self.containers.outputval.update(returnstuff, self.containers.inputval.timestamp)  
+    
+    
                     #im original DQN learnt er halt jetzt direkt, aber er kann doch besser durchgehend lernen?
                     
             finally:
@@ -128,8 +150,8 @@ class ReinfNet(object):
             oldstates, actions, rewards, newstates = zip(*batch)                        
             
             argmactions = [np.argmax(i) for i in actions]
+            
             actualActions = [read_supervised.dediscretize_all(i, self.rl_config.steering_steps, self.rl_config.INCLUDE_ACCPLUSBREAK) for i in actions]
-
             print(dict(zip(rewards,actualActions)), level=6)
             
             qs = self.session.run(self.cnn.q, feed_dict = prepare_feed_dict(oldstates))
@@ -146,7 +168,7 @@ class ReinfNet(object):
             })
             
             self.containers.reinfNetSteps += 1
-            print("ReinfLearnSteps:", self.containers.reinfNetSteps)
+            print("ReinfLearnSteps:", self.containers.reinfNetSteps, level=6)
             
             if self.containers.reinfNetSteps % CHECKPOINTALL == 0:
                 checkpoint_file = os.path.join(self.rl_config.checkpoint_dir, 'model.ckpt')
@@ -167,8 +189,7 @@ class ReinfNet(object):
         
         stay_on_street = abs(self.containers.inputval.othervecs[3][0])
         stay_on_street = round(0 if stay_on_street < 5 else 100 if stay_on_street > 10 else stay_on_street-5, 3)
-        
-        
+                
         return progress-stay_on_street
 
         

@@ -214,10 +214,14 @@ class CNN(object):
         with tf.device("/cpu:0"):
             visionvec = np.expand_dims(visionvec, axis=0)
             feed_dict = {self.inputs: visionvec}  
-            if self.config.speed_neurons:
-                speed_disc = read_supervised.inflate_speed(othervecs[1][4], self.config.speed_neurons, self.config.SPEED_AS_ONEHOT)
-                feed_dict[self.speed_input] = np.expand_dims(speed_disc, axis=0)
-
+            try:
+                if self.config.speed_neurons:
+                    speed_disc = read_supervised.inflate_speed(othervecs[1][4], self.config.speed_neurons, self.config.SPEED_AS_ONEHOT)
+                    feed_dict[self.speed_input] = np.expand_dims(speed_disc, axis=0)
+            except IndexError:
+                print("OHHH THIS SHOULD NOT HAPPEN")
+                print(speed_disc)
+                raise
             return True, session.run(self.argmaxs, feed_dict=feed_dict)
 #
 #            
