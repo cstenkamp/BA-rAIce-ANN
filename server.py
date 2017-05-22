@@ -174,8 +174,7 @@ class receiver_thread(threading.Thread):
     def handle_special_commands(self, data):
         specialcommand = False
         if data[:11] == "resetServer":
-            self.containers.inputval.reset(data[11:])
-            self.containers.outputval.reset()
+            resetServer(self.containers, data[11:])
             specialcommand = True    
         return specialcommand
     
@@ -186,7 +185,12 @@ class receiver_thread(threading.Thread):
                 currANN.runANN(UPDATE_ONLY_IF_NEW)
                 break
             
-        
+
+
+def resetServer(containers, mspersec):
+    containers.inputval.reset(mspersec)
+    containers.outputval.reset()
+    
         
     
         

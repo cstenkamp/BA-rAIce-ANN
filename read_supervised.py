@@ -101,15 +101,15 @@ def dediscretize_all(discrete, numcats, include_apb):
     if type(discrete).__module__ == np.__name__:
         discrete = discrete.tolist()
     if include_apb:
-        if discrete.index(1) > numcats*3:
+        if discrete.index(1) >= numcats*3:
             throttle = 1
             brake = 1
             steer = dediscretize_steer(discrete[(numcats*3):(numcats*4)])
-        elif discrete.index(1) > numcats*2:
+        elif discrete.index(1) >= numcats*2:
             throttle = 1
             brake = 0
             steer = dediscretize_steer(discrete[(numcats*2):(numcats*3)])
-        elif discrete.index(1) > numcats:
+        elif discrete.index(1) >= numcats:
             throttle = 0
             brake = 1
             steer = dediscretize_steer(discrete[numcats:(numcats*2)])
@@ -119,11 +119,11 @@ def dediscretize_all(discrete, numcats, include_apb):
             steer = dediscretize_steer(discrete[0:numcats])
         return throttle, brake, steer
     else:
-        if discrete.index(1) > numcats*2:
+        if discrete.index(1) >= numcats*2:
             throttle = 0
             brake = 1
             steer = dediscretize_steer(discrete[(numcats*2):(numcats*3)])
-        elif discrete.index(1) > numcats:
+        elif discrete.index(1) >= numcats:
             throttle = 1
             brake = 0
             steer = dediscretize_steer(discrete[numcats:(numcats*2)])

@@ -22,13 +22,14 @@ import supervisedcnn
 import reinforcementcnn
 import read_supervised
 from myprint import myprint as print
+import server
 
 current_milli_time = lambda: int(round(time.time() * 1000))
 
 STANDARDRETURN = ("[0.5,0,0.0]", [0]*42)
 MEMORY_SIZE = 5000
-epsilon = 0.5
-EPSILONDECREASE = 0.0005
+epsilon = 0.7
+EPSILONDECREASE = 0.005
 BATCHSIZE = 32
 Q_DECAY = 0.95
 repeat_random_action_for = 1000
@@ -36,7 +37,7 @@ last_random_timestamp = 0
 last_random_action = None
 CHECKPOINTALL = 5
 DONT_COPY_WEIGHTS = ["FC1", "FC2"]
-ACTION_ALL_X_MS = 2000
+ACTION_ALL_X_MS = 3000
 LAST_ACTION = 0
 
 
@@ -65,8 +66,7 @@ class ReinfNet(object):
             
     def resetUnity(self):
         self.containers.outputval.send_via_senderthread("pleasereset", self.containers.inputval.timestamp)
-        self.containers.inputval.reset(self.containers.inputval.msperframe)
-        self.containers.outputval.reset()
+        server.resetServer(self.containers, self.containers.inputval.msperframe)
     
 
     def dediscretize(self, discrete):
@@ -92,7 +92,7 @@ class ReinfNet(object):
                 
                 with self.graph.as_default(): 
     #                if self.containers.inputval.othervecs[0][0] > 30 and self.containers.inputval.othervecs[0][0] < 40:
-    #                    self.containers.outputval.send_via_senderthread("pleasereset", self.containers.inputval.timestamp)
+    #                    resetUnity()
     #                    return
                     othervecs, visionvec = self.containers.inputval.read()
                     
@@ -115,6 +115,7 @@ class ReinfNet(object):
                     else:
                         returnstuff, original = self.randomAction()
                         
+                    
                     self.containers.inputval.addResultAndBackup(original) 
                     self.containers.outputval.update(returnstuff, self.containers.inputval.timestamp)  
     
@@ -197,7 +198,7 @@ class ReinfNet(object):
                 
 
     def performNetwork(self, othervecs, visionvec):
-        print("Another ANN Inference")
+        print("Another ANN Inference", level=6)
         check, networkresult = self.cnn.run_inference(self.session, visionvec, othervecs, self.sv_config.history_frame_nr)
         if check:
             throttle, brake, steer = read_supervised.dediscretize_all(networkresult[0], self.containers.rl_conf.steering_steps, self.containers.rl_conf.INCLUDE_ACCPLUSBREAK)
@@ -209,21 +210,30 @@ class ReinfNet(object):
             
     def randomAction(self):
         global last_random_timestamp, last_random_action
-        print("Random Action!")
+        print("Random Action!", level=6)
         if current_milli_time() - last_random_timestamp > repeat_random_action_for:
-            throttle = 1 if np.random.random() > 0.5 else 0
-            if throttle == 1:
-                brake = 1 if np.random.random() > 0.5 else 0
-            else:
-                brake = 1 if np.random.random() > 0.9 else 0
-            #steer = ((np.random.random()*2)-1)
-            steer = np.random.normal(scale=0.5)
+            
+            action = np.random.randint(4) if self.rl_config.INCLUDE_ACCPLUSBREAK else np.random.randint(3)
+            if action == 0: brake, throttle = 1, 0
+            if action == 1: brake, throttle = 0, 1
+            if action == 2: brake, throttle = 0, 0
+            if action == 3: brake, throttle = 1, 1
+                   
+            #alternative 1a: steer = ((np.random.random()*2)-1)
+            #alternative 1b: steer = min(max(np.random.normal(scale=0.5), 1), -1)
+            #für 1a und 1b:  steer = read_supervised.dediscretize_steer(read_supervised.discretize_steering(steer, self.rl_config.steering_steps))
+            #alternative 2:
+            tmp = [0]*self.rl_config.steering_steps
+            tmp[np.random.randint(self.rl_config.steering_steps)] = 1
+            steer = read_supervised.dediscretize_steer(tmp)
+            
+            
             last_random_timestamp = current_milli_time()
             last_random_action = (throttle, brake, steer)
         else:
             throttle, brake, steer = last_random_action
             
-        throttle, brake, steer = 1, 0, 0
+        #throttle, brake, steer = 1, 0, 0
         result = "["+str(throttle)+", "+str(brake)+", "+str(steer)+"]"
         return result, read_supervised.discretize_all(throttle, brake, read_supervised.discretize_steering(steer, self.rl_config.steering_steps), self.rl_config.steering_steps, self.rl_config.INCLUDE_ACCPLUSBREAK) 
               
