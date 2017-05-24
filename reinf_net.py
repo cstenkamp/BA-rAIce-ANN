@@ -30,15 +30,17 @@ STANDARDRETURN = ("[0.5,0,0.0]", [0]*42)
 MEMORY_SIZE = 5000
 epsilon = 0.7
 EPSILONDECREASE = 0.005
-BATCHSIZE = 5
+BATCHSIZE = 32
 Q_DECAY = 0.95
 repeat_random_action_for = 1000
 last_random_timestamp = 0
 last_random_action = None
 CHECKPOINTALL = 5
 DONT_COPY_WEIGHTS = ["FC1", "FC2"]
-ACTION_ALL_X_MS = 4000
+
+ACTION_ALL_X_MS = 0
 LAST_ACTION = 0
+ONLY_START = False
 
 
 class ReinfNet(object):
@@ -83,11 +85,12 @@ class ReinfNet(object):
                 self.isbusy = True 
                 
                 #delete this part
-                global LAST_ACTION
-                if current_milli_time()-LAST_ACTION < ACTION_ALL_X_MS:
-                    return
-                else:
-                    LAST_ACTION = current_milli_time()
+                if ACTION_ALL_X_MS:
+                    global LAST_ACTION
+                    if current_milli_time()-LAST_ACTION < ACTION_ALL_X_MS:
+                        return
+                    else:
+                        LAST_ACTION = current_milli_time()
                 
                 
                 with self.graph.as_default(): 
@@ -103,9 +106,11 @@ class ReinfNet(object):
                         reward = self.calculateReward()
                         self.containers.memory.append([oldstate, action, reward, newstate, False]) 
                         print(self.dediscretize(action), reward, level=6)
-                        self.resetUnity()
-                        LAST_ACTION -= ACTION_ALL_X_MS
-                        return
+                        #deletethispart
+                        if ONLY_START:
+                            self.resetUnity()
+                            LAST_ACTION -= ACTION_ALL_X_MS
+                            return
                     
 
                     #run ANN
