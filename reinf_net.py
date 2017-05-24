@@ -272,7 +272,7 @@ class ReinfNet(object):
                 self.pretrainsaver = tf.train.Saver(pretrainvars)
                 with tf.name_scope("ReinfLearn"): 
                     with tf.variable_scope("cnnmodel", reuse=None, initializer=initializer):
-                        self.cnn = reinforcementcnn.CNN(self.rl_config, initializer, is_training=True)
+                        self.cnn = reinforcementcnn.CNN(self.rl_config, is_training=True)
                         
                 sv_ckpt = tf.train.get_checkpoint_state(self.sv_config.checkpoint_dir) 
                 assert sv_ckpt and sv_ckpt.model_checkpoint_path, "I need at least a supervisedly pre-trained net!"
@@ -284,7 +284,7 @@ class ReinfNet(object):
             else:
                 with tf.name_scope("ReinfLearn"): 
                     with tf.variable_scope("cnnmodel", reuse=None, initializer=initializer):
-                        self.cnn = reinforcementcnn.CNN(self.rl_config, initializer, is_training=True)
+                        self.cnn = reinforcementcnn.CNN(self.rl_config, is_training=True)
                 self.saver = tf.train.Saver(max_to_keep=3)
                 self.saver.restore(self.session, ckpt.model_checkpoint_path)
                 self.containers.reinfNetSteps = self.cnn.global_step.eval(session=self.session)

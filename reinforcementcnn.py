@@ -46,7 +46,7 @@ class RL_Config(object):
 class CNN(object):
     
     ######methods for BUILDING the computation graph######
-    def __init__(self, config, initializer, is_training=True):
+    def __init__(self, config, is_training=True):
         #builds the computation graph, using the next few functions (this is basically the interface)
         self.config = config
         self.iterations = 0

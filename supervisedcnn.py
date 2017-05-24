@@ -65,7 +65,6 @@ class CNN(object):
         #builds the computation graph, using the next few functions (this is basically the interface)
         self.config = config
         self.iterations = 0
-        
         final_neuron_num = self.config.steering_steps*4 if self.config.INCLUDE_ACCPLUSBREAK else self.config.steering_steps*3
     
         self.inputs, self.targets, self.speed_input = self.set_placeholders(is_training, final_neuron_num)
