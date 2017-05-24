@@ -28,15 +28,16 @@ current_milli_time = lambda: int(round(time.time() * 1000))
 
 STANDARDRETURN = ("[0.5,0,0.0]", [0]*42)
 MEMORY_SIZE = 5000
-epsilon = 0.7
-EPSILONDECREASE = 0.005
+epsilon = 0
+EPSILONDECREASE = 0.0025
+minepsilon = 0
 BATCHSIZE = 32
-Q_DECAY = 0.95
+Q_DECAY = 0.8
 repeat_random_action_for = 1000
 last_random_timestamp = 0
 last_random_action = None
 CHECKPOINTALL = 5
-DONT_COPY_WEIGHTS = ["FC1", "FC2"]
+DONT_COPY_WEIGHTS = [] #["FC1", "FC2"]
 
 ACTION_ALL_X_MS = 0
 LAST_ACTION = 0
@@ -116,7 +117,7 @@ class ReinfNet(object):
                     #run ANN
                     if np.random.random() > epsilon:
                         returnstuff, original = self.performNetwork(othervecs, visionvec)
-                        epsilon -= EPSILONDECREASE
+                        epsilon = max(epsilon-EPSILONDECREASE, minepsilon)
                     else:
                         returnstuff, original = self.randomAction()
                         

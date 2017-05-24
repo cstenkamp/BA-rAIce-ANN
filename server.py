@@ -192,10 +192,11 @@ def resetServer(containers, mspersec):
     containers.outputval.reset()
     
     #bei actions, nach denen resettet wurde, soll er den folgestate nicht mehr beachten (später gucken wenn reset=true dann setze Q_DECAY auf quasi 100%)
-    lastmemoryentry = containers.memory.pop() #oldstate, action, reward, newstate
-    if lastmemoryentry is not None:
-        lastmemoryentry[4] = True
-        containers.memory.append(lastmemoryentry)
+    if not containers.play_only:
+        lastmemoryentry = containers.memory.pop() #oldstate, action, reward, newstate
+        if lastmemoryentry is not None:
+            lastmemoryentry[4] = True
+            containers.memory.append(lastmemoryentry)
     
         
     
@@ -222,7 +223,6 @@ class InputValContainer(object):
         
         
     def update(self, visionvec, othervecs, timestamp):
-        
         
         def is_new(visionvec, othervecs):
             if self.config.history_frame_nr == 1:
@@ -565,7 +565,7 @@ def create_socket(port):
 
 
 
-def main(sv_conf, rl_conf, play_only):
+def main(sv_conf, rl_conf, play_only, no_learn):
     containers = Containers(play_only)
     containers.inputval = InputValContainer(sv_conf)
     containers.inputval.containers = containers #lol.    
@@ -600,7 +600,7 @@ def main(sv_conf, rl_conf, play_only):
     SenderConnecterThread.start()
 
     #THREAD 3 (learning)
-    if not play_only:
+    if not play_only and not no_learn:
         learnthread = threading.Thread(target=containers.ANNs[0].dauerLearnANN)
         learnthread.start()
         
@@ -618,7 +618,7 @@ def main(sv_conf, rl_conf, play_only):
         senderthread.delete_me() 
     ReceiverConnecterThread.join() #takes max. 1 second until socket timeouts
     SenderConnecterThread.join()
-    if not play_only:
+    if not play_only and not no_learn:
         learnthread.join()
     time.sleep(0.1)
     print("Server shut down sucessfully.")
@@ -627,5 +627,5 @@ def main(sv_conf, rl_conf, play_only):
 if __name__ == '__main__':  
     sv_conf = supervisedcnn.Config() #TODO: lass dir die infos instead von unity schicken.
     rl_conf = reinforcementcnn.RL_Config()
-    main(sv_conf, rl_conf, ("-playonly" in sys.argv))
+    main(sv_conf, rl_conf, ("-playonly" in sys.argv), ("-nolearn" in sys.argv))
     

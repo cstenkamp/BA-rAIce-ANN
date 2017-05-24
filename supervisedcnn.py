@@ -23,7 +23,7 @@ class Config(object):
     
     history_frame_nr = 1 #incl. dem jetzigem!
     speed_neurons = 10 #wenn null nutzt er sie nicht
-    SPEED_AS_ONEHOT = False
+    SPEED_AS_ONEHOT = True
     steering_steps = 7
     INCLUDE_ACCPLUSBREAK = False
     
