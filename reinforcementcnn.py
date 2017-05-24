@@ -222,7 +222,7 @@ class CNN(object):
                 print("OHHH THIS SHOULD NOT HAPPEN")
                 print(speed_disc)
                 raise
-            return True, session.run(self.argmaxs, feed_dict=feed_dict)
+            return True, session.run([self.argmaxs, self.q], feed_dict=feed_dict)
 #
 #            
 #       

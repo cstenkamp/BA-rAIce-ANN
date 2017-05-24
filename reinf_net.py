@@ -30,14 +30,14 @@ STANDARDRETURN = ("[0.5,0,0.0]", [0]*42)
 MEMORY_SIZE = 5000
 epsilon = 0.7
 EPSILONDECREASE = 0.005
-BATCHSIZE = 32
+BATCHSIZE = 5
 Q_DECAY = 0.95
 repeat_random_action_for = 1000
 last_random_timestamp = 0
 last_random_action = None
 CHECKPOINTALL = 5
 DONT_COPY_WEIGHTS = ["FC1", "FC2"]
-ACTION_ALL_X_MS = 3000
+ACTION_ALL_X_MS = 4000
 LAST_ACTION = 0
 
 
@@ -101,7 +101,7 @@ class ReinfNet(object):
                     if oldstate is not None:
                         newstate = (visionvec, othervecs[1][4])
                         reward = self.calculateReward()
-                        self.containers.memory.append([oldstate, action, reward, newstate]) 
+                        self.containers.memory.append([oldstate, action, reward, newstate, False]) 
                         print(self.dediscretize(action), reward, level=6)
                         self.resetUnity()
                         LAST_ACTION -= ACTION_ALL_X_MS
@@ -148,7 +148,7 @@ class ReinfNet(object):
             samples = np.random.permutation(len(mem))[:BATCHSIZE]
 
             batch = [mem[i] for i in samples]
-            oldstates, actions, rewards, newstates = zip(*batch)                        
+            oldstates, actions, rewards, newstates, resetafters = zip(*batch)                        
             
             argmactions = [np.argmax(i) for i in actions]
             
@@ -157,9 +157,8 @@ class ReinfNet(object):
             
             qs = self.session.run(self.cnn.q, feed_dict = prepare_feed_dict(oldstates))
             max_qs = self.session.run(self.cnn.q_max, feed_dict=prepare_feed_dict(newstates))
-            
-                                    
-            qs[np.arange(BATCHSIZE), argmactions] = rewards + Q_DECAY * max_qs 
+                                         
+            qs[np.arange(BATCHSIZE), argmactions] = rewards + Q_DECAY * max_qs * (not resetafters) #wenn anschließend resettet wurde war es bspw ein wallhit und damit quasi ein final state
 
 
             self.session.run(self.cnn.rl_train_op, feed_dict={
@@ -189,8 +188,11 @@ class ReinfNet(object):
         progress = round(progress_new-progress_old,3)
         
         stay_on_street = abs(self.containers.inputval.othervecs[3][0])
-        stay_on_street = round(0 if stay_on_street < 5 else 100 if stay_on_street > 10 else stay_on_street-5, 3)
-                
+        #wenn er >= 10 war und seitdem keine neue action kam, muss er >= 10 bleiben!
+        
+        stay_on_street = round(0 if stay_on_street < 5 else 50 if stay_on_street >= 10 else stay_on_street-5, 3)
+        
+        
         return progress-stay_on_street
 
         
@@ -199,10 +201,11 @@ class ReinfNet(object):
 
     def performNetwork(self, othervecs, visionvec):
         print("Another ANN Inference", level=6)
-        check, networkresult = self.cnn.run_inference(self.session, visionvec, othervecs, self.sv_config.history_frame_nr)
+        check, (networkresult,qvals) = self.cnn.run_inference(self.session, visionvec, othervecs, self.sv_config.history_frame_nr)
         if check:
             throttle, brake, steer = read_supervised.dediscretize_all(networkresult[0], self.containers.rl_conf.steering_steps, self.containers.rl_conf.INCLUDE_ACCPLUSBREAK)
             result = "["+str(throttle)+", "+str(brake)+", "+str(steer)+"]"
+            print(qvals, level=6)
             return result, networkresult[0]
         else:
             return STANDARDRETURN

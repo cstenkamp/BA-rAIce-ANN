@@ -191,6 +191,12 @@ def resetServer(containers, mspersec):
     containers.inputval.reset(mspersec)
     containers.outputval.reset()
     
+    #bei actions, nach denen resettet wurde, soll er den folgestate nicht mehr beachten (später gucken wenn reset=true dann setze Q_DECAY auf quasi 100%)
+    lastmemoryentry = containers.memory.pop() #oldstate, action, reward, newstate
+    if lastmemoryentry is not None:
+        lastmemoryentry[4] = True
+        containers.memory.append(lastmemoryentry)
+    
         
     
         
@@ -212,6 +218,7 @@ class InputValContainer(object):
         self.previous_vvechist = None
         self.previous_othervecs = None
         self.msperframe = config.msperframe
+        self.hit_a_wall = False
         
         
     def update(self, visionvec, othervecs, timestamp):
@@ -232,21 +239,29 @@ class InputValContainer(object):
         self.lock.acquire()
         try:
             logging.debug('Acquired lock')
-            if is_new(visionvec, othervecs):#
+            if is_new(visionvec, othervecs):
             
                 self.visionvec = visionvec
                 if self.config.history_frame_nr > 1:
                     self.vvec_hist = [visionvec] + [i for i in self.vvec_hist[:-1]]            
                 self.othervecs = othervecs
+                
+                #wenn othervecs[3][0] >= 10 war und seitdem keine neue action kam, muss er >= 10 bleiben!
+                if othervecs[3][0] >= 10:
+                    self.hit_a_wall = True 
+                if self.hit_a_wall:
+                    self.othervecs[3][0] = 10
+                              
                 self.alreadyread = False
                 self.timestamp = timestamp
-                print("Updated Input-Vec at", timestamp)
+                print("Updated Input-Vec at", timestamp, level=2)
             else:
-                print("No Input-Vec upgrading needed at", timestamp)
+                print("No Input-Vec upgrading needed at", timestamp, level=2)
         finally:
             self.lock.release()
             
     def addResultAndBackup(self, action):
+        self.hit_a_wall = False #sobald ne action danach kommt ist es unrelated #TODO: gilt nur wenn walhit_means_reset
         self.previous_action = action
         self.previous_othervecs = self.othervecs
         if self.config.history_frame_nr > 1:
@@ -371,6 +386,12 @@ class Memory(object):
     
     def append(self, obj):
         self.memory.append(obj)
+        
+    def pop(self):
+        try:
+            return self.memory.pop()        
+        except:
+            return None
 #        self.lock.acquire()
 #        try:
 #            self.memory.append(obj)
@@ -421,7 +442,7 @@ class sender_thread(threading.Thread):
         
     def send(self, result, timestamp):
         tosend = str(result) + "Time(" +str(timestamp)+")"
-        print("Sending", tosend)
+        print("Sending", tosend, level=3)
         self.clientsocket.mysend(tosend)
 
 
