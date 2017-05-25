@@ -16,7 +16,7 @@ import threading
 import tensorflow as tf
 
 #====own classes====
-import supervisedcnn 
+import cnn
 import read_supervised
 from myprint import myprint as print
 
@@ -69,7 +69,7 @@ class PlayNet(object):
 
     def performNetwork(self, othervecs, visionvec):
         print("Another ANN Inference")
-        check, networkresult = self.cnn.run_inference(self.session, visionvec, othervecs, self.config.history_frame_nr)
+        check, (networkresult, _) = self.cnn.run_inference(self.session, visionvec, othervecs, self.config.history_frame_nr)
         if check:
             throttle, brake, steer = read_supervised.dediscretize_all(networkresult[0], self.config.steering_steps, self.config.INCLUDE_ACCPLUSBREAK)
             result = "["+str(throttle)+", "+str(brake)+", "+str(steer)+"]"
@@ -85,7 +85,7 @@ class PlayNet(object):
                                                  
             with tf.name_scope("runAsServ"):
                 with tf.variable_scope("cnnmodel", reuse=None, initializer=initializer): 
-                    self.cnn = supervisedcnn.CNN(self.config, is_training=False)
+                    self.cnn = cnn.CNN(self.config, is_reinforcement = False, is_training=False)
             
             self.saver = tf.train.Saver(self.cnn.trainvars)
             self.session = tf.Session()

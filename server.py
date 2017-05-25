@@ -9,10 +9,9 @@ import sys
 from collections import deque
 
 #====own classes====
-import supervisedcnn 
-from playnet import PlayNet
+import playnet
 import reinf_net
-import reinforcementcnn
+import cnn
 from myprint import myprint as print
 
 logging.basicConfig(level=logging.ERROR, format='(%(threadName)-10s) %(message)s',)
@@ -578,7 +577,7 @@ def main(sv_conf, rl_conf, play_only, no_learn):
     containers.senderportsocket = create_socket(TCP_SENDER_PORT)
     
     if play_only:
-        NeuralNet = PlayNet
+        NeuralNet = playnet.PlayNet
     else:
         NeuralNet = reinf_net.ReinfNet
         containers.memory = Memory([], reinf_net.MEMORY_SIZE)
@@ -625,7 +624,7 @@ def main(sv_conf, rl_conf, play_only, no_learn):
     
 
 if __name__ == '__main__':  
-    sv_conf = supervisedcnn.Config() #TODO: lass dir die infos instead von unity schicken.
-    rl_conf = reinforcementcnn.RL_Config()
+    sv_conf = cnn.Config() #TODO: lass dir die infos instead von unity schicken.
+    rl_conf = cnn.RL_Config()
     main(sv_conf, rl_conf, ("-playonly" in sys.argv), ("-nolearn" in sys.argv))
     

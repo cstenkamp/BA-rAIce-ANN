@@ -18,8 +18,7 @@ import tensorflow as tf
 import time
 import os
 #====own classes====
-import supervisedcnn 
-import reinforcementcnn
+import cnn
 import read_supervised
 from myprint import myprint as print
 import server
@@ -143,7 +142,7 @@ class ReinfNet(object):
         def prepare_feed_dict(states):
             feed_dict = {
               self.cnn.inputs: np.array([state[0] for state in states]),
-              self.cnn.speed_input: np.array([read_supervised.inflate_speed(state[1], supervisedcnn.Config().speed_neurons, supervisedcnn.Config().SPEED_AS_ONEHOT) for state in states])
+              self.cnn.speed_input: np.array([read_supervised.inflate_speed(state[1], self.rl_config.speed_neurons, self.rl_config.SPEED_AS_ONEHOT) for state in states])
             }
             return feed_dict
             
@@ -169,7 +168,7 @@ class ReinfNet(object):
 
             self.session.run(self.cnn.rl_train_op, feed_dict={
                 self.cnn.inputs: np.array([curr[0] for curr in oldstates]),
-                self.cnn.speed_input: np.array([read_supervised.inflate_speed(curr[1], supervisedcnn.Config().speed_neurons, supervisedcnn.Config().SPEED_AS_ONEHOT) for curr in oldstates]),
+                self.cnn.speed_input: np.array([read_supervised.inflate_speed(curr[1], self.rl_config.speed_neurons, self.rl_config.SPEED_AS_ONEHOT) for curr in oldstates]),
                 self.cnn.q_targets: qs,
             })
             
@@ -207,7 +206,7 @@ class ReinfNet(object):
 
     def performNetwork(self, othervecs, visionvec):
         print("Another ANN Inference", level=6)
-        check, (networkresult,qvals) = self.cnn.run_inference(self.session, visionvec, othervecs, self.sv_config.history_frame_nr)
+        check, (networkresult, qvals) = self.cnn.run_inference(self.session, visionvec, othervecs, self.sv_config.history_frame_nr)
         if check:
             throttle, brake, steer = read_supervised.dediscretize_all(networkresult[0], self.containers.rl_conf.steering_steps, self.containers.rl_conf.INCLUDE_ACCPLUSBREAK)
             result = "["+str(throttle)+", "+str(brake)+", "+str(steer)+"]"
@@ -259,7 +258,7 @@ class ReinfNet(object):
             if not (ckpt and ckpt.model_checkpoint_path):
                 
 
-                pretrainvars = supervisedcnn.CNN(self.sv_config, is_training=True).trainvars
+                pretrainvars = cnn.CNN(self.sv_config, is_reinforcement=False, is_training=True).trainvars
                 topop = []
                 for key, _ in pretrainvars.items():
                     for curr in DONT_COPY_WEIGHTS:
@@ -272,7 +271,7 @@ class ReinfNet(object):
                 self.pretrainsaver = tf.train.Saver(pretrainvars)
                 with tf.name_scope("ReinfLearn"): 
                     with tf.variable_scope("cnnmodel", reuse=None, initializer=initializer):
-                        self.cnn = reinforcementcnn.CNN(self.rl_config, is_training=True)
+                        self.cnn = cnn.CNN(self.rl_config, is_reinforcement=True, is_training=True)
                         
                 sv_ckpt = tf.train.get_checkpoint_state(self.sv_config.checkpoint_dir) 
                 assert sv_ckpt and sv_ckpt.model_checkpoint_path, "I need at least a supervisedly pre-trained net!"
@@ -284,7 +283,7 @@ class ReinfNet(object):
             else:
                 with tf.name_scope("ReinfLearn"): 
                     with tf.variable_scope("cnnmodel", reuse=None, initializer=initializer):
-                        self.cnn = reinforcementcnn.CNN(self.rl_config, is_training=True)
+                        self.cnn = cnn.CNN(self.rl_config, is_reinforcement=True, is_training=True)
                 self.saver = tf.train.Saver(max_to_keep=3)
                 self.saver.restore(self.session, ckpt.model_checkpoint_path)
                 self.containers.reinfNetSteps = self.cnn.global_step.eval(session=self.session)
