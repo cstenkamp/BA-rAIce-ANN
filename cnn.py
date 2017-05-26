@@ -191,10 +191,21 @@ class CNN(object):
         if self.config.speed_neurons:
             h_fc1 = tf.concat([h_fc1, spinputs], 1)   #its lengths is now in any case 1024+speed_neurons
         q = fc_layer(h_fc1, final_neuron_num*20+self.config.speed_neurons, final_neuron_num, "FC2", None, do_dropout=False) 
+        
+        if tf.reduce_sum(spinputs) == 0: #wenn du stehst, brauchste dich nicht mehr für die ohne gas zu interessieren
+            if self.config.INCLUDE_ACCPLUSBREAK: #dann nimmste nur das argmax von den mittleren neurons
+                q = tf.slice(q,tf.shape(q)//3,tf.shape(q)//3)
+                q = tf.concat([tf.zeros(tf.shape(q)), q, tf.zeros(tf.shape(q))], axis=0)
+            else:
+                q = tf.slice(q,tf.shape(q)//2,(tf.shape(q)//4)*3)
+                q = tf.concat([tf.zeros(tf.shape(q)*2), q, tf.zeros(tf.shape(q))], axis=0)
+                
+            
         q_max = tf.reduce_max(q, axis=1)
         action = tf.argmax(q, axis=1) #Todo: kann gut sein dass ich action nicht brauche wenn ich argm hab
         y_conv = tf.nn.softmax(q)
         argm = tf.one_hot(tf.argmax(y_conv, dimension=1), depth=final_neuron_num)
+        
         return q, argm, q_max, action
     
     

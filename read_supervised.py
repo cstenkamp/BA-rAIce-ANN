@@ -89,7 +89,7 @@ def dediscretize_steer(discrete):
     if type(discrete).__module__ == np.__name__:
         discrete = discrete.tolist()
     try:
-        result = -1+(2/len(discrete))*(discrete.index(1)+0.5)
+        result = round(-1+(2/len(discrete))*(discrete.index(1)+0.5), 3)
     except ValueError:
         result = 0
     return result
@@ -261,12 +261,15 @@ class TPList(object):
 
 
 def inflate_speed(speed, numberneurons, asonehot):
+    speed = max(0,speed)
     result = [0]*numberneurons
+    if speed < 1:
+        return result
+    maxone = min(max(0,round((min([speed,MAXSPEED])/MAXSPEED)*numberneurons)), numberneurons-1)
     if asonehot:
-        result[round((min([speed,MAXSPEED])/MAXSPEED)*numberneurons)] = 1
+        result[maxone] = 1
     else:
-        maxone = round((min([speed,MAXSPEED])/MAXSPEED)*numberneurons)
-        for i in range(maxone):
+        for i in range(maxone+1):
             result[i] = 1
         
     return result

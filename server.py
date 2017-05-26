@@ -13,6 +13,7 @@ import playnet
 import reinf_net
 import cnn
 from myprint import myprint as print
+import infoscreen
 
 logging.basicConfig(level=logging.ERROR, format='(%(threadName)-10s) %(message)s',)
 
@@ -560,11 +561,9 @@ def create_socket(port):
     server_socket.listen(1)
     return server_socket
 
-    
 
 
-
-def main(sv_conf, rl_conf, play_only, no_learn):
+def main(sv_conf, rl_conf, play_only, no_learn, show_screen):
     containers = Containers(play_only)
     containers.inputval = InputValContainer(sv_conf)
     containers.inputval.containers = containers #lol.    
@@ -575,6 +574,9 @@ def main(sv_conf, rl_conf, play_only, no_learn):
     
     containers.receiverportsocket = create_socket(TCP_RECEIVER_PORT)
     containers.senderportsocket = create_socket(TCP_SENDER_PORT)
+    
+    if show_screen:
+        screenroot = infoscreen.showScreen(containers)
     
     if play_only:
         NeuralNet = playnet.PlayNet
@@ -602,12 +604,14 @@ def main(sv_conf, rl_conf, play_only, no_learn):
     if not play_only and not no_learn:
         learnthread = threading.Thread(target=containers.ANNs[0].dauerLearnANN)
         learnthread.start()
-        
     
-    
-    try:        
-        while True:
-            None
+   
+    try:      
+        if show_screen:
+            screenroot.mainloop()            
+        else:
+            while True:
+                pass
     except KeyboardInterrupt:
         pass
     
@@ -622,9 +626,16 @@ def main(sv_conf, rl_conf, play_only, no_learn):
     time.sleep(0.1)
     print("Server shut down sucessfully.")
     
+    
 
+
+    
 if __name__ == '__main__':  
     sv_conf = cnn.Config() #TODO: lass dir die infos instead von unity schicken.
     rl_conf = cnn.RL_Config()
-    main(sv_conf, rl_conf, ("-playonly" in sys.argv), ("-nolearn" in sys.argv))
     
+    if "-nolearn" in sys.argv:
+        reinf_net.minepsilon = 0
+        reinf_net.epsilon = 0
+                
+    main(sv_conf, rl_conf, ("-playonly" in sys.argv), ("-nolearn" in sys.argv), not ("-noscreen" in sys.argv))    

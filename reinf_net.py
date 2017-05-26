@@ -17,30 +17,32 @@ import numpy as np
 import tensorflow as tf
 import time
 import os
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 #====own classes====
 import cnn
 import read_supervised
 from myprint import myprint as print
 import server
+import infoscreen
 
 current_milli_time = lambda: int(round(time.time() * 1000))
 
 STANDARDRETURN = ("[0.5,0,0.0]", [0]*42)
 MEMORY_SIZE = 5000
-epsilon = 0
+epsilon = 0.6
 EPSILONDECREASE = 0.0025
-minepsilon = 0
+minepsilon = 0.1
 BATCHSIZE = 32
-Q_DECAY = 0.8
+Q_DECAY = 0.5 #TODO höher
 repeat_random_action_for = 1000
 last_random_timestamp = 0
 last_random_action = None
-CHECKPOINTALL = 5
-DONT_COPY_WEIGHTS = [] #["FC1", "FC2"]
+CHECKPOINTALL = 100
+DONT_COPY_WEIGHTS = ["FC2"] #["FC1", "FC2"]
 
-ACTION_ALL_X_MS = 0
+ACTION_ALL_X_MS = 3000
 LAST_ACTION = 0
-ONLY_START = False
+ONLY_START = True
 
 
 class ReinfNet(object):
@@ -106,6 +108,12 @@ class ReinfNet(object):
                         reward = self.calculateReward()
                         self.containers.memory.append([oldstate, action, reward, newstate, False]) 
                         print(self.dediscretize(action), reward, level=6)
+                        print(len(self.containers.memory.memory),level=6)
+                        
+                        if self.containers.showscreen:
+                            infoscreen.print(self.dediscretize(action), reward, containers= self.containers, wname="Last memory")
+                            infoscreen.print(str(len(self.containers.memory.memory)), containers= self.containers, wname="Memorysize")
+                        
                         #deletethispart
                         if ONLY_START:
                             self.resetUnity()
@@ -118,9 +126,11 @@ class ReinfNet(object):
                         returnstuff, original = self.performNetwork(othervecs, visionvec)
                         epsilon = max(epsilon-EPSILONDECREASE, minepsilon)
                     else:
-                        returnstuff, original = self.randomAction()
-                        
-                    
+                        returnstuff, original = self.randomAction(othervecs[1][4])
+
+                    if self.containers.showscreen:
+                        infoscreen.print(returnstuff, containers= self.containers, wname="Last command")
+
                     self.containers.inputval.addResultAndBackup(original) 
                     self.containers.outputval.update(returnstuff, self.containers.inputval.timestamp)  
     
@@ -158,7 +168,7 @@ class ReinfNet(object):
             argmactions = [np.argmax(i) for i in actions]
             
             actualActions = [read_supervised.dediscretize_all(i, self.rl_config.steering_steps, self.rl_config.INCLUDE_ACCPLUSBREAK) for i in actions]
-            print(dict(zip(rewards,actualActions)), level=6)
+            print(dict(zip(rewards,actualActions)), level=4)
             
             qs = self.session.run(self.cnn.q, feed_dict = prepare_feed_dict(oldstates))
             max_qs = self.session.run(self.cnn.q_max, feed_dict=prepare_feed_dict(newstates))
@@ -166,10 +176,10 @@ class ReinfNet(object):
             qs[np.arange(BATCHSIZE), argmactions] = rewards + Q_DECAY * max_qs * (not resetafters) #wenn anschließend resettet wurde war es bspw ein wallhit und damit quasi ein final state
 
 
-            self.session.run(self.cnn.rl_train_op, feed_dict={
+            self.session.run(self.cnn.train_op, feed_dict={
                 self.cnn.inputs: np.array([curr[0] for curr in oldstates]),
                 self.cnn.speed_input: np.array([read_supervised.inflate_speed(curr[1], self.rl_config.speed_neurons, self.rl_config.SPEED_AS_ONEHOT) for curr in oldstates]),
-                self.cnn.q_targets: qs,
+                self.cnn.targets: qs,
             })
             
             self.containers.reinfNetSteps += 1
@@ -190,12 +200,12 @@ class ReinfNet(object):
         progress_new = self.containers.inputval.othervecs[0][0]
         if progress_old > 90 and progress_new < 10:
             progress_new += 100
-        progress = round(progress_new-progress_old,3)
+        progress = round(progress_new-progress_old,3)*50
         
         stay_on_street = abs(self.containers.inputval.othervecs[3][0])
         #wenn er >= 10 war und seitdem keine neue action kam, muss er >= 10 bleiben!
         
-        stay_on_street = round(0 if stay_on_street < 5 else 50 if stay_on_street >= 10 else stay_on_street-5, 3)
+        stay_on_street = round(0 if stay_on_street < 5 else 20 if stay_on_street >= 10 else stay_on_street-5, 3)
         
         
         return progress-stay_on_street
@@ -210,23 +220,42 @@ class ReinfNet(object):
         if check:
             throttle, brake, steer = read_supervised.dediscretize_all(networkresult[0], self.containers.rl_conf.steering_steps, self.containers.rl_conf.INCLUDE_ACCPLUSBREAK)
             result = "["+str(throttle)+", "+str(brake)+", "+str(steer)+"]"
-            print(qvals, level=6)
+            self.showqvals(qvals[0])
             return result, networkresult[0]
         else:
             return STANDARDRETURN
 
+    def showqvals(self, qvals):
+        amount = self.rl_config.steering_steps*4 if self.rl_config.INCLUDE_ACCPLUSBREAK else self.rl_config.steering_steps*3
+        b = []
+        for i in range(amount):
+            a = [0]*amount
+            a[i] = 1
+            b.append(str(self.dediscretize(a)))
+        b = list(zip(b, qvals))
+        toprint = [str(i[0])[1:-1]+": "+str(i[1]) for i in b]
+        toprint = "\n".join(toprint)
+        
+        print(b, level=6)
+        if self.containers.showscreen:
+            infoscreen.print(toprint, containers= self.containers, wname="Current Q Vals")
+        
             
-    def randomAction(self):
+    def randomAction(self, speed):
         global last_random_timestamp, last_random_action
         print("Random Action!", level=6)
         if current_milli_time() - last_random_timestamp > repeat_random_action_for:
             
+            
             action = np.random.randint(4) if self.rl_config.INCLUDE_ACCPLUSBREAK else np.random.randint(3)
-            if action == 0: brake, throttle = 1, 0
-            if action == 1: brake, throttle = 0, 1
-            if action == 2: brake, throttle = 0, 0
+            if action == 0: brake, throttle = 0, 1
+            if action == 1: brake, throttle = 0, 0
+            if action == 2: brake, throttle = 1, 0
             if action == 3: brake, throttle = 1, 1
-                   
+            
+            if speed < 1:
+                brake, throttle = 0, 1  #wenn er nicht fährt bringt stehen nix!
+            
             #alternative 1a: steer = ((np.random.random()*2)-1)
             #alternative 1b: steer = min(max(np.random.normal(scale=0.5), 1), -1)
             #für 1a und 1b:  steer = read_supervised.dediscretize_steer(read_supervised.discretize_steering(steer, self.rl_config.steering_steps))
@@ -257,29 +286,30 @@ class ReinfNet(object):
             
             if not (ckpt and ckpt.model_checkpoint_path):
                 
-
-                pretrainvars = cnn.CNN(self.sv_config, is_reinforcement=False, is_training=True).trainvars
-                topop = []
-                for key, _ in pretrainvars.items():
-                    for curr in DONT_COPY_WEIGHTS:
-                        if curr in key:
-                            topop.append(key)
-                for i in topop:
-                    pretrainvars.pop(i)
-                print(pretrainvars.keys())
-                    
-                self.pretrainsaver = tf.train.Saver(pretrainvars)
+                cnn.CNN(self.rl_config, is_reinforcement=False, is_training=True)
+                varlist = dict(zip([v.name for v in tf.trainable_variables()], tf.trainable_variables()))
+                varlist = list(eraseneccessary(varlist, DONT_COPY_WEIGHTS).keys())
+                print(varlist)
+                
                 with tf.name_scope("ReinfLearn"): 
                     with tf.variable_scope("cnnmodel", reuse=None, initializer=initializer):
-                        self.cnn = cnn.CNN(self.rl_config, is_reinforcement=True, is_training=True)
+                        self.cnn = cnn.CNN(self.rl_config, is_reinforcement=True, is_training=True)                
                         
+                restorevars = {}
+                for i in tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope='cnnmodel'):
+                    for j in varlist:
+                        if j in i.name:
+                            restorevars[i.name.replace("cnnmodel/","").replace(":0","")] = i
+                
+                init = tf.global_variables_initializer()
+                self.session.run(init)        
+                self.pretrainsaver = tf.train.Saver(restorevars)
                 sv_ckpt = tf.train.get_checkpoint_state(self.sv_config.checkpoint_dir) 
                 assert sv_ckpt and sv_ckpt.model_checkpoint_path, "I need at least a supervisedly pre-trained net!"
                 self.pretrainsaver.restore(self.session, sv_ckpt.model_checkpoint_path)
-                
-                init = tf.global_variables_initializer()
-                self.session.run(init)
+
                 self.saver = tf.train.Saver(max_to_keep=3)
+                
             else:
                 with tf.name_scope("ReinfLearn"): 
                     with tf.variable_scope("cnnmodel", reuse=None, initializer=initializer):
@@ -291,3 +321,24 @@ class ReinfNet(object):
             
             print("network %s initialized with %i iterations already run." %(str(self.number+1), self.containers.reinfNetSteps))
             self.isinitialized = True
+            
+            
+
+def eraseneccessary(fromwhat, erasewhat):
+    topop = []
+    for key, _ in fromwhat.items():
+        for curr in erasewhat:
+            if curr in key:
+                topop.append(key)
+    for i in topop:
+        fromwhat.pop(i)
+    return fromwhat  
+
+
+def print_trainables(session):
+    variables_names = [v.name for v in tf.trainable_variables()]
+    values = session.run(variables_names)
+    for k, v in zip(variables_names, values):
+        print("Variable: ", k)
+        print("Shape: ", v.shape)
+        #print(v)

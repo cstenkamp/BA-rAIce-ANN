@@ -87,6 +87,8 @@ class PlayNet(object):
                 with tf.variable_scope("cnnmodel", reuse=None, initializer=initializer): 
                     self.cnn = cnn.CNN(self.config, is_reinforcement = False, is_training=False)
             
+            print(self.cnn.trainvars)
+            
             self.saver = tf.train.Saver(self.cnn.trainvars)
             self.session = tf.Session()
             ckpt = tf.train.get_checkpoint_state(self.config.checkpoint_dir) 

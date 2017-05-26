@@ -18,31 +18,33 @@ class FFNN(object):
         #erzeugt die leeren (dimension=none, für inference!!!) placeholder für input und ggf. output...
         #kriegt auch info darüber was er speichern soll???
         
-        self.targets = tf.placeholder(tf.float32, shape=[None,3], name="targets")    
+        self.targets = tf.placeholder(tf.float32, shape=[6], name="targets")    
         
         self.targets2 = tf.placeholder(tf.float32, shape=[None,3], name="targets2")    
         
-        self.targets = tf.cast(self.targets, tf.bool)
-        self.targets2 = tf.cast(self.targets2, tf.bool)
-        
-        correct = tf.equal(self.targets, self.targets2)
-        self.compare = tf.reduce_all(correct,axis=1)
-        
-        
-        self.compare = tf.cast(self.compare, tf.float32) #gucke wo das hier gleich der lenght ist
-        self.compare = tf.reduce_mean(self.compare)
-                              
+#        self.targets = tf.cast(self.targets, tf.bool)
+#        self.targets2 = tf.cast(self.targets2, tf.bool)
+#        
+#        correct = tf.equal(self.targets, self.targets2)
+#        self.compare = tf.reduce_all(correct,axis=1)
+#        
+#        
+#        self.compare = tf.cast(self.compare, tf.float32) #gucke wo das hier gleich der lenght ist
+#        self.compare = tf.reduce_mean(self.compare)
+#                              
         #self.compare = tf.shape(self.compare)[1]
         #self.compare = tf.reduce_sum(self.compare, axis=1)
         
+        self.compare = tf.slice(self.targets,tf.shape(self.targets)//3,tf.shape(self.targets)//3)
+        self.compare = tf.concat([tf.zeros(tf.shape(self.compare)), self.compare, tf.zeros(tf.shape(self.compare))], axis=0)
 
 
     def run_train_epoch(self, session):
         for i in range(1):
-            feed_dict = {self.targets: [[0,0,1],[0,1,0],[0,0,0]], self.targets2: [[0,0,0],[0,1,0],[0,0,0]]}
+            feed_dict = {self.targets: [2,2,1,1,2,2], self.targets2: [[0,0,0],[0,1,0],[0,0,0]]}
             t1, t2, compare = session.run([self.targets, self.targets2, self.compare], feed_dict=feed_dict)   
             print(t1,"\n")
-            print(t2,"\n")
+#            print(t2,"\n")
             print(compare)
             
             
