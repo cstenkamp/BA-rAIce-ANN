@@ -36,7 +36,7 @@ class FFNN(object):
         #self.compare = tf.reduce_sum(self.compare, axis=1)
         
         self.compare = tf.slice(self.targets,tf.shape(self.targets)//3,tf.shape(self.targets)//3)
-        self.compare = tf.concat([tf.zeros(tf.shape(self.compare)), self.compare, tf.zeros(tf.shape(self.compare))], axis=0)
+        self.compare = tf.concat([tf.multiply(tf.ones(tf.shape(self.compare)),-50), self.compare, tf.ones(tf.shape(self.compare))], axis=0)
 
 
     def run_train_epoch(self, session):

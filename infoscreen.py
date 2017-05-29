@@ -43,9 +43,11 @@ def showScreen(containers):
     memorysize.pack(fill=X)
     lastmemory = ThreadSafeConsole(root, width=1, height=1)
     lastmemory.pack(fill=X)
+    epsilon = ThreadSafeConsole(root, width=1, height=1)
+    epsilon.pack(fill=X)
     currentqvals = ThreadSafeConsole(root, width=50, height=22)
     currentqvals.pack(fill=X)
 
     containers.showscreen = True
-    containers.screenwidgets = {"Memorysize": memorysize, "Last command": lastcommand, "Last memory": lastmemory, "Current Q Vals": currentqvals}
+    containers.screenwidgets = {"Epsilon": epsilon, "Memorysize": memorysize, "Last command": lastcommand, "Last memory": lastmemory, "Current Q Vals": currentqvals}
     return root
