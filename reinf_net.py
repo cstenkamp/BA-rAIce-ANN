@@ -33,12 +33,12 @@ epsilon = 0.1
 EPSILONDECREASE = 0.00005
 minepsilon = 0.005
 BATCHSIZE = 32
-Q_DECAY = 0.8
+Q_DECAY = 0.99
 repeat_random_action_for = 1000
 last_random_timestamp = 0
 last_random_action = None
 CHECKPOINTALL = 100
-DONT_COPY_WEIGHTS = ["FC2"] #["FC1", "FC2"]
+DONT_COPY_WEIGHTS = [] #["FC1", "FC2"]
 
 ACTION_ALL_X_MS = 0
 LAST_ACTION = 0

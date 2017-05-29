@@ -22,12 +22,12 @@ class Config(object):
     checkpoint_pre_dir = "Checkpoint"
     
     history_frame_nr = 1 #incl. dem jetzigem!
-    speed_neurons = 10 #wenn null nutzt er sie nicht
-    SPEED_AS_ONEHOT = True
+    speed_neurons = 30 #wenn null nutzt er sie nicht
+    SPEED_AS_ONEHOT = False
     steering_steps = 7
     INCLUDE_ACCPLUSBREAK = False
     
-    image_dims = [30,42]
+    image_dims = [30,45] 
     vector_len = 61
     msperframe = 200 #50   #ACHTUNG!!! Dieser wert wird von unity überschrieben!!!!! #TODO: dass soll mit unity abgeglichen werden!
     
@@ -184,10 +184,10 @@ class CNN(object):
         rs_input = tf.reshape(inputs, [-1, self.config.image_dims[0], self.config.image_dims[1],self.config.history_frame_nr]) #final dimension = number of color channels
                              
         self.keep_prob = tf.Variable(tf.constant(1.0), trainable=False) #wenn nicht gefeedet ist sie standardmäßig 1        
-        h1 = convolutional_layer(rs_input, self.config.history_frame_nr, 32, "Conv1", tf.nn.relu, is_trainable = (not self.is_reinforcement)) #reduces to 15*21
-        h2 = convolutional_layer(h1, 32, 64, "Conv2", tf.nn.relu, is_trainable = (not self.is_reinforcement))      #reduces to 8*11
-        h_pool_flat =  tf.reshape(h2, [-1, 8*11*64])         
-        h_fc1 = fc_layer(h_pool_flat, 8*11*64, final_neuron_num*20, "FC1", tf.nn.relu, do_dropout=for_training)                 
+        h1 = convolutional_layer(rs_input, self.config.history_frame_nr, 32, "Conv1", tf.nn.relu, is_trainable = (not self.is_reinforcement)) #reduces to x//2*y//2
+        h2 = convolutional_layer(h1, 32, 64, "Conv2", tf.nn.relu, is_trainable = (not self.is_reinforcement))      #reduces to x//4*y//4
+        h_pool_flat =  tf.reshape(h2, [-1, math.ceil(self.config.image_dims[0]/4)*math.ceil(self.config.image_dims[1]/4)*64])
+        h_fc1 = fc_layer(h_pool_flat, math.ceil(self.config.image_dims[0]/4)*math.ceil(self.config.image_dims[1]/4)*64, final_neuron_num*20, "FC1", tf.nn.relu, do_dropout=for_training)                 
         if self.config.speed_neurons:
             h_fc1 = tf.concat([h_fc1, spinputs], 1)   #its lengths is now in any case 1024+speed_neurons
         q = fc_layer(h_fc1, final_neuron_num*20+self.config.speed_neurons, final_neuron_num, "FC2", None, do_dropout=False) 
