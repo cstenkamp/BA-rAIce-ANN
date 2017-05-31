@@ -58,7 +58,7 @@ class RL_Config(Config):
     
     keep_prob = 1
     max_grad_norm = 10
-    initial_lr = 0.9
+    initial_lr = 0.6
     lr_decay = 0.9
     
     #re-uses history_frame_nr, image_dims, steering_steps, speed_neurons, INCLUDE_ACCPLUSBREAK, SPEED_AS_ONEHOT
@@ -81,7 +81,7 @@ class RL_Config(Config):
 class CNN(object):
     
     ######methods for BUILDING the computation graph######
-    def __init__(self, config, is_reinforcement, is_training=True):
+    def __init__(self, config, is_reinforcement, is_training=True, rl_not_trainables=[]):
         #builds the computation graph, using the next few functions (this is basically the interface)
         self.config = config
         self.is_reinforcement = is_reinforcement
@@ -91,7 +91,7 @@ class CNN(object):
         self.inputs, self.targets, self.speed_input = self.set_placeholders(is_training, final_neuron_num)
         
         if is_training:
-            self.q, self.argmax, self.q_max, self.action = self.inference(self.inputs, self.speed_input, final_neuron_num, True)         
+            self.q, self.argmax, self.q_max, self.action = self.inference(self.inputs, self.speed_input, final_neuron_num, rl_not_trainables, True)         
             if is_reinforcement:
                 self.loss = self.rl_loss_func(self.q, self.targets)
                 self.train_op = self.training(self.loss, config.initial_lr, optimizer_arg = tf.train.RMSPropOptimizer)     
@@ -102,7 +102,7 @@ class CNN(object):
             self.summary = tf.summary.merge_all() #für TensorBoard
         else:
             with tf.device("/cpu:0"): #less overhead by not trying to switch to gpu
-                self.q, self.argmax, self.q_max, self.action = self.inference(self.inputs, self.speed_input, final_neuron_num, False) 
+                self.q, self.argmax, self.q_max, self.action = self.inference(self.inputs, self.speed_input, final_neuron_num, rl_not_trainables, False) 
             
             
     def variable_summary(self, var, what=""):
@@ -135,7 +135,7 @@ class CNN(object):
         return inputs, targets, speeds
     
     
-    def inference(self, inputs, spinputs, final_neuron_num, for_training=False):
+    def inference(self, inputs, spinputs, final_neuron_num, rl_not_trainables, for_training=False):
         self.trainvars = {}
         
         def weight_variable(shape, name, is_trainable=True):
@@ -151,8 +151,9 @@ class CNN(object):
         def max_pool_2x2(x):
           return tf.nn.max_pool(x, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding='SAME')
   
-        def convolutional_layer(input_tensor, input_channels, output_channels, name, act, is_trainable=True):
+        def convolutional_layer(input_tensor, input_channels, output_channels, name, act):
             with tf.name_scope(name):
+                is_trainable = True if not self.is_reinforcement else not (name in rl_not_trainables)
                 if is_trainable:
                     self.trainvars["W_%s" % name] = weight_variable([5, 5, input_channels, output_channels], "W_%s" % name, is_trainable=True)
                     self.variable_summary(self.trainvars["W_%s" % name])
@@ -167,8 +168,9 @@ class CNN(object):
                 tf.summary.histogram("activations", h_pool)
                 return h_pool
         
-        def fc_layer(input_tensor, input_size, output_size, name, act=None, do_dropout=False, is_trainable=True):
+        def fc_layer(input_tensor, input_size, output_size, name, act=None, do_dropout=False):
             with tf.name_scope(name):
+                is_trainable = True if not self.is_reinforcement else not (name in rl_not_trainables)
                 self.trainvars["W_%s" % name] = weight_variable([input_size, output_size], "W_%s" % name, is_trainable=is_trainable)
                 self.variable_summary(self.trainvars["W_%s" % name])
                 self.trainvars["b_%s" % name] = bias_variable([output_size], "b_%s" % name, is_trainable=is_trainable)
@@ -184,8 +186,8 @@ class CNN(object):
         rs_input = tf.reshape(inputs, [-1, self.config.image_dims[0], self.config.image_dims[1],self.config.history_frame_nr]) #final dimension = number of color channels
                              
         self.keep_prob = tf.Variable(tf.constant(1.0), trainable=False) #wenn nicht gefeedet ist sie standardmäßig 1        
-        h1 = convolutional_layer(rs_input, self.config.history_frame_nr, 32, "Conv1", tf.nn.relu, is_trainable = (not self.is_reinforcement)) #reduces to x//2*y//2
-        h2 = convolutional_layer(h1, 32, 64, "Conv2", tf.nn.relu, is_trainable = (not self.is_reinforcement))      #reduces to x//4*y//4
+        h1 = convolutional_layer(rs_input, self.config.history_frame_nr, 32, "Conv1", tf.nn.relu) #reduces to x//2*y//2
+        h2 = convolutional_layer(h1, 32, 64, "Conv2", tf.nn.relu)      #reduces to x//4*y//4
         h_pool_flat =  tf.reshape(h2, [-1, math.ceil(self.config.image_dims[0]/4)*math.ceil(self.config.image_dims[1]/4)*64])
         h_fc1 = fc_layer(h_pool_flat, math.ceil(self.config.image_dims[0]/4)*math.ceil(self.config.image_dims[1]/4)*64, final_neuron_num*20, "FC1", tf.nn.relu, do_dropout=for_training)                 
         if self.config.speed_neurons:
@@ -306,10 +308,10 @@ class CNN(object):
     def run_inference(self, session, visionvec, othervecs, hframes):
         if hframes > 1:
             if not type(visionvec[0]).__module__ == np.__name__:
-                return False, None #dann ist das input-array leer
+                return False, (None, None) #dann ist das input-array leer
         else:
             if not type(visionvec).__module__ == np.__name__:
-                return False, None #dann ist das input-array leer
+                return False, (None, None) #dann ist das input-array leer
             assert (np.array(visionvec.shape) == np.array(self.inputs.get_shape().as_list()[1:])).all()
         
         with tf.device("/cpu:0"):
@@ -325,10 +327,22 @@ class CNN(object):
                 raise
             
             return True, session.run([self.argmax, self.q], feed_dict=feed_dict)
-
+        
+        
+        
+    def calculate_value(self, session, visionvec, speed, hframes):
+        with tf.device("/cpu:0"):
+            visionvec = np.expand_dims(visionvec, axis=0)
+            feed_dict = {self.inputs: visionvec}  
+            if self.config.speed_neurons:
+               speed_disc = read_supervised.inflate_speed(speed, self.config.speed_neurons, self.config.SPEED_AS_ONEHOT)
+               feed_dict[self.speed_input] = np.expand_dims(speed_disc, axis=0)
             
+            return session.run(self.q_max, feed_dict=feed_dict)
+            
+        
        
-def run_CNN_training(config, dataset):
+def run_svtraining(config, dataset):
     graph = tf.Graph()
     with graph.as_default():    
         #initializer = tf.constant_initializer(0.0) #bei variablescopes kann ich nen default-initializer für get_variables festlegen
@@ -368,7 +382,6 @@ def run_CNN_training(config, dataset):
                 if cnn.iterations % CHECKPOINTALL == 0 or cnn.iterations == config.iterations:
                     checkpoint_file = os.path.join(config.checkpoint_dir, 'model.ckpt')
                     saver.save(sess, checkpoint_file, global_step=step)       
-                    
                     savedpoint = "(checkpoint saved)"
                 
                 print('Iteration %3d (step %4d): loss = %.2f (%.3f sec)' % (cnn.iterations, step+1, train_loss, time.time()-start_time), savedpoint)
@@ -394,7 +407,7 @@ def main():
         
     trackingpoints = read_supervised.TPList(config.foldername, config.msperframe, config.steering_steps, config.INCLUDE_ACCPLUSBREAK)
     print("Number of samples: %s | Tracking every %s ms with %s historyframes" % (trackingpoints.numsamples, str(config.msperframe), str(config.history_frame_nr)))
-    run_CNN_training(config, trackingpoints)        
+    run_svtraining(config, trackingpoints)        
     
                 
                 

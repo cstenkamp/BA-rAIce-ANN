@@ -1,0 +1,3 @@
+https://medium.com/@awjuliani/simple-reinforcement-learning-with-tensorflow-part-4-deep-q-networks-and-beyond-8438a3e2b8df
+file:///C:/Users/csten_000/Dropbox/Zotero/storage/KH6R5PX3/Torcs-Keras.html
+http://www.cs.toronto.edu/~tijmen/csc321/slides/lecture_slides_lec6.pdf

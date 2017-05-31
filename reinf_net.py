@@ -29,7 +29,7 @@ current_milli_time = lambda: int(round(time.time() * 1000))
 
 STANDARDRETURN = ("[0.5,0,0.0]", [0]*42)
 MEMORY_SIZE = 5000
-epsilon = 0.1
+epsilon = 0.05
 EPSILONDECREASE = 0.00005
 minepsilon = 0.005
 BATCHSIZE = 32
@@ -39,6 +39,8 @@ last_random_timestamp = 0
 last_random_action = None
 CHECKPOINTALL = 100
 DONT_COPY_WEIGHTS = [] #["FC1", "FC2"]
+DONT_TRAIN = []# ["Conv1", "Conv2"]
+TAU = 0.01
 
 ACTION_ALL_X_MS = 0
 LAST_ACTION = 0
@@ -46,7 +48,7 @@ ONLY_START = False
 
 
 class ReinfNet(object):
-    def __init__(self, num, sv_config, containers, rl_config):
+    def __init__(self, num, sv_config, containers, rl_config, start_fresh):
         self.lock = threading.Lock()
         self.isinitialized = False
         self.containers = containers
@@ -56,7 +58,7 @@ class ReinfNet(object):
         self.rl_config = rl_config
         #tps = read_supervised.TPList(read_supervised.FOLDERNAME, config.msperframe)
         #self.normalizers = tps.find_normalizers()
-        self.initNetwork()
+        self.initNetwork(start_fresh)
 
 #    @staticmethod
 #    def flatten_oneDs(AllOneDs):
@@ -111,7 +113,7 @@ class ReinfNet(object):
                         print(len(self.containers.memory.memory),level=6)
                         
                         if self.containers.showscreen:
-                            infoscreen.print(self.dediscretize(action), reward, containers= self.containers, wname="Last memory")
+                            infoscreen.print(self.dediscretize(action), round(reward,2), round(self.cnn.calculate_value(self.session, newstate[0], newstate[1], self.sv_config.history_frame_nr)[0],2), containers= self.containers, wname="Last memory")
                             infoscreen.print(str(len(self.containers.memory.memory)), containers= self.containers, wname="Memorysize")
                         
                         #deletethispart
@@ -123,11 +125,11 @@ class ReinfNet(object):
                     #run ANN
                     if np.random.random() > epsilon:
                         returnstuff, original = self.performNetwork(othervecs, visionvec)
+                    else:
+                        returnstuff, original = self.randomAction(othervecs[1][4])
                         epsilon = round(max(epsilon-EPSILONDECREASE, minepsilon),5)
                         if self.containers.showscreen:
                             infoscreen.print(epsilon, containers= self.containers, wname="Epsilon")
-                    else:
-                        returnstuff, original = self.randomAction(othervecs[1][4])
 
                     if self.containers.showscreen:
                         infoscreen.print(returnstuff, containers= self.containers, wname="Last command")
@@ -165,18 +167,21 @@ class ReinfNet(object):
 
             batch = [mem[i] for i in samples]
             oldstates, actions, rewards, newstates, resetafters = zip(*batch)                        
+                       
             
             argmactions = [np.argmax(i) for i in actions]
             
             actualActions = [read_supervised.dediscretize_all(i, self.rl_config.steering_steps, self.rl_config.INCLUDE_ACCPLUSBREAK) for i in actions]
-            print(dict(zip(rewards,actualActions)), level=4)
+            print(list(zip(rewards,actualActions)), level=4)
             
             qs = self.session.run(self.cnn.q, feed_dict = prepare_feed_dict(oldstates))
             max_qs = self.session.run(self.cnn.q_max, feed_dict=prepare_feed_dict(newstates))
                                          
+            #Bellman equation: Q(s,a) = r + y(max(Q(s',a')))
+            #qs[np.arange(BATCHSIZE), argmactions] += learning_rate*((rewards + Q_DECAY * max_qs * (not resetafters))-qs[np.arange(BATCHSIZE), argmactions]) #so wäre es wenn wir kein ANN nutzen würden!
+            #https://medium.com/emergent-future/simple-reinforcement-learning-with-tensorflow-part-0-q-learning-with-tables-and-neural-networks-d195264329d0
             qs[np.arange(BATCHSIZE), argmactions] = rewards + Q_DECAY * max_qs * (not resetafters) #wenn anschließend resettet wurde war es bspw ein wallhit und damit quasi ein final state
-
-
+            
             self.session.run(self.cnn.train_op, feed_dict={
                 self.cnn.inputs: np.array([curr[0] for curr in oldstates]),
                 self.cnn.speed_input: np.array([read_supervised.inflate_speed(curr[1], self.rl_config.speed_neurons, self.rl_config.SPEED_AS_ONEHOT) for curr in oldstates]),
@@ -201,7 +206,7 @@ class ReinfNet(object):
         progress_new = self.containers.inputval.othervecs[0][0]
         if progress_old > 90 and progress_new < 10:
             progress_new += 100
-        progress = round(progress_new-progress_old,3)*50
+        progress = round(progress_new-progress_old,3)*20
         
         stay_on_street = abs(self.containers.inputval.othervecs[3][0])
         #wenn er >= 10 war und seitdem keine neue action kam, muss er >= 10 bleiben!
@@ -277,7 +282,7 @@ class ReinfNet(object):
               
             
 
-    def initNetwork(self):
+    def initNetwork(self, start_fresh):
         self.graph = tf.Graph()
         with self.graph.as_default():    
             
@@ -285,39 +290,48 @@ class ReinfNet(object):
             ckpt = tf.train.get_checkpoint_state(self.rl_config.checkpoint_dir) 
             initializer = tf.random_uniform_initializer(-0.1, 0.1)
             
-            if not (ckpt and ckpt.model_checkpoint_path):
-                
-                cnn.CNN(self.rl_config, is_reinforcement=False, is_training=True)
-                varlist = dict(zip([v.name for v in tf.trainable_variables()], tf.trainable_variables()))
-                varlist = list(eraseneccessary(varlist, DONT_COPY_WEIGHTS).keys())
-                print(varlist)
-                
+            
+            if start_fresh:
                 with tf.name_scope("ReinfLearn"): 
                     with tf.variable_scope("cnnmodel", reuse=None, initializer=initializer):
-                        self.cnn = cnn.CNN(self.rl_config, is_reinforcement=True, is_training=True)                
-                        
-                restorevars = {}
-                for i in tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope='cnnmodel'):
-                    for j in varlist:
-                        if j in i.name:
-                            restorevars[i.name.replace("cnnmodel/","").replace(":0","")] = i
-                
+                        self.cnn = cnn.CNN(self.rl_config, is_reinforcement=True, is_training=True, rl_not_trainables=DONT_TRAIN)                
                 init = tf.global_variables_initializer()
                 self.session.run(init)        
-                self.pretrainsaver = tf.train.Saver(restorevars)
-                sv_ckpt = tf.train.get_checkpoint_state(self.sv_config.checkpoint_dir) 
-                assert sv_ckpt and sv_ckpt.model_checkpoint_path, "I need at least a supervisedly pre-trained net!"
-                self.pretrainsaver.restore(self.session, sv_ckpt.model_checkpoint_path)
-
                 self.saver = tf.train.Saver(max_to_keep=3)
-                
             else:
-                with tf.name_scope("ReinfLearn"): 
-                    with tf.variable_scope("cnnmodel", reuse=None, initializer=initializer):
-                        self.cnn = cnn.CNN(self.rl_config, is_reinforcement=True, is_training=True)
-                self.saver = tf.train.Saver(max_to_keep=3)
-                self.saver.restore(self.session, ckpt.model_checkpoint_path)
-                self.containers.reinfNetSteps = self.cnn.global_step.eval(session=self.session)
+                if not (ckpt and ckpt.model_checkpoint_path):
+                    
+                    cnn.CNN(self.rl_config, is_reinforcement=False, is_training=True)
+                    varlist = dict(zip([v.name for v in tf.trainable_variables()], tf.trainable_variables()))
+                    varlist = list(eraseneccessary(varlist, DONT_COPY_WEIGHTS).keys())
+                    print(varlist)
+                    
+                    with tf.name_scope("ReinfLearn"): 
+                        with tf.variable_scope("cnnmodel", reuse=None, initializer=initializer):
+                            self.cnn = cnn.CNN(self.rl_config, is_reinforcement=True, is_training=True, rl_not_trainables=DONT_TRAIN)                
+                            
+                    restorevars = {}
+                    for i in tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope='cnnmodel'):
+                        for j in varlist:
+                            if j in i.name:
+                                restorevars[i.name.replace("cnnmodel/","").replace(":0","")] = i
+                    
+                    init = tf.global_variables_initializer()
+                    self.session.run(init)        
+                    self.pretrainsaver = tf.train.Saver(restorevars)
+                    sv_ckpt = tf.train.get_checkpoint_state(self.sv_config.checkpoint_dir) 
+                    assert sv_ckpt and sv_ckpt.model_checkpoint_path, "I need at least a supervisedly pre-trained net!"
+                    self.pretrainsaver.restore(self.session, sv_ckpt.model_checkpoint_path)
+    
+                    self.saver = tf.train.Saver(max_to_keep=3)
+                    
+                else:
+                    with tf.name_scope("ReinfLearn"): 
+                        with tf.variable_scope("cnnmodel", reuse=None, initializer=initializer):
+                            self.cnn = cnn.CNN(self.rl_config, is_reinforcement=True, is_training=True, rl_not_trainables=DONT_TRAIN)
+                    self.saver = tf.train.Saver(max_to_keep=3)
+                    self.saver.restore(self.session, ckpt.model_checkpoint_path)
+                    self.containers.reinfNetSteps = self.cnn.global_step.eval(session=self.session)
                                 
             
             print("network %s initialized with %i iterations already run." %(str(self.number+1), self.containers.reinfNetSteps))

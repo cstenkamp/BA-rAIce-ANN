@@ -25,7 +25,7 @@ STANDARDRETURN = ("[0.5,0,0.0]", [0.5, 0, 0.0])
 
 
 class PlayNet(object):
-    def __init__(self, num, config, containers, rl_config_dummy=None): #der dummy ist da damit man playnet & reinfnet austauschen kan
+    def __init__(self, num, config, containers, rl_config_dummy=None, startfreshdummy=False): #der dummy ist da damit man playnet & reinfnet austauschen kan
         self.lock = threading.Lock()
         self.isinitialized = False
         self.containers = containers        

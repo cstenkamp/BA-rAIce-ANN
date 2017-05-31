@@ -173,8 +173,14 @@ class receiver_thread(threading.Thread):
         
     def handle_special_commands(self, data):
         specialcommand = False
+        if data[:5] == "Time(":
+            data = data[data.find(")")+1:]
+        
         if data[:11] == "resetServer":
             resetServer(self.containers, data[11:])
+            specialcommand = True    
+        if data[:7] == "wallhit":
+            endEpisode(self.containers)
             specialcommand = True    
         return specialcommand
     
@@ -190,14 +196,16 @@ class receiver_thread(threading.Thread):
 def resetServer(containers, mspersec):
     containers.inputval.reset(mspersec)
     containers.outputval.reset()
+    endEpisode(containers)
     
+
+def endEpisode(containers):
     #bei actions, nach denen resettet wurde, soll er den folgestate nicht mehr beachten (später gucken wenn reset=true dann setze Q_DECAY auf quasi 100%)
     if not containers.play_only:
         lastmemoryentry = containers.memory.pop() #oldstate, action, reward, newstate
         if lastmemoryentry is not None:
             lastmemoryentry[4] = True
             containers.memory.append(lastmemoryentry)
-    
         
     
         
@@ -563,7 +571,7 @@ def create_socket(port):
 
 
 
-def main(sv_conf, rl_conf, play_only, no_learn, show_screen):
+def main(sv_conf, rl_conf, play_only, no_learn, show_screen, start_fresh):
     containers = Containers(play_only)
     containers.inputval = InputValContainer(sv_conf)
     containers.inputval.containers = containers #lol.    
@@ -585,7 +593,7 @@ def main(sv_conf, rl_conf, play_only, no_learn, show_screen):
         containers.memory = Memory([], reinf_net.MEMORY_SIZE)
         
     for i in range(NUMBER_ANNS):
-        ANN = NeuralNet(i, sv_conf, containers, rl_conf)
+        ANN = NeuralNet(i, sv_conf, containers, rl_conf, start_fresh)
         containers.ANNs.append(ANN)
     
     print("Everything initialized", level=10)
@@ -638,4 +646,4 @@ if __name__ == '__main__':
         reinf_net.minepsilon = 0
         reinf_net.epsilon = 0
                 
-    main(sv_conf, rl_conf, ("-playonly" in sys.argv), ("-nolearn" in sys.argv), not ("-noscreen" in sys.argv))    
+    main(sv_conf, rl_conf, ("-playonly" in sys.argv), ("-nolearn" in sys.argv), not ("-noscreen" in sys.argv), ("-startfresh" in sys.argv))    
