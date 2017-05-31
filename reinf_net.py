@@ -15,6 +15,7 @@ Created on Wed May 10 13:31:54 2017
 import threading
 import numpy as np
 import tensorflow as tf
+from tensorflow.contrib.framework import get_variables
 import time
 import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
@@ -40,7 +41,9 @@ last_random_action = None
 CHECKPOINTALL = 100
 DONT_COPY_WEIGHTS = [] #["FC1", "FC2"]
 DONT_TRAIN = []# ["Conv1", "Conv2"]
-TAU = 0.01
+COPY_TARGET_ALL = 100
+
+lastresult = None
 
 ACTION_ALL_X_MS = 0
 LAST_ACTION = 0
@@ -152,10 +155,12 @@ class ReinfNet(object):
                 
                 
     def learnANN(self):
-        def prepare_feed_dict(states):
+        learn_which = self.online_cnn    #TODO: target network ausschalten können
+    
+        def prepare_feed_dict(states, which_net):
             feed_dict = {
-              self.cnn.inputs: np.array([state[0] for state in states]),
-              self.cnn.speed_input: np.array([read_supervised.inflate_speed(state[1], self.rl_config.speed_neurons, self.rl_config.SPEED_AS_ONEHOT) for state in states])
+              which_net.inputs: np.array([state[0] for state in states]),
+              which_net.speed_input: np.array([read_supervised.inflate_speed(state[1], self.rl_config.speed_neurons, self.rl_config.SPEED_AS_ONEHOT) for state in states])
             }
             return feed_dict
             
@@ -174,30 +179,34 @@ class ReinfNet(object):
             actualActions = [read_supervised.dediscretize_all(i, self.rl_config.steering_steps, self.rl_config.INCLUDE_ACCPLUSBREAK) for i in actions]
             print(list(zip(rewards,actualActions)), level=4)
             
-            qs = self.session.run(self.cnn.q, feed_dict = prepare_feed_dict(oldstates))
-            max_qs = self.session.run(self.cnn.q_max, feed_dict=prepare_feed_dict(newstates))
+            qs = self.session.run(learn_which.q, feed_dict = prepare_feed_dict(oldstates, learn_which))
+            max_qs = self.session.run(learn_which.q_max, feed_dict=prepare_feed_dict(newstates, learn_which))
                                          
             #Bellman equation: Q(s,a) = r + y(max(Q(s',a')))
             #qs[np.arange(BATCHSIZE), argmactions] += learning_rate*((rewards + Q_DECAY * max_qs * (not resetafters))-qs[np.arange(BATCHSIZE), argmactions]) #so wäre es wenn wir kein ANN nutzen würden!
             #https://medium.com/emergent-future/simple-reinforcement-learning-with-tensorflow-part-0-q-learning-with-tables-and-neural-networks-d195264329d0
             qs[np.arange(BATCHSIZE), argmactions] = rewards + Q_DECAY * max_qs * (not resetafters) #wenn anschließend resettet wurde war es bspw ein wallhit und damit quasi ein final state
             
-            self.session.run(self.cnn.train_op, feed_dict={
-                self.cnn.inputs: np.array([curr[0] for curr in oldstates]),
-                self.cnn.speed_input: np.array([read_supervised.inflate_speed(curr[1], self.rl_config.speed_neurons, self.rl_config.SPEED_AS_ONEHOT) for curr in oldstates]),
-                self.cnn.targets: qs,
+            self.session.run(learn_which.train_op, feed_dict={
+                learn_which.inputs: np.array([curr[0] for curr in oldstates]),
+                learn_which.speed_input: np.array([read_supervised.inflate_speed(curr[1], self.rl_config.speed_neurons, self.rl_config.SPEED_AS_ONEHOT) for curr in oldstates]),
+                learn_which.targets: qs,
             })
             
             self.containers.reinfNetSteps += 1
-            print("ReinfLearnSteps:", self.containers.reinfNetSteps, level=6)
+            print("ReinfLearnSteps:", self.containers.reinfNetSteps, level=10)
             
             if self.containers.reinfNetSteps % CHECKPOINTALL == 0:
                 checkpoint_file = os.path.join(self.rl_config.checkpoint_dir, 'model.ckpt')
-                self.saver.save(self.session, checkpoint_file, global_step=self.cnn.global_step.eval(session=self.session))       
+                self.saver.save(self.session, checkpoint_file, global_step=learn_which.global_step.eval(session=self.session))       
                 print("saved")
-                    
-                    
-                    
+                
+            if learn_which == self.online_cnn:
+                self.lock.acquire()
+                if self.containers.reinfNetSteps % COPY_TARGET_ALL == 0:
+                    with self.graph.as_default():    
+                        self.session.run([target.assign(online) for online, target in zip(get_variables(scope="onlinenet"), get_variables(scope="targetnet"))])
+                self.lock.release()
                     
                 
                 
@@ -221,15 +230,19 @@ class ReinfNet(object):
                 
 
     def performNetwork(self, othervecs, visionvec):
+        global lastresult
         print("Another ANN Inference", level=6)
+        
         check, (networkresult, qvals) = self.cnn.run_inference(self.session, visionvec, othervecs, self.sv_config.history_frame_nr)
         if check:
             throttle, brake, steer = read_supervised.dediscretize_all(networkresult[0], self.containers.rl_conf.steering_steps, self.containers.rl_conf.INCLUDE_ACCPLUSBREAK)
             result = "["+str(throttle)+", "+str(brake)+", "+str(steer)+"]"
             self.showqvals(qvals[0])
+            lastresult = result, networkresult[0]
             return result, networkresult[0]
         else:
-            return STANDARDRETURN
+            return lastresult
+        
 
     def showqvals(self, qvals):
         amount = self.rl_config.steering_steps*4 if self.rl_config.INCLUDE_ACCPLUSBREAK else self.rl_config.steering_steps*3
@@ -293,11 +306,23 @@ class ReinfNet(object):
             
             if start_fresh:
                 with tf.name_scope("ReinfLearn"): 
-                    with tf.variable_scope("cnnmodel", reuse=None, initializer=initializer):
+                    with tf.variable_scope("targetnet", reuse=None, initializer=initializer):
                         self.cnn = cnn.CNN(self.rl_config, is_reinforcement=True, is_training=True, rl_not_trainables=DONT_TRAIN)                
+                    with tf.variable_scope("onlinenet", reuse=None, initializer=initializer):
+                        self.online_cnn = cnn.CNN(self.rl_config, is_reinforcement=True, is_training=True, rl_not_trainables=DONT_TRAIN)                
                 init = tf.global_variables_initializer()
                 self.session.run(init)        
                 self.saver = tf.train.Saver(max_to_keep=3)
+                
+                self.session.run([target.assign(online) for online, target in zip(get_variables(scope="onlinenet"), get_variables(scope="targetnet"))])
+                
+#                for i in tf.trainable_variables():
+#                    if i.name.startswith("learning"):
+#                        for j in tf.trainable_variables():
+#                            if (not(j.name.startswith("learning"))) and j.name[j.name.find("/"):] == i.name[i.name.find("/"):]:
+#                                #self.session.run(i.assign(j));
+#                                print(i.eval(session=self.session) == j.eval(session=self.session), level=10)
+                
             else:
                 if not (ckpt and ckpt.model_checkpoint_path):
                     
@@ -307,14 +332,16 @@ class ReinfNet(object):
                     print(varlist)
                     
                     with tf.name_scope("ReinfLearn"): 
-                        with tf.variable_scope("cnnmodel", reuse=None, initializer=initializer):
+                        with tf.variable_scope("targetnet", reuse=None, initializer=initializer):
                             self.cnn = cnn.CNN(self.rl_config, is_reinforcement=True, is_training=True, rl_not_trainables=DONT_TRAIN)                
+                        with tf.variable_scope("onlinenet", reuse=None, initializer=initializer):
+                            self.online_cnn = cnn.CNN(self.rl_config, is_reinforcement=True, is_training=True, rl_not_trainables=DONT_TRAIN)                
                             
                     restorevars = {}
-                    for i in tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope='cnnmodel'):
+                    for i in tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope='targetnet'):
                         for j in varlist:
                             if j in i.name:
-                                restorevars[i.name.replace("cnnmodel/","").replace(":0","")] = i
+                                restorevars[i.name.replace("targetnet/","").replace(":0","")] = i
                     
                     init = tf.global_variables_initializer()
                     self.session.run(init)        
@@ -322,17 +349,20 @@ class ReinfNet(object):
                     sv_ckpt = tf.train.get_checkpoint_state(self.sv_config.checkpoint_dir) 
                     assert sv_ckpt and sv_ckpt.model_checkpoint_path, "I need at least a supervisedly pre-trained net!"
                     self.pretrainsaver.restore(self.session, sv_ckpt.model_checkpoint_path)
+                    self.session.run([online.assign(target) for online, target in zip(get_variables(scope="onlinenet"), get_variables(scope="targetnet"))])
     
                     self.saver = tf.train.Saver(max_to_keep=3)
                     
                 else:
                     with tf.name_scope("ReinfLearn"): 
-                        with tf.variable_scope("cnnmodel", reuse=None, initializer=initializer):
+                        with tf.variable_scope("targetnet", reuse=None, initializer=initializer):
                             self.cnn = cnn.CNN(self.rl_config, is_reinforcement=True, is_training=True, rl_not_trainables=DONT_TRAIN)
+                        with tf.variable_scope("onlinenet", reuse=None, initializer=initializer):
+                            self.online_cnn = cnn.CNN(self.rl_config, is_reinforcement=True, is_training=True, rl_not_trainables=DONT_TRAIN)                                            
                     self.saver = tf.train.Saver(max_to_keep=3)
                     self.saver.restore(self.session, ckpt.model_checkpoint_path)
                     self.containers.reinfNetSteps = self.cnn.global_step.eval(session=self.session)
-                                
+                    self.session.run([online.assign(target) for online, target in zip(get_variables(scope="onlinenet"), get_variables(scope="targetnet"))])
             
             print("network %s initialized with %i iterations already run." %(str(self.number+1), self.containers.reinfNetSteps))
             self.isinitialized = True
