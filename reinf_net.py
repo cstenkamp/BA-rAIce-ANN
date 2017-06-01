@@ -74,8 +74,7 @@ class ReinfNet(object):
 #        return NormalizedOneDs
             
     def resetUnity(self):
-        self.containers.outputval.send_via_senderthread("pleasereset", self.containers.inputval.timestamp)
-        server.resetServer(self.containers, self.containers.inputval.msperframe)
+        server.resetUnity(self.containers)
     
 
     def dediscretize(self, discrete):
@@ -98,12 +97,11 @@ class ReinfNet(object):
                         return
                     else:
                         LAST_ACTION = current_milli_time()
-                
-                
+                                
                 with self.graph.as_default(): 
-    #                if self.containers.inputval.othervecs[0][0] > 30 and self.containers.inputval.othervecs[0][0] < 40:
-    #                    resetUnity()
-    #                    return
+#                    if self.containers.inputval.othervecs[0][0] > 0 and self.containers.inputval.othervecs[0][0] < 10:
+#                        self.resetUnity()
+#                        return
                     othervecs, visionvec = self.containers.inputval.read()
                     
                     #add to memory
@@ -126,13 +124,18 @@ class ReinfNet(object):
                             return
                     
                     #run ANN
-                    if np.random.random() > epsilon:
-                        returnstuff, original = self.performNetwork(othervecs, visionvec)
-                    else:
-                        returnstuff, original = self.randomAction(othervecs[1][4])
-                        epsilon = round(max(epsilon-EPSILONDECREASE, minepsilon),5)
-                        if self.containers.showscreen:
-                            infoscreen.print(epsilon, containers= self.containers, wname="Epsilon")
+                    global lastresult
+                    try:
+                        if np.random.random() > epsilon:
+                            returnstuff, original = self.performNetwork(othervecs, visionvec)
+                        else:
+                            returnstuff, original = self.randomAction(othervecs[1][4])
+                            epsilon = round(max(epsilon-EPSILONDECREASE, minepsilon),5)
+                            if self.containers.showscreen:
+                                infoscreen.print(epsilon, containers= self.containers, wname="Epsilon")
+                        lastresult = returnstuff, original
+                    except IndexError: #kommt wenn inputval resettet wurde
+                        returnstuff, original = lastresult
 
                     if self.containers.showscreen:
                         infoscreen.print(returnstuff, containers= self.containers, wname="Last command")
@@ -230,7 +233,6 @@ class ReinfNet(object):
                 
 
     def performNetwork(self, othervecs, visionvec):
-        global lastresult
         print("Another ANN Inference", level=6)
         
         check, (networkresult, qvals) = self.cnn.run_inference(self.session, visionvec, othervecs, self.sv_config.history_frame_nr)
@@ -238,7 +240,6 @@ class ReinfNet(object):
             throttle, brake, steer = read_supervised.dediscretize_all(networkresult[0], self.containers.rl_conf.steering_steps, self.containers.rl_conf.INCLUDE_ACCPLUSBREAK)
             result = "["+str(throttle)+", "+str(brake)+", "+str(steer)+"]"
             self.showqvals(qvals[0])
-            lastresult = result, networkresult[0]
             return result, networkresult[0]
         else:
             return lastresult

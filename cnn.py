@@ -27,8 +27,10 @@ class Config(object):
     steering_steps = 7
     INCLUDE_ACCPLUSBREAK = False
     
+    reset_if_wrongdirection = True
+    
     image_dims = [30,45] 
-    vector_len = 61
+    vector_len = 62
     msperframe = 200 #50   #ACHTUNG!!! Dieser wert wird von unity überschrieben!!!!! #TODO: dass soll mit unity abgeglichen werden!
     
     batch_size = 32
@@ -313,18 +315,17 @@ class CNN(object):
             if not type(visionvec).__module__ == np.__name__:
                 return False, (None, None) #dann ist das input-array leer
             assert (np.array(visionvec.shape) == np.array(self.inputs.get_shape().as_list()[1:])).all()
+        try:
+            othervecs[1][4]
+        except IndexError:
+            return False, (None, None)
         
         with tf.device("/cpu:0"):
             visionvec = np.expand_dims(visionvec, axis=0)
             feed_dict = {self.inputs: visionvec}  
-            try:
-                if self.config.speed_neurons:
-                    speed_disc = read_supervised.inflate_speed(othervecs[1][4], self.config.speed_neurons, self.config.SPEED_AS_ONEHOT)
-                    feed_dict[self.speed_input] = np.expand_dims(speed_disc, axis=0)
-            except IndexError:
-                print("OHHH THIS SHOULD NOT HAPPEN")
-                print(speed_disc)
-                raise
+            if self.config.speed_neurons:
+                speed_disc = read_supervised.inflate_speed(othervecs[1][4], self.config.speed_neurons, self.config.SPEED_AS_ONEHOT)
+                feed_dict[self.speed_input] = np.expand_dims(speed_disc, axis=0)
             
             return True, session.run([self.argmax, self.q], feed_dict=feed_dict)
         

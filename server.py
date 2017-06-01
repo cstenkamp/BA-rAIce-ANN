@@ -14,20 +14,19 @@ import reinf_net
 import cnn
 from myprint import myprint as print
 import infoscreen
+current_milli_time = lambda: int(round(time.time() * 1000))
 
 logging.basicConfig(level=logging.ERROR, format='(%(threadName)-10s) %(message)s',)
 
-
+MININT = -sys.maxsize+1
 TCP_IP = 'localhost'
 TCP_RECEIVER_PORT = 6435
 TCP_SENDER_PORT = 6436
 NUMBER_ANNS = 1
 UPDATE_ONLY_IF_NEW = False #sendet immer nach jedem update -> Wenn False sendet er wann immer er was kriegt
 
+wrongdirtime = 0
 
-
-current_milli_time = lambda: int(round(time.time() * 1000))
-MININT = -sys.maxsize+1
 
 
 class MySocket:
@@ -192,11 +191,17 @@ class receiver_thread(threading.Thread):
                 break
             
 
+def resetUnity(containers, punish=0):
+    containers.outputval.send_via_senderthread("pleasereset", containers.inputval.timestamp)
+    if punish:
+        punishLastAction(containers, punish)
+    resetServer(containers, containers.inputval.msperframe)
+    
 
 def resetServer(containers, mspersec):
-    containers.inputval.reset(mspersec)
-    containers.outputval.reset()
     endEpisode(containers)
+    containers.outputval.reset()
+    containers.inputval.reset(mspersec, nolock = True)
     
 
 def endEpisode(containers):
@@ -207,7 +212,14 @@ def endEpisode(containers):
             lastmemoryentry[4] = True
             containers.memory.append(lastmemoryentry)
         
-    
+        
+def punishLastAction(containers, howmuch):
+    if not containers.play_only:
+        lastmemoryentry = containers.memory.pop() #oldstate, action, reward, newstate
+        if lastmemoryentry is not None:
+            lastmemoryentry[2] -= abs(howmuch)
+            containers.memory.append(lastmemoryentry)    
+
         
         
 class InputValContainer(object):   
@@ -219,7 +231,7 @@ class InputValContainer(object):
         if self.config.history_frame_nr > 1:
             self.vvec_hist = np.zeros([config.history_frame_nr, config.image_dims[0], config.image_dims[1]]) 
         self.othervecs = np.zeros(config.vector_len)      
-        self.timestamp = 0
+        self.timestamp = MININT
         self.containers = None
         self.alreadyread = True
         self.previous_action = None
@@ -231,6 +243,7 @@ class InputValContainer(object):
         
         
     def update(self, visionvec, othervecs, timestamp):
+        global wrongdirtime
         
         def is_new(visionvec, othervecs):
             if self.config.history_frame_nr == 1:
@@ -260,6 +273,14 @@ class InputValContainer(object):
                 if self.hit_a_wall:
                     self.othervecs[3][0] = 10
                               
+                if self.config.reset_if_wrongdirection:
+                    if not self.othervecs[1][5]:
+                        wrongdirtime += self.containers.sv_conf.msperframe
+                        if wrongdirtime >= 2000:
+                            resetUnity(self.containers, punish=100)
+                    else:
+                        wrongdirtime = 0
+                                  
                 self.alreadyread = False
                 self.timestamp = timestamp
                 print("Updated Input-Vec at", timestamp, level=2)
@@ -296,26 +317,31 @@ class InputValContainer(object):
 
 
         
-    def reset(self, interval):
+    def reset(self, interval, nolock = False):
         logging.debug('Inputval-Reset: Waiting for lock')
-        self.lock.acquire()
+        if not nolock: 
+            self.lock.acquire()
         try:
             logging.debug('Acquired lock')
+            
             self.visionvec = np.zeros([self.config.image_dims[0], self.config.image_dims[1]])
             if self.config.history_frame_nr > 1:
                 self.vvec_hist = np.zeros([self.config.history_frame_nr, self.config.image_dims[0], self.config.image_dims[1]]) 
-            self.othervecs = np.zeros(self.config.vector_len)
-            self.timestamp = MININT
+            self.othervecs = np.zeros(self.config.vector_len)      
+            self.timestamp = 0
+            self.alreadyread = True
             self.previous_action = None
             self.previous_visionvec = None
             self.previous_vvechist = None
             self.previous_othervecs = None
             self.msperframe = interval #da Unity im diesen Wert immer bei spielstart schickt, wird msperframe immer richtig sein            
             assert int(self.msperframe) == int(self.config.msperframe)
-            self.alreadyread = True
+            self.hit_a_wall = False
+            
             logging.debug("Resettet input-value")
         finally:
-            self.lock.release()
+            if not nolock:
+                self.lock.release() 
 
 
     def read(self):
@@ -370,6 +396,7 @@ class OutputValContainer(object):
             
             
     def send_via_senderthread(self, value, timestamp):
+        
         #nehme die erste verbindung die keinen error schemißt!        
         assert len(self.containers.senderthreads) > 0, "There is no senderthread at all! How will I send?"
         for i in range(len(self.containers.senderthreads)):
