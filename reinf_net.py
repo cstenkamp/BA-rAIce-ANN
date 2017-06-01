@@ -40,7 +40,7 @@ last_random_timestamp = 0
 last_random_action = None
 CHECKPOINTALL = 100
 DONT_COPY_WEIGHTS = [] #["FC1", "FC2"]
-DONT_TRAIN = []# ["Conv1", "Conv2"]
+DONT_TRAIN = [] #["Conv1", "Conv2", "FC1"]# ["Conv1", "Conv2"]
 COPY_TARGET_ALL = 100
 
 lastresult = None
@@ -304,7 +304,6 @@ class ReinfNet(object):
             ckpt = tf.train.get_checkpoint_state(self.rl_config.checkpoint_dir) 
             initializer = tf.random_uniform_initializer(-0.1, 0.1)
             
-            
             if start_fresh:
                 with tf.name_scope("ReinfLearn"): 
                     with tf.variable_scope("targetnet", reuse=None, initializer=initializer):
@@ -362,8 +361,9 @@ class ReinfNet(object):
                             self.online_cnn = cnn.CNN(self.rl_config, is_reinforcement=True, is_training=True, rl_not_trainables=DONT_TRAIN)                                            
                     self.saver = tf.train.Saver(max_to_keep=3)
                     self.saver.restore(self.session, ckpt.model_checkpoint_path)
-                    self.containers.reinfNetSteps = self.cnn.global_step.eval(session=self.session)
                     self.session.run([online.assign(target) for online, target in zip(get_variables(scope="onlinenet"), get_variables(scope="targetnet"))])
+                    self.session.run(self.cnn.global_step.assign(self.online_cnn.global_step))
+                    self.containers.reinfNetSteps = self.cnn.global_step.eval(session=self.session)
             
             print("network %s initialized with %i iterations already run." %(str(self.number+1), self.containers.reinfNetSteps))
             self.isinitialized = True

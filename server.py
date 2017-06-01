@@ -273,13 +273,16 @@ class InputValContainer(object):
                 if self.hit_a_wall:
                     self.othervecs[3][0] = 10
                               
-                if self.config.reset_if_wrongdirection:
-                    if not self.othervecs[1][5]:
-                        wrongdirtime += self.containers.sv_conf.msperframe
-                        if wrongdirtime >= 2000:
-                            resetUnity(self.containers, punish=100)
-                    else:
-                        wrongdirtime = 0
+                try:
+                    if self.config.reset_if_wrongdirection:
+                        if not self.othervecs[1][5]:
+                            wrongdirtime += self.containers.sv_conf.msperframe
+                            if wrongdirtime >= 2000:
+                                resetUnity(self.containers, punish=100)
+                        else:
+                            wrongdirtime = 0
+                except IndexError:
+                    wrongdirtime = 0
                                   
                 self.alreadyread = False
                 self.timestamp = timestamp

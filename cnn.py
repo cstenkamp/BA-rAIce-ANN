@@ -60,7 +60,7 @@ class RL_Config(Config):
     
     keep_prob = 1
     max_grad_norm = 10
-    initial_lr = 0.6
+    initial_lr = 0.001
     lr_decay = 0.9
     
     #re-uses history_frame_nr, image_dims, steering_steps, speed_neurons, INCLUDE_ACCPLUSBREAK, SPEED_AS_ONEHOT
