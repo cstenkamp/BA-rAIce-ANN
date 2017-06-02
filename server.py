@@ -1,4 +1,6 @@
 #!/usr/bin/env python
+#SERVER ist UNABHÄNGIG VOM AGENT, und sorgt dafür dass die passenden Dinge an den agent weitergeleitet werden!
+
 
 import socket
 import threading
@@ -10,12 +12,13 @@ from collections import deque, namedtuple
 import copy
 
 #====own classes====
-import playnet
+import svplaynet
 import reinf_net
 import cnn
 from myprint import myprint as print
 import infoscreen
 current_milli_time = lambda: int(round(time.time() * 1000))
+from read_supervised import cutoutandreturnvectors
 
 logging.basicConfig(level=logging.ERROR, format='(%(threadName)-10s) %(message)s',)
 
@@ -23,7 +26,7 @@ logging.basicConfig(level=logging.ERROR, format='(%(threadName)-10s) %(message)s
 
 prespeedsteer = namedtuple('SpeedSteer', ['RLTorque', 'RRTorque', 'FLSteer', 'FRSteer', 'velocity', 'rightDirection'])
 prestatusvector = namedtuple('StatusVector', ['velocity', 'FLSlip0', 'FRSlip0', 'RLSlip0', 'RRSlip0', 'FLSlip1', 'FRSlip1', 'RLSlip1', 'RRSlip1'])
-                                             #1 elem     6 elems       9 elems         1 elem        15 elems         30 elems
+                                             #1 elem     6 elems       9 elems         1 elem        15 elems         30 elems = 62 elems
 preotherinputs = namedtuple('OtherInputs', ['progress', 'SpeedSteer', 'StatusVector', 'CenterDist', 'CenterDistVec', 'LookAheadVec'])
 class speedsteer(prespeedsteer):
     def __eq__(self, other):
@@ -185,9 +188,9 @@ class receiver_thread(threading.Thread):
                         self.containers.inputval.update(visionvec, allOneDs, self.timestamp) #we MUST have the inputval, otherwise there wouldn't be the possibility for historyframes.           
                         
                         if len(self.containers.ANNs) == 1:
-                            self.containers.ANNs[0].runANN(UPDATE_ONLY_IF_NEW)
+                            self.containers.ANNs[0].runInference(UPDATE_ONLY_IF_NEW)
                         else:                                                       
-                            thread = threading.Thread(target=self.runOneANN, args=()) #immediately returns if UPDATE_ONLY_IF_NEW and alreadyreadthread = threading.Thread(target=self.runANN_SaveResult, args=())
+                            thread = threading.Thread(target=self.runOneANN, args=()) #immediately returns if UPDATE_ONLY_IF_NEW and alreadyreadthread = threading.Thread(target=self.runInference_SaveResult, args=())
                             thread.start() 
                         
                         
@@ -221,7 +224,7 @@ class receiver_thread(threading.Thread):
     def runOneANN(self):
         for currANN in self.containers.ANNs:
             if not currANN.isbusy:
-                currANN.runANN(UPDATE_ONLY_IF_NEW)
+                currANN.runInference(UPDATE_ONLY_IF_NEW)
                 break
             
 
@@ -523,92 +526,6 @@ class sender_thread(threading.Thread):
 
 
 
-
-
-
-
-
-
-###############################################################################
-        
-def cutoutandreturnvectors(string):
-    allOneDs  = []
-    visionvec = [[]]    
-    def cutout(string, letter):
-        return string[string.find(letter)+2:string[string.find(letter):].find(")")+string.find(letter)]
-    
-    if string.find("P(") > -1:
-        #print("Progress as real Number",self.readOneDArrayFromString(cutout(data, "P(")))
-        allOneDs.append(readOneDArrayFromString(cutout(string, "P(")))
-
-    if string.find("S(") > -1:
-        #print("SpeedStearVec",self.readOneDArrayFromString(cutout(data, "S(")))
-        allOneDs.append(readOneDArrayFromString(cutout(string, "S(")))
-
-    if string.find("T(") > -1:
-        #print("CarStatusVec",self.readOneDArrayFromString(cutout(data, "T(")))
-        allOneDs.append(readOneDArrayFromString(cutout(string, "T(")))
-        
-    if string.find("C(") > -1:
-        #print("Visionvec",self.readTwoDArrayFromString(cutout(data, "V(")))
-        allOneDs.append(readOneDArrayFromString(cutout(string, "C(")))
-        
-    if string.find("L(") > -1:
-        #print("Visionvec",self.readTwoDArrayFromString(cutout(data, "V(")))
-        allOneDs.append(readOneDArrayFromString(cutout(string, "L(")))
-    
-    if string.find("V(") > -1:
-        #print("Visionvec",self.readTwoDArrayFromString(cutout(data, "V(")))
-        visionvec = readTwoDArrayFromString(cutout(string, "V("))    
-        
-    return visionvec, allOneDs
-        
-
-def readOneDArrayFromString(string):
-    tmpstrings = string.split(",")
-    tmpfloats = []
-    for i in tmpstrings:
-        tmp = i.replace(" ","")
-        if len(tmp) > 0:
-            try:
-                x = float(str(tmp))
-                tmpfloats.append(x)
-            except ValueError:
-                print("I'm crying") #cry.
-    return tmpfloats
-
-
-def ternary(n):
-    if n == 0:
-        return '0'
-    nums = []
-    if n < 0:
-        n*=-1
-    while n:
-        n, r = divmod(n, 3)
-        nums.append(str(r))
-    return ''.join(reversed(nums))
-
-
-def readTwoDArrayFromString(string):
-    tmpstrings = string.split(",")
-    tmpreturn = []
-    for i in tmpstrings:
-        tmp = i.replace(" ","")
-        if len(tmp) > 0:
-            try:
-                currline = []
-                for j in tmp:
-                    currline.append(int(j))
-                tmpreturn.append(currline)
-            except ValueError:
-                print("I'm crying") #cry.
-    return np.array(tmpreturn)
-
-
-
-
-
 ###############################################################################
 ##################### ACTUAL STARTING OF THE STUFF#############################
 ###############################################################################
@@ -649,7 +566,7 @@ def main(sv_conf, rl_conf, play_only, no_learn, show_screen, start_fresh):
         screenroot = infoscreen.showScreen(containers)
     
     if play_only:
-        NeuralNet = playnet.PlayNet
+        NeuralNet = svplaynet.PlayNet
     else:
         NeuralNet = reinf_net.ReinfNet
         containers.memory = Memory([], reinf_net.MEMORY_SIZE)
@@ -708,4 +625,4 @@ if __name__ == '__main__':
         reinf_net.minepsilon = 0
         reinf_net.epsilon = 0
                 
-    main(sv_conf, rl_conf, ("-playonly" in sys.argv), ("-nolearn" in sys.argv), not ("-noscreen" in sys.argv), ("-startfresh" in sys.argv))    
+    main(sv_conf, rl_conf, ("-svplay" in sys.argv), ("-nolearn" in sys.argv), not ("-noscreen" in sys.argv), ("-startfresh" in sys.argv))    

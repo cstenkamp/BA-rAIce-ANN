@@ -4,7 +4,6 @@ import numpy as np
 np.set_printoptions(threshold=np.nan)
 from copy import deepcopy
 #====own classes====
-import server #from server import cutoutandreturnvectors
 from myprint import myprint as print
 
 MAXSPEED = 250
@@ -29,7 +28,7 @@ class TrackingPoint(object):
                 
     def make_vecs(self):
        if self.vectors != "":
-           self.visionvec, self.AllOneDs = server.cutoutandreturnvectors(self.vectors)
+           self.visionvec, self.AllOneDs = cutoutandreturnvectors(self.vectors)
            self.vectors = ""
            self.flatten_oneDs()
     
@@ -273,6 +272,86 @@ def inflate_speed(speed, numberneurons, asonehot):
             result[i] = 1
         
     return result
+
+
+################################################################################
+        
+def cutoutandreturnvectors(string):
+    allOneDs  = []
+    visionvec = [[]]    
+    def cutout(string, letter):
+        return string[string.find(letter)+2:string[string.find(letter):].find(")")+string.find(letter)]
+    
+    if string.find("P(") > -1:
+        #print("Progress as real Number",self.readOneDArrayFromString(cutout(data, "P(")))
+        allOneDs.append(readOneDArrayFromString(cutout(string, "P(")))
+
+    if string.find("S(") > -1:
+        #print("SpeedStearVec",self.readOneDArrayFromString(cutout(data, "S(")))
+        allOneDs.append(readOneDArrayFromString(cutout(string, "S(")))
+
+    if string.find("T(") > -1:
+        #print("CarStatusVec",self.readOneDArrayFromString(cutout(data, "T(")))
+        allOneDs.append(readOneDArrayFromString(cutout(string, "T(")))
+        
+    if string.find("C(") > -1:
+        #print("Visionvec",self.readTwoDArrayFromString(cutout(data, "V(")))
+        allOneDs.append(readOneDArrayFromString(cutout(string, "C(")))
+        
+    if string.find("L(") > -1:
+        #print("Visionvec",self.readTwoDArrayFromString(cutout(data, "V(")))
+        allOneDs.append(readOneDArrayFromString(cutout(string, "L(")))
+    
+    if string.find("V(") > -1:
+        #print("Visionvec",self.readTwoDArrayFromString(cutout(data, "V(")))
+        visionvec = readTwoDArrayFromString(cutout(string, "V("))    
+        
+    return visionvec, allOneDs
+        
+
+def readOneDArrayFromString(string):
+    tmpstrings = string.split(",")
+    tmpfloats = []
+    for i in tmpstrings:
+        tmp = i.replace(" ","")
+        if len(tmp) > 0:
+            try:
+                x = float(str(tmp))
+                tmpfloats.append(x)
+            except ValueError:
+                print("I'm crying") #cry.
+    return tmpfloats
+
+
+def ternary(n):
+    if n == 0:
+        return '0'
+    nums = []
+    if n < 0:
+        n*=-1
+    while n:
+        n, r = divmod(n, 3)
+        nums.append(str(r))
+    return ''.join(reversed(nums))
+
+
+def readTwoDArrayFromString(string):
+    tmpstrings = string.split(",")
+    tmpreturn = []
+    for i in tmpstrings:
+        tmp = i.replace(" ","")
+        if len(tmp) > 0:
+            try:
+                currline = []
+                for j in tmp:
+                    currline.append(int(j))
+                tmpreturn.append(currline)
+            except ValueError:
+                print("I'm crying") #cry.
+    return np.array(tmpreturn)
+
+################################################################################
+
 
     
 if __name__ == '__main__':    

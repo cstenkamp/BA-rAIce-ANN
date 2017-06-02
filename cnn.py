@@ -30,7 +30,6 @@ class Config(object):
     reset_if_wrongdirection = True
     
     image_dims = [30,45] 
-    vector_len = 62
     msperframe = 200 #50   #ACHTUNG!!! Dieser wert wird von unity überschrieben!!!!! #TODO: dass soll mit unity abgeglichen werden!
     
     batch_size = 32

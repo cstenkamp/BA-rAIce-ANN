@@ -12,7 +12,6 @@ Created on Wed May 10 13:31:54 2017
 @author: nivradmin
 """
 
-import threading
 import numpy as np
 import tensorflow as tf
 from tensorflow.contrib.framework import get_variables
@@ -20,10 +19,9 @@ import time
 import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 #====own classes====
+from agent import AbstractRLAgent
 import cnn
-import read_supervised
 from myprint import myprint as print
-import server
 import infoscreen
 
 current_milli_time = lambda: int(round(time.time() * 1000))
@@ -35,9 +33,6 @@ EPSILONDECREASE = 0.00005
 minepsilon = 0.005
 BATCHSIZE = 32
 Q_DECAY = 0.99
-repeat_random_action_for = 1000
-last_random_timestamp = 0
-last_random_action = None
 CHECKPOINTALL = 100
 DONT_COPY_WEIGHTS = [] #["FC1", "FC2"]
 DONT_TRAIN = [] #["Conv1", "Conv2", "FC1"]# ["Conv1", "Conv2"]
@@ -50,37 +45,16 @@ LAST_ACTION = 0
 ONLY_START = False
 
 
-class ReinfNet(object):
-    def __init__(self, num, sv_config, containers, rl_config, start_fresh):
-        self.lock = threading.Lock()
-        self.isinitialized = False
-        self.containers = containers
-        self.number = num
-        self.isbusy = False
+class ReinfNet(AbstractRLAgent):
+    def __init__(self, num, sv_config, containers, rl_config, start_fresh, *args, **kwargs):
+        super().__init__(containers, num, *args, **kwargs)
         self.sv_config = sv_config
         self.rl_config = rl_config
-        #tps = read_supervised.TPList(read_supervised.FOLDERNAME, config.msperframe)
-        #self.normalizers = tps.find_normalizers()
         self.initNetwork(start_fresh)
 
-#    @staticmethod
-#    def flatten_oneDs(AllOneDs):
-#        return np.array(read_supervised.flatten(AllOneDs))
-#    
-#    @staticmethod
-#    def normalize_oneDs(FlatOneDs, normalizers):
-#        FlatOneDs -= np.array([item[0] for item in normalizers])
-#        NormalizedOneDs = FlatOneDs / np.array([item[1] for item in normalizers])
-#        return NormalizedOneDs
-            
-    def resetUnity(self):
-        server.resetUnity(self.containers)
-    
+   
 
-    def dediscretize(self, discrete):
-        return read_supervised.dediscretize_all(discrete, self.rl_config.steering_steps, self.rl_config.INCLUDE_ACCPLUSBREAK)
-
-    def runANN(self, update_only_if_new):
+    def runInference(self, update_only_if_new):
         global epsilon
         if self.isinitialized:
             if update_only_if_new and self.containers.inputval.alreadyread:
@@ -98,63 +72,53 @@ class ReinfNet(object):
                     else:
                         LAST_ACTION = current_milli_time()
                                 
-                with self.graph.as_default(): 
-#                    if self.containers.inputval.otherinputs.progress > 0 and self.containers.inputval.otherinputs.progress < 10:
-#                        self.resetUnity()
+#                if self.containers.inputval.otherinputs.progress > 0 and self.containers.inputval.otherinputs.progress < 10:
+#                    self.resetUnity()
 #                        return
-                    otherinputs, visionvec = self.containers.inputval.read()
-                    
-                    #add to memory
-                    oldstate, action = self.containers.inputval.get_previous_state()
-                    if oldstate is not None:
-                        newstate = (visionvec, otherinputs.SpeedSteer.velocity)
-                        reward = self.calculateReward()
-                        self.containers.memory.append([oldstate, action, reward, newstate, False]) 
-                        print(self.dediscretize(action), reward, level=6)
-                        print(len(self.containers.memory.memory),level=6)
-                        
+                otherinputs, visionvec = self.containers.inputval.read()
+                
+                #add to memory
+                if self.addToMemory(otherinputs, visionvec):
+                    return
+
+                #run ANN
+                global lastresult
+                try:
+                    if np.random.random() > epsilon:
+                        returnstuff, original = self.performNetwork(otherinputs, visionvec)
+                    else:
+                        returnstuff, original = self.randomAction(otherinputs.SpeedSteer.velocity, self.rl_config)
+                        epsilon = round(max(epsilon-EPSILONDECREASE, minepsilon),5)
                         if self.containers.showscreen:
-                            infoscreen.print(self.dediscretize(action), round(reward,2), round(self.cnn.calculate_value(self.session, newstate[0], newstate[1], self.sv_config.history_frame_nr)[0],2), containers= self.containers, wname="Last memory")
-                            infoscreen.print(str(len(self.containers.memory.memory)), containers= self.containers, wname="Memorysize")
-                        
-                        #deletethispart
-                        if ONLY_START:
-                            self.resetUnity()
-                            LAST_ACTION -= ACTION_ALL_X_MS
-                            return
-                    
-                    #run ANN
-                    global lastresult
-                    try:
-                        if np.random.random() > epsilon:
-                            returnstuff, original = self.performNetwork(otherinputs, visionvec)
-                        else:
-                            returnstuff, original = self.randomAction(otherinputs.SpeedSteer.velocity)
-                            epsilon = round(max(epsilon-EPSILONDECREASE, minepsilon),5)
-                            if self.containers.showscreen:
-                                infoscreen.print(epsilon, containers= self.containers, wname="Epsilon")
-                        lastresult = returnstuff, original
-                    except IndexError: #kommt wenn inputval resettet wurde
-                        returnstuff, original = lastresult
+                            infoscreen.print(epsilon, containers= self.containers, wname="Epsilon")
+                    lastresult = returnstuff, original
+                except IndexError: #kommt wenn inputval resettet wurde
+                    returnstuff, original = lastresult
 
-                    if self.containers.showscreen:
-                        infoscreen.print(returnstuff, containers= self.containers, wname="Last command")
+                if self.containers.showscreen:
+                    infoscreen.print(returnstuff, containers= self.containers, wname="Last command")
 
-                    self.containers.inputval.addResultAndBackup(original) 
-                    self.containers.outputval.update(returnstuff, self.containers.inputval.timestamp)  
-    
-    
-                    #im original DQN learnt er halt jetzt direkt, aber er kann doch besser durchgehend lernen?
-                    
+                self.containers.inputval.addResultAndBackup(original) 
+                self.containers.outputval.update(returnstuff, self.containers.inputval.timestamp)  
+
+
+                #im original DQN learnt er halt jetzt direkt, aber er kann doch besser durchgehend lernen?
+                
             finally:
                 self.isbusy = False
                 self.lock.release()
     
-                
-    def dauerLearnANN(self):
-        while self.containers.KeepRunning:
-            self.learnANN()
-        print("Learn-Thread stopped")
+    
+    def addToMemory(self, otherinputs, visionvec):
+        super().addToMemory(otherinputs, visionvec)
+        if ONLY_START:
+            global LAST_ACTION
+            self.resetUnity()
+            LAST_ACTION -= ACTION_ALL_X_MS
+            return True
+   
+
+    #dauerlearnANN kommt aus der AbstractRLAgent
                 
                 
     def learnANN(self):
@@ -163,7 +127,7 @@ class ReinfNet(object):
         def prepare_feed_dict(states, which_net):
             feed_dict = {
               which_net.inputs: np.array([state[0] for state in states]),
-              which_net.speed_input: np.array([read_supervised.inflate_speed(state[1], self.rl_config.speed_neurons, self.rl_config.SPEED_AS_ONEHOT) for state in states])
+              which_net.speed_input:  np.array([self.inflate_speed(state[1], self.rl_config) for state in states])
             }
             return feed_dict
             
@@ -179,7 +143,7 @@ class ReinfNet(object):
             
             argmactions = [np.argmax(i) for i in actions]
             
-            actualActions = [read_supervised.dediscretize_all(i, self.rl_config.steering_steps, self.rl_config.INCLUDE_ACCPLUSBREAK) for i in actions]
+            actualActions = [self.dediscretize(i, self.rl_config) for i in actions]
             print(list(zip(rewards,actualActions)), level=4)
             
             qs = self.session.run(learn_which.q, feed_dict = prepare_feed_dict(oldstates, learn_which))
@@ -192,7 +156,7 @@ class ReinfNet(object):
             
             self.session.run(learn_which.train_op, feed_dict={
                 learn_which.inputs: np.array([curr[0] for curr in oldstates]),
-                learn_which.speed_input: np.array([read_supervised.inflate_speed(curr[1], self.rl_config.speed_neurons, self.rl_config.SPEED_AS_ONEHOT) for curr in oldstates]),
+                learn_which.speed_input:np.array([self.inflate_speed(curr[1], self.rl_config) for curr in oldstates]),
                 learn_which.targets: qs,
             })
             
@@ -215,35 +179,24 @@ class ReinfNet(object):
                     
                 
                 
-    def calculateReward(self):
-        progress_old = self.containers.inputval.previous_otherinputs.progress
-        progress_new = self.containers.inputval.otherinputs.progress
-        if progress_old > 90 and progress_new < 10:
-            progress_new += 100
-        progress = round(progress_new-progress_old,3)*20
-        
-        stay_on_street = abs(self.containers.inputval.otherinputs.CenterDist)
-        #wenn er >= 10 war und seitdem keine neue action kam, muss er >= 10 bleiben!
-        
-        stay_on_street = round(0 if stay_on_street < 5 else 20 if stay_on_street >= 10 else stay_on_street-5, 3)
-        
-        return progress-stay_on_street
+    #calculateReward ist in der AbstractRLAgent von der er erbt
 
         
                         
                 
 
-    def performNetwork(self, otherinputs, visionvec):
-        print("Another ANN Inference", level=6)
+    def performNetwork(self, otherinputs, visionvec):        
+        super().performNetwork(otherinputs, visionvec)
         
-        check, (networkresult, qvals) = self.cnn.run_inference(self.session, visionvec, otherinputs, self.sv_config.history_frame_nr)
-        if check:
-            throttle, brake, steer = read_supervised.dediscretize_all(networkresult[0], self.containers.rl_conf.steering_steps, self.containers.rl_conf.INCLUDE_ACCPLUSBREAK)
-            result = "["+str(throttle)+", "+str(brake)+", "+str(steer)+"]"
-            self.showqvals(qvals[0])
-            return result, networkresult[0]
-        else:
-            return lastresult
+        with self.graph.as_default():
+            check, (networkresult, qvals) = self.cnn.run_inference(self.session, visionvec, otherinputs, self.sv_config.history_frame_nr)
+            if check:
+                throttle, brake, steer = self.dediscretize(networkresult[0], self.containers.rl_conf)
+                result = "["+str(throttle)+", "+str(brake)+", "+str(steer)+"]"
+                self.showqvals(qvals[0])
+                return result, networkresult[0]
+            else:
+                return lastresult
         
 
     def showqvals(self, qvals):
@@ -252,7 +205,7 @@ class ReinfNet(object):
         for i in range(amount):
             a = [0]*amount
             a[i] = 1
-            b.append(str(self.dediscretize(a)))
+            b.append(str(self.dediscretize(a, self.rl_config)))
         b = list(zip(b, qvals))
         toprint = [str(i[0])[1:-1]+": "+str(i[1]) for i in b]
         toprint = "\n".join(toprint)
@@ -262,39 +215,7 @@ class ReinfNet(object):
             infoscreen.print(toprint, containers= self.containers, wname="Current Q Vals")
         
             
-    def randomAction(self, speed):
-        global last_random_timestamp, last_random_action
-        print("Random Action!", level=6)
-        if current_milli_time() - last_random_timestamp > repeat_random_action_for:
-            
-            
-            action = np.random.randint(4) if self.rl_config.INCLUDE_ACCPLUSBREAK else np.random.randint(3)
-            if action == 0: brake, throttle = 0, 1
-            if action == 1: brake, throttle = 0, 0
-            if action == 2: brake, throttle = 1, 0
-            if action == 3: brake, throttle = 1, 1
-            
-            if speed < 1:
-                brake, throttle = 0, 1  #wenn er nicht fährt bringt stehen nix!
-            
-            #alternative 1a: steer = ((np.random.random()*2)-1)
-            #alternative 1b: steer = min(max(np.random.normal(scale=0.5), 1), -1)
-            #für 1a und 1b:  steer = read_supervised.dediscretize_steer(read_supervised.discretize_steering(steer, self.rl_config.steering_steps))
-            #alternative 2:
-            tmp = [0]*self.rl_config.steering_steps
-            tmp[np.random.randint(self.rl_config.steering_steps)] = 1
-            steer = read_supervised.dediscretize_steer(tmp)
-            
-            
-            last_random_timestamp = current_milli_time()
-            last_random_action = (throttle, brake, steer)
-        else:
-            throttle, brake, steer = last_random_action
-            
-        #throttle, brake, steer = 1, 0, 0
-        result = "["+str(throttle)+", "+str(brake)+", "+str(steer)+"]"
-        return result, read_supervised.discretize_all(throttle, brake, read_supervised.discretize_steering(steer, self.rl_config.steering_steps), self.rl_config.steering_steps, self.rl_config.INCLUDE_ACCPLUSBREAK) 
-              
+    #randomAction ist ebenfalls in der AbstractRLAgent     
             
 
     def initNetwork(self, start_fresh):

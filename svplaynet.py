@@ -12,42 +12,25 @@ Created on Wed May 10 13:31:54 2017
 @author: nivradmin
 """
 
-import threading
 import tensorflow as tf
 
 #====own classes====
+from agent import AbstractAgent
 import cnn
-import read_supervised
 from myprint import myprint as print
 
 
 STANDARDRETURN = ("[0.5,0,0.0]", [0.5, 0, 0.0])
 
 
-class PlayNet(object):
-    def __init__(self, num, config, containers, rl_config_dummy=None, startfreshdummy=False): #der dummy ist da damit man playnet & reinfnet austauschen kan
-        self.lock = threading.Lock()
-        self.isinitialized = False
-        self.containers = containers        
-        self.number = num
-        self.isbusy = False
+class PlayNet(AbstractAgent):
+    def __init__(self, num, config, containers, rl_config_dummy=None, startfreshdummy=False, *args, **kwargs): #der dummy ist da damit man playnet & reinfnet austauschen kan
+        super().__init__(containers, num, *args, **kwargs)
         self.config = config
-        #tps = read_supervised.TPList(read_supervised.FOLDERNAME, config.msperframe)
-        #self.normalizers = tps.find_normalizers()
         self.initNetwork()
 
-#    @staticmethod
-#    def flatten_oneDs(AllOneDs):
-#        return np.array(read_supervised.flatten(AllOneDs))
-#    
-#    @staticmethod
-#    def normalize_oneDs(FlatOneDs, normalizers):
-#        FlatOneDs -= np.array([item[0] for item in normalizers])
-#        NormalizedOneDs = FlatOneDs / np.array([item[1] for item in normalizers])
-#        return NormalizedOneDs
-        
     
-    def runANN(self, update_only_if_new):
+    def runInference(self, update_only_if_new):
         if self.isinitialized:
             if update_only_if_new and self.containers.inputval.alreadyread:
                     return
@@ -55,9 +38,6 @@ class PlayNet(object):
             self.lock.acquire()
             try:
                 self.isbusy = True 
-#                if self.containers.inputval.otherinputs.progress > 30 and self.containers.inputval.otherinputs.progress < 40:
-#                    self.containers.outputval.send_via_senderthread("pleasereset", self.containers.inputval.timestamp)
-#                    return
                 otherinputs, visionvec = self.containers.inputval.read()
                 returnstuff, original = self.performNetwork(otherinputs, visionvec)
                 self.containers.outputval.update(returnstuff, self.containers.inputval.timestamp)    
@@ -68,10 +48,11 @@ class PlayNet(object):
                 
 
     def performNetwork(self, otherinputs, visionvec):
-        print("Another ANN Inference")
+        super().performNetwork(otherinputs, visionvec)
+        
         check, (networkresult, _) = self.cnn.run_inference(self.session, visionvec, otherinputs, self.config.history_frame_nr)
         if check:
-            throttle, brake, steer = read_supervised.dediscretize_all(networkresult[0], self.config.steering_steps, self.config.INCLUDE_ACCPLUSBREAK)
+            throttle, brake, steer = self.dediscretize(networkresult[0], self.config)
             result = "["+str(throttle)+", "+str(brake)+", "+str(steer)+"]"
             return result, [throttle, brake, steer]
         else:
