@@ -176,10 +176,10 @@ class receiver_thread(threading.Thread):
             data = data[data.find(")")+1:]
         
         if data[:11] == "resetServer":
-            resetServer(self.containers, data[11:])
+            resetServer(self.containers, data[11:], punish=0)
             specialcommand = True    
         if data[:7] == "wallhit":
-            endEpisode(self.containers)
+            resetServer(self.containers, self.containers.sv_conf.msperframe, 20) #ist das doppelt gemoppelt damit, dass er eh das if punish > 10 beibehält?
             specialcommand = True    
         return specialcommand
     
@@ -193,12 +193,12 @@ class receiver_thread(threading.Thread):
 
 def resetUnity(containers, punish=0):
     containers.outputval.send_via_senderthread("pleasereset", containers.inputval.timestamp)
-    if punish:
-        punishLastAction(containers, punish)
-    resetServer(containers, containers.inputval.msperframe)
+    resetServer(containers, containers.inputval.msperframe, punish)
     
 
-def resetServer(containers, mspersec):
+def resetServer(containers, mspersec, punish=0):
+    if punish:
+        punishLastAction(containers, punish)
     endEpisode(containers)
     containers.outputval.reset()
     containers.inputval.reset(mspersec, nolock = True)
@@ -215,6 +215,8 @@ def endEpisode(containers):
         
 def punishLastAction(containers, howmuch):
     if not containers.play_only:
+        if containers.showscreen:
+            infoscreen.print(str(-abs(howmuch)), time.strftime("%H:%M:%S", time.gmtime()), containers=containers, wname="Last big punish") #ASDF
         lastmemoryentry = containers.memory.pop() #oldstate, action, reward, newstate
         if lastmemoryentry is not None:
             lastmemoryentry[2] -= abs(howmuch)
@@ -269,7 +271,7 @@ class InputValContainer(object):
                 
                 #wenn othervecs[3][0] >= 10 war und seitdem keine neue action kam, muss er >= 10 bleiben!
                 if othervecs[3][0] >= 10:
-                    self.hit_a_wall = True 
+                    self.hit_a_wall = True #wird erst sobald ne action kommt wieder false gesetzt
                 if self.hit_a_wall:
                     self.othervecs[3][0] = 10
                               

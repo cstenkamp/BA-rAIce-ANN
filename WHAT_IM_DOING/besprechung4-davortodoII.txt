@@ -22,7 +22,7 @@
 -ne Kategorie "probleme und Lösungen", wo zeug drin steht wie was ist die goal function, überhaupt das server nutzen, und überhaupt viel aus dem todo! 
 -die random function möglicherweise mit ner gaussverteilung um die letzte Aktion mit ner similarity-function
 -die Funktionen so ändern dass random in ner extra Funktion und austauschbar ist, und das komplette network (sodass ich wie bei gym nur functions calle wo ich vectors hin gebe und action zurück bekomme) 
-
+-dropout nicht bei inference, nur bei learning?
 
 
 

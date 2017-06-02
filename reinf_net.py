@@ -197,7 +197,9 @@ class ReinfNet(object):
             })
             
             self.containers.reinfNetSteps += 1
-            print("ReinfLearnSteps:", self.containers.reinfNetSteps, level=10)
+            print("ReinfLearnSteps:", self.containers.reinfNetSteps)
+            if self.containers.showscreen:
+                infoscreen.print(self.containers.reinfNetSteps, containers= self.containers, wname="ReinfLearnSteps")
             
             if self.containers.reinfNetSteps % CHECKPOINTALL == 0:
                 checkpoint_file = os.path.join(self.rl_config.checkpoint_dir, 'model.ckpt')

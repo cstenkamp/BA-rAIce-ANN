@@ -1,0 +1,29 @@
+-in der gui den max_q des folgestates (eigens berechnet) ebenfalls anzeigen um zu sehen obs hinkommt
+-den alten topview rausnehmen, den anderen zur seite und y entzerren
+-im playonly modus gui deaktivieren
+-gukcen ob dropout wirklich nur im training ist
+-die 8*11 in den convolutional layers ersetzen sodass ich die imagesize verändern kann
+-macht er settozero auch im supervised-training?
+-Q_DECAY faktor abhängig von fps!
+-kann das supervised pre-training nicht auch schon ein q-value-pendant mitlernen??
+-Leon fängt an zu bremsen bevor der visionvektor sieht dass da ne kurve kommt
+-bild muss länger aber nicht breiter
+-2 kameras um sich selbst auf der strecke besser zu sehen
+-cnn.py runnen klappt nicht
+-convolutional layer können
+-haufen runden für supervised fahren
+-beim supervisedlearning den feedback dabei haben, bzw irgendwie q-werte schon vortrainierne
+-unter 5 kmh nichtstun ist penalized, unter 10kmh bremsen ist penalized (nicht null)
+-den torcs-blogpost wo bremsen nachträglich reingebracht wurde? das genauso machen?
+-supervised pretraining kann nicht perfekt sein weil vieleviele frames skippt und lenken diskretisiert
+-wo gelenkt oder gebremst wird (!bremszonen und kurven) sollte beim supervisedtraining überrepresentiert sein
+-(neben "anzahlmäßig überrepresentieren", kann man auch den gradient/die learningrate den er nutzt davon abhängig machen)
+-dann beim sv-training auch "correct inferences when breaking" and "correct inferences when steering" anzeigen
+-sv-training beenden sobald es am besten auf einem (achtung, )testing-set ist ("early stopping")
+-sv-training besser bereits q-werte lernen lassen (bzw gucken ob es das nicht schon tut)
+-beim SV-training sollte das mit der gaußkurve über ähnliche zustände schon sein "target-smoothing" (macht aus einem gasbremsesteer-vektor 0,0,0,0,1,0,0,0,0 einen 0,0,0.25,0.5,1,0.5,0.25,0,0 -- warum? weil der so die 'krasse entshceidung kriegt der eine ist alles wert und alles andere nichts' -> zu extreme q-values!!! (wenn das auch über ähnlichkeit geht müsste man das auch als 2d-array sehen (gas/bremse/nix auf x und steer auf y), um da zu smoothen... also reshapen und nen kernel drüber laufen lassen ODER ne ähnlichkeitsfunktion haben
+-bereits bekanntes ding ähnlich wie das "target-smoothing": "softtargets" -> 0 wird zu 0.1, 1 wird zu 0.9  (keine one-hot vektoren)
+-cross-entropy-with-logits geht nur mit onehot-vektoren, die werden wir nicht mehr habne, daher was anderes probieren (MSE?)
+-fürs "correct inferences" anzeigen alledings doch fix in onehot-vektoren kombinieren
+-ne variable in othervecs die einfach 0 ist wenn er in die falshce richtung fährt, und resetten und hart bestraen wenn er zu lange in die falshce richtung fährt
+-
