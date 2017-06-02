@@ -26,6 +26,19 @@
 
 
 
+-Rand ne Millionen mal weniger slippery 
+-regards Klippen/nirmieren 
+-lr decay! 
+-lernen auf der gpu! 
+-ne abstrakte klasse "agent"! 
+-nen Python/Delphi restarter, im Zweifelsfall mit geplanten Tasks 
+-Delphi restarter 
+-qmax history speichern und durchgehend mit matplotlib anzeigen 
+-sieht aktuell so aus als sei der qmax richtig (am Rand negativ, Straße ok, Straße und schnell top) aber aus irgendeinem grund wählt er die falsche Aktion 
+-othervecs als namedtuple
+-in unity speeds simulieren können während h gedruckt ist 
+
+
 
 -wenn er komplett zum Stehen kommt soll der Wert des darauffolgenden states nicht mehr beachtet werden
 -dass geradeaus fahren gut für ihn ist macht nur dann Sinn wenn jetzt geradeaus fahren auch ne hohe Wahrscheinlichkeit heißt in den nächsten frames geradeaus zu fahren (oder wenigstens ähnlich - nicht plötzlich bremsen und ganz rechts) 

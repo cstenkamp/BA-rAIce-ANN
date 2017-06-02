@@ -6,7 +6,8 @@ import time
 import logging
 import numpy as np
 import sys
-from collections import deque
+from collections import deque, namedtuple
+import copy
 
 #====own classes====
 import playnet
@@ -18,6 +19,40 @@ current_milli_time = lambda: int(round(time.time() * 1000))
 
 logging.basicConfig(level=logging.ERROR, format='(%(threadName)-10s) %(message)s',)
 
+
+
+prespeedsteer = namedtuple('SpeedSteer', ['RLTorque', 'RRTorque', 'FLSteer', 'FRSteer', 'velocity', 'rightDirection'])
+prestatusvector = namedtuple('StatusVector', ['velocity', 'FLSlip0', 'FRSlip0', 'RLSlip0', 'RRSlip0', 'FLSlip1', 'FRSlip1', 'RLSlip1', 'RRSlip1'])
+                                             #1 elem     6 elems       9 elems         1 elem        15 elems         30 elems
+preotherinputs = namedtuple('OtherInputs', ['progress', 'SpeedSteer', 'StatusVector', 'CenterDist', 'CenterDistVec', 'LookAheadVec'])
+class speedsteer(prespeedsteer):
+    def __eq__(self, other):
+        return np.all([self[i] == other[i] for i in range(len(self))])
+class statusvector(prestatusvector):
+    def __eq__(self, other):
+        return np.all([self[i] == other[i] for i in range(len(self))])
+class otherinputs(preotherinputs):
+    def __eq__(self, other):
+        return self.progress == other.progress \
+           and self.SpeedSteer ==  other.SpeedSteer \
+           and self.StatusVector == other.StatusVector \
+           and self.CenterDist == other.CenterDist \
+           and np.all(self.LookAheadVec == other.LookAheadVec)
+           #and np.all(self.CenterDistVec == other.CenterDistVec) \ #can be skipped because then the centerdist is also equal
+           
+empty_speedsteer = lambda: speedsteer(0, 0, 0, 0, 0, 0)
+empty_statusvector = lambda: statusvector(0, 0, 0, 0, 0, 0, 0, 0, 0)
+empty_inputs = lambda: otherinputs(0, empty_speedsteer(), empty_statusvector(), 0, np.zeros(15), np.zeros(30))
+def make_otherinputs(othervecs):
+    return otherinputs(othervecs[0][0], \
+                       speedsteer(othervecs[1][0], othervecs[1][1], othervecs[1][2], othervecs[1][3], othervecs[1][4], othervecs[1][5]), \
+                       statusvector(othervecs[2][0], othervecs[2][1], othervecs[2][2], othervecs[2][3], othervecs[2][4], othervecs[2][5], othervecs[2][6], othervecs[2][7], othervecs[2][8]), \
+                       othervecs[3][0], \
+                       othervecs[3][1:], \
+                       othervecs[4])
+
+
+
 MININT = -sys.maxsize+1
 TCP_IP = 'localhost'
 TCP_RECEIVER_PORT = 6435
@@ -26,7 +61,6 @@ NUMBER_ANNS = 1
 UPDATE_ONLY_IF_NEW = False #sendet immer nach jedem update -> Wenn False sendet er wann immer er was kriegt
 
 wrongdirtime = 0
-
 
 
 class MySocket:
@@ -216,13 +250,12 @@ def endEpisode(containers):
 def punishLastAction(containers, howmuch):
     if not containers.play_only:
         if containers.showscreen:
-            infoscreen.print(str(-abs(howmuch)), time.strftime("%H:%M:%S", time.gmtime()), containers=containers, wname="Last big punish") #ASDF
+            infoscreen.print(str(-abs(howmuch)), time.strftime("%H:%M:%S", time.gmtime()), containers=containers, wname="Last big punish")
         lastmemoryentry = containers.memory.pop() #oldstate, action, reward, newstate
         if lastmemoryentry is not None:
             lastmemoryentry[2] -= abs(howmuch)
             containers.memory.append(lastmemoryentry)    
 
-        
         
 class InputValContainer(object):   
     
@@ -232,14 +265,14 @@ class InputValContainer(object):
         self.visionvec = np.zeros([config.image_dims[0], config.image_dims[1]])
         if self.config.history_frame_nr > 1:
             self.vvec_hist = np.zeros([config.history_frame_nr, config.image_dims[0], config.image_dims[1]]) 
-        self.othervecs = np.zeros(config.vector_len)      
+        self.otherinputs = empty_inputs()
         self.timestamp = MININT
         self.containers = None
         self.alreadyread = True
         self.previous_action = None
         self.previous_visionvec = None
         self.previous_vvechist = None
-        self.previous_othervecs = None
+        self.previous_otherinputs = None
         self.msperframe = config.msperframe
         self.hit_a_wall = False
         
@@ -247,37 +280,38 @@ class InputValContainer(object):
     def update(self, visionvec, othervecs, timestamp):
         global wrongdirtime
         
-        def is_new(visionvec, othervecs):
+        def is_new(visionvec, otherinputs):
             if self.config.history_frame_nr == 1:
-                return not (np.all(self.visionvec == visionvec) and np.all(self.othervecs == othervecs))
+                return not (np.all(self.visionvec == visionvec) and self.otherinputs == otherinputs)
             else:
                 tmp_vvec_hist = [visionvec] + [i for i in self.vvec_hist[:-1]]
                 allequal = True
                 for i in range(len(tmp_vvec_hist)):
                     if not np.all(self.vvec_hist[i] == tmp_vvec_hist[i]):
                         allequal = False
-                return not (allequal and np.all(self.othervecs == othervecs))
+                return not (allequal and np.all(self.otherinputs == otherinputs))
         
         logging.debug('Inputval-Update: Waiting for lock')
         self.lock.acquire()
         try:
             logging.debug('Acquired lock')
-            if is_new(visionvec, othervecs):
+            otherinputs = make_otherinputs(othervecs)
+            if is_new(visionvec, otherinputs):
             
                 self.visionvec = visionvec
                 if self.config.history_frame_nr > 1:
                     self.vvec_hist = [visionvec] + [i for i in self.vvec_hist[:-1]]            
-                self.othervecs = othervecs
+                self.otherinputs = otherinputs
                 
-                #wenn othervecs[3][0] >= 10 war und seitdem keine neue action kam, muss er >= 10 bleiben!
-                if othervecs[3][0] >= 10:
+                #wenn otherinputs.centerdistvec[0] >= 10 war und seitdem keine neue action kam, muss er >= 10 bleiben!
+                if otherinputs.CenterDist >= 10:
                     self.hit_a_wall = True #wird erst sobald ne action kommt wieder false gesetzt
                 if self.hit_a_wall:
-                    self.othervecs[3][0] = 10
-                              
+                    self.otherinputs = self.otherinputs._replace(CenterDist = 10)
+                    
                 try:
                     if self.config.reset_if_wrongdirection:
-                        if not self.othervecs[1][5]:
+                        if not self.otherinputs.SpeedSteer.rightDirection:
                             wrongdirtime += self.containers.sv_conf.msperframe
                             if wrongdirtime >= 2000:
                                 resetUnity(self.containers, punish=100)
@@ -297,25 +331,21 @@ class InputValContainer(object):
     def addResultAndBackup(self, action):
         self.hit_a_wall = False #sobald ne action danach kommt ist es unrelated #TODO: gilt nur wenn walhit_means_reset
         self.previous_action = action
-        self.previous_othervecs = self.othervecs
+        self.previous_otherinputs = copy.deepcopy(self.otherinputs) #OMFG HAT ES ALLES GEÄNDERT HIER COPY ZU NEHMEN????
         if self.config.history_frame_nr > 1:
-            self.previous_vvechist = self.vvec_hist
+            self.previous_vvechist = copy.deepcopy(self.vvec_hist)
         else:
-            self.previous_visionvec = self.visionvec
+            self.previous_visionvec = copy.deepcopy(self.visionvec)
             
         
     def get_previous_state(self):
-        if self.previous_action is None or self.previous_othervecs is None:
-            return None, False
-        try:
-            self.previous_othervecs[0][0]
-        except IndexError:
+        if self.previous_action is None or self.previous_otherinputs is None:
             return None, False
         
         if self.config.history_frame_nr > 1:
-            state = (self.previous_vvechist, self.previous_othervecs[1][4]) #vision plus speed
+            state = (self.previous_vvechist, self.previous_otherinputs.SpeedSteer.velocity) #vision plus speed
         else:
-            state = (self.previous_visionvec, self.previous_othervecs[1][4]) #vision plus speed
+            state = (self.previous_visionvec, self.previous_otherinputs.SpeedSteer.velocity) #vision plus speed
         action = self.previous_action
             
         return state, action
@@ -332,13 +362,13 @@ class InputValContainer(object):
             self.visionvec = np.zeros([self.config.image_dims[0], self.config.image_dims[1]])
             if self.config.history_frame_nr > 1:
                 self.vvec_hist = np.zeros([self.config.history_frame_nr, self.config.image_dims[0], self.config.image_dims[1]]) 
-            self.othervecs = np.zeros(self.config.vector_len)      
+            self.otherinputs = empty_inputs()
             self.timestamp = 0
             self.alreadyread = True
             self.previous_action = None
             self.previous_visionvec = None
             self.previous_vvechist = None
-            self.previous_othervecs = None
+            self.previous_otherinputs = None
             self.msperframe = interval #da Unity im diesen Wert immer bei spielstart schickt, wird msperframe immer richtig sein            
             assert int(self.msperframe) == int(self.config.msperframe)
             self.hit_a_wall = False
@@ -353,9 +383,9 @@ class InputValContainer(object):
         self.alreadyread = True
         #print(self.visionvec) #TODO: der sollte nicht leer sein wenn not UPDATE_ONLY_IF_NEW
         if self.config.history_frame_nr > 1:
-            return self.othervecs, self.vvec_hist
+            return self.otherinputs, self.vvec_hist
         else:
-            return self.othervecs, self.visionvec
+            return self.otherinputs, self.visionvec
         
         
     
@@ -610,7 +640,7 @@ def main(sv_conf, rl_conf, play_only, no_learn, show_screen, start_fresh):
     containers.outputval = OutputValContainer()
     containers.outputval.containers = containers
     containers.sv_conf = sv_conf
-    containers.rl_conf = rl_conf
+    containers.rl_conf = rl_conf   
     
     containers.receiverportsocket = create_socket(TCP_RECEIVER_PORT)
     containers.senderportsocket = create_socket(TCP_SENDER_PORT)

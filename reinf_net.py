@@ -29,7 +29,7 @@ import infoscreen
 current_milli_time = lambda: int(round(time.time() * 1000))
 
 STANDARDRETURN = ("[0.5,0,0.0]", [0]*42)
-MEMORY_SIZE = 5000
+MEMORY_SIZE = 30000
 epsilon = 0.05
 EPSILONDECREASE = 0.00005
 minepsilon = 0.005
@@ -99,15 +99,15 @@ class ReinfNet(object):
                         LAST_ACTION = current_milli_time()
                                 
                 with self.graph.as_default(): 
-#                    if self.containers.inputval.othervecs[0][0] > 0 and self.containers.inputval.othervecs[0][0] < 10:
+#                    if self.containers.inputval.otherinputs.progress > 0 and self.containers.inputval.otherinputs.progress < 10:
 #                        self.resetUnity()
 #                        return
-                    othervecs, visionvec = self.containers.inputval.read()
+                    otherinputs, visionvec = self.containers.inputval.read()
                     
                     #add to memory
                     oldstate, action = self.containers.inputval.get_previous_state()
                     if oldstate is not None:
-                        newstate = (visionvec, othervecs[1][4])
+                        newstate = (visionvec, otherinputs.SpeedSteer.velocity)
                         reward = self.calculateReward()
                         self.containers.memory.append([oldstate, action, reward, newstate, False]) 
                         print(self.dediscretize(action), reward, level=6)
@@ -127,9 +127,9 @@ class ReinfNet(object):
                     global lastresult
                     try:
                         if np.random.random() > epsilon:
-                            returnstuff, original = self.performNetwork(othervecs, visionvec)
+                            returnstuff, original = self.performNetwork(otherinputs, visionvec)
                         else:
-                            returnstuff, original = self.randomAction(othervecs[1][4])
+                            returnstuff, original = self.randomAction(otherinputs.SpeedSteer.velocity)
                             epsilon = round(max(epsilon-EPSILONDECREASE, minepsilon),5)
                             if self.containers.showscreen:
                                 infoscreen.print(epsilon, containers= self.containers, wname="Epsilon")
@@ -216,17 +216,16 @@ class ReinfNet(object):
                 
                 
     def calculateReward(self):
-        progress_old = self.containers.inputval.previous_othervecs[0][0]
-        progress_new = self.containers.inputval.othervecs[0][0]
+        progress_old = self.containers.inputval.previous_otherinputs.progress
+        progress_new = self.containers.inputval.otherinputs.progress
         if progress_old > 90 and progress_new < 10:
             progress_new += 100
         progress = round(progress_new-progress_old,3)*20
         
-        stay_on_street = abs(self.containers.inputval.othervecs[3][0])
+        stay_on_street = abs(self.containers.inputval.otherinputs.CenterDist)
         #wenn er >= 10 war und seitdem keine neue action kam, muss er >= 10 bleiben!
         
         stay_on_street = round(0 if stay_on_street < 5 else 20 if stay_on_street >= 10 else stay_on_street-5, 3)
-        
         
         return progress-stay_on_street
 
@@ -234,10 +233,10 @@ class ReinfNet(object):
                         
                 
 
-    def performNetwork(self, othervecs, visionvec):
+    def performNetwork(self, otherinputs, visionvec):
         print("Another ANN Inference", level=6)
         
-        check, (networkresult, qvals) = self.cnn.run_inference(self.session, visionvec, othervecs, self.sv_config.history_frame_nr)
+        check, (networkresult, qvals) = self.cnn.run_inference(self.session, visionvec, otherinputs, self.sv_config.history_frame_nr)
         if check:
             throttle, brake, steer = read_supervised.dediscretize_all(networkresult[0], self.containers.rl_conf.steering_steps, self.containers.rl_conf.INCLUDE_ACCPLUSBREAK)
             result = "["+str(throttle)+", "+str(brake)+", "+str(steer)+"]"

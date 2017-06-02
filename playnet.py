@@ -55,11 +55,11 @@ class PlayNet(object):
             self.lock.acquire()
             try:
                 self.isbusy = True 
-#                if self.containers.inputval.othervecs[0][0] > 30 and self.containers.inputval.othervecs[0][0] < 40:
+#                if self.containers.inputval.otherinputs.progress > 30 and self.containers.inputval.otherinputs.progress < 40:
 #                    self.containers.outputval.send_via_senderthread("pleasereset", self.containers.inputval.timestamp)
 #                    return
-                othervecs, visionvec = self.containers.inputval.read()
-                returnstuff, original = self.performNetwork(othervecs, visionvec)
+                otherinputs, visionvec = self.containers.inputval.read()
+                returnstuff, original = self.performNetwork(otherinputs, visionvec)
                 self.containers.outputval.update(returnstuff, self.containers.inputval.timestamp)    
                 self.isbusy = False
             finally:
@@ -67,9 +67,9 @@ class PlayNet(object):
                   
                 
 
-    def performNetwork(self, othervecs, visionvec):
+    def performNetwork(self, otherinputs, visionvec):
         print("Another ANN Inference")
-        check, (networkresult, _) = self.cnn.run_inference(self.session, visionvec, othervecs, self.config.history_frame_nr)
+        check, (networkresult, _) = self.cnn.run_inference(self.session, visionvec, otherinputs, self.config.history_frame_nr)
         if check:
             throttle, brake, steer = read_supervised.dediscretize_all(networkresult[0], self.config.steering_steps, self.config.INCLUDE_ACCPLUSBREAK)
             result = "["+str(throttle)+", "+str(brake)+", "+str(steer)+"]"

@@ -307,7 +307,7 @@ class CNN(object):
         return accuracy, loss, dataset.numsamples
             
             
-    def run_inference(self, session, visionvec, othervecs, hframes):
+    def run_inference(self, session, visionvec, otherinputs, hframes):
         if hframes > 1:
             if not type(visionvec[0]).__module__ == np.__name__:
                 return False, (None, None) #dann ist das input-array leer
@@ -315,16 +315,13 @@ class CNN(object):
             if not type(visionvec).__module__ == np.__name__:
                 return False, (None, None) #dann ist das input-array leer
             assert (np.array(visionvec.shape) == np.array(self.inputs.get_shape().as_list()[1:])).all()
-        try:
-            othervecs[1][4]
-        except IndexError:
-            return False, (None, None)
+            
         
         with tf.device("/cpu:0"):
             visionvec = np.expand_dims(visionvec, axis=0)
             feed_dict = {self.inputs: visionvec}  
             if self.config.speed_neurons:
-                speed_disc = read_supervised.inflate_speed(othervecs[1][4], self.config.speed_neurons, self.config.SPEED_AS_ONEHOT)
+                speed_disc = read_supervised.inflate_speed(otherinputs.SpeedSteer.velocity, self.config.speed_neurons, self.config.SPEED_AS_ONEHOT)
                 feed_dict[self.speed_input] = np.expand_dims(speed_disc, axis=0)
             
             return True, session.run([self.argmax, self.q], feed_dict=feed_dict)
