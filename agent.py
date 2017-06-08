@@ -24,10 +24,13 @@ class AbstractAgent(object):
         self.containers = containers        
         self.number = num
         self.isbusy = False        
+        self.numIterations = 0
         
     ##############functions that should be impemented##########
-    def runInference(self, update_only_if_new):
-        raise NotImplementedError
+    def runInference(self, update_only_if_new):     
+        self.numIterations += 1
+        if update_only_if_new and self.containers.inputval.alreadyread:
+                return
         
         
         
@@ -67,7 +70,6 @@ class AbstractRLAgent(AbstractAgent):
     
     
     
-    
     def addToMemory(self, otherinputs, visionvec): 
         oldstate, action = self.containers.inputval.get_previous_state()
         if oldstate is not None:
@@ -87,8 +89,14 @@ class AbstractRLAgent(AbstractAgent):
 
 
     def dauerLearnANN(self):
+        try: 
+            self.rl_config.train_for
+        except:
+            self.rl_config.train_for = float("inf")
+            
         while self.containers.KeepRunning:
-            self.learnANN()
+            if self.learnANN() == "break":
+                break
         print("Learn-Thread stopped")
 
 
@@ -105,7 +113,7 @@ class AbstractRLAgent(AbstractAgent):
         progress_new = inputval.otherinputs.progress
         if progress_old > 90 and progress_new < 10:
             progress_new += 100
-        progress = round(progress_new-progress_old,3)*20
+        progress = round(progress_new-progress_old,3)*100
         
         stay_on_street = abs(inputval.otherinputs.CenterDist)
         #wenn er >= 10 war und seitdem keine neue action kam, muss er >= 10 bleiben!
@@ -147,4 +155,7 @@ class AbstractRLAgent(AbstractAgent):
         #throttle, brake, steer = 1, 0, 0
         result = "["+str(throttle)+", "+str(brake)+", "+str(steer)+"]"
         return result, self.discretize(throttle, brake, steer, config) 
+
+
+###################################################################################################  
 

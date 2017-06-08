@@ -10,6 +10,8 @@ import numpy as np
 import sys
 from collections import deque, namedtuple
 import copy
+import pickle
+import os
 
 #====own classes====
 import svplaynet
@@ -65,6 +67,8 @@ UPDATE_ONLY_IF_NEW = False #sendet immer nach jedem update -> Wenn False sendet 
 
 wrongdirtime = 0
 
+SAVEMEMORYALL = 10
+SAVEMEMORYPATH = "./"
 
 class MySocket:
 
@@ -193,10 +197,6 @@ class receiver_thread(threading.Thread):
                             thread = threading.Thread(target=self.runOneANN, args=()) #immediately returns if UPDATE_ONLY_IF_NEW and alreadyreadthread = threading.Thread(target=self.runInference_SaveResult, args=())
                             thread.start() 
                         
-                        
-                        
-                        
-                    
             except TimeoutError:
                 if len(self.containers.receiverthreads) < 2:
                     pass
@@ -453,12 +453,25 @@ class OutputValContainer(object):
 #wenn ich hier thread-locks verwenden würde würde er jedes mal einen neuen receiver-thread starten. 
 #TODO: auf richtigere weise thread-safe machen.
 class Memory(object):
-    def __init__(self, elemtype, size):
+    def __init__(self, elemtype, size, containers):
 #        self.lock = threading.Lock()
         self.memory = deque(elemtype, size)
+        self.appendcount = 0
+        self.containers = containers
+        if self.containers.keep_memory:
+            if os.path.exists(SAVEMEMORYPATH+'memory.pkl'):
+                with open(SAVEMEMORYPATH+'memory.pkl', 'rb') as input:
+                    self.memory = pickle.load(input)   
+                print("Loading existing memory with", len(self.memory), "entries", level=10)
+            
     
     def append(self, obj):
         self.memory.append(obj)
+        self.appendcount += 1
+        if self.containers.keep_memory:
+            if self.appendcount % SAVEMEMORYALL == 0:
+                with open(SAVEMEMORYPATH+'memory.pkl', 'wb') as output:
+                    pickle.dump(self.memory, output, pickle.HIGHEST_PROTOCOL)
         
     def pop(self):
         try:
@@ -550,7 +563,7 @@ def create_socket(port):
 
 
 
-def main(sv_conf, rl_conf, play_only, no_learn, show_screen, start_fresh):
+def main(sv_conf, rl_conf, play_only, no_learn, show_screen, start_fresh, keep_memory):
     containers = Containers(play_only)
     containers.inputval = InputValContainer(sv_conf)
     containers.inputval.containers = containers #lol.    
@@ -558,6 +571,7 @@ def main(sv_conf, rl_conf, play_only, no_learn, show_screen, start_fresh):
     containers.outputval.containers = containers
     containers.sv_conf = sv_conf
     containers.rl_conf = rl_conf   
+    containers.keep_memory = keep_memory
     
     containers.receiverportsocket = create_socket(TCP_RECEIVER_PORT)
     containers.senderportsocket = create_socket(TCP_SENDER_PORT)
@@ -569,7 +583,7 @@ def main(sv_conf, rl_conf, play_only, no_learn, show_screen, start_fresh):
         NeuralNet = svplaynet.PlayNet
     else:
         NeuralNet = reinf_net.ReinfNet
-        containers.memory = Memory([], reinf_net.MEMORY_SIZE)
+        containers.memory = Memory([], rl_conf.memorysize, containers)
         
     for i in range(NUMBER_ANNS):
         ANN = NeuralNet(i, sv_conf, containers, rl_conf, start_fresh)
@@ -619,10 +633,14 @@ def main(sv_conf, rl_conf, play_only, no_learn, show_screen, start_fresh):
     
 if __name__ == '__main__':  
     sv_conf = cnn.Config() #TODO: lass dir die infos instead von unity schicken.
-    rl_conf = cnn.RL_Config()
+    if ("-DQN" in sys.argv):
+        rl_conf = cnn.DQN_Config()
+    else:
+        rl_conf = cnn.RL_Config()
     
     if "-nolearn" in sys.argv:
         reinf_net.minepsilon = 0
         reinf_net.epsilon = 0
+        
                 
-    main(sv_conf, rl_conf, ("-svplay" in sys.argv), ("-nolearn" in sys.argv), not ("-noscreen" in sys.argv), ("-startfresh" in sys.argv))    
+    main(sv_conf, rl_conf, ("-svplay" in sys.argv), ("-nolearn" in sys.argv), not ("-noscreen" in sys.argv), ("-startfresh" in sys.argv), ("-keepmemory" in sys.argv or "-DQN" in sys.argv))    

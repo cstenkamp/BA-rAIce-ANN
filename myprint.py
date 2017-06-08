@@ -6,7 +6,7 @@ Created on Fri May 19 18:40:44 2017
 """
 
 
-PRINTLEVEL = 7
+PRINTLEVEL = 5
 
 def myprint(*args, **kwargs):
     try:

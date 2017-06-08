@@ -32,8 +32,7 @@ class PlayNet(AbstractAgent):
     
     def runInference(self, update_only_if_new):
         if self.isinitialized:
-            if update_only_if_new and self.containers.inputval.alreadyread:
-                    return
+            super().runInference(update_only_if_new)
                 
             self.lock.acquire()
             try:

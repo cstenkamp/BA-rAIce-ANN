@@ -1,0 +1,19 @@
+Dqn Paper 
+-experience replay mit viel größerem speicher
+-c ist 10000 mal größer 
+-uniformly at random ziehen is bad 
+-print average Qval over time, average points per episode, und in meinem Fall average Rundenzeit (Einstellung dass Wallhit episode beendet) 
+-->Samples besser ziehen, countbased Motivation! 
+-deren Input, nach preprocessing, ist 84*84*4 @ 60HZ (4 historyframes..) 
+-alternatives Lernziel: Prozent bevor er in die Wand fährt (allgemein formulieren, variable dass Wand die episode beendet, und goalfunction Länge der Strecke) 
+-clipping of rewards! (genau dann wenn auf +-1 geclippt, kann man die learning Rate von dqnpaper nutzen!) 
+-hab ich relus? 
+-first layer 32 Filter a 8x8 stride 4,relu, second layer 64 a 3x3 stride 1. Final laser 512 relus 
+-epsilon-greedy, mit epsilon linearly von 1.0 zu 0.1 in den ersten 1 Million frames 
+-The game is perceptually aliased - nur vom current frame kann man nicht auf die richtige Aktion schließen, auch nicht mit speed etc, bspw wegen slip -> sequence of Last states + Actions as Input?? (aka states?) 
+"-Bias Experience replay towards salient Events" wollen Sie noch
+-das replay memory mit zufalls-policy-werten initiieren (50.000)
+-mach ich nicht nen fehler beim targetnetwork? das klingt im dqn paper anders :o
+
+
+-> wenn ich sowas wie replay memory mit random sachen initiiere und das nicht klappt, oder wenn werte wie epsilon = 0.1 nicht klappen bei mir, unbedingt dazuschreiben dass das in rennspielen komplexer ist (weil korelliert)... und halt auch schreiben dass der mit ner random policy wohl nie auf den zustand speed = 10/10 kommen wird, der das also null lernt

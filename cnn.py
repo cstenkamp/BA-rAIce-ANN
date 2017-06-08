@@ -7,6 +7,7 @@ Created on Sat Mar 25 13:41:09 2017
 import tensorflow as tf
 import numpy as np
 import os
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 import time
 import math
 #====own classes====
@@ -14,14 +15,13 @@ import read_supervised
 from myprint import myprint as print
 
 SUMMARYALL = 1000
-CHECKPOINTALL = 10
 
 class Config(object):
     foldername = "SavedLaps/"
     log_dir = "SummaryLogDir/"  
     checkpoint_pre_dir = "Checkpoint"
     
-    history_frame_nr = 1 #incl. dem jetzigem!
+    history_frame_nr = 4 #incl. dem jetzigem!
     speed_neurons = 30 #wenn null nutzt er sie nicht
     SPEED_AS_ONEHOT = False
     steering_steps = 7
@@ -42,6 +42,7 @@ class Config(object):
     lr_decay = 0.9
     lrdecayafter = iterations//2  #//3 für 90, 120
     minimal_lr = 1e-6 #mit diesen settings kommt er auf 0.01 loss, 99.7% correct inferences
+    checkpointall = 10
     
     def __init__(self):
         assert os.path.exists(self.foldername), "No data to train on at all!"        
@@ -60,7 +61,18 @@ class RL_Config(Config):
     keep_prob = 1
     max_grad_norm = 10
     initial_lr = 0.001
-    lr_decay = 0.9
+    #lr_decay = 1
+    
+    startepsilon = 0.2
+    epsilondecrease = 0.0001
+    minepsilon = 0.005
+    batchsize = 32
+    q_decay = 0.99
+    checkpointall = 100
+    copy_target_all = 100
+    
+    replaystartsize = 0
+    memorysize = 30000
     
     #re-uses history_frame_nr, image_dims, steering_steps, speed_neurons, INCLUDE_ACCPLUSBREAK, SPEED_AS_ONEHOT
     
@@ -74,10 +86,26 @@ class RL_Config(Config):
 
 
 
-                   
+    
+class DQN_Config(RL_Config):
+    batch_size = 32             #minibatch size
+    memorysize = 1000000        #replay memory size
+    history_frames = 4          #agent history length
+    copy_target_all = 10000     #target network update frequency (C)
+    q_decay = 0.99              #discount factor
+    #action repeat & update frequency & noop-max
+    initial_lr = 0.00025        #learning rate used by RMSProp
+    lr_decay = 1                #as the lr seems to stay equal, no decay
+    rms_momentum = 0.95         #gradient momentum (=squared gradient momentum)
+    min_sq_grad = 0.1           #min squared gradient 
+    startepsilon = 1            #initial exploration
+    minepsilon = 0.1            #final exploration
+    finalepsilonframe = 1000000 #final exploration frame
+    replaystartsize = 50000     #replay start size
+    train_for = 50000000        #number of iterations to train for 
+    
+    
 
-#was fehlt am ANN:
-#    -nutzen: Tensorflow website's stuff, Leons TF-Project
                                       
 class CNN(object):
     
@@ -88,7 +116,8 @@ class CNN(object):
         self.is_reinforcement = is_reinforcement
         self.iterations = 0
         final_neuron_num = self.config.steering_steps*4 if self.config.INCLUDE_ACCPLUSBREAK else self.config.steering_steps*3
-    
+        
+        self.prepareNumIters()
         self.inputs, self.targets, self.speed_input = self.set_placeholders(is_training, final_neuron_num)
         
         if is_training:
@@ -245,6 +274,22 @@ class CNN(object):
             
         
         optimizer = optimizer_arg(self.learning_rate)
+        
+        if (optimizer_arg == tf.train.RMSPropOptimizer):
+            arguments = {"learning_rate": self.config.initial_lr}
+            try:
+                arguments["decay"] = self.config.lr_decay
+            except:
+                pass
+            try: 
+                arguments["momentum"] = self.config.rms_momentum
+            except:
+                pass
+            try: 
+                arguments["epsilon"] = self.config.min_sq_grad
+            except:
+                pass
+            optimizer = optimizer_arg(**arguments)
         #TODO: AUSSUCHEN können welchen optimizer, und meinen ausgesuchten verteidigen können
         #https://www.tensorflow.org/api_guides/python/train#optimizers
         
@@ -263,8 +308,22 @@ class CNN(object):
         tf.summary.scalar('accuracy', compare)
         return compare
         
-        
+    
+    def prepareNumIters(self):
+        self.numIterations = tf.Variable(tf.constant(0), trainable=False)
+        self.newIters = tf.placeholder(tf.int32, shape=[]) 
+        self.iterUpdate = tf.assign(self.numIterations, self.newIters)           
+    
     ######methods for RUNNING the computation graph######
+    
+    def saveNumIters(self, session, value):
+        session.run(self.iterUpdate, feed_dict={self.newIters: value})
+        
+    def restoreNumIters(self, session):
+        return self.numIterations.eval(session=session)
+        
+    
+    
     def train_fill_feed_dict(self, config, dataset, batchsize = 0, decay_lr = True):
         batchsize = config.batch_size if batchsize == 0 else batchsize
         _, visionvec, targets, speeds = dataset.next_batch(config, batchsize)
@@ -363,12 +422,12 @@ def run_svtraining(config, dataset):
                 stepsPerIt = dataset.numsamples//config.batch_size
                 already_run_iterations = cnn.global_step.eval()//stepsPerIt
                 cnn.iterations = already_run_iterations
-                print("Restored checkpoint with",already_run_iterations,"Iterations run already") 
+                print("Restored checkpoint with",already_run_iterations,"Iterations run already", level=8) 
             else:
                 already_run_iterations = 0
                 
             num_iterations = config.iterations - already_run_iterations
-            print("Running for",num_iterations,"further iterations" if already_run_iterations>0 else "iterations")
+            print("Running for",num_iterations,"further iterations" if already_run_iterations>0 else "iterations", level=8)
             for _ in range(num_iterations):
                 start_time = time.time()
 
@@ -376,17 +435,17 @@ def run_svtraining(config, dataset):
                 train_loss = cnn.run_train_epoch(sess, dataset, summary_writer)
                 
                 savedpoint = ""
-                if cnn.iterations % CHECKPOINTALL == 0 or cnn.iterations == config.iterations:
+                if cnn.iterations % config.checkpointall == 0 or cnn.iterations == config.iterations:
                     checkpoint_file = os.path.join(config.checkpoint_dir, 'model.ckpt')
                     saver.save(sess, checkpoint_file, global_step=step)       
                     savedpoint = "(checkpoint saved)"
                 
-                print('Iteration %3d (step %4d): loss = %.2f (%.3f sec)' % (cnn.iterations, step+1, train_loss, time.time()-start_time), savedpoint)
+                print('Iteration %3d (step %4d): loss = %.2f (%.3f sec)' % (cnn.iterations, step+1, train_loss, time.time()-start_time), savedpoint, level=8)
                 
                 
             ev, loss, _ = cnn.run_eval(sess, dataset)
-            print("Result of evaluation:")
-            print("Loss: %.2f,  Correct inferences: %.2f%%" % (loss, ev*100))
+            print("Result of evaluation:", level=8)
+            print("Loss: %.2f,  Correct inferences: %.2f%%" % (loss, ev*100), level=8)
 
 #            dataset.reset_batch()
 #            _, visionvec, _, _ = dataset.next_batch(config, 1)
@@ -403,7 +462,7 @@ def main():
     config = Config()
         
     trackingpoints = read_supervised.TPList(config.foldername, config.msperframe, config.steering_steps, config.INCLUDE_ACCPLUSBREAK)
-    print("Number of samples: %s | Tracking every %s ms with %s historyframes" % (trackingpoints.numsamples, str(config.msperframe), str(config.history_frame_nr)))
+    print("Number of samples: %s | Tracking every %s ms with %s historyframes" % (trackingpoints.numsamples, str(config.msperframe), str(config.history_frame_nr)), level=6)
     run_svtraining(config, trackingpoints)        
     
                 

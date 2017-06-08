@@ -27,16 +27,8 @@ import infoscreen
 current_milli_time = lambda: int(round(time.time() * 1000))
 
 STANDARDRETURN = ("[0.5,0,0.0]", [0]*42)
-MEMORY_SIZE = 30000
-epsilon = 0.05
-EPSILONDECREASE = 0.00005
-minepsilon = 0.005
-BATCHSIZE = 32
-Q_DECAY = 0.99
-CHECKPOINTALL = 100
 DONT_COPY_WEIGHTS = [] #["FC1", "FC2"]
 DONT_TRAIN = [] #["Conv1", "Conv2", "FC1"]# ["Conv1", "Conv2"]
-COPY_TARGET_ALL = 100
 
 lastresult = None
 
@@ -50,15 +42,14 @@ class ReinfNet(AbstractRLAgent):
         super().__init__(containers, num, *args, **kwargs)
         self.sv_config = sv_config
         self.rl_config = rl_config
+        self.epsilon = self.rl_config.startepsilon
         self.initNetwork(start_fresh)
 
    
 
     def runInference(self, update_only_if_new):
-        global epsilon
         if self.isinitialized:
-            if update_only_if_new and self.containers.inputval.alreadyread:
-                    return
+            super().runInference(update_only_if_new)
                 
             self.lock.acquire()
             try:
@@ -84,13 +75,20 @@ class ReinfNet(AbstractRLAgent):
                 #run ANN
                 global lastresult
                 try:
-                    if np.random.random() > epsilon:
+                    
+                    if len(self.containers.memory.memory) > self.rl_config.replaystartsize and np.random.random() > self.epsilon:
                         returnstuff, original = self.performNetwork(otherinputs, visionvec)
                     else:
                         returnstuff, original = self.randomAction(otherinputs.SpeedSteer.velocity, self.rl_config)
-                        epsilon = round(max(epsilon-EPSILONDECREASE, minepsilon),5)
+                    
+                        if len(self.containers.memory.memory) > self.rl_config.replaystartsize:
+                            try:
+                                self.epsilon = round(max(self.rl_config.startepsilon-((self.rl_config.startepsilon-self.rl_config.minepsilon)*((self.numIterations-self.rl_config.replaystartsize)/self.rl_config.finalepsilonframe)), self.rl_config.minepsilon), 5)
+                            except:
+                                self.epsilon = round(max(self.epsilon-self.rl_config.epsilondecrease, self.rl_config.minepsilon),5)
+                            
                         if self.containers.showscreen:
-                            infoscreen.print(epsilon, containers= self.containers, wname="Epsilon")
+                            infoscreen.print(self.epsilon, containers= self.containers, wname="Epsilon")
                     lastresult = returnstuff, original
                 except IndexError: #kommt wenn inputval resettet wurde
                     returnstuff, original = lastresult
@@ -123,6 +121,9 @@ class ReinfNet(AbstractRLAgent):
                 
     def learnANN(self):
         learn_which = self.online_cnn    #TODO: target network ausschalten können
+  
+        if self.numIterations < self.rl_config.replaystartsize:
+            return
     
         def prepare_feed_dict(states, which_net):
             feed_dict = {
@@ -132,10 +133,10 @@ class ReinfNet(AbstractRLAgent):
             return feed_dict
             
             
-        if len(self.containers.memory.memory) > BATCHSIZE:
+        if len(self.containers.memory.memory) > self.rl_config.batchsize:
         
             mem = self.containers.memory.memory
-            samples = np.random.permutation(len(mem))[:BATCHSIZE]
+            samples = np.random.permutation(len(mem))[:self.rl_config.batchsize]
 
             batch = [mem[i] for i in samples]
             oldstates, actions, rewards, newstates, resetafters = zip(*batch)                        
@@ -152,7 +153,7 @@ class ReinfNet(AbstractRLAgent):
             #Bellman equation: Q(s,a) = r + y(max(Q(s',a')))
             #qs[np.arange(BATCHSIZE), argmactions] += learning_rate*((rewards + Q_DECAY * max_qs * (not resetafters))-qs[np.arange(BATCHSIZE), argmactions]) #so wäre es wenn wir kein ANN nutzen würden!
             #https://medium.com/emergent-future/simple-reinforcement-learning-with-tensorflow-part-0-q-learning-with-tables-and-neural-networks-d195264329d0
-            qs[np.arange(BATCHSIZE), argmactions] = rewards + Q_DECAY * max_qs * (not resetafters) #wenn anschließend resettet wurde war es bspw ein wallhit und damit quasi ein final state
+            qs[np.arange(self.rl_config.batchsize), argmactions] = rewards + self.rl_config.q_decay * max_qs * (not resetafters) #wenn anschließend resettet wurde war es bspw ein wallhit und damit quasi ein final state
             
             self.session.run(learn_which.train_op, feed_dict={
                 learn_which.inputs: np.array([curr[0] for curr in oldstates]),
@@ -165,18 +166,22 @@ class ReinfNet(AbstractRLAgent):
             if self.containers.showscreen:
                 infoscreen.print(self.containers.reinfNetSteps, containers= self.containers, wname="ReinfLearnSteps")
             
-            if self.containers.reinfNetSteps % CHECKPOINTALL == 0:
+            if self.containers.reinfNetSteps % self.rl_config.checkpointall == 0:
+                self.cnn.saveNumIters(self.session, self.numIterations)
                 checkpoint_file = os.path.join(self.rl_config.checkpoint_dir, 'model.ckpt')
                 self.saver.save(self.session, checkpoint_file, global_step=learn_which.global_step.eval(session=self.session))       
                 print("saved")
                 
             if learn_which == self.online_cnn:
                 self.lock.acquire()
-                if self.containers.reinfNetSteps % COPY_TARGET_ALL == 0:
+                if self.containers.reinfNetSteps % self.rl_config.copy_target_all == 0:
                     with self.graph.as_default():    
                         self.session.run([target.assign(online) for online, target in zip(get_variables(scope="onlinenet"), get_variables(scope="targetnet"))])
                 self.lock.release()
-                    
+        
+        if self.numIterations > self.rl_config.train_for:
+            return "break"
+                        
                 
                 
     #calculateReward ist in der AbstractRLAgent von der er erbt
@@ -219,6 +224,9 @@ class ReinfNet(AbstractRLAgent):
             
 
     def initNetwork(self, start_fresh):
+        
+        #TODO: self.numIterations aus dem checkpoint laden
+        
         self.graph = tf.Graph()
         with self.graph.as_default():    
             
@@ -286,6 +294,7 @@ class ReinfNet(AbstractRLAgent):
                     self.session.run([online.assign(target) for online, target in zip(get_variables(scope="onlinenet"), get_variables(scope="targetnet"))])
                     self.session.run(self.cnn.global_step.assign(self.online_cnn.global_step))
                     self.containers.reinfNetSteps = self.cnn.global_step.eval(session=self.session)
+                    self.numIterations = self.cnn.restoreNumIters(self.session)
             
             print("network %s initialized with %i iterations already run." %(str(self.number+1), self.containers.reinfNetSteps))
             self.isinitialized = True
