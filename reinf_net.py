@@ -242,7 +242,7 @@ class ReinfNet(AbstractRLAgent):
                         self.online_cnn = cnn.CNN(self.rl_config, is_reinforcement=True, is_training=True, rl_not_trainables=DONT_TRAIN)                
                 init = tf.global_variables_initializer()
                 self.session.run(init)        
-                self.saver = tf.train.Saver(max_to_keep=3)
+                self.saver = tf.train.Saver(max_to_keep=1)
                 
                 self.session.run([target.assign(online) for online, target in zip(get_variables(scope="onlinenet"), get_variables(scope="targetnet"))])
                 
@@ -281,7 +281,7 @@ class ReinfNet(AbstractRLAgent):
                     self.pretrainsaver.restore(self.session, sv_ckpt.model_checkpoint_path)
                     self.session.run([online.assign(target) for online, target in zip(get_variables(scope="onlinenet"), get_variables(scope="targetnet"))])
     
-                    self.saver = tf.train.Saver(max_to_keep=3)
+                    self.saver = tf.train.Saver(max_to_keep=1)
                     
                 else:
                     with tf.name_scope("ReinfLearn"): 
@@ -289,7 +289,7 @@ class ReinfNet(AbstractRLAgent):
                             self.cnn = cnn.CNN(self.rl_config, is_reinforcement=True, is_training=True, rl_not_trainables=DONT_TRAIN)
                         with tf.variable_scope("onlinenet", reuse=None, initializer=initializer):
                             self.online_cnn = cnn.CNN(self.rl_config, is_reinforcement=True, is_training=True, rl_not_trainables=DONT_TRAIN)                                            
-                    self.saver = tf.train.Saver(max_to_keep=3)
+                    self.saver = tf.train.Saver(max_to_keep=1)
                     self.saver.restore(self.session, ckpt.model_checkpoint_path)
                     self.session.run([online.assign(target) for online, target in zip(get_variables(scope="onlinenet"), get_variables(scope="targetnet"))])
                     self.session.run(self.cnn.global_step.assign(self.online_cnn.global_step))

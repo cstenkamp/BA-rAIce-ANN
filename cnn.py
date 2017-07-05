@@ -410,7 +410,7 @@ def run_svtraining(config, dataset):
         
         init = tf.global_variables_initializer()
         cnn.trainvars["global_step"] = cnn.global_step #TODO: try to remove this and see if it still works, cause it should
-        saver = tf.train.Saver(cnn.trainvars, max_to_keep=3)
+        saver = tf.train.Saver(cnn.trainvars, max_to_keep=2)
 
         with tf.Session(graph=graph) as sess:
             summary_writer = tf.summary.FileWriter(config.log_dir, sess.graph) #aus dem toy-example

@@ -67,7 +67,7 @@ UPDATE_ONLY_IF_NEW = False #sendet immer nach jedem update -> Wenn False sendet 
 
 wrongdirtime = 0
 
-SAVEMEMORYALL = 10
+SAVEMEMORYALL = 1000
 SAVEMEMORYPATH = "./"
 
 class MySocket:

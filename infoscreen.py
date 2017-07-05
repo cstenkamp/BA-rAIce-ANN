@@ -1,4 +1,4 @@
-from tkinter import *
+from tkinter import Text, END, Tk, X
 import queue
 
 class ThreadSafeConsole(Text):
@@ -36,7 +36,7 @@ def print(*args, containers, wname):
     
     
 def showScreen(containers):
-    root = Tk()
+    root = Tk()                         
     lastcommand = ThreadSafeConsole(root, width=1, height=1)
     lastcommand.pack(fill=X)
     memorysize = ThreadSafeConsole(root, width=1, height=1)
@@ -51,6 +51,9 @@ def showScreen(containers):
     reinflearnsteps.pack(fill=X)
     currentqvals = ThreadSafeConsole(root, width=50, height=22)
     currentqvals.pack(fill=X)
+    x = root.winfo_screenwidth()-420
+    y = 5 #root.winfo_screenheight()-200
+    root.geometry('+%d+%d' % (x, y))   
 
     containers.showscreen = True
     containers.screenwidgets = {"Last command": lastcommand, "Memorysize": memorysize, "Last memory": lastmemory, "Epsilon": epsilon, "Last big punish": lastpunish, "ReinfLearnSteps": reinflearnsteps, "Current Q Vals": currentqvals}
