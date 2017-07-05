@@ -90,7 +90,7 @@ class RL_Config(Config):
 class DQN_Config(RL_Config):
     batch_size = 32             #minibatch size
     memorysize = 1000000        #replay memory size
-    history_frames = 4          #agent history length
+    history_frame_nr = 4        #agent history length
     copy_target_all = 10000     #target network update frequency (C)
     q_decay = 0.99              #discount factor
     #action repeat & update frequency & noop-max
@@ -104,6 +104,8 @@ class DQN_Config(RL_Config):
     replaystartsize = 50000     #replay start size
     train_for = 50000000        #number of iterations to train for 
     
+    def __init__(self):
+        super().__init__()
     
 
                                       
