@@ -1,5 +1,0 @@
--Erstmal alle Deepmind-DeepQ-learning-paper (DQN, continuus control, ..)
--Dann die meisten die razvan in seiner Präsi erwähnt hat (Design decisions warum Adadelta, dropout, etc)
--OpenAI universe and Gym! 
--Das Mariokart mit TF!
--Das Unity-mit-Deeplearning was Felix MZD mir per mail geschickt hat!

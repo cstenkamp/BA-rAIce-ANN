@@ -4,7 +4,7 @@ Created on Fri May 19 18:40:44 2017
 
 @author: nivradmin
 """
-
+#10 is highest, 1 is lowest, 5 prints everything not specified
 
 PRINTLEVEL = 5
 

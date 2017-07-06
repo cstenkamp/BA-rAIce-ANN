@@ -1,5 +1,0 @@
-Warum erst supervised? AlphaGO macht es genauso (siehe anfang von https://rubenfiszel.github.io/posts/rl4j/2016-08-24-Reinforcement-Learning-and-DQN.html)
-
--Welche Optimizer steht auf https://www.tensorflow.org/api_guides/python/train#optimizers ne Auswahl PLUS paper-referenz das erklärt wie die each funktionieren!
-
-Warum Dropout? https://www.cs.toronto.edu/~hinton/absps/JMLRdropout.pdf

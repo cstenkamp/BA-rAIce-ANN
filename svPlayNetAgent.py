@@ -23,9 +23,9 @@ from myprint import myprint as print
 STANDARDRETURN = ("[0.5,0,0.0]", [0.5, 0, 0.0])
 
 
-class PlayNet(AbstractAgent):
-    def __init__(self, num, config, containers, rl_config_dummy=None, startfreshdummy=False, *args, **kwargs): #der dummy ist da damit man playnet & reinfnet austauschen kan
-        super().__init__(containers, num, *args, **kwargs)
+class PlayNetAgent(AbstractAgent):
+    def __init__(self, config, containers, rl_config_dummy=None, startfreshdummy=False, *args, **kwargs): #der dummy ist da damit man playnet & reinfnet austauschen kan
+        super().__init__(containers, *args, **kwargs)
         self.config = config
         self.initNetwork()
 

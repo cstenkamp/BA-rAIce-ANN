@@ -7,7 +7,7 @@ Created on Sat Mar 25 13:41:09 2017
 import tensorflow as tf
 import numpy as np
 import os
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' #so that TF doesn't show its warnings
 import time
 import math
 #====own classes====
@@ -57,6 +57,8 @@ class Config(object):
 class RL_Config(Config):
     log_dir = "SummaryLogDirRL/"  
     checkpoint_dir = "RL_Learn/"
+    savememorypath = "./" #will be a pickle-file
+    savememoryall = 1000
     
     keep_prob = 1
     max_grad_norm = 10

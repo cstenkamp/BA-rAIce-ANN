@@ -37,9 +37,9 @@ LAST_ACTION = 0
 ONLY_START = False
 
 
-class ReinfNet(AbstractRLAgent):
-    def __init__(self, num, sv_config, containers, rl_config, start_fresh, *args, **kwargs):
-        super().__init__(containers, num, *args, **kwargs)
+class ReinfNetAgent(AbstractRLAgent):
+    def __init__(self, sv_config, containers, rl_config, start_fresh, *args, **kwargs):
+        super().__init__(containers, *args, **kwargs)
         self.sv_config = sv_config
         self.rl_config = rl_config
         self.epsilon = self.rl_config.startepsilon
@@ -76,12 +76,12 @@ class ReinfNet(AbstractRLAgent):
                 global lastresult
                 try:
                     
-                    if len(self.containers.memory.memory) > self.rl_config.replaystartsize and np.random.random() > self.epsilon:
+                    if len(self.memory.memory) > self.rl_config.replaystartsize and np.random.random() > self.epsilon:
                         returnstuff, original = self.performNetwork(otherinputs, visionvec)
                     else:
                         returnstuff, original = self.randomAction(otherinputs.SpeedSteer.velocity, self.rl_config)
                     
-                        if len(self.containers.memory.memory) > self.rl_config.replaystartsize:
+                        if len(self.memory.memory) > self.rl_config.replaystartsize:
                             try:
                                 self.epsilon = round(max(self.rl_config.startepsilon-((self.rl_config.startepsilon-self.rl_config.minepsilon)*((self.numIterations-self.rl_config.replaystartsize)/self.rl_config.finalepsilonframe)), self.rl_config.minepsilon), 5)
                             except:
@@ -133,9 +133,9 @@ class ReinfNet(AbstractRLAgent):
             return feed_dict
             
             
-        if len(self.containers.memory.memory) > self.rl_config.batchsize:
+        if len(self.memory.memory) > self.rl_config.batchsize:
         
-            mem = self.containers.memory.memory
+            mem = self.memory.memory
             samples = np.random.permutation(len(mem))[:self.rl_config.batchsize]
 
             batch = [mem[i] for i in samples]
@@ -226,6 +226,9 @@ class ReinfNet(AbstractRLAgent):
     def initNetwork(self, start_fresh):
         
         #TODO: self.numIterations aus dem checkpoint laden
+        #TODONOW
+        
+        
         
         self.graph = tf.Graph()
         with self.graph.as_default():    
@@ -296,7 +299,7 @@ class ReinfNet(AbstractRLAgent):
                     self.containers.reinfNetSteps = self.cnn.global_step.eval(session=self.session)
                     self.numIterations = self.cnn.restoreNumIters(self.session)
             
-            print("network %s initialized with %i iterations already run." %(str(self.number+1), self.containers.reinfNetSteps))
+            print("network initialized with %i iterations already run." % self.containers.reinfNetSteps)
             self.isinitialized = True
             
             

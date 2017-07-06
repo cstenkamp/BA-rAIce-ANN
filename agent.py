@@ -8,6 +8,11 @@ import time
 current_milli_time = lambda: int(round(time.time() * 1000))
 import numpy as np
 import threading
+#for memory
+import os
+from collections import deque
+import pickle
+import shutil
 ####own classes###
 from myprint import myprint as print
 import read_supervised
@@ -17,12 +22,11 @@ import infoscreen
 ###################################################################################################
 
 class AbstractAgent(object):
-    def __init__(self, containers, num, *args, **kwargs):
+    def __init__(self, containers, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.lock = threading.Lock()
         self.isinitialized = False
-        self.containers = containers        
-        self.number = num
+        self.containers = containers
         self.isbusy = False        
         self.numIterations = 0
         
@@ -67,21 +71,23 @@ class AbstractRLAgent(AbstractAgent):
         self.last_random_timestamp = 0
         self.last_random_action = None
         self.repeat_random_action_for = 1000
-    
+        self.memory = None
     
     
     def addToMemory(self, otherinputs, visionvec): 
+        assert self.memory is not None, "It should be specified in server right afterwards"
+        
         oldstate, action = self.containers.inputval.get_previous_state()
         if oldstate is not None:
             newstate = (visionvec, otherinputs.SpeedSteer.velocity)
             reward = self.calculateReward(self.containers.inputval)
-            self.containers.memory.append([oldstate, action, reward, newstate, False]) 
+            self.memory.append([oldstate, action, reward, newstate, False]) 
             print(self.dediscretize(action, self.rl_config), reward, level=6)
-            print(len(self.containers.memory.memory),level=6)
+            print(len(self.memory.memory),level=6)
             
             if self.containers.showscreen:
                 infoscreen.print(self.dediscretize(action, self.rl_config), round(reward,2), round(self.cnn.calculate_value(self.session, newstate[0], newstate[1], self.sv_config.history_frame_nr)[0],2), containers= self.containers, wname="Last memory")
-                infoscreen.print(str(len(self.containers.memory.memory)), containers= self.containers, wname="Memorysize")
+                infoscreen.print(str(len(self.memory.memory)), containers= self.containers, wname="Memorysize")
                                     
  
         
@@ -157,5 +163,65 @@ class AbstractRLAgent(AbstractAgent):
         return result, self.discretize(throttle, brake, steer, config) 
 
 
-###################################################################################################  
 
+    def endEpisode(self):
+        #bei actions, nach denen resettet wurde, soll er den folgestate nicht mehr beachten (später gucken wenn reset=true dann setze Q_DECAY auf quasi 100%)
+        if not self.containers.play_only:
+            lastmemoryentry = self.memory.pop() #oldstate, action, reward, newstate
+            if lastmemoryentry is not None:
+                lastmemoryentry[4] = True
+                self.memory.append(lastmemoryentry)
+            
+            
+    def punishLastAction(self, howmuch):
+        if not self.containers.play_only:
+            if self.containers.showscreen:
+                infoscreen.print(str(-abs(howmuch)), time.strftime("%H:%M:%S", time.gmtime()), containers=self.containers, wname="Last big punish")
+            lastmemoryentry = self.memory.pop() #oldstate, action, reward, newstate
+            if lastmemoryentry is not None:
+                lastmemoryentry[2] -= abs(howmuch)
+                self.memory.append(lastmemoryentry) 
+
+
+
+###############################################################################
+
+      
+#wenn ich hier thread-locks verwenden würde würde er jedes mal einen neuen receiver-thread starten. 
+#TODO: auf richtigere weise thread-safe machen. https://stackoverflow.com/questions/13610654/how-to-make-built-in-containers-sets-dicts-lists-thread-safe
+class Memory(object):
+    def __init__(self, elemtype, size, containers):
+        self._lock = threading.Lock()
+        self.memory = deque(elemtype, size)
+        self.appendcount = 0
+        self.containers = containers
+        if self.containers.keep_memory:
+            if os.path.exists(self.containers.rl_conf.savememorypath+'memory.pkl'):
+                if os.path.getsize(self.containers.rl_conf.savememorypath+'memory.pkl') > 1024:
+                    with open(self.containers.rl_conf.savememorypath+'memory.pkl', 'rb') as input:
+                        self.memory = pickle.load(input)   
+                    print("Loading existing memory with", len(self.memory), "entries", level=10)
+                else:
+                    print("Previous memory was corrupted!", level=10) 
+            
+    
+    def append(self, obj):
+        with self._lock:
+            self.memory.append(obj)
+            self.appendcount += 1
+            if self.containers.keep_memory: #TODO: sollte der das vielleicht in nem thread machen, damit der nicht zwischendurch unterbrochen wird?
+                if self.appendcount % self.containers.rl_conf.savememoryall == 0:
+                    with open(self.containers.rl_conf.savememorypath+'memoryTMP.pkl', 'wb') as output:
+                        pickle.dump(self.memory, output, pickle.HIGHEST_PROTOCOL)
+                    if os.path.exists(self.containers.rl_conf.savememorypath+'memoryTMP.pkl'):
+                        if os.path.getsize(self.containers.rl_conf.savememorypath+'memoryTMP.pkl') > 1024: #only use it as memory if you weren't disturbed while writing
+                            shutil.copyfile(self.containers.rl_conf.savememorypath+'memoryTMP.pkl', self.containers.rl_conf.savememorypath+'memory.pkl')
+                            
+
+                    
+    def pop(self):
+        with self._lock:
+            try:
+                return self.memory.pop()        
+            except:
+                return None

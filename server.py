@@ -8,24 +8,24 @@ import time
 import logging
 import numpy as np
 import sys
-from collections import deque, namedtuple
+from collections import namedtuple
 import copy
-import pickle
-import os
 
 #====own classes====
-import svplaynet
-import reinf_net
+import svPlayNetAgent
+import reinfNetAgent #is an agent, inherits all agent's functions
 import cnn
 from myprint import myprint as print
 import infoscreen
-current_milli_time = lambda: int(round(time.time() * 1000))
 from read_supervised import cutoutandreturnvectors
-
-logging.basicConfig(level=logging.ERROR, format='(%(threadName)-10s) %(message)s',)
-
+from agent import Memory
 
 
+current_milli_time = lambda: int(round(time.time() * 1000))
+logging.basicConfig(level=logging.ERROR, format='(%(threadName)-10s) %(message)s',) #legacy
+
+
+#this very long part is the comparable namedtuple otherinputs!
 prespeedsteer = namedtuple('SpeedSteer', ['RLTorque', 'RRTorque', 'FLSteer', 'FRSteer', 'velocity', 'rightDirection'])
 prestatusvector = namedtuple('StatusVector', ['velocity', 'FLSlip0', 'FRSlip0', 'RLSlip0', 'RRSlip0', 'FLSlip1', 'FRSlip1', 'RLSlip1', 'RRSlip1'])
                                              #1 elem     6 elems       9 elems         1 elem        15 elems         30 elems = 62 elems
@@ -55,20 +55,16 @@ def make_otherinputs(othervecs):
                        othervecs[3][0], \
                        othervecs[3][1:], \
                        othervecs[4])
-
+#this very long part end
 
 
 MININT = -sys.maxsize+1
-TCP_IP = 'localhost'
+TCP_IP = 'localhost' #TODO check if it also works over internet, in the CLuster
 TCP_RECEIVER_PORT = 6435
 TCP_SENDER_PORT = 6436
-NUMBER_ANNS = 1
+NUMBER_ANNS = 1 #only one of those will execute the learning, in dauerLearnANN in LearnThread
 UPDATE_ONLY_IF_NEW = False #sendet immer nach jedem update -> Wenn False sendet er wann immer er was kriegt
 
-wrongdirtime = 0
-
-SAVEMEMORYALL = 1000
-SAVEMEMORYPATH = "./"
 
 class MySocket:
 
@@ -91,8 +87,6 @@ class MySocket:
     def close(self):
         self.sock.close()
         
-        
-        
     def mysend(self, msg):
         length = str(len(msg))
         while len(length) < 5:
@@ -106,7 +100,6 @@ class MySocket:
             if sent == 0:
                 raise RuntimeError("socket connection broken")
             totalsent = totalsent + sent
-
 
     def myreceive(self):
         chunks = []
@@ -138,8 +131,8 @@ class MySocket:
 
 # there is a receiver-listener-thread, constantly waiting on the receiverport if unity wants to connect.
 # Unity will connect only once, and if so, the receiverlistenerthread will create a new receiver_thread, 
-# handling everything from there on. If unity wants to reconnect for any reason, it will create a new receiver_thread...
-# where the new one should kill the old one, such that there is only one receiver_thread active most of the time.
+# handling everything from there on. If unity wants to reconnect for any reason, it will create a new receiver_thread
+# which kills all old ones, such that there is only one receiver_thread active most of the time.
 class ReceiverListenerThread(threading.Thread):
     def __init__(self):
         threading.Thread.__init__(self)
@@ -191,11 +184,15 @@ class receiver_thread(threading.Thread):
                         visionvec, allOneDs = cutoutandreturnvectors(data) 
                         self.containers.inputval.update(visionvec, allOneDs, self.timestamp) #we MUST have the inputval, otherwise there wouldn't be the possibility for historyframes.           
                         
-                        if len(self.containers.ANNs) == 1:
-                            self.containers.ANNs[0].runInference(UPDATE_ONLY_IF_NEW)
-                        else:                                                       
-                            thread = threading.Thread(target=self.runOneANN, args=()) #immediately returns if UPDATE_ONLY_IF_NEW and alreadyreadthread = threading.Thread(target=self.runInference_SaveResult, args=())
-                            thread.start() 
+                        #CHANGE: only 1 agent 
+#                        if len(self.containers.ANNs) == 1:
+#                            self.containers.ANNs[0].runInference(UPDATE_ONLY_IF_NEW)
+#                        else:                                                       
+#                            thread = threading.Thread(target=self.runOneANN, args=()) #immediately returns if UPDATE_ONLY_IF_NEW and alreadyreadthread = threading.Thread(target=self.runInference_SaveResult, args=())
+#                            thread.start() 
+                            #this thread here will also  send the result afterwards
+                            
+                        self.containers.myAgent.runInference(UPDATE_ONLY_IF_NEW)
                         
             except TimeoutError:
                 if len(self.containers.receiverthreads) < 2:
@@ -205,6 +202,7 @@ class receiver_thread(threading.Thread):
                 
         self.containers.receiverthreads.remove(self)
         print("stopping receiver_thread")
+        #thread.exit() only works with the thread object, but not with threading.Thread class object.
         
         
     def handle_special_commands(self, data):
@@ -213,20 +211,25 @@ class receiver_thread(threading.Thread):
             data = data[data.find(")")+1:]
         
         if data[:11] == "resetServer":
-            resetServer(self.containers, data[11:], punish=0)
+            resetServer(self.containers, data[11:], punish=0) #TODO: sollte er hier auch endEpisode machen? wenn ja, warum?
             specialcommand = True    
         if data[:7] == "wallhit":
-            resetServer(self.containers, self.containers.sv_conf.msperframe, 20) #ist das doppelt gemoppelt damit, dass er eh das if punish > 10 beibehält?
+            self.containers.myAgent.punishLastAction(20)   #ist das doppelt gemoppelt damit, dass er eh das if punish > 10 beibehält?       
+            self.containers.myAgent.endEpisode()
+            resetServer(self.containers, self.containers.sv_conf.msperframe) 
             specialcommand = True    
         return specialcommand
     
-    
-    def runOneANN(self):
-        for currANN in self.containers.ANNs:
-            if not currANN.isbusy:
-                currANN.runInference(UPDATE_ONLY_IF_NEW)
-                break
+    #CHANGE: only 1 agent
+#    #this will be run in a separate thread
+#    def runOneANN(self):
+#        for currANN in self.containers.ANNs:
+#            if not currANN.isbusy:
+#                currANN.runInference(UPDATE_ONLY_IF_NEW)
+#                break
             
+
+###############################################################################
 
 def resetUnity(containers, punish=0):
     containers.outputval.send_via_senderthread("pleasereset", containers.inputval.timestamp)
@@ -234,31 +237,11 @@ def resetUnity(containers, punish=0):
     
 
 def resetServer(containers, mspersec, punish=0):
-    if punish:
-        punishLastAction(containers, punish)
-    endEpisode(containers)
     containers.outputval.reset()
     containers.inputval.reset(mspersec, nolock = True)
     
-
-def endEpisode(containers):
-    #bei actions, nach denen resettet wurde, soll er den folgestate nicht mehr beachten (später gucken wenn reset=true dann setze Q_DECAY auf quasi 100%)
-    if not containers.play_only:
-        lastmemoryentry = containers.memory.pop() #oldstate, action, reward, newstate
-        if lastmemoryentry is not None:
-            lastmemoryentry[4] = True
-            containers.memory.append(lastmemoryentry)
-        
-        
-def punishLastAction(containers, howmuch):
-    if not containers.play_only:
-        if containers.showscreen:
-            infoscreen.print(str(-abs(howmuch)), time.strftime("%H:%M:%S", time.gmtime()), containers=containers, wname="Last big punish")
-        lastmemoryentry = containers.memory.pop() #oldstate, action, reward, newstate
-        if lastmemoryentry is not None:
-            lastmemoryentry[2] -= abs(howmuch)
-            containers.memory.append(lastmemoryentry)    
-
+   
+###############################################################################
         
 class InputValContainer(object):   
     
@@ -268,7 +251,7 @@ class InputValContainer(object):
         self.visionvec = np.zeros([config.image_dims[0], config.image_dims[1]])
         if self.config.history_frame_nr > 1:
             self.vvec_hist = np.zeros([config.history_frame_nr, config.image_dims[0], config.image_dims[1]]) 
-        self.otherinputs = empty_inputs()
+        self.otherinputs = empty_inputs() #defined at the top, is a namedtuple
         self.timestamp = MININT
         self.containers = None
         self.alreadyread = True
@@ -281,7 +264,6 @@ class InputValContainer(object):
         
         
     def update(self, visionvec, othervecs, timestamp):
-        global wrongdirtime
         
         def is_new(visionvec, otherinputs):
             if self.config.history_frame_nr == 1:
@@ -298,7 +280,7 @@ class InputValContainer(object):
         self.lock.acquire()
         try:
             logging.debug('Acquired lock')
-            otherinputs = make_otherinputs(othervecs)
+            otherinputs = make_otherinputs(othervecs) #is now a namedtuple instead of an array
             if is_new(visionvec, otherinputs):
             
                 self.visionvec = visionvec
@@ -306,22 +288,23 @@ class InputValContainer(object):
                     self.vvec_hist = [visionvec] + [i for i in self.vvec_hist[:-1]]            
                 self.otherinputs = otherinputs
                 
-                #wenn otherinputs.centerdistvec[0] >= 10 war und seitdem keine neue action kam, muss er >= 10 bleiben!
+                #wenn otherinputs.CenterDist >= 10 war und seitdem keine neue action kam, muss er >= 10 bleiben!
                 if otherinputs.CenterDist >= 10:
-                    self.hit_a_wall = True #wird erst sobald ne action kommt wieder false gesetzt
+                    self.hit_a_wall = True 
+                #wird erst sobald ne action kommt wieder false gesetzt.. und solange es true ist:
                 if self.hit_a_wall:
                     self.otherinputs = self.otherinputs._replace(CenterDist = 10)
                     
                 try:
                     if self.config.reset_if_wrongdirection:
                         if not self.otherinputs.SpeedSteer.rightDirection:
-                            wrongdirtime += self.containers.sv_conf.msperframe
-                            if wrongdirtime >= 2000:
+                            self.containers.wrongdirectiontime += self.containers.sv_conf.msperframe
+                            if self.containers.wrongdirectiontime >= 2000:
                                 resetUnity(self.containers, punish=100)
                         else:
-                            wrongdirtime = 0
+                            self.containers.wrongdirectiontime = 0
                 except IndexError:
-                    wrongdirtime = 0
+                    self.containers.wrongdirectiontime = 0
                                   
                 self.alreadyread = False
                 self.timestamp = timestamp
@@ -334,7 +317,7 @@ class InputValContainer(object):
     def addResultAndBackup(self, action):
         self.hit_a_wall = False #sobald ne action danach kommt ist es unrelated #TODO: gilt nur wenn walhit_means_reset
         self.previous_action = action
-        self.previous_otherinputs = copy.deepcopy(self.otherinputs) #OMFG HAT ES ALLES GEÄNDERT HIER COPY ZU NEHMEN????
+        self.previous_otherinputs = copy.deepcopy(self.otherinputs) 
         if self.config.history_frame_nr > 1:
             self.previous_vvechist = copy.deepcopy(self.vvec_hist)
         else:
@@ -443,47 +426,10 @@ class OutputValContainer(object):
             except (ConnectionResetError, ConnectionAbortedError):
                     #if unity restarted, the old connection is now useless and should be deleted
                     print("I assume you just restarted Unity.")
-                    self.containers.senderthreads[i].delete_me();
+                    self.containers.senderthreads[i].delete_me()
+                    self.containers.senderthreads[i].join()
                     if i >= len(self.containers.senderthreads)-1:
                         break
-
-###############################################################################
-
-      
-#wenn ich hier thread-locks verwenden würde würde er jedes mal einen neuen receiver-thread starten. 
-#TODO: auf richtigere weise thread-safe machen.
-class Memory(object):
-    def __init__(self, elemtype, size, containers):
-#        self.lock = threading.Lock()
-        self.memory = deque(elemtype, size)
-        self.appendcount = 0
-        self.containers = containers
-        if self.containers.keep_memory:
-            if os.path.exists(SAVEMEMORYPATH+'memory.pkl'):
-                with open(SAVEMEMORYPATH+'memory.pkl', 'rb') as input:
-                    self.memory = pickle.load(input)   
-                print("Loading existing memory with", len(self.memory), "entries", level=10)
-            
-    
-    def append(self, obj):
-        self.memory.append(obj)
-        self.appendcount += 1
-        if self.containers.keep_memory:
-            if self.appendcount % SAVEMEMORYALL == 0:
-                with open(SAVEMEMORYPATH+'memory.pkl', 'wb') as output:
-                    pickle.dump(self.memory, output, pickle.HIGHEST_PROTOCOL)
-        
-    def pop(self):
-        try:
-            return self.memory.pop()        
-        except:
-            return None
-#        self.lock.acquire()
-#        try:
-#            self.memory.append(obj)
-#        finally:
-#            self.lock.release()
-        
 
 
 ###############################################################################
@@ -523,7 +469,8 @@ class sender_thread(threading.Thread):
         selfind = self.containers.senderthreads.index(self)
         del self.containers.senderthreads[selfind]
         print("stopping sender_thread")
-        #TODO: wird er jetzt automatisch garbage-collected oder muss ich ihn noch löschen?
+        #ist er jetzt wirklich ganz weg?
+        
         
         
     def send(self, result, timestamp):
@@ -552,6 +499,8 @@ class Containers():
         self.senderthreads = []
         self.ANNs = []
         self.reinfNetSteps = 0
+        self.wrongdirectiontime = 0
+        #TODO - sollten in den containern nicht auch die numIterations stehen?
         
         
 def create_socket(port):
@@ -571,7 +520,7 @@ def main(sv_conf, rl_conf, play_only, no_learn, show_screen, start_fresh, keep_m
     containers.outputval.containers = containers
     containers.sv_conf = sv_conf
     containers.rl_conf = rl_conf   
-    containers.keep_memory = keep_memory
+    containers.keep_memory = keep_memory #bei DQN und der keepmememory-variante speichert er das memory als pickle-file for later use
     
     containers.receiverportsocket = create_socket(TCP_RECEIVER_PORT)
     containers.senderportsocket = create_socket(TCP_SENDER_PORT)
@@ -580,14 +529,19 @@ def main(sv_conf, rl_conf, play_only, no_learn, show_screen, start_fresh, keep_m
         screenroot = infoscreen.showScreen(containers)
     
     if play_only:
-        NeuralNet = svplaynet.PlayNet
+        agent = svPlayNetAgent.PlayNetAgent
     else:
-        NeuralNet = reinf_net.ReinfNet
-        containers.memory = Memory([], rl_conf.memorysize, containers)
+        agent = reinfNetAgent.ReinfNetAgent #this one, inheriting from abstractRLAgent, will have a memory
         
-    for i in range(NUMBER_ANNS):
-        ANN = NeuralNet(i, sv_conf, containers, rl_conf, start_fresh)
-        containers.ANNs.append(ANN)
+    #CHANGE: only one agent. that agent can itself run the runInference in separate threads, if need be.
+#    for i in range(NUMBER_ANNS): #only one of those will execute the learning, in dauerLearnANN in LearnThread
+#        ANN = agent(i, sv_conf, containers, rl_conf, start_fresh)
+#        containers.ANNs.append(ANN)
+    
+    containers.myAgent = agent(sv_conf, containers, rl_conf, start_fresh) #executes dauerLearnANN in LearnThread
+                                                                          #executes runInference in receiver_thread
+    if not play_only:
+        containers.myAgent.memory = Memory([], rl_conf.memorysize, containers)
     
     print("Everything initialized", level=10)
     
@@ -603,7 +557,7 @@ def main(sv_conf, rl_conf, play_only, no_learn, show_screen, start_fresh, keep_m
 
     #THREAD 3 (learning)
     if not play_only and not no_learn:
-        learnthread = threading.Thread(target=containers.ANNs[0].dauerLearnANN)
+        learnthread = threading.Thread(target=containers.myAgent.dauerLearnANN) #TODO: das hier geht nicht bei > 1 ANN #BUG
         learnthread.start()
     
    
@@ -620,6 +574,7 @@ def main(sv_conf, rl_conf, play_only, no_learn, show_screen, start_fresh, keep_m
     containers.KeepRunning = False
     for senderthread in containers.senderthreads:
         senderthread.delete_me() 
+        senderthread.join()
     ReceiverConnecterThread.join() #takes max. 1 second until socket timeouts
     SenderConnecterThread.join()
     if not play_only and not no_learn:
@@ -639,8 +594,8 @@ if __name__ == '__main__':
         rl_conf = cnn.RL_Config()
     
     if "-nolearn" in sys.argv:
-        reinf_net.minepsilon = 0
-        reinf_net.epsilon = 0
+        reinfNetAgent.minepsilon = 0
+        reinfNetAgent.epsilon = 0 #or whatever random-value will be in 
         
                 
     main(sv_conf, rl_conf, ("-svplay" in sys.argv), ("-nolearn" in sys.argv), not ("-noscreen" in sys.argv), ("-startfresh" in sys.argv), ("-keepmemory" in sys.argv or "-DQN" in sys.argv))    
