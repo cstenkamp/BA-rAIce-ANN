@@ -1,12 +1,5 @@
 # -*- coding: utf-8 -*-
 """
-Created on Wed May 10 13:33:46 2017
-
-@author: nivradmin
-"""
-
-# -*- coding: utf-8 -*-
-"""
 Created on Wed May 10 13:31:54 2017
 
 @author: nivradmin
@@ -76,12 +69,12 @@ class ReinfNetAgent(AbstractRLAgent):
                 global lastresult
                 try:
                     
-                    if len(self.memory.memory) > self.rl_config.replaystartsize and np.random.random() > self.epsilon:
+                    if len(self.memory) >= self.rl_config.replaystartsize and np.random.random() > self.epsilon:
                         returnstuff, original = self.performNetwork(otherinputs, visionvec)
                     else:
                         returnstuff, original = self.randomAction(otherinputs.SpeedSteer.velocity, self.rl_config)
                     
-                        if len(self.memory.memory) > self.rl_config.replaystartsize:
+                        if len(self.memory) >= self.rl_config.replaystartsize:
                             try:
                                 self.epsilon = round(max(self.rl_config.startepsilon-((self.rl_config.startepsilon-self.rl_config.minepsilon)*((self.numIterations-self.rl_config.replaystartsize)/self.rl_config.finalepsilonframe)), self.rl_config.minepsilon), 5)
                             except:
@@ -133,14 +126,10 @@ class ReinfNetAgent(AbstractRLAgent):
             return feed_dict
             
             
-        if len(self.memory.memory) > self.rl_config.batchsize:
-        
-            mem = self.memory.memory
-            samples = np.random.permutation(len(mem))[:self.rl_config.batchsize]
+        if len(self.memory) > self.rl_config.batchsize+3: 
 
-            batch = [mem[i] for i in samples]
-            oldstates, actions, rewards, newstates, resetafters = zip(*batch)                        
-                       
+            batch = self.memory.sample(self.rl_config.batchsize)
+            oldstates, actions, rewards, newstates, resetafters = zip(*batch)              
             
             argmactions = [np.argmax(i) for i in actions]
             

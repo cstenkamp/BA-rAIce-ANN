@@ -77,11 +77,11 @@ class AbstractRLAgent(AbstractAgent):
             reward = self.calculateReward(self.containers.inputval)
             self.memory.append([oldstate, action, reward, newstate, False]) 
             print(self.dediscretize(action, self.rl_config), reward, level=6)
-            print(len(self.memory.memory),level=6)
+            print(len(self.memory),level=6)
             
             if self.containers.showscreen:
                 infoscreen.print(self.dediscretize(action, self.rl_config), round(reward,2), round(self.cnn.calculate_value(self.session, newstate[0], newstate[1], self.sv_config.history_frame_nr)[0],2), containers= self.containers, wname="Last memory")
-                infoscreen.print(str(len(self.memory.memory)), containers= self.containers, wname="Memorysize")
+                infoscreen.print(str(len(self.memory)), containers= self.containers, wname="Memorysize")
                                     
  
         
@@ -162,20 +162,15 @@ class AbstractRLAgent(AbstractAgent):
     def endEpisode(self):
         #bei actions, nach denen resettet wurde, soll er den folgestate nicht mehr beachten (später gucken wenn reset=true dann setze Q_DECAY auf quasi 100%)
         if not self.containers.play_only:
-            lastmemoryentry = self.memory.pop() #oldstate, action, reward, newstate
-            if lastmemoryentry is not None:
-                lastmemoryentry[4] = True
-                self.memory.append(lastmemoryentry)
+            self.memory.endEpisode()
             
             
     def punishLastAction(self, howmuch):
         if not self.containers.play_only:
             if self.containers.showscreen:
                 infoscreen.print(str(-abs(howmuch)), time.strftime("%H:%M:%S", time.gmtime()), containers=self.containers, wname="Last big punish")
-            lastmemoryentry = self.memory.pop() #oldstate, action, reward, newstate
-            if lastmemoryentry is not None:
-                lastmemoryentry[2] -= abs(howmuch)
-                self.memory.append(lastmemoryentry) 
+            self.memory.punishLastAction(howmuch)
+            
                 
     
     def freezeEverything(self):

@@ -64,6 +64,7 @@ TCP_RECEIVER_PORT = 6435
 TCP_SENDER_PORT = 6436
 NUMBER_ANNS = 1 #only one of those will execute the learning, in dauerLearnANN in LearnThread
 UPDATE_ONLY_IF_NEW = False #sendet immer nach jedem update -> Wenn False sendet er wann immer er was kriegt
+SAVE_MEMORY_ON_EXIT = True
 
 
 class MySocket:
@@ -426,18 +427,19 @@ class OutputValContainer(object):
             
     def send_via_senderthread(self, value, timestamp):
         
-        #nehme die erste verbindung die keinen error schemißt!        
-        assert len(self.containers.senderthreads) > 0, "There is no senderthread at all! How will I send?"
-        for i in range(len(self.containers.senderthreads)):
-            try:
-                self.containers.senderthreads[i].send(value, timestamp)
-            except (ConnectionResetError, ConnectionAbortedError):
-                    #if unity restarted, the old connection is now useless and should be deleted
-                    print("I assume you just restarted Unity.")
-                    self.containers.senderthreads[i].delete_me()
-                    self.containers.senderthreads[i].join()
-                    if i >= len(self.containers.senderthreads)-1:
-                        break
+        #nehme die erste verbindung die keinen error schemißt!    
+        if self.containers.KeepRunning:
+            assert len(self.containers.senderthreads) > 0, "There is no senderthread at all! How will I send?"
+            for i in range(len(self.containers.senderthreads)):
+                try:
+                    self.containers.senderthreads[i].send(value, timestamp)
+                except (ConnectionResetError, ConnectionAbortedError):
+                        #if unity restarted, the old connection is now useless and should be deleted
+                        print("I assume you just restarted Unity.")
+                        self.containers.senderthreads[i].delete_me()
+                        self.containers.senderthreads[i].join()
+                        if i >= len(self.containers.senderthreads)-1:
+                            break
 
 
 ###############################################################################
@@ -550,7 +552,7 @@ def main(sv_conf, rl_conf, play_only, no_learn, show_screen, start_fresh, keep_m
     containers.myAgent = agent(sv_conf, containers, rl_conf, start_fresh) #executes dauerLearnANN in LearnThread
                                                                           #executes runInference in receiver_thread
     if not play_only:
-        containers.myAgent.memory = Memory([], rl_conf.memorysize, containers)
+        containers.myAgent.memory = Memory(rl_conf.memorysize, containers)
     
     print("Everything initialized", level=10)
     
@@ -583,7 +585,7 @@ def main(sv_conf, rl_conf, play_only, no_learn, show_screen, start_fresh, keep_m
         
     print("Server shutting down...")
     containers.KeepRunning = False
-    
+        
     for senderthread in containers.senderthreads:
         senderthread.delete_me() 
         senderthread.join()
@@ -591,6 +593,10 @@ def main(sv_conf, rl_conf, play_only, no_learn, show_screen, start_fresh, keep_m
     SenderConnecterThread.join()
     if not play_only and not no_learn:
         learnthread.join()
+        
+    if SAVE_MEMORY_ON_EXIT:
+        containers.myAgent.memory.save_memory()
+        
     time.sleep(0.1)
     print("Server shut down sucessfully.")
     
