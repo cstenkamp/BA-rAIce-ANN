@@ -239,6 +239,13 @@ def resetUnity(containers, punish=0):
 def resetServer(containers, mspersec, punish=0):
     containers.outputval.reset()
     containers.inputval.reset(mspersec, nolock = True)
+
+
+def freezeUnity(containers):
+    containers.outputval.send_via_senderthread("pleaseFreeze", containers.inputval.timestamp)
+
+def unFreezeUnity(containers):
+    containers.outputval.send_via_senderthread("pleaseUnFreeze", containers.inputval.timestamp)
     
    
 ###############################################################################
@@ -572,6 +579,7 @@ def main(sv_conf, rl_conf, play_only, no_learn, show_screen, start_fresh, keep_m
     
     print("Server shutting down...")
     containers.KeepRunning = False
+    
     for senderthread in containers.senderthreads:
         senderthread.delete_me() 
         senderthread.join()

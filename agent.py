@@ -196,14 +196,26 @@ class Memory(object):
         self.appendcount = 0
         self.containers = containers
         if self.containers.keep_memory:
+            corrupted = False
             if os.path.exists(self.containers.rl_conf.savememorypath+'memory.pkl'):
-                if os.path.getsize(self.containers.rl_conf.savememorypath+'memory.pkl') > 1024:
-                    with open(self.containers.rl_conf.savememorypath+'memory.pkl', 'rb') as input:
-                        self.memory = pickle.load(input)   
-                    print("Loading existing memory with", len(self.memory), "entries", level=10)
-                else:
-                    print("Previous memory was corrupted!", level=10) 
-            
+                try:
+                    if os.path.getsize(self.containers.rl_conf.savememorypath+'memory.pkl') > 1024:
+                        with open(self.containers.rl_conf.savememorypath+'memory.pkl', 'rb') as input:
+                            self.memory = pickle.load(input)   
+                        print("Loading existing memory with", len(self.memory), "entries", level=10)
+                    else:
+                        corrupted = True
+                except:
+                    corrupted = True
+            if corrupted:
+                print("Previous memory was corrupted!", level=10) 
+                if os.path.exists(self.containers.rl_conf.savememorypath+'memoryTMP.pkl'):
+                    if os.path.getsize(self.containers.rl_conf.savememorypath+'memoryTMP.pkl') > 1024: 
+                        shutil.copyfile(self.containers.rl_conf.savememorypath+'memoryTMP.pkl', self.containers.rl_conf.savememorypath+'memory.pkl')
+                        with open(self.containers.rl_conf.savememorypath+'memory.pkl', 'rb') as input:
+                            self.memory = pickle.load(input)   
+                        print("Loading Backup-Memory with", len(self.memory), "entries", level=10)
+                
     
     def append(self, obj):
         with self._lock:

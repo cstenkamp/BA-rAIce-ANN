@@ -4,7 +4,7 @@ SummaryLogDir
 Checkpoint*
 RL_Learn*
 **/settings.ini
-
+*.pkl
 
 
 
