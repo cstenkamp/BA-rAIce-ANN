@@ -17,7 +17,7 @@ import shutil
 from myprint import myprint as print
 import read_supervised
 import infoscreen
-
+    
 
 ###################################################################################################
 
@@ -101,8 +101,9 @@ class AbstractRLAgent(AbstractAgent):
             self.rl_config.train_for = float("inf")
             
         while self.containers.KeepRunning:
-            if self.learnANN() == "break":
-                break
+            if not self.containers.freezeEverything:
+                if self.learnANN() == "break":
+                    break
         print("Learn-Thread stopped")
 
 
@@ -181,20 +182,29 @@ class AbstractRLAgent(AbstractAgent):
             if lastmemoryentry is not None:
                 lastmemoryentry[2] -= abs(howmuch)
                 self.memory.append(lastmemoryentry) 
-
+                
+    
+    def freezeEverything(self):
+        self.containers.outputval.send_via_senderthread("pleaseFreeze", self.containers.inputval.timestamp)
+        self.containers.freezeEverything = True
+        
+    def unFreezeEverything(self):
+        self.containers.outputval.send_via_senderthread("pleaseUnFreeze", self.containers.inputval.timestamp)
+        self.containers.freezeEverything = False
 
 
 ###############################################################################
 
       
 #wenn ich hier thread-locks verwenden würde würde er jedes mal einen neuen receiver-thread starten. 
-#TODO: auf richtigere weise thread-safe machen. https://stackoverflow.com/questions/13610654/how-to-make-built-in-containers-sets-dicts-lists-thread-safe
+#TODO: not sure how thread-safe this is.. https://stackoverflow.com/questions/13610654/how-to-make-built-in-containers-sets-dicts-lists-thread-safe
 class Memory(object):
     def __init__(self, elemtype, size, containers):
         self._lock = threading.Lock()
         self.memory = deque(elemtype, size)
         self.appendcount = 0
         self.containers = containers
+        self.lastsavetime = current_milli_time()
         if self.containers.keep_memory:
             corrupted = False
             if os.path.exists(self.containers.rl_conf.savememorypath+'memory.pkl'):
@@ -222,14 +232,18 @@ class Memory(object):
             self.memory.append(obj)
             self.appendcount += 1
             if self.containers.keep_memory: #TODO: sollte der das vielleicht in nem thread machen, damit der nicht zwischendurch unterbrochen wird?
-                if self.appendcount % self.containers.rl_conf.savememoryall == 0:
+                #previously: if self.appendcount % self.containers.rl_conf.savememoryall == 0:
+                if ((current_milli_time() - self.lastsavetime) / (1000*60)) > self.containers.rl_conf.saveMemoryAllMins:
+                    self.containers.myAgent.freezeEverything()
                     with open(self.containers.rl_conf.savememorypath+'memoryTMP.pkl', 'wb') as output:
                         pickle.dump(self.memory, output, pickle.HIGHEST_PROTOCOL)
+                    print("Saving Memory at",time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime()),level=6)
                     if os.path.exists(self.containers.rl_conf.savememorypath+'memoryTMP.pkl'):
                         if os.path.getsize(self.containers.rl_conf.savememorypath+'memoryTMP.pkl') > 1024: #only use it as memory if you weren't disturbed while writing
                             shutil.copyfile(self.containers.rl_conf.savememorypath+'memoryTMP.pkl', self.containers.rl_conf.savememorypath+'memory.pkl')
-                            
-
+                    self.lastsavetime = current_milli_time()
+                    self.containers.myAgent.unFreezeEverything()   
+                    
                     
     def pop(self):
         with self._lock:

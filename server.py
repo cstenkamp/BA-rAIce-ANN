@@ -168,31 +168,32 @@ class receiver_thread(threading.Thread):
     def run(self):
         print("Starting receiver_thread")
         while self.containers.KeepRunning and (not self.killme):
-            try:            
-                data = self.clientsocket.myreceive()
-                if data: 
-                    #print("received data:", data)       
-                    if self.handle_special_commands(data):
-                        continue
-                    elif data[:5] == "Time(":
-                        self.timestamp = float(data[5:data.find(")")])
-                        for i in self.containers.receiverthreads:
-                            if int(i.timestamp) < int(self.timestamp):
-                                i.killme = True
-                    
-                        #print(data)
-                        visionvec, allOneDs = cutoutandreturnvectors(data) 
-                        self.containers.inputval.update(visionvec, allOneDs, self.timestamp) #we MUST have the inputval, otherwise there wouldn't be the possibility for historyframes.           
+            try:        
+                if not self.containers.freezeEverything:
+                    data = self.clientsocket.myreceive()
+                    if data: 
+                        #print("received data:", data)       
+                        if self.handle_special_commands(data):
+                            continue
+                        elif data[:5] == "Time(":
+                            self.timestamp = float(data[5:data.find(")")])
+                            for i in self.containers.receiverthreads:
+                                if int(i.timestamp) < int(self.timestamp):
+                                    i.killme = True
                         
-                        #CHANGE: only 1 agent 
-#                        if len(self.containers.ANNs) == 1:
-#                            self.containers.ANNs[0].runInference(UPDATE_ONLY_IF_NEW)
-#                        else:                                                       
-#                            thread = threading.Thread(target=self.runOneANN, args=()) #immediately returns if UPDATE_ONLY_IF_NEW and alreadyreadthread = threading.Thread(target=self.runInference_SaveResult, args=())
-#                            thread.start() 
-                            #this thread here will also  send the result afterwards
+                            #print(data)
+                            visionvec, allOneDs = cutoutandreturnvectors(data) 
+                            self.containers.inputval.update(visionvec, allOneDs, self.timestamp) #we MUST have the inputval, otherwise there wouldn't be the possibility for historyframes.           
                             
-                        self.containers.myAgent.runInference(UPDATE_ONLY_IF_NEW)
+                            #CHANGE: only 1 agent 
+    #                        if len(self.containers.ANNs) == 1:
+    #                            self.containers.ANNs[0].runInference(UPDATE_ONLY_IF_NEW)
+    #                        else:                                                       
+    #                            thread = threading.Thread(target=self.runOneANN, args=()) #immediately returns if UPDATE_ONLY_IF_NEW and alreadyreadthread = threading.Thread(target=self.runInference_SaveResult, args=())
+    #                            thread.start() 
+                                #this thread here will also  send the result afterwards
+                                
+                            self.containers.myAgent.runInference(UPDATE_ONLY_IF_NEW)
                         
             except TimeoutError:
                 if len(self.containers.receiverthreads) < 2:
@@ -507,6 +508,7 @@ class Containers():
         self.ANNs = []
         self.reinfNetSteps = 0
         self.wrongdirectiontime = 0
+        self.freezeEverything = False
         #TODO - sollten in den containern nicht auch die numIterations stehen?
         
         
@@ -552,7 +554,7 @@ def main(sv_conf, rl_conf, play_only, no_learn, show_screen, start_fresh, keep_m
     
     print("Everything initialized", level=10)
     
-    #THREAD 1
+    #THREAD 1 
     ReceiverConnecterThread = ReceiverListenerThread()
     ReceiverConnecterThread.containers = containers
     ReceiverConnecterThread.start()
@@ -567,7 +569,7 @@ def main(sv_conf, rl_conf, play_only, no_learn, show_screen, start_fresh, keep_m
         learnthread = threading.Thread(target=containers.myAgent.dauerLearnANN) #TODO: das hier geht nicht bei > 1 ANN #BUG
         learnthread.start()
     
-   
+   #THREAD 4 (self)
     try:      
         if show_screen:
             screenroot.mainloop()            
@@ -576,6 +578,8 @@ def main(sv_conf, rl_conf, play_only, no_learn, show_screen, start_fresh, keep_m
                 pass
     except KeyboardInterrupt:
         pass
+    
+    #AFTER KILLING:
     
     print("Server shutting down...")
     containers.KeepRunning = False
