@@ -18,7 +18,7 @@ import cnn
 from myprint import myprint as print
 import infoscreen
 from read_supervised import cutoutandreturnvectors
-from agent import Memory
+from memory import Memory
 
 
 current_milli_time = lambda: int(round(time.time() * 1000))
@@ -569,7 +569,7 @@ def main(sv_conf, rl_conf, play_only, no_learn, show_screen, start_fresh, keep_m
         learnthread = threading.Thread(target=containers.myAgent.dauerLearnANN) #TODO: das hier geht nicht bei > 1 ANN #BUG
         learnthread.start()
     
-   #THREAD 4 (self)
+   #THREAD 4 (self/GUI)
     try:      
         if show_screen:
             screenroot.mainloop()            
@@ -580,7 +580,7 @@ def main(sv_conf, rl_conf, play_only, no_learn, show_screen, start_fresh, keep_m
         pass
     
     #AFTER KILLING:
-    
+        
     print("Server shutting down...")
     containers.KeepRunning = False
     
