@@ -21,7 +21,6 @@ from myprint import myprint as print
 #https://docs.python.org/3/library/collections.html#deque-objects
 
 
-#wenn ich hier thread-locks verwenden würde würde er jedes mal einen neuen receiver-thread starten. 
 #TODO: not sure how thread-safe this is.. https://stackoverflow.com/questions/13610654/how-to-make-built-in-containers-sets-dicts-lists-thread-safe
 class Memory(object):
     def __init__(self, capacity, containers):
@@ -76,14 +75,14 @@ class Memory(object):
     
     def save_memory(self):
         if self.containers.keep_memory: 
-            self.containers.myAgent.freezeEverything()
+            self.containers.myAgent.freezeEverything("saveMem")
             self.psave(self.containers.rl_conf.savememorypath+'memoryTMP.pkl')
             print("Saving Memory at",time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime()), level=6)
             if os.path.exists(self.containers.rl_conf.savememorypath+'memoryTMP.pkl'):
                 if os.path.getsize(self.containers.rl_conf.savememorypath+'memoryTMP.pkl') > 1024: #only use it as memory if you weren't disturbed while writing
                     shutil.copyfile(self.containers.rl_conf.savememorypath+'memoryTMP.pkl', self.containers.rl_conf.savememorypath+'memory.pkl')
             self.lastsavetime = current_milli_time()
-            self.containers.myAgent.unFreezeEverything()   
+            self.containers.myAgent.unFreezeEverything("saveMem")   
            
             
             

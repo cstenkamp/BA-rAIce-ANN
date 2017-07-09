@@ -18,7 +18,8 @@ import cnn
 from myprint import myprint as print
 import infoscreen
 from read_supervised import cutoutandreturnvectors
-from memory import Memory
+from precisememory import Memory as Precisememory
+from efficientmemory import Memory as Efficientmemory
 
 
 current_milli_time = lambda: int(round(time.time() * 1000))
@@ -64,7 +65,7 @@ TCP_RECEIVER_PORT = 6435
 TCP_SENDER_PORT = 6436
 NUMBER_ANNS = 1 #only one of those will execute the learning, in dauerLearnANN in LearnThread
 UPDATE_ONLY_IF_NEW = False #sendet immer nach jedem update -> Wenn False sendet er wann immer er was kriegt
-SAVE_MEMORY_ON_EXIT = True
+SAVE_MEMORY_ON_EXIT = False #ASDF 
 
 
 class MySocket:
@@ -170,7 +171,7 @@ class receiver_thread(threading.Thread):
         print("Starting receiver_thread")
         while self.containers.KeepRunning and (not self.killme):
             try:        
-                if not self.containers.freezeEverything:
+                if not self.containers.freezeInf:
                     data = self.clientsocket.myreceive()
                     if data: 
                         #print("received data:", data)       
@@ -507,12 +508,12 @@ class Containers():
         self.KeepRunning = True
         self.receiverthreads = []
         self.senderthreads = []
-        self.ANNs = []
-        self.reinfNetSteps = 0
+        #self.ANNs = []
+        self.myAgent = None
+        #self.reinfNetSteps = 0
         self.wrongdirectiontime = 0
-        self.freezeEverything = False
-        #TODO - sollten in den containern nicht auch die numIterations stehen?
-        
+        self.freezeInf = self.freezeLearn = False
+        #numIterations steckt in self.myAgent.numIterations
         
 def create_socket(port):
     server_socket = MySocket()
@@ -523,8 +524,8 @@ def create_socket(port):
 
 
 
-def main(sv_conf, rl_conf, play_only, no_learn, show_screen, start_fresh, keep_memory):
-    containers = Containers(play_only)
+def main(sv_conf, rl_conf, only_sv, no_learn, show_screen, start_fresh, keep_memory):
+    containers = Containers(only_sv)
     containers.inputval = InputValContainer(sv_conf)
     containers.inputval.containers = containers #lol.    
     containers.outputval = OutputValContainer()
@@ -539,7 +540,7 @@ def main(sv_conf, rl_conf, play_only, no_learn, show_screen, start_fresh, keep_m
     if show_screen:
         screenroot = infoscreen.showScreen(containers)
     
-    if play_only:
+    if only_sv:
         agent = svPlayNetAgent.PlayNetAgent
     else:
         agent = reinfNetAgent.ReinfNetAgent #this one, inheriting from abstractRLAgent, will have a memory
@@ -551,8 +552,11 @@ def main(sv_conf, rl_conf, play_only, no_learn, show_screen, start_fresh, keep_m
     
     containers.myAgent = agent(sv_conf, containers, rl_conf, start_fresh) #executes dauerLearnANN in LearnThread
                                                                           #executes runInference in receiver_thread
-    if not play_only:
-        containers.myAgent.memory = Memory(rl_conf.memorysize, containers)
+    if not only_sv:
+        if rl_conf.useprecisebuthugememory:
+            containers.myAgent.memory = Precisememory(rl_conf.memorysize, containers)
+        else:
+            containers.myAgent.memory = Efficientmemory(rl_conf.memorysize, containers, rl_conf.history_frame_nr) 
     
     print("Everything initialized", level=10)
     
@@ -567,7 +571,7 @@ def main(sv_conf, rl_conf, play_only, no_learn, show_screen, start_fresh, keep_m
     SenderConnecterThread.start()
 
     #THREAD 3 (learning)
-    if not play_only and not no_learn:
+    if not only_sv and not no_learn:
         learnthread = threading.Thread(target=containers.myAgent.dauerLearnANN) #TODO: das hier geht nicht bei > 1 ANN #BUG
         learnthread.start()
     
@@ -591,7 +595,7 @@ def main(sv_conf, rl_conf, play_only, no_learn, show_screen, start_fresh, keep_m
         senderthread.join()
     ReceiverConnecterThread.join() #takes max. 1 second until socket timeouts
     SenderConnecterThread.join()
-    if not play_only and not no_learn:
+    if not only_sv and not no_learn:
         learnthread.join()
         
     if SAVE_MEMORY_ON_EXIT:
@@ -612,8 +616,8 @@ if __name__ == '__main__':
         rl_conf = cnn.RL_Config()
     
     if "-nolearn" in sys.argv:
-        reinfNetAgent.minepsilon = 0
-        reinfNetAgent.epsilon = 0 #or whatever random-value will be in 
+        rl_conf.minepsilon = 0
+        rl_conf.startepsilon = 0 #or whatever random-value will be in 
         
                 
     main(sv_conf, rl_conf, ("-svplay" in sys.argv), ("-nolearn" in sys.argv), not ("-noscreen" in sys.argv), ("-startfresh" in sys.argv), ("-keepmemory" in sys.argv or "-DQN" in sys.argv))    
