@@ -93,12 +93,13 @@ class AbstractRLAgent(AbstractAgent):
     def runInference(self, update_only_if_new):
         if self.containers.freezeInf:
             return "return"
-        
+                
         #hier gehts darum die Inference zu freezen bis das learnen eingeholt hat. (falls update_frequency gesetzt)
         if self.rl_config.ForEveryInf and self.rl_config.ComesALearn and self.canLearn():
             
-            if self.numInferencesAfterLearn >= self.rl_config.ForEveryInf:
-                self.unFreezeLearn("updateFrequency")            
+            if self.numInferencesAfterLearn == self.rl_config.ForEveryInf:
+                self.unFreezeLearn("updateFrequency")  
+                self.numInferencesAfterLearn = self.numLearnAfterInference = 0
                 
             #Alle ForEveryInf inferences sollst du warten, bis ComesALearn mal in der zwischenzeit gelernt wurde.
             if self.numInferencesAfterLearn == self.rl_config.ForEveryInf:
@@ -133,18 +134,19 @@ class AbstractRLAgent(AbstractAgent):
             
             #hier gehts darum das learnen zu freezen bis die Inference eingeholt hat. (falls update_frequency gesetzt)
             if self.rl_config.ForEveryInf and self.rl_config.ComesALearn:
-                
+
+                #                #Alle ComesALearn sollst du warten, bis ForEveryInf mal zwischenzeitlich Inference gemacht wurde
                 if self.numLearnAfterInference >= self.rl_config.ComesALearn:
                     self.unFreezeInf("updateFrequency") 
-                    self.numInferencesAfterLearn = self.numLearnAfterInference = 0
+                    
             
-#                #Alle ComesALearn sollst du warten, bis ForEveryInf mal zwischenzeitlich Inference gemacht wurde
-#                if self.numLearnAfterInference == self.rl_config.ComesALearn:
-#                    
-#                    if self.numInferencesAfterLearn < self.rl_config.ForEveryInf and self.canLearn():
-#                        self.freezeLearn("updateFrequency")
-#                        print("FREEZELEARN", self.numLearnAfterInference, self.numInferencesAfterLearn, level=10)
-#                        cando = False
+                    if self.numInferencesAfterLearn < self.rl_config.ForEveryInf and self.canLearn():
+                        self.freezeLearn("updateFrequency")
+                        print("FREEZELEARN", self.numLearnAfterInference, self.numInferencesAfterLearn, level=10)
+                        cando = False
+                        self.numLearnAfterInference = 0
+                    else:
+                        self.numInferencesAfterLearn = self.numLearnAfterInference = 0
         
             if cando and not self.containers.freezeLearn and self.canLearn():
                 self.learnANN()

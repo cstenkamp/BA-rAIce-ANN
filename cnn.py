@@ -126,7 +126,7 @@ class DQN_Config(RL_Config):
     finalepsilonframe = 1000   #final exploration frame
     replaystartsize = 33       #replay start size
     train_for = 2700           #number of iterations to train for 
-    ForEveryInf, ComesALearn = 30, 10
+    ForEveryInf, ComesALearn = 5, 100
     
     def __init__(self):
         super().__init__()
