@@ -27,7 +27,7 @@ class Memory(object):
     def __init__(self, capacity, containers, state_stacksize):
         self._lock = lock = threading.Lock()
         
-        self.capacity = capacity + state_stacksize
+        self.capacity = capacity
         self._state_stacksize = state_stacksize
         self._pointer = 0
         self._appendcount = 0
@@ -35,10 +35,11 @@ class Memory(object):
         self.lastsavetime = current_milli_time()
         self._size = 0
         
-        self._states = [None]*self.capacity
-        self._actions = [None]*self.capacity
-        self._rewards = np.zeros(capacity, dtype=np.float)
-        self._fEnds = np.zeros(capacity, dtype=np.bool)
+        self._visionvecs = [None]*(capacity+state_stacksize)
+        self._speeds = [None]*(capacity+1) #da das state-speed von n+1 gleich dem folgestate-speed von n ist, muss er nur 1 mal doppelt abspeichern
+        self._actions = [None]*capacity
+        self._rewards = [None]*capacity #np.zeros(capacity, dtype=np.float)
+        self._fEnds = [None]*capacity #np.zeros(capacity, dtype=np.bool)
         #keine Folgestates, da die ja im n+1ten Element stecken
         
         if self.containers.keep_memory:
@@ -65,24 +66,50 @@ class Memory(object):
         return self._size            
     
     
-    def __getitem__(self, indices):
+    def __getitem__(self, index):
         #Get a list of (s,a,r,s',fE) tuples
+
+        action = self._actions[index]
+        reward = self._rewards[index]
+        speed = self._speeds[index]
+        folgespeed = self._speeds[(index+1 % self.capacity)]
+        fEnd = self._fEnds[index]
+        state = self._visionvecs[index:index+4]
+        folgestate = self._visionvecs[index+1:index+5]
         
-        #The current state is this,this+1,this+2,this+3
-        #...and the s' is this+1,this+2,this+3,this+4, this should be an eights of the original memory
-        if not isinstance(indices, (list, tuple)):
-            indices = (indices,)
-        actions = self._actions[indices]
-        rewards = self._rewards[indices]
-        fEnds = self._fEnds[indices]
-        states = self._get_states(indices)
-        folgestates = self._get_states([i+1 for i in indices])
-        return list(zip(states, actions, rewards, folgestates, fEnds))        
-        
-        
-    #https://github.com/ahoereth/ddpg/blob/feature/rewrite/src/lib/memory.py
+        state = (state, speed)
+        folgestate = (folgestate, folgespeed)
+                        
+        return [state, action, reward, folgestate, fEnd]
+
+
     
-    #NEXT: USE ALEX's _get_state
+    def append(self,obj):
+        oldstate, action, reward, newstate, fEnd = obj
+        oldspeed = oldstate[1]
+        oldstate = oldstate[0]
+        newspeed = newstate[1]
+        newstate = newstate[0]
+        if self._pointer == 0:
+            self._visionvecs[0:self._state_stacksize-1] = oldstate
+            self._visionvecs[self._state_stacksize] = newstate[-1]
+            self._speeds[0] = oldspeed
+        else:
+            self._visionvecs[self._pointer+self._state_stacksize] = newstate[-1]
+            
+        self._speeds[self._pointer+1] = newspeed
+        self._actions[self._pointer] = action
+        self._rewards[self._pointer] = reward
+        self._fEnds[self._pointer] = fEnd 
+            
+        self._pointer = (self._pointer+1)%self.capacity
+        
+        self._appendcount += 1
+        if self._size < self.capacity:
+            self._size += 1
+    
+    
+    
     
     
 #       THIS STUFF NEEDS TO BE DONE     

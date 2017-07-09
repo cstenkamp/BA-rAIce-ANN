@@ -80,6 +80,7 @@ class AbstractRLAgent(AbstractAgent):
         if oldstate is not None:
             newstate = (visionvec, otherinputs.SpeedSteer.velocity)
             reward = self.calculateReward(self.containers.inputval)
+            #print(np.all(np.all(oldstate[0][0] == newstate[0][1]), np.all(oldstate[0][1] == newstate[0][2]), np.all(oldstate[0][2] == newstate[0][3])), level=10) #this is why our efficient memory works
             self.memory.append([oldstate, action, reward, newstate, False]) 
             print(self.dediscretize(action, self.rl_config), reward, level=6)
             

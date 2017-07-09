@@ -120,10 +120,10 @@ class DQN_Config(RL_Config):
     lr_decay = 1                #as the lr seems to stay equal, no decay
     rms_momentum = 0.95         #gradient momentum (=squared gradient momentum)
     min_sq_grad = 0.1           #min squared gradient 
-    startepsilon = 0.99         #initial exploration
+    startepsilon = 0.15         #initial exploration
     minepsilon = 0.1            #final exploration
     finalepsilonframe = 1000   #final exploration frame
-    replaystartsize = 100       #replay start size
+    replaystartsize = 33       #replay start size
     train_for = 2000           #number of iterations to train for 
     ForEveryInf, ComesALearn = 40, 10
     

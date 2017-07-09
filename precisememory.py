@@ -85,15 +85,20 @@ class Memory(object):
             self.containers.myAgent.unFreezeEverything("saveMem")   
            
             
+    def __getitem__(self, index):
+        return self._buffer[index]
+            
             
     def sample(self, n):
         with self._lock:
-            return random.sample(self._buffer[:self._size-3], n) 
+            return random.sample(self._buffer[:self._size], n) 
 #            samples = np.random.permutation(self._size-4)[:n]
 #            batch = [self._buffer[i] for i in samples]  
 #            return batch                   
                        
-        
+    def sample2(self, n):
+        return zip(*self.sample(n))      
+  
         
     def pop(self):
         self._pointer = (self._pointer - 1) % self.capacity
