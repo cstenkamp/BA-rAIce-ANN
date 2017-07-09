@@ -65,7 +65,7 @@ TCP_RECEIVER_PORT = 6435
 TCP_SENDER_PORT = 6436
 NUMBER_ANNS = 1 #only one of those will execute the learning, in dauerLearnANN in LearnThread
 UPDATE_ONLY_IF_NEW = False #sendet immer nach jedem update -> Wenn False sendet er wann immer er was kriegt
-SAVE_MEMORY_ON_EXIT = False #ASDF 
+SAVE_MEMORY_ON_EXIT = True
 
 
 class MySocket:

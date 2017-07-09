@@ -37,7 +37,7 @@ class ReinfNetAgent(AbstractRLAgent):
         self.rl_config = rl_config
         self.epsilon = self.rl_config.startepsilon
         self.initNetwork(start_fresh)
-
+        self.learn_which = self.online_cnn    #TODO: target network ausschalten können
    
 
     def runInference(self, update_only_if_new):
@@ -115,10 +115,7 @@ class ReinfNetAgent(AbstractRLAgent):
     #dauerlearnANN kommt aus der AbstractRLAgent
                 
                 
-    def learnANN(self):
-        learn_which = self.online_cnn    #TODO: target network ausschalten können
-  
-   
+    def learnANN(self):   
         def prepare_feed_dict(states, which_net):
             feed_dict = {
               which_net.inputs: np.array([state[0] for state in states]),
@@ -135,18 +132,18 @@ class ReinfNetAgent(AbstractRLAgent):
         actualActions = [self.dediscretize(i, self.rl_config) for i in actions]
         print(list(zip(rewards,actualActions)), level=4)
         
-        qs = self.session.run(learn_which.q, feed_dict = prepare_feed_dict(oldstates, learn_which))
-        max_qs = self.session.run(learn_which.q_max, feed_dict=prepare_feed_dict(newstates, learn_which))
+        qs = self.session.run(self.learn_which.q, feed_dict = prepare_feed_dict(oldstates, self.learn_which))
+        max_qs = self.session.run(self.learn_which.q_max, feed_dict=prepare_feed_dict(newstates, self.learn_which))
                                      
         #Bellman equation: Q(s,a) = r + y(max(Q(s',a')))
         #qs[np.arange(BATCHSIZE), argmactions] += learning_rate*((rewards + Q_DECAY * max_qs * (not resetafters))-qs[np.arange(BATCHSIZE), argmactions]) #so wäre es wenn wir kein ANN nutzen würden!
         #https://medium.com/emergent-future/simple-reinforcement-learning-with-tensorflow-part-0-q-learning-with-tables-and-neural-networks-d195264329d0
         qs[np.arange(self.rl_config.batchsize), argmactions] = rewards + self.rl_config.q_decay * max_qs * (not resetafters) #wenn anschließend resettet wurde war es bspw ein wallhit und damit quasi ein final state
         
-        self.session.run(learn_which.train_op, feed_dict={
-            learn_which.inputs: np.array([curr[0] for curr in oldstates]),
-            learn_which.speed_input:np.array([self.inflate_speed(curr[1], self.rl_config) for curr in oldstates]),
-            learn_which.targets: qs,
+        self.session.run(self.learn_which.train_op, feed_dict={
+            self.learn_which.inputs: np.array([curr[0] for curr in oldstates]),
+            self.learn_which.speed_input:np.array([self.inflate_speed(curr[1], self.rl_config) for curr in oldstates]),
+            self.learn_which.targets: qs,
         })
         
         self.reinfNetSteps += 1
@@ -155,10 +152,10 @@ class ReinfNetAgent(AbstractRLAgent):
             infoscreen.print(self.reinfNetSteps, "Iterations: >"+str(self.numIterations), containers= self.containers, wname="ReinfLearnSteps")
                     
         if self.reinfNetSteps % self.rl_config.checkpointall == 0 or self.numIterations >= self.rl_config.train_for:
-            self.saveNet(learn_which)
+            self.saveNet()
             
             
-        if learn_which == self.online_cnn:
+        if self.learn_which == self.online_cnn:
             self.lock.acquire()
             if self.reinfNetSteps % self.rl_config.copy_target_all == 0:
                 with self.graph.as_default():    
@@ -168,11 +165,11 @@ class ReinfNetAgent(AbstractRLAgent):
 
                         
                 
-    def saveNet(self, learn_which):
+    def saveNet(self):
         #self.freezeEverything("saveNet")
         self.cnn.saveNumIters(self.session, self.numIterations)
         checkpoint_file = os.path.join(self.rl_config.checkpoint_dir, 'model.ckpt')
-        self.saver.save(self.session, checkpoint_file, global_step=learn_which.global_step.eval(session=self.session))       
+        self.saver.save(self.session, checkpoint_file, global_step=self.learn_which.global_step.eval(session=self.session))       
         print("saved", level=6)
         #self.unFreezeEverything("saveNet")
                 

@@ -82,7 +82,6 @@ class AbstractRLAgent(AbstractAgent):
             reward = self.calculateReward(self.containers.inputval)
             self.memory.append([oldstate, action, reward, newstate, False]) 
             print(self.dediscretize(action, self.rl_config), reward, level=6)
-            print(len(self.memory),level=6)
             
             if self.containers.showscreen:
                 infoscreen.print(self.dediscretize(action, self.rl_config), round(reward,2), round(self.cnn.calculate_value(self.session, newstate[0], newstate[1], self.sv_config.history_frame_nr)[0],2), containers= self.containers, wname="Last memory")
@@ -97,22 +96,25 @@ class AbstractRLAgent(AbstractAgent):
         #hier gehts darum die Inference zu freezen bis das learnen eingeholt hat. (falls update_frequency gesetzt)
         if self.rl_config.ForEveryInf and self.rl_config.ComesALearn and self.canLearn():
             
-            if self.numInferencesAfterLearn == self.rl_config.ForEveryInf:
-                self.unFreezeLearn("updateFrequency")  
-                self.numInferencesAfterLearn = self.numLearnAfterInference = 0
-                
-            #Alle ForEveryInf inferences sollst du warten, bis ComesALearn mal in der zwischenzeit gelernt wurde.
+            if self.numLearnAfterInference == self.rl_config.ComesALearn and self.numInferencesAfterLearn == self.rl_config.ForEveryInf:
+                self.numLearnAfterInference = self.numInferencesAfterLearn = 0            
+                self.unFreezeLearn("updateFrequency")   
+                self.unFreezeInf("updateFrequency")
+            
+             #Alle ForEveryInf inferences sollst du warten, bis ComesALearn mal in der zwischenzeit gelernt wurde.
             if self.numInferencesAfterLearn == self.rl_config.ForEveryInf:
                 #gucke ob er in der zwischenzeit ComesALearn mal gelernt hat, wenn nein, freeze Inference
-                
+                self.unFreezeLearn("updateFrequency")                  
+           
                 if self.numLearnAfterInference < self.rl_config.ComesALearn:
                     self.freezeInf("updateFrequency")
-                    print("FREEZEINF", self.numLearnAfterInference, self.numInferencesAfterLearn, level=10)
+                    print("FREEZEINF", self.numLearnAfterInference, self.numInferencesAfterLearn, level=2)
                     return "return"
+                self.numLearnAfterInference = 0
                 
             self.numInferencesAfterLearn += 1
         
-        print(self.numLearnAfterInference, self.numInferencesAfterLearn, level=10)
+        #print(self.numLearnAfterInference, self.numInferencesAfterLearn, level=10)
         
         return super().runInference(update_only_if_new)
 
@@ -129,36 +131,43 @@ class AbstractRLAgent(AbstractAgent):
         except:
             self.rl_config.train_for = float("inf")
             
-        while self.containers.KeepRunning and self.numIterations < self.rl_config.train_for:
+        while self.containers.KeepRunning and self.numIterations <= self.rl_config.train_for:
             cando = True
             
             #hier gehts darum das learnen zu freezen bis die Inference eingeholt hat. (falls update_frequency gesetzt)
             if self.rl_config.ForEveryInf and self.rl_config.ComesALearn:
 
-                #                #Alle ComesALearn sollst du warten, bis ForEveryInf mal zwischenzeitlich Inference gemacht wurde
+                if self.numLearnAfterInference == self.rl_config.ComesALearn and self.numInferencesAfterLearn == self.rl_config.ForEveryInf:
+                    self.numLearnAfterInference = self.numInferencesAfterLearn = 0
+                    self.unFreezeLearn("updateFrequency")   
+                    self.unFreezeInf("updateFrequency")
+                
+                #Alle ComesALearn sollst du warten, bis ForEveryInf mal zwischenzeitlich Inference gemacht wurde
                 if self.numLearnAfterInference >= self.rl_config.ComesALearn:
                     self.unFreezeInf("updateFrequency") 
                     
-            
                     if self.numInferencesAfterLearn < self.rl_config.ForEveryInf and self.canLearn():
                         self.freezeLearn("updateFrequency")
-                        print("FREEZELEARN", self.numLearnAfterInference, self.numInferencesAfterLearn, level=10)
+                        print("FREEZELEARN", self.numLearnAfterInference, self.numInferencesAfterLearn, level=2)
                         cando = False
-                        self.numLearnAfterInference = 0
                     else:
-                        self.numInferencesAfterLearn = self.numLearnAfterInference = 0
+                        self.numInferencesAfterLearn = 0
         
             if cando and not self.containers.freezeLearn and self.canLearn():
                 self.learnANN()
-                self.numLearnAfterInference += 1
+                if self.rl_config.ForEveryInf and self.rl_config.ComesALearn:
+                    self.numLearnAfterInference += 1
                      
-
+                
                     
         self.unFreezeInf("updateFrequency")
+        if self.numIterations >= self.rl_config.train_for:
+            self.saveNet()
         print("Stopping learning after", self.numIterations, "inferences", level=10)
+        
 
-
-
+    def saveNet(self):
+        raise NotImplementedError
                 
     def learnANN(self):
         raise NotImplementedError
@@ -235,13 +244,15 @@ class AbstractRLAgent(AbstractAgent):
         self.freezeInf(reason)
 
     def freezeLearn(self, reason):
-        self.containers.freezeLearn = True
-        self.freezeLearnReasons.append(reason)
+        if not reason in self.freezeLearnReasons:
+            self.containers.freezeLearn = True
+            self.freezeLearnReasons.append(reason)
 
     def freezeInf(self, reason):
-        self.containers.freezeInf = True
-        self.freezeInfReasons.append(reason)
-        self.containers.outputval.send_via_senderthread("pleaseFreeze", self.containers.inputval.timestamp)        
+        if not reason in self.freezeInfReasons:
+            self.containers.freezeInf = True
+            self.freezeInfReasons.append(reason)
+            self.containers.outputval.send_via_senderthread("pleaseFreeze", self.containers.inputval.timestamp)        
         
         
     def unFreezeEverything(self, reason):

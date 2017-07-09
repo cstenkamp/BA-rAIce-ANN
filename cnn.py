@@ -70,14 +70,13 @@ class RL_Config(Config):
     minepsilon = 0.005
     batchsize = 32
     q_decay = 0.99
-    checkpointall = 500
+    checkpointall = 300 #RLsteps, not inferences!
     copy_target_all = 100
     
     replaystartsize = 0
     memorysize = 30000
     useprecisebuthugememory = True
-    learnAllXInferences = False
-    CheckLearnInfRateAll = False #je höher dieser wert ist desto seltener checkt er die learnAllXInferences-ratio, desto seltener freezed er.
+    ForEveryInf, ComesALearn = False, False
     
     #re-uses history_frame_nr, image_dims, steering_steps, speed_neurons, INCLUDE_ACCPLUSBREAK, SPEED_AS_ONEHOT
     
@@ -98,7 +97,7 @@ class DQN_Config(RL_Config):
 #    history_frame_nr = 4            #agent history length
 #    copy_target_all = 10000         #target network update frequency (C)
 #    q_decay = 0.99                  #discount factor
-#    #action repeat & update frequency & noop-max
+#    #action repeat & noop-max
 #    initial_lr = 0.00025            #learning rate used by RMSProp
 #    lr_decay = 1                    #as the lr seems to stay equal, no decay
 #    rms_momentum = 0.95             #gradient momentum (=squared gradient momentum)
@@ -116,17 +115,17 @@ class DQN_Config(RL_Config):
     history_frame_nr = 4        #agent history length
     copy_target_all = 100       #target network update frequency (C)
     q_decay = 0.99              #discount factor
-    #action repeat & update frequency & noop-max
+    #action repeat & noop-max
     initial_lr = 0.00025        #learning rate used by RMSProp
     lr_decay = 1                #as the lr seems to stay equal, no decay
     rms_momentum = 0.95         #gradient momentum (=squared gradient momentum)
     min_sq_grad = 0.1           #min squared gradient 
-    startepsilon = 0.1            #initial exploration
+    startepsilon = 0.99         #initial exploration
     minepsilon = 0.1            #final exploration
     finalepsilonframe = 1000   #final exploration frame
-    replaystartsize = 33       #replay start size
-    train_for = 2700           #number of iterations to train for 
-    ForEveryInf, ComesALearn = 5, 100
+    replaystartsize = 100       #replay start size
+    train_for = 2000           #number of iterations to train for 
+    ForEveryInf, ComesALearn = 40, 10
     
     def __init__(self):
         super().__init__()
