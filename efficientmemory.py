@@ -68,7 +68,12 @@ class Memory(object):
     
     def __getitem__(self, index):
         #Get a list of (s,a,r,s',fE) tuples
-
+        
+        if self._appendcount > self.capacity and (self._pointer <= index <= self._pointer+3):
+            return False
+        if index >= self._size:
+            return None
+        
         action = self._actions[index]
         reward = self._rewards[index]
         speed = self._speeds[index]
@@ -91,7 +96,7 @@ class Memory(object):
         newspeed = newstate[1]
         newstate = newstate[0]
         if self._pointer == 0:
-            self._visionvecs[0:self._state_stacksize-1] = oldstate
+            self._visionvecs[0:self._state_stacksize] = oldstate
             self._visionvecs[self._state_stacksize] = newstate[-1]
             self._speeds[0] = oldspeed
         else:
