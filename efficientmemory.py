@@ -108,7 +108,7 @@ class Memory(object):
             self._rewards[self._pointer] = reward
             self._fEnds[self._pointer] = fEnd 
                 
-            self._pointer = (self._pointer+1)%self.capacity
+            self._pointer = (self._pointer+1) % self.capacity
             
             self._appendcount += 1
             if self._size < self.capacity:
@@ -152,24 +152,30 @@ class Memory(object):
         
         
     def pop(self):
-        self._pointer = (self._pointer - 1) % self.capacity
+        tmp = (self._pointer - 1) % self.capacity
+        tmp2 = self[tmp]
         self._size -= 1
-        return self[self._pointer]
+        self._pointer = tmp 
+        return tmp2
         
         
     
     def endEpisode(self):
+        if self._size < 2:
+            return
         lastmemoryentry = self.pop() #oldstate, action, reward, newstate, fEnd
-        if lastmemoryentry is not None:
+        if lastmemoryentry is not None and lastmemoryentry != False:
             lastmemoryentry[4] = True
             self.append(lastmemoryentry)
             
             
     def punishLastAction(self, howmuch):
-            lastmemoryentry = self.pop() #oldstate, action, reward, newstate, fEnd
-            if lastmemoryentry is not None:
-                lastmemoryentry[2] -= abs(howmuch)
-                self.append(lastmemoryentry)     
+        if self._size < 2:
+            return
+        lastmemoryentry = self.pop() #oldstate, action, reward, newstate, fEnd
+        if lastmemoryentry is not None and lastmemoryentry != False:
+            lastmemoryentry[2] -= abs(howmuch)
+            self.append(lastmemoryentry)     
    
 
  

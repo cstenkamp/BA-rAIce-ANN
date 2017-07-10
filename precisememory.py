@@ -116,6 +116,8 @@ class Memory(object):
         
     
     def endEpisode(self):
+        if self._size < 2:
+            return
         lastmemoryentry = self.pop() #oldstate, action, reward, newstate, fEnd
         if lastmemoryentry is not None:
             lastmemoryentry[4] = True
@@ -123,6 +125,8 @@ class Memory(object):
             
             
     def punishLastAction(self, howmuch):
+        if self._size < 2:
+            return
         lastmemoryentry = self.pop() #oldstate, action, reward, newstate, fEnd
         if lastmemoryentry is not None:
             lastmemoryentry[2] -= abs(howmuch)
