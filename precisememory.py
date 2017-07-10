@@ -20,6 +20,7 @@ from myprint import myprint as print
 #we want something with fast random access, so we take a list instead of a deque https://wiki.python.org/moin/TimeComplexity
 #https://docs.python.org/3/library/collections.html#deque-objects
 
+SAVENAME = "memory"
 
 #TODO: not sure how thread-safe this is.. https://stackoverflow.com/questions/13610654/how-to-make-built-in-containers-sets-dicts-lists-thread-safe
 class Memory(object):
@@ -35,22 +36,22 @@ class Memory(object):
         
         if self.containers.keep_memory:
             corrupted = False
-            if os.path.exists(self.containers.rl_conf.savememorypath+'memory.pkl'):
+            if os.path.exists(self.containers.rl_conf.savememorypath+SAVENAME+'.pkl'):
                 try:
-                    if os.path.getsize(self.containers.rl_conf.savememorypath+'memory.pkl') > 1024 and (os.path.getsize(self.containers.rl_conf.savememorypath+'memory.pkl') >= os.path.getsize(self.containers.rl_conf.savememorypath+'memoryTMP.pkl')-10240):
-                        self.pload(self.containers.rl_conf.savememorypath+'memory.pkl', containers, lock)
-                        print("Loading existing memory with", len(self._buffer), "entries", level=10)
+                    if os.path.getsize(self.containers.rl_conf.savememorypath+SAVENAME+'.pkl') > 1024 and (os.path.getsize(self.containers.rl_conf.savememorypath+SAVENAME+'.pkl') >= os.path.getsize(self.containers.rl_conf.savememorypath+SAVENAME+'TMP.pkl')-10240):
+                        self.pload(self.containers.rl_conf.savememorypath+SAVENAME+'.pkl', containers, lock)
+                        print("Loading existing memory with", self._size, "entries", level=10)
                     else:
                         corrupted = True
                 except:
                     corrupted = True
             if corrupted:
                 print("Previous memory was corrupted!", level=10) 
-                if os.path.exists(self.containers.rl_conf.savememorypath+'memoryTMP.pkl'):
-                    if os.path.getsize(self.containers.rl_conf.savememorypath+'memoryTMP.pkl') > 1024: 
-                        shutil.copyfile(self.containers.rl_conf.savememorypath+'memoryTMP.pkl', self.containers.rl_conf.savememorypath+'memory.pkl')
-                        self.pload(self.containers.rl_conf.savememorypath+'memory.pkl', containers, lock)
-                        print("Loading Backup-Memory with", len(self._buffer), "entries", level=10)
+                if os.path.exists(self.containers.rl_conf.savememorypath+SAVENAME+'TMP.pkl'):
+                    if os.path.getsize(self.containers.rl_conf.savememorypath+SAVENAME+'TMP.pkl') > 1024: 
+                        shutil.copyfile(self.containers.rl_conf.savememorypath+SAVENAME+'TMP.pkl', self.containers.rl_conf.savememorypath+SAVENAME+'.pkl')
+                        self.pload(self.containers.rl_conf.savememorypath+SAVENAME+'.pkl', containers, lock)
+                        print("Loading Backup-Memory with", self._size, "entries", level=10)
         
         
     def __len__(self):
@@ -78,11 +79,11 @@ class Memory(object):
         with self._lock:
             if self.containers.keep_memory: 
                 self.containers.myAgent.freezeEverything("saveMem")
-                self.psave(self.containers.rl_conf.savememorypath+'memoryTMP.pkl')
+                self.psave(self.containers.rl_conf.savememorypath+SAVENAME+'TMP.pkl')
                 print("Saving Memory at",time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime()), level=6)
-                if os.path.exists(self.containers.rl_conf.savememorypath+'memoryTMP.pkl'):
-                    if os.path.getsize(self.containers.rl_conf.savememorypath+'memoryTMP.pkl') > 1024: #only use it as memory if you weren't disturbed while writing
-                        shutil.copyfile(self.containers.rl_conf.savememorypath+'memoryTMP.pkl', self.containers.rl_conf.savememorypath+'memory.pkl')
+                if os.path.exists(self.containers.rl_conf.savememorypath+SAVENAME+'TMP.pkl'):
+                    if os.path.getsize(self.containers.rl_conf.savememorypath+SAVENAME+'TMP.pkl') > 1024: #only use it as memory if you weren't disturbed while writing
+                        shutil.copyfile(self.containers.rl_conf.savememorypath+SAVENAME+'TMP.pkl', self.containers.rl_conf.savememorypath+SAVENAME+'.pkl')
                 self.lastsavetime = current_milli_time()
                 self.containers.myAgent.unFreezeEverything("saveMem")   
            

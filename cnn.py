@@ -110,7 +110,7 @@ class DQN_Config(RL_Config):
 #    ForEveryInf, ComesALearn = 4, 1 #update frequency & how often it checks it
 
 
-    batch_size = 32             #minibatch size
+    batch_size = 8             #minibatch size
     memorysize = 800          #replay memory size
     history_frame_nr = 4        #agent history length
     copy_target_all = 100       #target network update frequency (C)

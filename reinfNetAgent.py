@@ -124,11 +124,12 @@ class ReinfNetAgent(AbstractRLAgent):
             return feed_dict
             
             
-#        batch = self.memory.sample(self.rl_config.batchsize)
-#        oldstates, actions, rewards, newstates, resetafters = zip(*batch)      
+#        samples, batch = self.memory2.sample(self.rl_config.batchsize)
+#        batch2 = self.memory.sampletest(samples)
+        
+        batch = self.memory.sample(self.rl_config.batchsize)
+        oldstates, actions, rewards, newstates, resetafters = zip(*batch)      
 
-        oldstates, actions, rewards, newstates, resetafters = self.memory.sample2(self.rl_config.batchsize)
-                
         
         argmactions = [np.argmax(i) for i in actions]
         

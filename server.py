@@ -552,12 +552,15 @@ def main(sv_conf, rl_conf, only_sv, no_learn, show_screen, start_fresh, keep_mem
     
     containers.myAgent = agent(sv_conf, containers, rl_conf, start_fresh) #executes dauerLearnANN in LearnThread
                                                                           #executes runInference in receiver_thread
-    if not only_sv:
-        if rl_conf.useprecisebuthugememory:
-            containers.myAgent.memory = Precisememory(rl_conf.memorysize, containers)
-        else:
-            containers.myAgent.memory = Efficientmemory(rl_conf.memorysize, containers, rl_conf.history_frame_nr) 
+#    if not only_sv:
+#        if rl_conf.useprecisebuthugememory:
+#            containers.myAgent.memory = Precisememory(rl_conf.memorysize, containers)
+#        else:
+#            containers.myAgent.memory = Efficientmemory(rl_conf.memorysize, containers, rl_conf.history_frame_nr) 
     
+    containers.myAgent.memory = Precisememory(rl_conf.memorysize, containers)
+    containers.myAgent.memory2 = Efficientmemory(rl_conf.memorysize, containers, rl_conf.history_frame_nr) 
+
     print("Everything initialized", level=10)
     
     #THREAD 1 
@@ -600,6 +603,7 @@ def main(sv_conf, rl_conf, only_sv, no_learn, show_screen, start_fresh, keep_mem
         
     if SAVE_MEMORY_ON_EXIT:
         containers.myAgent.memory.save_memory()
+        containers.myAgent.memory2.save_memory()
         
     time.sleep(0.1)
     print("Server shut down sucessfully.")

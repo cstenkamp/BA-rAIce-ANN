@@ -78,7 +78,7 @@ reward9 = 10
 newstate9 = ([["vision71"],["vision81"],["vision91"],["vision101"]], "speed10")
 
 
-MEMSIZE = 7
+MEMSIZE = 15
 
 m1 =   Precisememory(MEMSIZE, containers)
 m2 = Efficientmemory(MEMSIZE, containers, 4) 
