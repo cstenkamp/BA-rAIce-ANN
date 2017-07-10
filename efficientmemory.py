@@ -35,8 +35,8 @@ class Memory(object):
         self.lastsavetime = current_milli_time()
         self._size = 0
         
-        self._visionvecs = [None]*(capacity+state_stacksize)
-        self._speeds = [None]*(capacity+1) #da das state-speed von n+1 gleich dem folgestate-speed von n ist, muss er nur 1 mal doppelt abspeichern
+        self._visionvecs = [None]*capacity
+        self._speeds = [None]*capacity 
         self._actions = [None]*capacity
         self._rewards = [None]*capacity #np.zeros(capacity, dtype=np.float)
         self._fEnds = [None]*capacity #np.zeros(capacity, dtype=np.bool)
@@ -64,23 +64,6 @@ class Memory(object):
         
     def __len__(self):
         return self._size            
-    
-    
-    def __getitem__(self, index):
-        #Get a list of (s,a,r,s',fE) tuples
-
-        action = self._actions[index]
-        reward = self._rewards[index]
-        speed = self._speeds[index]
-        folgespeed = self._speeds[(index+1 % self.capacity)]
-        fEnd = self._fEnds[index]
-        state = self._visionvecs[index:index+4]
-        folgestate = self._visionvecs[index+1:index+5]
-        
-        state = (state, speed)
-        folgestate = (folgestate, folgespeed)
-                        
-        return [state, action, reward, folgestate, fEnd]
 
 
     
@@ -91,13 +74,11 @@ class Memory(object):
         newspeed = newstate[1]
         newstate = newstate[0]
         if self._pointer == 0:
-            self._visionvecs[0:self._state_stacksize-1] = oldstate
-            self._visionvecs[self._state_stacksize] = newstate[-1]
-            self._speeds[0] = oldspeed
-        else:
-            self._visionvecs[self._pointer+self._state_stacksize] = newstate[-1]
-            
-        self._speeds[self._pointer+1] = newspeed
+            self._visionvecs[-self._state_stacksize:] = oldstate
+            self._speeds[-1] = oldspeed
+        
+        self._visionvecs[self._pointer] = newstate[-1]
+        self._speeds[self._pointer] = newspeed
         self._actions[self._pointer] = action
         self._rewards[self._pointer] = reward
         self._fEnds[self._pointer] = fEnd 
@@ -107,7 +88,28 @@ class Memory(object):
         self._appendcount += 1
         if self._size < self.capacity:
             self._size += 1
+        
     
+    def __getitem__(self, index):
+        #Get a list of (s,a,r,s',fE) tuples
+                       
+        action = self._actions[index]
+        reward = self._rewards[index]
+        speed = self._speeds[(index-1 % self.capacity)]
+        folgespeed = self._speeds[index]
+        fEnd = self._fEnds[index]
+        if index-self._state_stacksize-1 >= 0:
+            state = self._visionvecs[index-self._state_stacksize-1:index-1]
+            folgestate = self._visionvecs[index-self._state_stacksize:index]
+        else:
+            state = [self._visionvecs[i] for i in ]
+        
+        state = (state, speed)
+        folgestate = (folgestate, folgespeed)
+                        
+        return [state, action, reward, folgestate, fEnd]
+
+
     
     
     
