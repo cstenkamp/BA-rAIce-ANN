@@ -12,7 +12,6 @@ import threading
 import shutil
 import time
 current_milli_time = lambda: int(round(time.time() * 1000))
-import random
 import numpy as np
 #====own classes====
 from myprint import myprint as print
@@ -63,13 +62,14 @@ class Memory(object):
         
         
     def __len__(self):
-        return self._size            
+        with self._lock:
+            return self._size            
     
     
-    def __getitem__(self, index):
-        #Get a list of (s,a,r,s',fE) tuples
+    def __getitem__(self, index): #if i had with self._lock here, I would get a deadlock in the sample-method. 
+        #Get a (s,a,r,s',fE) tuple  #TODO: Alex' Version... https://github.com/ahoereth/ddpg/blob/feature/rewrite/src/lib/memory.py#L28-L60. is it more efficient?
         
-        if self._appendcount > self.capacity and (self._pointer <= index <= self._pointer+3):
+        if self._appendcount > self.capacity and (self._pointer <= index <= self._pointer+3): #I know that the values from _pointer to _pointer+3 are always wrong.
             return False
         if index >= self._size:
             return None
@@ -90,114 +90,102 @@ class Memory(object):
 
     
     def append(self,obj):
-        oldstate, action, reward, newstate, fEnd = obj
-        oldspeed = oldstate[1]
-        oldstate = oldstate[0]
-        newspeed = newstate[1]
-        newstate = newstate[0]
-        if self._pointer == 0:
-            self._visionvecs[0:self._state_stacksize] = oldstate
-            self._visionvecs[self._state_stacksize] = newstate[-1]
-            self._speeds[0] = oldspeed
-        else:
-            self._visionvecs[self._pointer+self._state_stacksize] = newstate[-1]
+        with self._lock:
+            oldstate, action, reward, newstate, fEnd = obj
+            oldspeed = oldstate[1]
+            oldstate = oldstate[0]
+            newspeed = newstate[1]
+            newstate = newstate[0]
+            if self._pointer == 0:
+                self._visionvecs[0:self._state_stacksize] = oldstate
+                self._visionvecs[self._state_stacksize] = newstate[-1]
+                self._speeds[0] = oldspeed
+            else:
+                self._visionvecs[self._pointer+self._state_stacksize] = newstate[-1]
+                
+            self._speeds[self._pointer+1] = newspeed
+            self._actions[self._pointer] = action
+            self._rewards[self._pointer] = reward
+            self._fEnds[self._pointer] = fEnd 
+                
+            self._pointer = (self._pointer+1)%self.capacity
             
-        self._speeds[self._pointer+1] = newspeed
-        self._actions[self._pointer] = action
-        self._rewards[self._pointer] = reward
-        self._fEnds[self._pointer] = fEnd 
-            
-        self._pointer = (self._pointer+1)%self.capacity
+            self._appendcount += 1
+            if self._size < self.capacity:
+                self._size += 1
         
-        self._appendcount += 1
-        if self._size < self.capacity:
-            self._size += 1
+            if self.containers.keep_memory: 
+                if ((current_milli_time() - self.lastsavetime) / (1000*60)) > self.containers.rl_conf.saveMemoryAllMins: 
+                    self.save_memory()
     
     
     
+    def save_memory(self):
+        with self._lock:
+            if self.containers.keep_memory: 
+                self.containers.myAgent.freezeEverything("saveMem")
+                self.psave(self.containers.rl_conf.savememorypath+'memoryTMP.pkl')
+                print("Saving Memory at",time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime()), level=6)
+                if os.path.exists(self.containers.rl_conf.savememorypath+'memoryTMP.pkl'):
+                    if os.path.getsize(self.containers.rl_conf.savememorypath+'memoryTMP.pkl') > 1024: #only use it as memory if you weren't disturbed while writing
+                        shutil.copyfile(self.containers.rl_conf.savememorypath+'memoryTMP.pkl', self.containers.rl_conf.savememorypath+'memory.pkl')
+                self.lastsavetime = current_milli_time()
+                self.containers.myAgent.unFreezeEverything("saveMem")   
+           
+            
+            
+    def sample(self, n): #gesamplet wird nur sobald len(self.memory) > self.rl_config.batchsize+self.rl_config.history_frame_nr+1
+        with self._lock:
+            assert self._size > self._state_stacksize, "you can't even sample a single value!"
+            if self._appendcount <= self.capacity:
+                samples = list(np.random.permutation(self._size)[:n])
+            else:
+                samples = np.random.permutation(self._size-self._state_stacksize)[:n] 
+                samples = [i if i < self._pointer else i+self._state_stacksize for i in samples ]
+                #because again,  I know that the values from _pointer to _pointer+3 are always wrong. So I simply don't use them, its 4 out of thousands of values.
+            
+            batch = [self[i] for i in samples]
+            
+            return samples, batch
+        
+                       
+        
+        
+    def pop(self):
+        self._pointer = (self._pointer - 1) % self.capacity
+        self._size -= 1
+        return self[self._pointer]
+        
+        
+    
+    def endEpisode(self):
+        lastmemoryentry = self.pop() #oldstate, action, reward, newstate, fEnd
+        if lastmemoryentry is not None:
+            lastmemoryentry[4] = True
+            self.append(lastmemoryentry)
+            
+            
+    def punishLastAction(self, howmuch):
+            lastmemoryentry = self.pop() #oldstate, action, reward, newstate, fEnd
+            if lastmemoryentry is not None:
+                lastmemoryentry[2] -= abs(howmuch)
+                self.append(lastmemoryentry)     
+   
+
+ 
+    #loads everything and then overwrites containers, locks, and lastsavetime, as those are pointers/relative to now.
+    def pload(self, filename, containers, lock):
+        with open(filename, 'rb') as f:
+            tmp_dict = pickle.load(f)
+        self.__dict__.update(tmp_dict) 
+        self.containers = containers
+        self._lock = lock
+        self.lastsavetime = current_milli_time()
     
     
-#       THIS STUFF NEEDS TO BE DONE     
-#    
-#    def append(self, obj):
-#        with self._lock:
-#                        
-#            self._buffer[self._pointer] = obj                      
-#            self._pointer = (self._pointer + 1) % self.capacity            
-#            
-#                            
-#            self._appendcount += 1
-#            if self._size < self.capacity:
-#                self._size += 1
-#            
-#            if self.containers.keep_memory: 
-#                if ((current_milli_time() - self.lastsavetime) / (1000*60)) > self.containers.rl_conf.saveMemoryAllMins: #previously: if self._appendcount % self.containers.rl_conf.savememoryall == 0:
-#                    self.save_memory()
-#    
-#    
-#    def save_memory(self):
-#        if self.containers.keep_memory: 
-#            self.containers.myAgent.freezeEverything("saveMem")
-#            self.psave(self.containers.rl_conf.savememorypath+'memoryTMP.pkl')
-#            print("Saving Memory at",time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime()), level=6)
-#            if os.path.exists(self.containers.rl_conf.savememorypath+'memoryTMP.pkl'):
-#                if os.path.getsize(self.containers.rl_conf.savememorypath+'memoryTMP.pkl') > 1024: #only use it as memory if you weren't disturbed while writing
-#                    shutil.copyfile(self.containers.rl_conf.savememorypath+'memoryTMP.pkl', self.containers.rl_conf.savememorypath+'memory.pkl')
-#            self.lastsavetime = current_milli_time()
-#            self.containers.myAgent.unFreezeEverything("saveMem")   
-#           
-#            
-#            
-#    def sample(self, n):
-#        with self._lock:
-#            return random.sample(self._buffer[:self._size-3], n) 
-##            samples = np.random.permutation(self._size-4)[:n]
-##            batch = [self._buffer[i] for i in samples]  
-##            return batch                   
-#                       
-#        
-#        
-#    def pop(self):
-#        self._pointer = (self._pointer - 1) % self.capacity
-#        self._size -= 1
-#        return self._buffer[self._pointer]
-#        
-#        
-#    
-#    def endEpisode(self):
-#        lastmemoryentry = self.pop() #oldstate, action, reward, newstate, fEnd
-#        if lastmemoryentry is not None:
-#            lastmemoryentry[4] = True
-#            self.append(lastmemoryentry)
-#            
-#            
-#    def punishLastAction(self, howmuch):
-#            lastmemoryentry = self.pop() #oldstate, action, reward, newstate, fEnd
-#            if lastmemoryentry is not None:
-#                lastmemoryentry[2] -= abs(howmuch)
-#                self.append(lastmemoryentry)     
-#    
-#    
-#    
-#    
-#    
-#    
-#    
-#            
-#        
-#    #loads everything and then overwrites containers, locks, and lastsavetime, as those are pointers/relative to now.
-#    def pload(self, filename, containers, lock):
-#        with open(filename, 'rb') as f:
-#            tmp_dict = pickle.load(f)
-#        self.__dict__.update(tmp_dict) 
-#        self.containers = containers
-#        self._lock = lock
-#        self.lastsavetime = current_milli_time()
-#    
-#    
-#    def psave(self, filename):
-#        odict = self.__dict__.copy() # copy the dict since we change it
-#        del odict['containers']  
-#        del odict['_lock']  
-#        with open(filename, 'wb') as f:
-#            pickle.dump(odict, f, pickle.HIGHEST_PROTOCOL)
+    def psave(self, filename):
+        odict = self.__dict__.copy() # copy the dict since we change it
+        del odict['containers']  
+        del odict['_lock']  
+        with open(filename, 'wb') as f:
+            pickle.dump(odict, f, pickle.HIGHEST_PROTOCOL)

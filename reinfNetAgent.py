@@ -70,7 +70,7 @@ class ReinfNetAgent(AbstractRLAgent):
                 global lastresult
                 try:
                     
-                    if len(self.memory) >= self.rl_config.replaystartsize and np.random.random() > self.epsilon:
+                    if self.canLearn() and np.random.random() > self.epsilon:
                         returnstuff, original = self.performNetwork(otherinputs, visionvec)
                     else:
                         returnstuff, original = self.randomAction(otherinputs.SpeedSteer.velocity, self.rl_config)

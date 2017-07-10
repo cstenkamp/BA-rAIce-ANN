@@ -54,7 +54,8 @@ class Memory(object):
         
         
     def __len__(self):
-        return self._size            
+        with self._lock:
+            return self._size            
             
     
     def append(self, obj):
@@ -74,19 +75,21 @@ class Memory(object):
     
     
     def save_memory(self):
-        if self.containers.keep_memory: 
-            self.containers.myAgent.freezeEverything("saveMem")
-            self.psave(self.containers.rl_conf.savememorypath+'memoryTMP.pkl')
-            print("Saving Memory at",time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime()), level=6)
-            if os.path.exists(self.containers.rl_conf.savememorypath+'memoryTMP.pkl'):
-                if os.path.getsize(self.containers.rl_conf.savememorypath+'memoryTMP.pkl') > 1024: #only use it as memory if you weren't disturbed while writing
-                    shutil.copyfile(self.containers.rl_conf.savememorypath+'memoryTMP.pkl', self.containers.rl_conf.savememorypath+'memory.pkl')
-            self.lastsavetime = current_milli_time()
-            self.containers.myAgent.unFreezeEverything("saveMem")   
+        with self._lock:
+            if self.containers.keep_memory: 
+                self.containers.myAgent.freezeEverything("saveMem")
+                self.psave(self.containers.rl_conf.savememorypath+'memoryTMP.pkl')
+                print("Saving Memory at",time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime()), level=6)
+                if os.path.exists(self.containers.rl_conf.savememorypath+'memoryTMP.pkl'):
+                    if os.path.getsize(self.containers.rl_conf.savememorypath+'memoryTMP.pkl') > 1024: #only use it as memory if you weren't disturbed while writing
+                        shutil.copyfile(self.containers.rl_conf.savememorypath+'memoryTMP.pkl', self.containers.rl_conf.savememorypath+'memory.pkl')
+                self.lastsavetime = current_milli_time()
+                self.containers.myAgent.unFreezeEverything("saveMem")   
            
             
     def __getitem__(self, index):
-        return self._buffer[index]
+        with self._lock:
+            return self._buffer[index]
             
             
     def sample(self, n):
@@ -99,6 +102,11 @@ class Memory(object):
     def sample2(self, n):
         return zip(*self.sample(n))      
   
+    
+    def sampletest(self, samples):
+        batch = [self._buffer[i] for i in samples]  
+        return batch            
+
         
     def pop(self):
         self._pointer = (self._pointer - 1) % self.capacity
@@ -115,10 +123,10 @@ class Memory(object):
             
             
     def punishLastAction(self, howmuch):
-            lastmemoryentry = self.pop() #oldstate, action, reward, newstate, fEnd
-            if lastmemoryentry is not None:
-                lastmemoryentry[2] -= abs(howmuch)
-                self.append(lastmemoryentry)     
+        lastmemoryentry = self.pop() #oldstate, action, reward, newstate, fEnd
+        if lastmemoryentry is not None:
+            lastmemoryentry[2] -= abs(howmuch)
+            self.append(lastmemoryentry)     
     
     
     

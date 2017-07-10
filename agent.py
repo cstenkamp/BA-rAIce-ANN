@@ -122,7 +122,8 @@ class AbstractRLAgent(AbstractAgent):
 
 
     def canLearn(self):
-        return len(self.memory) > self.rl_config.batchsize+3 and len(self.memory) > self.rl_config.replaystartsize and self.numIterations < self.rl_config.train_for
+        return len(self.memory) > self.rl_config.batchsize+self.rl_config.history_frame_nr+1 and \
+               len(self.memory) > self.rl_config.replaystartsize and self.numIterations < self.rl_config.train_for
 
 
 
