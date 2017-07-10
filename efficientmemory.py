@@ -81,8 +81,21 @@ class Memory(object):
         speed = self._speeds[index]
         folgespeed = self._speeds[(index+1 % self.capacity)]
         fEnd = self._fEnds[index]
-        state = self._visionvecs[index:index+4]
-        folgestate = self._visionvecs[index+1:index+5]
+        state = list(reversed(self._visionvecs[index:index+4]))
+        folgestate = list(reversed(self._visionvecs[index+1:index+5]))
+                
+        if self._fEnds[(index-1 % self.capacity)]:
+            state[1] = np.zeros(state[1].shape)
+            state[2] = np.zeros(state[2].shape)
+            state[3] = np.zeros(state[3].shape)
+            
+        if self._fEnds[(index-2 % self.capacity)]:
+            state[2] = np.zeros(state[2].shape)
+            state[3] = np.zeros(state[3].shape)
+            
+        if self._fEnds[(index-3 % self.capacity)]:
+            state[3] = np.zeros(state[3].shape)
+            
         
         state = (state, speed)
         folgestate = (folgestate, folgespeed)
@@ -99,11 +112,11 @@ class Memory(object):
             newspeed = newstate[1]
             newstate = newstate[0]
             if self._pointer == 0:
-                self._visionvecs[0:self._state_stacksize] = oldstate
-                self._visionvecs[self._state_stacksize] = newstate[-1]
+                self._visionvecs[0:self._state_stacksize] = list(reversed(oldstate))
+                self._visionvecs[self._state_stacksize] = newstate[0]
                 self._speeds[0] = oldspeed
             else:
-                self._visionvecs[self._pointer+self._state_stacksize] = newstate[-1]
+                self._visionvecs[self._pointer+self._state_stacksize] = newstate[0]
                 
             self._speeds[self._pointer+1] = newspeed
             self._actions[self._pointer] = action

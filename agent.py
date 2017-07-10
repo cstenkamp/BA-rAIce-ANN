@@ -79,7 +79,11 @@ class AbstractRLAgent(AbstractAgent):
         assert self.memory2 is not None, "It should be specified in server right afterwards"
         
         oldstate, action = self.containers.inputval.get_previous_state()
-        if oldstate is not None:
+        if oldstate is not None: #was der Fall DIREKT nach reset oder nach start ist
+            if self.containers.motherfucker:
+                print("JUSTRESET", level=10)
+                oldstate[0][0][0][0] = 999
+                self.containers.motherfucker = False
             newstate = (visionvec, otherinputs.SpeedSteer.velocity)
             reward = self.calculateReward(self.containers.inputval)
             #print(np.all(np.all(oldstate[0][0] == newstate[0][1]), np.all(oldstate[0][1] == newstate[0][2]), np.all(oldstate[0][2] == newstate[0][3])), level=10) #this is why our efficient memory works
@@ -91,6 +95,7 @@ class AbstractRLAgent(AbstractAgent):
                 infoscreen.print(self.dediscretize(action, self.rl_config), round(reward,2), round(self.cnn.calculate_value(self.session, newstate[0], newstate[1], self.sv_config.history_frame_nr)[0],2), containers= self.containers, wname="Last memory")
                 if len(self.memory) % 20 == 0:
                     infoscreen.print(">"+str(len(self.memory)), containers= self.containers, wname="Memorysize")
+      
                                     
  
     def runInference(self, update_only_if_new):

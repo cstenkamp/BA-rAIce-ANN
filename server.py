@@ -241,6 +241,7 @@ def resetUnity(containers, punish=0):
 
 def resetServer(containers, mspersec, punish=0):
     containers.outputval.reset()
+    containers.motherfucker = True
     containers.inputval.reset(mspersec, nolock = True)
 
 
@@ -533,6 +534,7 @@ def main(sv_conf, rl_conf, only_sv, no_learn, show_screen, start_fresh, keep_mem
     containers.sv_conf = sv_conf
     containers.rl_conf = rl_conf   
     containers.keep_memory = keep_memory #bei DQN und der keepmememory-variante speichert er das memory als pickle-file for later use
+    containers.motherfucker = False
     
     containers.receiverportsocket = create_socket(TCP_RECEIVER_PORT)
     containers.senderportsocket = create_socket(TCP_SENDER_PORT)

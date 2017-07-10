@@ -16,69 +16,69 @@ class Containers():
 containers = Containers()
         
 
-oldstate1 = ([["vision11"],["vision12"],["vision13"],["vision14"]], "speed1")
+oldstate1 = ([["vision14"],["vision13"],["vision12"],["vision11"]], "speed1")
 action1 = "action1"
 reward1 = 10
-newstate1 = ([["vision12"],["vision13"],["vision14"],["vision21"]], "speed2")
+newstate1 = ([["vision21"],["vision14"],["vision13"],["vision12"]], "speed2")
 
 
 
-oldstate2 = ([["vision12"],["vision13"],["vision14"],["vision21"]], "speed2")
+oldstate2 = ([["vision21"],["vision14"],["vision13"],["vision12"]], "speed2")
 action2 = "action2"
 reward2 = 10
-newstate2 = ([["vision13"],["vision14"],["vision21"],["vision31"]], "speed3")
+newstate2 = ([["vision31"],["vision21"],["vision14"],["vision13"]], "speed3")
 
 
 
-oldstate3 = ([["vision13"],["vision14"],["vision21"],["vision31"]], "speed3")
+oldstate3 = ([["vision31"],["vision21"],["vision14"],["vision13"]], "speed3")
 action3 = "action3"
 reward3 = 10
-newstate3 = ([["vision14"],["vision21"],["vision31"],["vision41"]], "speed4")
+newstate3 = ([["vision41"],["vision31"],["vision21"],["vision14"]], "speed4")
 
 
 
-oldstate4 = ([["vision14"],["vision21"],["vision31"],["vision41"]], "speed4")
+oldstate4 = ([["vision41"],["vision31"],["vision21"],["vision14"]], "speed4")
 action4 = "action4"
 reward4 = 10
-newstate4 = ([["vision21"],["vision31"],["vision41"],["vision51"]], "speed5")
+newstate4 = ([["vision51"],["vision41"],["vision31"],["vision21"]], "speed5")
 
 
 
-oldstate5 = ([["vision21"],["vision31"],["vision41"],["vision51"]], "speed5")
+oldstate5 = ([["vision51"],["vision41"],["vision31"],["vision21"]], "speed5")
 action5 = "action5"
 reward5 = 10
-newstate5 = ([["vision31"],["vision41"],["vision51"],["vision61"]], "speed6")
+newstate5 = ([["vision61"],["vision51"],["vision41"],["vision31"]], "speed6")
 
 
 
-oldstate6 = ([["vision31"],["vision41"],["vision51"],["vision61"]], "speed6")
+oldstate6 = ([["vision61"],["vision51"],["vision41"],["vision31"]], "speed6")
 action6 = "action6"
 reward6 = 10
-newstate6 = ([["vision41"],["vision51"],["vision61"],["vision71"]], "speed7")
+newstate6 = ([["vision71"],["vision61"],["vision51"],["vision41"]], "speed7")
 
 
 
-oldstate7 = ([["vision41"],["vision51"],["vision61"],["vision71"]], "speed7")
+oldstate7 = ([["vision71"],["vision61"],["vision51"],["vision41"]], "speed7")
 action7 = "action7"
 reward7 = 10
-newstate7 = ([["vision51"],["vision61"],["vision71"],["vision81"]], "speed8")
+newstate7 = ([["vision81"],["vision71"],["vision61"],["vision51"]], "speed8")
 
 
 
-oldstate8 = ([["vision51"],["vision61"],["vision71"],["vision81"]], "speed8")
+oldstate8 = ([["vision81"],["vision71"],["vision61"],["vision51"]], "speed8")
 action8 = "action8"
 reward8 = 10
-newstate8 = ([["vision61"],["vision71"],["vision81"],["vision91"]], "speed9")
+newstate8 = ([["vision91"],["vision81"],["vision71"],["vision61"]], "speed9")
 
 
 
-oldstate9 = ([["vision61"],["vision71"],["vision81"],["vision91"]], "speed9")
+oldstate9 = ([["vision91"],["vision81"],["vision71"],["vision61"]], "speed9")
 action9 = "action9"
 reward9 = 10
-newstate9 = ([["vision71"],["vision81"],["vision91"],["vision101"]], "speed10")
+newstate9 = ([["vision101"],["vision91"],["vision81"],["vision71"]], "speed10")
 
 
-MEMSIZE = 15
+MEMSIZE = 8
 
 m1 =   Precisememory(MEMSIZE, containers)
 m2 = Efficientmemory(MEMSIZE, containers, 4) 
