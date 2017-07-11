@@ -66,6 +66,10 @@ m2 = Efficientmemory(MEMSIZE, containers, 4)
 #        print(i, np.all(m2[i][0][0][0] == m2[i][3][0][1]))
 
 
+#for i in range(114,120):
+#    print(m1[i][1])
+    
+    
 
 #for i in range(114,120):
 #    print(i, "reset" if m1[i][4] else "")
@@ -120,7 +124,7 @@ m2 = Efficientmemory(MEMSIZE, containers, 4)
 allof = lambda t1, t2: np.all(t1[0] == t2[0]) and np.all(t1[1] == t2[1]) and np.all(t1[2] == t2[2]) and np.all(t1[3] == t2[3])
 allequal = lambda m1, m2, i: allof(m1[i][0][0], m2[i][0][0]) and m1[i][0][1] == m2[i][0][1] and np.all(m1[i][1] == m2[i][1]) and m1[i][2] == m2[i][2] and allof(m1[i][3][0], m2[i][3][0]) and m1[i][3][1] == m2[i][3][1] and m1[i][4] == m2[i][4]
 
-
+##
 print("")
 print("")
 print(m2._pointer) #immer der in pointer bis pointer+3 ist falsch
@@ -138,7 +142,29 @@ for i in range(MEMSIZE):
 print("")
 print("")
 print("")
+##
+
+
+
+###############################
+#weiteres problem: wenn er freezed, vergisst er beim efficientmemory ein frame.
+
+#for i in range(MEMSIZE):
+#    if m2[i] != False and m2[i] is not None:
+#        if not allequal(m1,m2, i) and not m1[i][4]:
+#            print(i)
+#            print("s:      ", np.all(m1[i][0][0][0] == m2[i][0][0][0]), np.all(m1[i][0][0][1] == m2[i][0][0][1]), np.all(m1[i][0][0][2] == m2[i][0][0][2]), np.all(m1[i][0][0][3] == m2[i][0][0][3]), "|", m1[i][0][1] == m2[i][0][1])
+#            print("s':", np.all(m1[i][3][0][0] == m2[i][3][0][0]), np.all(m1[i][3][0][1] == m2[i][3][0][1]), np.all(m1[i][3][0][2] == m2[i][3][0][2]), np.all(m1[i][3][0][3] == m2[i][3][0][3]), "|", m1[i][3][1] == m2[i][3][1])           
+#print("")
+#print("")
+#print("")
 #
+#print(np.all(m1[117][3][0][2] == m2[117][3][0][1]))
+
+
+
+
+
 #print(m2[1])
 #
 #samples, batch = m2.sample(5)

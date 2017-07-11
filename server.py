@@ -369,7 +369,6 @@ class InputValContainer(object):
             self.msperframe = interval #da Unity im diesen Wert immer bei spielstart schickt, wird msperframe immer richtig sein            
             assert int(self.msperframe) == int(self.config.msperframe)
             self.hit_a_wall = False
-            
             logging.debug("Resettet input-value")
         finally:
             if not nolock:

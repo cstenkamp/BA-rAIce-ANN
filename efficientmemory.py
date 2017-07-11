@@ -37,8 +37,8 @@ class Memory(object):
         self._size = 0
         
         self._visionvecs = [None]*(capacity+state_stacksize)
-        self._speeds = [None]*(capacity+1) #da das state-speed von n+1 gleich dem folgestate-speed von n ist, muss er nur 1 mal doppelt abspeichern
-        self._actions = [None]*capacity
+        self._speeds = np.zeros(capacity+1, dtype=np.float) #da das state-speed von n+1 gleich dem folgestate-speed von n ist, muss er nur 1 mal doppelt abspeichern
+        self._actions = np.zeros(capacity, dtype=np.int8)
         self._rewards = np.zeros(capacity, dtype=np.float)
         self._fEnds = np.zeros(capacity, dtype=np.bool)
         #keine Folgestates, da die ja im n+1ten Element stecken

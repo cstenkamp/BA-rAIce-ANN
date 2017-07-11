@@ -128,10 +128,11 @@ class ReinfNetAgent(AbstractRLAgent):
 #        batch2 = self.memory.sampletest(samples)
         
         batch = self.memory.sample(self.rl_config.batchsize)
-        oldstates, actions, rewards, newstates, resetafters = zip(*batch)      
-
+        oldstates, argmactions, rewards, newstates, resetafters = zip(*batch)      
+        actions = np.zeros([len(argmactions), ((4*self.rl_config.steering_steps) if self.rl_config.INCLUDE_ACCPLUSBREAK else (3*self.rl_config.steering_steps))])
+        for i in range(len(argmactions)):
+            actions[i][argmactions[i]] = 1
         
-        argmactions = [np.argmax(i) for i in actions]
         
         actualActions = [self.dediscretize(i, self.rl_config) for i in actions]
         print(list(zip(rewards,actualActions)), level=4)

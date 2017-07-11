@@ -83,8 +83,8 @@ class AbstractRLAgent(AbstractAgent):
             newstate = (visionvec, otherinputs.SpeedSteer.velocity)
             reward = self.calculateReward(self.containers.inputval)
             #print(np.all(np.all(oldstate[0][0] == newstate[0][1]), np.all(oldstate[0][1] == newstate[0][2]), np.all(oldstate[0][2] == newstate[0][3])), level=10) #this is why our efficient memory works
-            self.memory.append([oldstate, action, reward, newstate, False]) 
-            self.memory2.append([oldstate, action, reward, newstate, False]) 
+            self.memory.append([oldstate, np.argmax(action), reward, newstate, False]) 
+            self.memory2.append([oldstate, np.argmax(action), reward, newstate, False]) 
             print(self.dediscretize(action, self.rl_config), reward, level=6)
             
             if self.containers.showscreen:
@@ -114,7 +114,7 @@ class AbstractRLAgent(AbstractAgent):
                 if self.numLearnAfterInference < self.rl_config.ComesALearn:
                     self.freezeInf("updateFrequency")
                     print("FREEZEINF", self.numLearnAfterInference, self.numInferencesAfterLearn, level=2)
-                    return "return"
+                    return super().runInference(update_only_if_new)
                 self.numLearnAfterInference = 0
                 
             self.numInferencesAfterLearn += 1
