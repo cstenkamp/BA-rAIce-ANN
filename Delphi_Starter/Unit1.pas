@@ -265,7 +265,7 @@ end;
 	  Application.ProcessMessages; Sleep(2000); Application.ProcessMessages;
     command := '/C cd "'+ExtractFilePath(pythonPath)+'" && ' + 'python '+ExtractFileName(pythonPath)+' '+args;         
     ShellExecute(0, nil, 'cmd.exe', PChar(command), nil, SW_SHOW);
-	  Application.ProcessMessages; Sleep(40*1000); Application.ProcessMessages;
+	  Application.ProcessMessages; Sleep(80*1000); Application.ProcessMessages;
 	  ShellExecute(handle, nil, Pchar(gamePath), nil, nil, SW_SHOW);
 	  Application.ProcessMessages; Sleep(2000); Application.ProcessMessages;
     PostKeyEx32(VK_RETURN, [], False);   
