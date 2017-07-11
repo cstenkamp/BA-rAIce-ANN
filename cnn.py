@@ -75,7 +75,10 @@ class RL_Config(Config):
     
     replaystartsize = 0
     memorysize = 30000
-    useprecisebuthugememory = True
+    use_efficientmemory = True
+    use_constantbutbigmemory = True
+    visionvecdtype = np.int8 #wäre es np.bool würde er den rand als street sehen!
+    
     ForEveryInf, ComesALearn = False, False
     
     #re-uses history_frame_nr, image_dims, steering_steps, speed_neurons, INCLUDE_ACCPLUSBREAK, SPEED_AS_ONEHOT
@@ -111,7 +114,7 @@ class DQN_Config(RL_Config):
 
 
     batch_size = 8             #minibatch size
-    memorysize = 400          #replay memory size
+    memorysize = 50000          #replay memory size
     history_frame_nr = 4        #agent history length
     copy_target_all = 100       #target network update frequency (C)
     q_decay = 0.99              #discount factor

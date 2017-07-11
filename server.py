@@ -256,12 +256,13 @@ def unFreezeUnity(containers):
         
 class InputValContainer(object):   
     
-    def __init__(self, config):
+    def __init__(self, config, rl_conf):
         self.lock = threading.Lock()
         self.config = config
-        self.visionvec = np.zeros([config.image_dims[0], config.image_dims[1]])
+        self.rl_conf = rl_conf
+        self.visionvec = np.zeros([config.image_dims[0], config.image_dims[1]], dtype=rl_conf.visionvecdtype)
         if self.config.history_frame_nr > 1:
-            self.vvec_hist = np.zeros([config.history_frame_nr, config.image_dims[0], config.image_dims[1]]) 
+            self.vvec_hist = np.zeros([config.history_frame_nr, config.image_dims[0], config.image_dims[1]], dtype=rl_conf.visionvecdtype) 
         self.otherinputs = empty_inputs() #defined at the top, is a namedtuple
         self.timestamp = MININT
         self.containers = None
@@ -294,9 +295,9 @@ class InputValContainer(object):
             otherinputs = make_otherinputs(othervecs) #is now a namedtuple instead of an array
             if is_new(visionvec, otherinputs):
             
-                self.visionvec = visionvec
+                self.visionvec = np.array(visionvec, dtype=self.containers.rl_conf.visionvecdtype)
                 if self.config.history_frame_nr > 1:
-                    self.vvec_hist = [visionvec] + [i for i in self.vvec_hist[:-1]]            
+                    self.vvec_hist = np.array([visionvec] + [i for i in self.vvec_hist[:-1]], dtype=self.containers.rl_conf.visionvecdtype)
                 self.otherinputs = otherinputs
                 
                 #wenn otherinputs.CenterDist >= 10 war und seitdem keine neue action kam, muss er >= 10 bleiben!
@@ -356,9 +357,9 @@ class InputValContainer(object):
         try:
             logging.debug('Acquired lock')
             
-            self.visionvec = np.zeros([self.config.image_dims[0], self.config.image_dims[1]])
+            self.visionvec = np.zeros([self.config.image_dims[0], self.config.image_dims[1]], dtype=self.containers.rl_conf.visionvecdtype)
             if self.config.history_frame_nr > 1:
-                self.vvec_hist = np.zeros([self.config.history_frame_nr, self.config.image_dims[0], self.config.image_dims[1]]) 
+                self.vvec_hist = np.zeros([self.config.history_frame_nr, self.config.image_dims[0], self.config.image_dims[1]], dtype=self.containers.rl_conf.visionvecdtype) 
             self.otherinputs = empty_inputs()
             self.timestamp = 0
             self.alreadyread = True
@@ -526,7 +527,7 @@ def create_socket(port):
 
 def main(sv_conf, rl_conf, only_sv, no_learn, show_screen, start_fresh, keep_memory):
     containers = Containers(only_sv)
-    containers.inputval = InputValContainer(sv_conf)
+    containers.inputval = InputValContainer(sv_conf, rl_conf)
     containers.inputval.containers = containers #lol.    
     containers.outputval = OutputValContainer()
     containers.outputval.containers = containers
@@ -553,13 +554,13 @@ def main(sv_conf, rl_conf, only_sv, no_learn, show_screen, start_fresh, keep_mem
     containers.myAgent = agent(sv_conf, containers, rl_conf, start_fresh) #executes dauerLearnANN in LearnThread
                                                                           #executes runInference in receiver_thread
 #    if not only_sv:
-#        if rl_conf.useprecisebuthugememory:
-#            containers.myAgent.memory = Precisememory(rl_conf.memorysize, containers)
+#        if rl_conf.use_efficientmemory:
+#            containers.myAgent.memory = Efficientmemory(rl_conf.memorysize, containers, rl_conf.history_frame_nr, rl_conf.use_constantbutbigmemory) 
 #        else:
-#            containers.myAgent.memory = Efficientmemory(rl_conf.memorysize, containers, rl_conf.history_frame_nr) 
+#            containers.myAgent.memory = Precisememory(rl_conf.memorysize, containers)
     
     containers.myAgent.memory = Precisememory(rl_conf.memorysize, containers)
-    containers.myAgent.memory2 = Efficientmemory(rl_conf.memorysize, containers, rl_conf.history_frame_nr) 
+    containers.myAgent.memory2 = Efficientmemory(rl_conf.memorysize, containers, rl_conf.history_frame_nr, rl_conf.use_constantbutbigmemory) 
 
     print("Everything initialized", level=10)
     

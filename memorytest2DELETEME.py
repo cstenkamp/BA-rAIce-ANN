@@ -14,7 +14,9 @@ np.set_printoptions(threshold=np.nan)
 class RLConf:
     def __init__(self):
         self.savememorypath = "./"
-        
+        self.image_dims = [30,45] 
+        self.use_constantbutbigmemory = True
+        self.visionvecdtype = np.int8
 
 class Containers():
     def __init__(self):
@@ -56,7 +58,7 @@ for i in range(2,116):
 
 
 print("") 
-m2 = Efficientmemory(MEMSIZE, containers, 4) 
+m2 = Efficientmemory(MEMSIZE, containers, 4, containers.rl_conf.use_constantbutbigmemory) 
 
 #for i in range(1,116):
 #    if m1[i-1][4]:
