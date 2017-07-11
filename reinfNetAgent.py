@@ -124,9 +124,6 @@ class ReinfNetAgent(AbstractRLAgent):
             return feed_dict
             
             
-#        samples, batch = self.memory2.sample(self.rl_config.batchsize)
-#        batch2 = self.memory.sampletest(samples)
-        
         batch = self.memory.sample(self.rl_config.batchsize)
         oldstates, argmactions, rewards, newstates, resetafters = zip(*batch)      
         actions = np.zeros([len(argmactions), ((4*self.rl_config.steering_steps) if self.rl_config.INCLUDE_ACCPLUSBREAK else (3*self.rl_config.steering_steps))])

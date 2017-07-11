@@ -76,8 +76,9 @@ class RL_Config(Config):
     replaystartsize = 0
     memorysize = 30000
     use_efficientmemory = True
-    use_constantbutbigmemory = True
+    use_constantbutbigmemory = False
     visionvecdtype = np.int8 #wäre es np.bool würde er den rand als street sehen!
+    keep_memory = True
     
     ForEveryInf, ComesALearn = False, False
     
@@ -95,40 +96,44 @@ class RL_Config(Config):
 
     
 class DQN_Config(RL_Config):
-#    batch_size = 32                 #minibatch size
-#    memorysize = 1000000            #replay memory size
-#    history_frame_nr = 4            #agent history length
-#    copy_target_all = 10000         #target network update frequency (C)
-#    q_decay = 0.99                  #discount factor
-#    #action repeat & noop-max
-#    initial_lr = 0.00025            #learning rate used by RMSProp
-#    lr_decay = 1                    #as the lr seems to stay equal, no decay
-#    rms_momentum = 0.95             #gradient momentum (=squared gradient momentum)
-#    min_sq_grad = 0.1               #min squared gradient 
-#    startepsilon = 1                #initial exploration
-#    minepsilon = 0.1                #final exploration
-#    finalepsilonframe = 1000000     #final exploration frame
-#    replaystartsize = 50000         #replay start size
-#    train_for = 50000000            #number of iterations to train for 
-#    ForEveryInf, ComesALearn = 4, 1 #update frequency & how often it checks it
-
-
-    batch_size = 8             #minibatch size
-    memorysize = 50000          #replay memory size
-    history_frame_nr = 4        #agent history length
-    copy_target_all = 100       #target network update frequency (C)
-    q_decay = 0.99              #discount factor
+    batch_size = 32                 #minibatch size
+    memorysize = 1000000            #replay memory size
+    history_frame_nr = 4            #agent history length
+    copy_target_all = 10000         #target network update frequency (C)
+    q_decay = 0.99                  #discount factor
     #action repeat & noop-max
-    initial_lr = 0.00025        #learning rate used by RMSProp
-    lr_decay = 1                #as the lr seems to stay equal, no decay
-    rms_momentum = 0.95         #gradient momentum (=squared gradient momentum)
-    min_sq_grad = 0.1           #min squared gradient 
-    startepsilon = 0.15         #initial exploration
-    minepsilon = 0.1            #final exploration
-    finalepsilonframe = 1000   #final exploration frame
-    replaystartsize = 33       #replay start size
-    train_for = 2000           #number of iterations to train for 
-    ForEveryInf, ComesALearn = 40, 10
+    initial_lr = 0.00025            #learning rate used by RMSProp
+    lr_decay = 1                    #as the lr seems to stay equal, no decay
+    rms_momentum = 0.95             #gradient momentum (=squared gradient momentum)
+    min_sq_grad = 0.1               #min squared gradient 
+    startepsilon = 1                #initial exploration
+    minepsilon = 0.1                #final exploration
+    finalepsilonframe = 1000000     #final exploration frame
+    replaystartsize = 50000         #replay start size
+    train_for = 50000000            #number of iterations to train for 
+    ForEveryInf, ComesALearn = 4, 1 #update frequency & how often it checks it
+    use_constantbutbigmemory = True
+    keep_memory = True
+
+    def __init__(self):
+        super().__init__()
+        
+        
+    
+class Half_DQN_Config(RL_Config):
+    batch_size = 32                     #minibatch size
+    memorysize = 200000                 #replay memory size
+    history_frame_nr = 4                #agent history length
+    copy_target_all = 1000              #target network update frequency (C)
+    q_decay = 0.99                      #discount factor
+    startepsilon = 1                    #initial exploration
+    minepsilon = 0.01                   #final exploration
+    finalepsilonframe = 200000          #final exploration frame
+    replaystartsize = 2000              #replay start size
+    train_for = 30000000                #number of iterations to train for 
+    ForEveryInf, ComesALearn = 400, 100 #update frequency & how often it checks it
+    use_constantbutbigmemory = True
+    keep_memory = True
     
     def __init__(self):
         super().__init__()

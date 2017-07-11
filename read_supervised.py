@@ -260,7 +260,7 @@ class TPList(object):
 
 
 def inflate_speed(speed, numberneurons, asonehot):
-    speed = max(0,speed)
+    speed = max(0,int(round(speed)))
     result = [0]*numberneurons
     if speed < 1:
         return result

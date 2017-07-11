@@ -18,7 +18,7 @@ import cnn
 from myprint import myprint as print
 import infoscreen
 from read_supervised import cutoutandreturnvectors
-from precisememory import Memory as Precisememory
+from inefficientmemory import Memory as Precisememory
 from efficientmemory import Memory as Efficientmemory
 
 
@@ -525,7 +525,7 @@ def create_socket(port):
 
 
 
-def main(sv_conf, rl_conf, only_sv, no_learn, show_screen, start_fresh, keep_memory):
+def main(sv_conf, rl_conf, only_sv, no_learn, show_screen, start_fresh, nomemorykeep):
     containers = Containers(only_sv)
     containers.inputval = InputValContainer(sv_conf, rl_conf)
     containers.inputval.containers = containers #lol.    
@@ -533,7 +533,8 @@ def main(sv_conf, rl_conf, only_sv, no_learn, show_screen, start_fresh, keep_mem
     containers.outputval.containers = containers
     containers.sv_conf = sv_conf
     containers.rl_conf = rl_conf   
-    containers.keep_memory = keep_memory #bei DQN und der keepmememory-variante speichert er das memory als pickle-file for later use
+    containers.keep_memory = False if nomemorykeep else containers.rl_conf.keep_memory
+    
     
     containers.receiverportsocket = create_socket(TCP_RECEIVER_PORT)
     containers.senderportsocket = create_socket(TCP_SENDER_PORT)
@@ -553,14 +554,11 @@ def main(sv_conf, rl_conf, only_sv, no_learn, show_screen, start_fresh, keep_mem
     
     containers.myAgent = agent(sv_conf, containers, rl_conf, start_fresh) #executes dauerLearnANN in LearnThread
                                                                           #executes runInference in receiver_thread
-#    if not only_sv:
-#        if rl_conf.use_efficientmemory:
-#            containers.myAgent.memory = Efficientmemory(rl_conf.memorysize, containers, rl_conf.history_frame_nr, rl_conf.use_constantbutbigmemory) 
-#        else:
-#            containers.myAgent.memory = Precisememory(rl_conf.memorysize, containers)
-    
-    containers.myAgent.memory = Precisememory(rl_conf.memorysize, containers)
-    containers.myAgent.memory2 = Efficientmemory(rl_conf.memorysize, containers, rl_conf.history_frame_nr, rl_conf.use_constantbutbigmemory) 
+    if not only_sv:
+        if rl_conf.use_efficientmemory:
+            containers.myAgent.memory = Efficientmemory(rl_conf.memorysize, containers, rl_conf.history_frame_nr, rl_conf.use_constantbutbigmemory) 
+        else:
+            containers.myAgent.memory = Precisememory(rl_conf.memorysize, containers)
 
     print("Everything initialized", level=10)
     
@@ -602,9 +600,8 @@ def main(sv_conf, rl_conf, only_sv, no_learn, show_screen, start_fresh, keep_mem
     if not only_sv and not no_learn:
         learnthread.join()
         
-    if SAVE_MEMORY_ON_EXIT:
+    if SAVE_MEMORY_ON_EXIT and containers.keep_memory:
         containers.myAgent.memory.save_memory()
-        containers.myAgent.memory2.save_memory()
         
     time.sleep(0.1)
     print("Server shut down sucessfully.")
@@ -615,8 +612,11 @@ def main(sv_conf, rl_conf, only_sv, no_learn, show_screen, start_fresh, keep_mem
     
 if __name__ == '__main__':  
     sv_conf = cnn.Config() #TODO: lass dir die infos instead von unity schicken.
+    
     if ("-DQN" in sys.argv):
         rl_conf = cnn.DQN_Config()
+    elif ("-half_DQN" in sys.argv):
+        rl_conf = cnn.Half_DQN_Config()
     else:
         rl_conf = cnn.RL_Config()
     
@@ -625,4 +625,4 @@ if __name__ == '__main__':
         rl_conf.startepsilon = 0 #or whatever random-value will be in 
         
                 
-    main(sv_conf, rl_conf, ("-svplay" in sys.argv), ("-nolearn" in sys.argv), not ("-noscreen" in sys.argv), ("-startfresh" in sys.argv), ("-keepmemory" in sys.argv or "-DQN" in sys.argv))    
+    main(sv_conf, rl_conf, ("-svplay" in sys.argv), ("-nolearn" in sys.argv), not ("-noscreen" in sys.argv), ("-startfresh" in sys.argv), ("-nomemorykeep" in sys.argv))    

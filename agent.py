@@ -66,7 +66,6 @@ class AbstractRLAgent(AbstractAgent):
         self.last_random_action = None
         self.repeat_random_action_for = 1000
         self.memory = None
-        self.memory2 = None
         self.reinfNetSteps = 0
         self.numInferencesAfterLearn = 0
         self.numLearnAfterInference = 0
@@ -76,7 +75,6 @@ class AbstractRLAgent(AbstractAgent):
     
     def addToMemory(self, otherinputs, visionvec): 
         assert self.memory is not None, "It should be specified in server right afterwards"
-        assert self.memory2 is not None, "It should be specified in server right afterwards"
         
         oldstate, action = self.containers.inputval.get_previous_state()
         if oldstate is not None: #was der Fall DIREKT nach reset oder nach start ist
@@ -84,7 +82,6 @@ class AbstractRLAgent(AbstractAgent):
             reward = self.calculateReward(self.containers.inputval)
             #print(np.all(np.all(oldstate[0][0] == newstate[0][1]), np.all(oldstate[0][1] == newstate[0][2]), np.all(oldstate[0][2] == newstate[0][3])), level=10) #this is why our efficient memory works
             self.memory.append([oldstate, np.argmax(action), reward, newstate, False]) 
-            self.memory2.append([oldstate, np.argmax(action), reward, newstate, False]) 
             print(self.dediscretize(action, self.rl_config), reward, level=6)
             
             if self.containers.showscreen:
@@ -235,7 +232,6 @@ class AbstractRLAgent(AbstractAgent):
         #bei actions, nach denen resettet wurde, soll er den folgestate nicht mehr beachten (später gucken wenn reset=true dann setze Q_DECAY auf quasi 100%)
         if not self.containers.play_only:
             self.memory.endEpisode()
-            self.memory2.endEpisode()
             
             
     def punishLastAction(self, howmuch):
@@ -243,7 +239,6 @@ class AbstractRLAgent(AbstractAgent):
             if self.containers.showscreen:
                 infoscreen.print(str(-abs(howmuch)), time.strftime("%H:%M:%S", time.gmtime()), containers=self.containers, wname="Last big punish")
             self.memory.punishLastAction(howmuch)
-            self.memory2.punishLastAction(howmuch)
             
                 
     

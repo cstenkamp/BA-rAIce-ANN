@@ -98,7 +98,6 @@ class Memory(object):
                     iter1 = False
             
             
-        
         state = (state, speed)
         folgestate = (folgestate, folgespeed)
                         
@@ -167,7 +166,7 @@ class Memory(object):
             
             batch = [self[i] for i in samples]
             
-            return samples, batch
+            return batch
         
                        
         
