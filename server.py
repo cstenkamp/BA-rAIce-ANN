@@ -214,7 +214,8 @@ class receiver_thread(threading.Thread):
             data = data[data.find(")")+1:]
         
         if data[:11] == "resetServer":
-            resetServer(self.containers, data[11:], punish=0) #TODO: sollte er hier auch endEpisode machen? wenn ja, warum?
+            self.containers.myAgent.endEpisode()
+            resetServer(self.containers, data[11:]) 
             specialcommand = True    
         if data[:7] == "wallhit":
             self.containers.myAgent.punishLastAction(20)   #ist das doppelt gemoppelt damit, dass er eh das if punish > 10 beibehält?       
@@ -241,7 +242,6 @@ def resetUnity(containers, punish=0):
 
 def resetServer(containers, mspersec, punish=0):
     containers.outputval.reset()
-    containers.motherfucker = True
     containers.inputval.reset(mspersec, nolock = True)
 
 
@@ -534,7 +534,6 @@ def main(sv_conf, rl_conf, only_sv, no_learn, show_screen, start_fresh, keep_mem
     containers.sv_conf = sv_conf
     containers.rl_conf = rl_conf   
     containers.keep_memory = keep_memory #bei DQN und der keepmememory-variante speichert er das memory als pickle-file for later use
-    containers.motherfucker = False
     
     containers.receiverportsocket = create_socket(TCP_RECEIVER_PORT)
     containers.senderportsocket = create_socket(TCP_SENDER_PORT)

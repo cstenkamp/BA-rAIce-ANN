@@ -9,6 +9,7 @@ Created on Sun Jul  9 22:42:59 2017
 from precisememory import Memory as Precisememory
 from efficientmemory import Memory as Efficientmemory
 import numpy as np
+np.set_printoptions(threshold=np.nan)
 
 class RLConf:
     def __init__(self):
@@ -24,14 +25,19 @@ class Containers():
 containers = Containers()
         
 
-MEMSIZE = 150
+MEMSIZE = 400
 
 m1 =   Precisememory(MEMSIZE, containers)
 
 #for i in range(2,116):
 #    print(i, np.all(m1[i][0][0][0] == m1[i+1][0][0][1]), m1[i][4])  
 #    #wir sehen, das gilt immer, bis auf beim Reset. Warum da nicht? weil er da den inputval RESETTET -> setzt auf nur nullen
-#
+
+
+for i in range(2,116):
+    if m1[i-1][4]:
+        print(i, np.all(m1[i][0][0][0] == m1[i][3][0][1]))
+
 #print("")
 #print("")   
 #
@@ -52,15 +58,33 @@ m1 =   Precisememory(MEMSIZE, containers)
 print("") 
 m2 = Efficientmemory(MEMSIZE, containers, 4) 
 
+#for i in range(1,116):
+#    if m1[i-1][4]:
+#        print(i, np.all(m1[i][0][0][0] == m1[i][3][0][1]))
+#        print(m1[i][0][0][0])
+#        print(m1[i][3][0][1])
+#        print(i, np.all(m2[i][0][0][0] == m2[i][3][0][1]))
 
-for i in range(2,75):
-    if m1[i-1][4]:
-#        print(m2[i][0])
-#        print(m1[i][0])
-        print(i, np.all(m1[i][0][0][0] == m2[i][0][0][0]), m1[i][0][1] == m2[i][0][1])
-        print(np.all(m1[i][0][0][1] == m2[i][0][0][1]))
-        print(np.all(m1[i][0][0][2] == m2[i][0][0][2]))
-        print(np.all(m1[i][0][0][3] == m2[i][0][0][3]))
+
+
+#for i in range(114,120):
+#    print(i, "reset" if m1[i][4] else "")
+#    print("s:      ", np.all(m1[i][0][0][0] == m2[i][0][0][0]), np.all(m1[i][0][0][1] == m2[i][0][0][1]), np.all(m1[i][0][0][2] == m2[i][0][0][2]), np.all(m1[i][0][0][3] == m2[i][0][0][3]), "|", m1[i][0][1] == m2[i][0][1])
+#    print("s':", np.all(m1[i][3][0][0] == m2[i][3][0][0]), np.all(m1[i][3][0][1] == m2[i][3][0][1]), np.all(m1[i][3][0][2] == m2[i][3][0][2]), np.all(m1[i][3][0][3] == m2[i][3][0][3]), "|", m1[i][3][1] == m2[i][3][1])           
+
+
+#print(m1[115][3][0][2])
+#print(m2[115][3][0][1])
+#print(np.all(m1[115][3][0][2] == m2[115][3][0][1]))
+
+#for i in range(2,75):
+#    if m1[i-1][4]:
+##        print(m2[i][0])
+##        print(m1[i][0])
+#        print(i, np.all(m1[i][0][0][0] == m2[i][0][0][0]), m1[i][0][1] == m2[i][0][1])
+#        print(np.all(m1[i][0][0][1] == m2[i][0][0][1]))
+#        print(np.all(m1[i][0][0][2] == m2[i][0][0][2]))
+#        print(np.all(m1[i][0][0][3] == m2[i][0][0][3]))
         
         
         
@@ -97,22 +121,23 @@ allof = lambda t1, t2: np.all(t1[0] == t2[0]) and np.all(t1[1] == t2[1]) and np.
 allequal = lambda m1, m2, i: allof(m1[i][0][0], m2[i][0][0]) and m1[i][0][1] == m2[i][0][1] and np.all(m1[i][1] == m2[i][1]) and m1[i][2] == m2[i][2] and allof(m1[i][3][0], m2[i][3][0]) and m1[i][3][1] == m2[i][3][1] and m1[i][4] == m2[i][4]
 
 
-#print("")
-#print("")
-#print(m2._pointer) #immer der in pointer bis pointer+3 ist falsch
-#for i in range(2,MEMSIZE):
-#    if m2[i] != False and m2[i] is not None:
-#        print(i, allequal(m1,m2), ("knew it" if m1[(i-1)][4] else "") )
-#        if not allequal(m1,m2, i):
-#            print(np.all(m1[i][0][0][0] == m2[i][0][0][0]), np.all(m1[i][0][0][1] == m2[i][0][0][1]), np.all(m1[i][0][0][2] == m2[i][0][0][2]), np.all(m1[i][0][0][3] == m2[i][0][0][3]))
-#    elif m2[i] == False:
-#        print(i, "corrupted")
-#    else:
-#        print(i, "empty")
+print("")
+print("")
+print(m2._pointer) #immer der in pointer bis pointer+3 ist falsch
+for i in range(MEMSIZE):
+    if m2[i] != False and m2[i] is not None:
+        print(i, allequal(m1,m2, i), ("reset" if m1[(i)][4] else "") )
+        if not allequal(m1,m2, i):
+            print("s:      ", np.all(m1[i][0][0][0] == m2[i][0][0][0]), np.all(m1[i][0][0][1] == m2[i][0][0][1]), np.all(m1[i][0][0][2] == m2[i][0][0][2]), np.all(m1[i][0][0][3] == m2[i][0][0][3]), "|", m1[i][0][1] == m2[i][0][1])
+            print("s':", np.all(m1[i][3][0][0] == m2[i][3][0][0]), np.all(m1[i][3][0][1] == m2[i][3][0][1]), np.all(m1[i][3][0][2] == m2[i][3][0][2]), np.all(m1[i][3][0][3] == m2[i][3][0][3]), "|", m1[i][3][1] == m2[i][3][1])           
+    elif m2[i] == False:
+        print(i, "corrupted")
+    else:
+        print(i, "empty")
 
-#print("")
-#print("")
-#print("")
+print("")
+print("")
+print("")
 #
 #print(m2[1])
 #

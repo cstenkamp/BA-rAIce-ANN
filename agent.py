@@ -80,10 +80,6 @@ class AbstractRLAgent(AbstractAgent):
         
         oldstate, action = self.containers.inputval.get_previous_state()
         if oldstate is not None: #was der Fall DIREKT nach reset oder nach start ist
-            if self.containers.motherfucker:
-                print("JUSTRESET", level=10)
-                oldstate[0][0][0][0] = 999
-                self.containers.motherfucker = False
             newstate = (visionvec, otherinputs.SpeedSteer.velocity)
             reward = self.calculateReward(self.containers.inputval)
             #print(np.all(np.all(oldstate[0][0] == newstate[0][1]), np.all(oldstate[0][1] == newstate[0][2]), np.all(oldstate[0][2] == newstate[0][3])), level=10) #this is why our efficient memory works

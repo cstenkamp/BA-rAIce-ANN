@@ -84,17 +84,16 @@ class Memory(object):
         state = list(reversed(self._visionvecs[index:index+4]))
         folgestate = list(reversed(self._visionvecs[index+1:index+5]))
                 
-        if self._fEnds[(index-1 % self.capacity)]:
-            state[1] = np.zeros(state[1].shape)
-            state[2] = np.zeros(state[2].shape)
-            state[3] = np.zeros(state[3].shape)
+        
+        for j in range(1, self._state_stacksize):
+            if self._fEnds[(index-j % self.capacity)]:
+                iter1 = True
+                for i in range(j, self._state_stacksize):
+                    state[i] = np.zeros(state[i].shape)
+                    if not iter1: 
+                        folgestate[i] = np.zeros(folgestate[i].shape)
+                    iter1 = False
             
-        if self._fEnds[(index-2 % self.capacity)]:
-            state[2] = np.zeros(state[2].shape)
-            state[3] = np.zeros(state[3].shape)
-            
-        if self._fEnds[(index-3 % self.capacity)]:
-            state[3] = np.zeros(state[3].shape)
             
         
         state = (state, speed)
@@ -117,6 +116,10 @@ class Memory(object):
                 self._speeds[0] = oldspeed
             else:
                 self._visionvecs[self._pointer+self._state_stacksize] = newstate[0]
+            
+            if self._fEnds[(self._pointer-1 % self.capacity)]:                                          #if he resettet last the last frame, Q-learning doesn't look at its s' anyway...
+                self._visionvecs[(self._pointer+self._state_stacksize-1 % self.capacity)] = oldstate[0] #but we need it this time, because we skipped exactly one frame ("if oldstate is not None" in agents addtomemory)
+                self._speeds[self._pointer] = oldspeed                 
                 
             self._speeds[self._pointer+1] = newspeed
             self._actions[self._pointer] = action

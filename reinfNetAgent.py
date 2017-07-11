@@ -136,7 +136,7 @@ class ReinfNetAgent(AbstractRLAgent):
         actualActions = [self.dediscretize(i, self.rl_config) for i in actions]
         print(list(zip(rewards,actualActions)), level=4)
         
-        qs = self.session.run(self.learn_which.q, feed_dict = prepare_feed_dict(oldstates, self.learn_which))
+        qs = self.session.run(self.learn_which.q, feed_dict = prepare_feed_dict(oldstates, self.learn_which)) 
         max_qs = self.session.run(self.learn_which.q_max, feed_dict=prepare_feed_dict(newstates, self.learn_which))
                                      
         #Bellman equation: Q(s,a) = r + y(max(Q(s',a')))
