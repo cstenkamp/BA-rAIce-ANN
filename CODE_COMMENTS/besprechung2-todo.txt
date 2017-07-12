@@ -1,0 +1,54 @@
+TODO
+
+UNITY
+-Bei der Spiel-neustarten-funktion drauf achten dass die richtigen sachen richtig resettet werden
+-getperpendicular&position für ne gewisse Prozentzahl der Strecke (den passenden anchor von den showanchors raussuchen, peasy) um an 50% der strecke bspw resetten zu konnen
+-in welchen Winkel hat sich der Reifen vom letzten zum jetzigen frame bewegt und in welchem Winkel hat sich die Automitte bewegt 
+-Delta und Feedback beim SV-Learn mitspeichern und beim RL-learn mitschicken!!
+-wenn man sich perfekt Resetten kann (der totale hack), kann man dem network Feedback für jedes seiner output Neuronen geben indem man alle durchprobiert. Wenn nicht, dann nur von dem softmax (ODER CONTINUUS CONTROL DEEPMIND PAPER)
+-die slip-vektoren UND der speedvektor springen noch manchmal wahllos herum. Slip workaround ware zu sagen wenn speed kleiner epsilon dann slip gleich 0, bei speed... kp
+-um sicher zu sein dass unity und python gleiche parametervalues haben (für zb. visionvecdimension), könnte unity die am anfang per socket an python schicken (another var wäre welche vectoren genutzt werden sollen)
+-Die perfekt-resetten-funktion furs spiel (GENAU wie vorher, furs AI cheaten)
+-Optionen hinzufugen
+-Pausenmenu ungleich startmenu
+-Am anfang des Spiels globale Params mitschicken
+-Pausenmenu PAUSIERT timing, startet nicht neu
+
+
+PYTHON
+-um sicher zu sein dass unity und python gleiche parametervalues haben (für zb. visionvecdimension), könnte unity die am anfang per socket an python schicken (another var wäre welche vectoren genutzt werden sollen)
+-replay-Speicher von dem die ältesten (schlechtesten) rausgelöscht werden 
+-kann ich weniger outputneuronen haben indem ich linkskurven als gespiegelte Rechtskurven sehe? 
+-bei unseren 44 outputneuronen haben wir ja eine Dimension in 11 Abstufungen für Lenkung, Gas und bremse jeweils binär. Der reward für die Bremswinkel ist ne Gaußkurve(/rbf) mit dem mean bei der supervisedly richtigen Einstellung um diese, und die Verteilung von Gas/bremse ist gesondert: keingaskeinbremsen ist abgeschwächt gaskeinbremsen und noch deutlich besser als bremsen, etc. 
+
+
+-------------------------------------------------------------------------------------------------------------
+DONE
+
+UNITY
+-direkt die Positiontracking auskommentieren (also über jede Funktion nen doc) 
+-die pythonval-please-reset-funktion
+-Den vision Vektor schicken können 
+-das aufzeichnen der schnellsten runde klappt nicht mehr :o
+-uhm, und er checkt nicht mehr wenn ne runde vorbei ist? :o
+-ne variable debugstuff aktivieren 
+-Den vision Vektor schicken können 
+-Supervisedly-learning-runden werden gespeichert, wenn auch ohne visionvector etc bisher
+-Der Bug dass wenn der Server nicht da ist dass er dann mit zu vielen threads abschmeirt gefixt
+-die pythonval-please-reset-funktion
+-Den Pythonresetbefehl nicht bei start schicken, sondern dann wenn man das Spiel neu startet 
+-Verschiedene Spielmodi
+-die perpendicular und den globalen finde für den ersten resetbefehl 
+-bei Wandkontakt automatisch Resetten und Strafe geben , macht keinen Sinn da noch weiter zu fahren (da Kollisionsabfrage für Wand) 
+-erst soll der supervisedly lernen, wo man sowohl den speed Lenkung bremsung die man betätigt als auch das ganze bekannte gibt, DANACH dann reinforcement learning. Dafür zum recorder und überhaupt zum ai-interface die Inputs von speed stear mitgeben 
+-beim aufnehmen soll der aber definitiv die tatsächlichen Inputs Speichern, die die unten rechts abgebildet sind. 
+-Die Sachen furs reset fixen, sodass es nicht mehr rollt
+-Er zeigt time-punishments für wallhits nur an, speichert sie aber nicht mit
+-5 Datenpunkte pro Sekunde BEI ALLEM!
+-Die ganzen parameter (globalen vars) in den einzelnen funktionen aufraumen
+
+
+PYTHON
+-für das supervised learning vielleicht die Menschen-inputs auf unser 44-neuron-model mappen/filtern? 
+-Python muss das SV-learn-lap entpacken konnen
+-nen test, wo python den schon steered, naturlich nicht anhand von ANN-results (ZWISCHENZIEL!!!)

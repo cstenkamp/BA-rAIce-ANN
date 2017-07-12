@@ -1,0 +1,34 @@
+DONE: 
+
+-speedbenchmark!
+-nicht jedes mal ne neue Socketverbindung aufbauen sondern die alte weiternutzen, neuer speedbenchmark
+
+-(zumindest synchron) haengt in Update, lauft aber in Fixedupdate
+-100 mal synchron und unelegant "hello world" von unity zu python dauert 900ms -> 5ms per send
+-9 ms fuer send and receive, aber 1000ms mehr wenn kein server da
+
+
+-hin und wieder gucken ob server da ist, wenn nein das senden ignorieren (die sekunde delay auflosen!)
+-den visionvector besser machen, wie gewollt (-> layer dafur verwenden!)
+-den thread asynchron machen
+-eine funktion machen die ALLES sendet
+-die vektoren in python so darstellen wie sie jetzt in unity sind
+
+
+-auf der c#-seite mussen die threads asynchron sein, da der schon neue infos schicken muss wahrend python noch rechnet
+-5 mal pro sekunde daten mit ids an python senden, python checkt in extra thread immer nach neuen mit id, wannimmerneneue - forward step. Skript fragt immer nach neuestem Output vom Buffer wenn es fragt.
+-unity macht auf python-seite immer updateinput, wo es den letzten input an python updated, python macht sein krams, unity fragt ebenfalls immer wieder nach neuesten output
+-sobald asynchron kann das in fixedupdate
+-BIS MONTAG (hoffentlich)
+
+
+PYTHON
+-ist server, connections-anfragen werden in asynchronem thread ausgelesen und ihr wert in der selben variable gespeichert
+-asynchroner thread ruft x mal pro sekunde einen Thread mit der reader-funktion auf
+	reader-funktion: -liest den aktuellen wert der inputs aus, started netzwerk, sendet über mitgelieferten socket netzwerk-result zurück
+
+
+
+UNITY
+-ist client, baut connection zu python auf, sendet aktuelle resultate
+-empfängt aktuelle resultate

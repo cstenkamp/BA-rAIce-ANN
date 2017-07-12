@@ -1,0 +1,47 @@
+-----------DONE (auch vom anderem textfile)------------------------------------------------
+-considered den 150ms delay beim supervisedtraining
+-aktueller speed ist input im letztem Network-layer (inflated into X neurons)
+-Er speichert alles in einer history: s, a, r, s', infoObFinalState --> saves reward!
+-Reinforcement-learning: Goal-function ist percent der strecke -penalty fürs nicht-auf-strecke-bleiben
+-Wenn er gegen ne Wand fährt ist das ein final state fürs Reinforcement lernen
+-Wallhit wurde vorher doch nicht gepenalized, das ist jetzt gefixt
+-sowohl die RandomMove-funktion, als auch das Network (per tf) lassen es nicht zu bei 0km/h NICHT zu fahren
+-einstellbar ob gas+bremse ein input ist, standardmäßig ists aus
+-es gibt einen screen auf dem aktuelle Q-werte sowie memorysize etc angezeigt werden
+-Unity-Seite stürzt nicht mehr ab falls im Recorder.fastlap andere Rundenzeiten waren
+-Unity-Seite stürzt nicht mehr ab falls der Tracker keinen closest wegpunkt findet (was genau bei 0 als dem nächsten passiert ist)
+-supervisedcnn und reinforcementcnn sind in einer datei, mit lediglich anderer lossfunction
+-welche weights man übernimmt vom supervisedcnn kann man einstellen
+-er lernt dass losfahren besser ist als stehenbleiben
+
+
+-----------TODO----------------------------------------------------------------------------
+-target network ist so easy! Keras and ddpg Artikel! 
+-Fucking normalizing! Maybe nur die von dem Paper nehmen aber die normiert! 
+-in torcs mit universe hat man halt die Möglichkeit auf Environment.step, die ich nicht habe! Erwähnen! 
+-ne Kategorie "probleme und Lösungen", wo zeug drin steht wie was ist die goal function, überhaupt das server nutzen, und überhaupt viel aus dem todo! 
+-die random function möglicherweise mit ner gaussverteilung um die letzte Aktion mit ner similarity-function
+-die Funktionen so ändern dass random in ner extra Funktion und austauschbar ist, und das komplette network (sodass ich wie bei gym nur functions calle wo ich vectors hin gebe und action zurück bekomme) 
+-dropout nicht bei inference, nur bei learning?
+
+
+
+-Rand ne Millionen mal weniger slippery 
+-regards Klippen/nirmieren 
+-lr decay! 
+-lernen auf der gpu! 
+-ne abstrakte klasse "agent"! 
+-nen Python/Delphi restarter, im Zweifelsfall mit geplanten Tasks 
+-Delphi restarter 
+-qmax history speichern und durchgehend mit matplotlib anzeigen 
+-sieht aktuell so aus als sei der qmax richtig (am Rand negativ, Straße ok, Straße und schnell top) aber aus irgendeinem grund wählt er die falsche Aktion 
+-othervecs als namedtuple
+-in unity speeds simulieren können während h gedruckt ist 
+
+
+
+-wenn er komplett zum Stehen kommt soll der Wert des darauffolgenden states nicht mehr beachtet werden
+-dass geradeaus fahren gut für ihn ist macht nur dann Sinn wenn jetzt geradeaus fahren auch ne hohe Wahrscheinlichkeit heißt in den nächsten frames geradeaus zu fahren (oder wenigstens ähnlich - nicht plötzlich bremsen und ganz rechts) 
+-dass separate learning and target net aus dem dqn Paper 
+-epsilon abhängig von der Bekanntheit des States aus dem count based Paper 
+-wenn er beim wolltest von vor zu hinter dem nocheat-trigger resettet soll das wieder invalid gemacht werden

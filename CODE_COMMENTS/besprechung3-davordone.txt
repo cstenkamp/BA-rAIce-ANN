@@ -1,0 +1,10 @@
+-altes visiondisplay mit raycasting ersetzt durch ein viel schnelleres dass die unity-camera nutzt und einstellbare pixel-zahl an python schicken kann!
+-sending actually every vector to python finally
+-redoing the threads that they end automatically
+-redoing the threads that its faster, efficient, doesn't freeze the game
+-Supervisedly-learning-runden werden gespeichert, wenn auch ohne visionvector etc bisher
+-...Jetzt auch mit Visonvektor etc.
+-verschiedene Game-Modi für driven, AI trainieren, AI driven lassen
+-Server heult nicht mehr rum mit exceptions
+-bei Wandkontakt automatisch Resetten und Strafe geben , macht keinen Sinn da noch weiter zu fahren (da Kollisionsabfrage für Wand) 
+-Reset-funktionen aufeinander abgestimmt und aufgeraumt

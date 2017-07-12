@@ -1,0 +1,52 @@
+-----------DONE----------------------------------------------------------------------------
+---PYTHON---
+-reinf_net wurde umbenannt in reinfNetAgent, playnet in svPlayNetAgent
+-Es gibt eine abstrakte Klasse abstractagent und abstractRLAgent, welche u.a. von reinfNetAgent implementiert wird (und hoffentlich in Zukunft auch von DDPG)
+	-...was diese Klasse implementiert benötigt runInference, performNetwork, initNetwork, und im abstractRLAgent auch learnANN...
+	-...und was AbstractRLAgent generell bereitstellt ist dauerLearnANN, calculateReward (änderbar!), randomAction (änderbar!), sowie memory-related stuff...
+	-denn das Memory wurde ebenfalls verschoben von Server zu agent. Agent now HAS memory (with addToMemory, punishLastAction)
+	[um nen super-easy-beispiel zu sehen was AbstractAgent implementiert siehe svPlayNetAgent, um was zu sehen was auch AbstractRLAgent implementiert siehe reinfNetAgent]
+	-Im Rahmen dessen wurde die Möglichkeit auf multiple ANNs vorerst gelöscht (EIN Agent applied und learnt, DIESER AGENT könnte in zukunft multiple ANNs runnen (auch schreiben dass das zwischendurch sinn hatte!)
+	-Einige Sachen wurden von server in agent verschoben, da sie dahin gehören(!). Server now HAS agent.
+-Das Memory kann nun abgespeichert werden (was leider zu einigen Problemen führt, da es upto 25GB groß wird und minutenlang zum speichern braucht)
+-Finally separation of online & target-network! Das sollte der Letzte Part vom DQN-Paper sein
+-DQN Config eingebracht, wenn Parameter "-DQN" da ist sollte er die DQN config laufen lassen können
+-Othervecs ist finally human-understandable, as its a namedTuple!
+-Wenn das Auto zu lange rückwärts fährt, kriegt es punishment und wird sooner or later (optional) resettet
+-Wenn er steht, sind sämtliche Q-werte wo er nicht gas gibt super negative (must drive when it stands, uses world knowledge)
+-Während er das Memory speichert, pausiert er das spiel
+-Memory speichern nicht alle X füllungen, sondern alle X minuten
+-Das Memory ist jetzt keine Inefficient (siehe Code-Comments/Alex' Nachrichten) Deque mehr, sondern eine begrenztlange Liste
+-Das Pendant zu Update_frequency von DQN: Obwohl lernen und inference separate threads sind, kann man jetzt beide threads dazu zwingen sich im, say, 4:1 verhältnis zu syncen
+-Memory speichert jetzt effizienter: (s,a,r,s' -> bei 4 historyframes sollten ja 3 übereinstimmen, außerdem ist das s vom nächstem gleich s' von jetzt -> ein achtel!)..
+	Das efficientmemory ist zwar optional, aber definitiv (ausreichend getestet) in 100% der Fälle gleich dem inefficient one (außer VOR reset, da wird s' nicht gespeichert, da ist es aber irrelevant)
+	Efficientmemory is also numpy arrays, and is in DQN config in every case 1.5GB
+
+---UNITY---
+-Variable dass Rand weniger slippery & Steering+Bremsen bisschen besser geht
+-Während H gedrückt ist kann man im AIDrive-Modus Speed für python simulieren, um sich die Q-Werte anzugucken
+-Quickpause (per pythonbefehl/keypress) eingeführt, damit er das spiel kurz einfrieren kann während er bspw das Memory speichert
+-Bugfix: Beim resetten resettet er jetzt auch den nocheat-trigger, sodass er nicht den passen kann, sich dahinter resetten, und plötzlich eine superschnelle runde hat
+-Sendet an Pyhton ob er Rückwärts fährt, für eventuelles punishment
+-Quickpause-Modus: Entweder von Python oder mit Tastenkombi kann man das spiel komplett einfrieren (sinnvoll um memory in seemingly no time zu freezen)
+
+
+---GENERELL---
+-Delphi Restarter, der alle X Minuten Unity und python neustartet und zu viele Savepoints löscht
+
+
+-----------TODO----------------------------------------------------------------------------
+-Lernen auf der GPU
+-Fucking normalizing! Maybe nur die von dem Paper nehmen aber die normiert! 
+-rewards Klippen/nirmieren 
+-Das ganze network als namedtuple (siehe alex)
+-die random function möglicherweise mit ner gaussverteilung um die letzte Aktion mit ner similarity-function
+-die Funktionen so ändern dass random in ner extra Funktion und austauschbar ist, und das komplette network (sodass ich wie bei gym nur functions calle wo ich vectors hin gebe und action zurück bekomme) 
+-dropout nicht bei inference, nur bei learning?
+-qmax history speichern und durchgehend mit matplotlib anzeigen 
+-sieht aktuell so aus als sei der qmax richtig (am Rand negativ, Straße ok, Straße und schnell top) aber aus irgendeinem grund wählt er die falsche Aktion 
+-Die Supervised-Todos von Leon!!!
+-wenn er komplett zum Stehen kommt soll der Wert des darauffolgenden states nicht mehr beachtet werden
+-dass geradeaus fahren gut für ihn ist macht nur dann Sinn wenn jetzt geradeaus fahren auch ne hohe Wahrscheinlichkeit heißt in den nächsten frames geradeaus zu fahren (oder wenigstens ähnlich - nicht plötzlich bremsen und ganz rechts) 
+-epsilon abhängig von der Bekanntheit des States aus dem count based Paper (!!!)
+-DDPG!!!

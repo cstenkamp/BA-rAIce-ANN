@@ -1,0 +1,88 @@
+-----------------------------------------TODO-----------------------------------------
+
+UNITY
+-Den Recorder ein supervisedly-learn-target mitrecorden lassen (bzw. alle möglichen), kann man evtl nutzen!
+-Dass der am anfang, wenn man startet, alle variablen von unity nach python schickt (oder umgekehrt) damit sie garantiert gleich sind
+-Unity muss noch selbstständig(!!) zwischen 2 results vom netzwerk interpolieren 
+ -(momentan ist das so, dass WENN kein resultat von python kommt, python standardmäßig [0.1, 0, 0] schickt. Das muss weg, dafür muss unity selbst interpolieren anhand der letzten paar inputs von python(!))
+ ->5 mal pro sekunde schickt python unity sein result, und unity interpoliert selbst dazwischen (OPTIONAL! andere möglichkeit ist "digital, aka springen!)
+-Dafür sorgen dass er an den richtigen Sachen die richtigen Sachen resettet
+VON FRÜHER:
+  -Die perfekter-reset-funktion
+  -Funkion um genau an x (->parameter) prozent der strecke zu resetten
+  -Delta und Feedback beim SV-learn mitspeichern
+  -Optionen hinzufügen
+  -Pausenmenü ungleich startmenü
+  -Pausenmenu PAUSIERT timing, startet nicht neu
+  -Die ganzen parameter (globalen vars) in den einzelnen funktionen aufraumen
+
+
+PYTHON
+-Das Netzwerk muss den eigenen Speed berücksichtigen (MÖGLICHKEIT 1) ODER die history-frames (MÖGLICHKEIT 2) ODER recurrent sein (MÖGLICHKEIT 3)!
+-Andere Netzwerkstrukturen probieren! Außerdem stuff wie dropout etc
+-Netzwerk irgendwie continuous machen (wahrscheinlich aber erst NACH dem supervised learning)
+-bessere Idee wie er mit immer-dem-gleichem-visionvektor umgeht als stumpf speed 0.1 zu machen (->Unity interpolieren lassen!)
+-Das Trackingpoints-array per pickle speichern und nur neu-erzeugen wenn sich der hash der namen der files die er dafür auslesen soll verändert hat
+-Überhaupt REINFORCEMENT-LEARNEN-KÖNNEN!!
+-M2: NACH Dem Convnet-teil geht ZUSÄTZLICH in das fully-connected layer eine featuremap mit den anderen vektoren rein (u.a. speed)
+ ->FALLS DAS KLAPPT könnte man den letzten vektor durch nen LSTM ersetzen. (M3)
+VON FRÜHER:
+  -kann ich weniger outputneuronen haben indem ich linkskurven als gespiegelte Rechtskurven sehe? 
+
+
+ALLGEMEIN
+-...überhaupt mal ne runde fahren können^^
+-Vielleicht im zweiten schritt (aka erster supervised-schritt) bonus dafür geben auf der Straße zu bleiben?
+-statt absolute lenkradstellungen zu lernen kann er ja auch velocitys für lenkradbewegungen lernen?
+-Im ersten Schritt non-recurrent. Als Baseline. Dann gucken obs smarter wird wenns recurrent wird.
+-Zum Thema was ist der Q-learn-reward: WENN man NUR am ende der Runde nen reward gibt, ist der reward bei 5 steps per second und OPTIMISTISCHEN 60 sekunden rundenzeit schon 300 steps apart. Problem. 
+  -zu sagen wenn wir decay von 0 haben? dann pusht er am ende der runde ALLE weights und lernt IMMER NUR komplette rundne. bad.
+  -Problem an den kleinen Steps ist dass es manchmal klüger ist ne Kurve langsam zu fahren um gut raus zu kommen.
+  ->daher vielleicht schritt 2: reward fürs auf-der-straße-bleiben
+-Supervisedly learnen macht der auf nen 4-elementigen vektor (break, accelearate, left, right)... Aber mit DEM GLEICHEN Convnet wie später (this is the important part)
+-...und um dann auf das reinforcementlearning zu mappen sollte der ne per gaußkurve von dem genauem wert auf die diskretisierten 44 werte (FALLS NICHT CONTINUUS) mappen
+-A bunch of Todos im Quellcode...
+-Zum Thema exploration... wie wäre es mit nem reward dafür neue zustände zu erreichen? er bremst zu oft, und so nen reward könnte ihn daran hindern? ->paper dazu!
+
+-----------------------------------------DONE-----------------------------------------
+
+
+UNITY
+-Es gibt einen Recorder für Supervised-learning, der alle <einstellbar> Sekunden Visionvector und throttle/brake/steer als python-auslesbares XML speichert
+-Reset-funktion (für Wallhit) resettet jetzt richtig auf null speed
+-Game-modi überarbeitet. Wenn er fährt ist immer "driving" dabei, dann können noch supervisedtraining und ENTWEDER keyboarddriving ODER aidriving dabei sein. Abhängig von denen versucht er dann bspw mit server zu kommunizieren, erlaubt keyboardbefehle, und recorded. es können mehere modi gleichzeitig aktiv sein.
+-Ne funktion um den Server zu disconnecten ("D") und neu zu connecten ("C"), die man jederzeit nutzen kann
+-Im aidriving-modus kann man mit "H" als mensch intervenieren ("Human taking control"-Modus), dann igoniert er das ANN und human färhrt
+-im supervisedtraining-modus exportiert er x mal pro sekunde visionvector und speed etc, dass dann python für supervised learning einlesen kann
+-Die Handles überarbeitet dass das Resultat des Netzwerk das tatsächliche fahren ist (und anderenfalls resetten)
+-Bugfix dass die time-punishs jetzt mit gespeichert werden
+-Die alte funktion fürs visiondisplay komplett entfernt
+-der recorder muss mitspeichern ob ICH die runde gefahren bin oder das netz (und die gesamtzeit der runde im filename speichern)
+-Recorder muss für das supervised-learning eigenen Speed mit-recorden, dass er daran mitlernen KANN
+-Nach längerer Zeit kackt er immer noch mit "Too many threads" ab
+-Er hat noch 350ms responsetime, es würde bestimmt unglaublich helfen den selben Socket immer wieder zu nutzen anstatt immer neu zu connecten
+-Den selben Socket immer wieder re-usen, sollte deutlich deutlich schneller sein als die 350ms
+-variablen zentralisieren, bspw alle wie-viel sekunden er supervised-learn-records macht (eher viel als wenig)
+
+
+PYTHON
+-ERST Supervisedly learnen um den statespace gehörig zu verkleinern.
+-python liest das supervised-learning-dingsi-XML aus, in ein eigenes Dateiformat, macht dann viele sachen drauf wie steering discretizen etcetc... und runnt ein neeural network drauf yay!
+-Erstes (nur steering, mit lookahead, linear model) und Zweites (convolutional auf nur visionvector) Netzwerk das supervisedly anhand exportierter Renn-infos lernt
+-Netzwerke in einer recht generic struktur (->grundsätzliches template!), objektorientiert und gute tensorflow-struktur. Exportieren des Netzwerk möglich
+-Dieses Netwerk wird dann im server wieder geladen, und die inference wird live gemacht, das netzwerk spuckt in <350ms das resultat und schickt es an unity und FÄHRT!!!
+-Das lenken ist fürs netzwerk diskretisiert in 11 steps, und insgesamt ist das ganze in 2(brake)*2(throttle)*11(steer)=44 output-neuronen aufgeteilt (->diskret)
+-Convnet macht seinen Conv-kram, macht daraus dann nach reshapen aus den letzten convlayer ein langes, darauf ist dann ein fully connected, und DAS mappt dann per fc auf die 11*2*2 aktionen. 
+-die alte datei client_für_servertest entfernt. Die "playground.py" ist übrigens nur zum ausprobieren von tensorflow-funktionen da.
+-Der Server hat jetzt 3 einzelne Threads, und der Hauptthread wartet auf einen Keyboardinterrupt, bei wessen auftreten er die anderen threads safely runterfahren lässt
+-Das Netzwerk hat global_step und saver und stellt sich wieder her mit passender anzahl restiterationen
+-Das CNN brauche die Möglichkeit auf adaptable Learning rate
+-Den Saver bzw den supervisor richtig nutzen können, sodass man nicht die Konsole resetten muss UND global_step so nutzen dass man unterbrechen & neustarten kann
+-Tensorboard nutzen können!
+-Noch ordentlicher und mehr anhand von TF-Tutorials und online-sourcecode den TF-Code strukturieren (->sämtliche TF-Tutorials von tensorflow.org anschauen und incorporaten!)
+-Im nur-inference-modus soll er nicht die GPU nutzen
+
+
+ALLGEMEIN
+-Wenn funktionen die vorher mal auskommentiert war jetzt weg sind, in DIESEM Update (14.04.) wars!!!
+-Im XML der supervisedrounds soll stehen alle wie viel ms aufgenommen wurde, und python soll asserten dass er damit was anfangen kann und dementsprechend jedes x-te nehmen!

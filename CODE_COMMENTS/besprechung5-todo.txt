@@ -1,0 +1,15 @@
+-eine streckenbreite mehr sicht nach vorn
+-unity einen wert immer genau 110 MS nach dem senden nutzen lassen (ist die max-avg-server-time) (sodass der genau 220/320 (je nachdem ob 10/20FPS) reaktionszeit hat)
+-unity doch smoothen lassen "alter input war gas = 0, python sagt gas = 1, ich mach bis zum nächstem shottetem-frame von 0 bis 1" (optional)
+-playnetagent broke :(
+-dropout kann weg
+-leons komplette kurs-slides (besonders alex's ddpg und leons filler session!) anschauen [proof by authority by karpathy] 
+[-mal 4 conv + 1 FC ausprobieren] nach continuous control ddpg
+-speed-neurons: der letzte ist gebrochener wert 
+-zweite kamera für präzisere ortung, die unter die anderen gestacked ist [also in die selbe dim wie die historyframes]
+-supervised overrepresentation of curves, again
+!!DDPG!!
+-randomaction mit ner gaußverteilung und wie im intrinsic-motivation paper
+-in den options für jeden einzelnen inputvalue nen true/false ob python ihn nutzt, NUR visual network vergleichen mit inkl speed, nach und nach weitere variablen rein
+-die ganzen sachen die sinvoll sind gegeneinander zu testen, die sollen unbedingt als option!
+-DDPG-Paper lesen

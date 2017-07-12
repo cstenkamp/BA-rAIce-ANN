@@ -1,0 +1,18 @@
+-so wie der momentan lernt führt das zu 2 Haupt-Problemen:
+  1.) Er verpasst einige der Frames in denen ich bremse, ist zu schnell, fährt gegen Wand
+  2.) Nach dem Wand-fahren wird er resettet, fährt also ganz langsam, denkt aber trotzdem dass er weiter bremsen muss, bleibt komplett stehen.
+ Das grundsätzliche Problem beim SV-Lernen ist halt dass sich sein input quasi gar nicht ändert, selbst mit history-frames, aber ich in manchen situationen voll bremse, und in anderen nicht, was halt 1 pixel apart sein könnte...
+ Lösungen dafür:
+  -aktuellen speed als zusätzlichen Input im letzten Network-layer haben (kann aber sein dass das schlicht auch nicht hilft, sonst müssten die bereits integrierten historyframes ja auch eig helfen)
+  -den Delay von 150ms berücksichtigen (beim supervisedlearning schlicht jeweils den input von now mit dem frame in 150ms matchen)
+  -Supervised-learning: Reward fürs auf-der-strecke-bleiben
+  -some kind of intrinsic motivation für exploration - dass er nicht stehen bleiben will
+  -kurven überrepräsentieren in der anzahl des vorkommens..!
+
+sowieso als nächstes:
+supervised-learning-target: centerdist kleiner 5 und wie viel prozent er voran gekommen ist.
+
+
+----------
+-speed mit als networkinput reinbringen - check
+-considered den 150ms delay beim supervisedtraining - check
