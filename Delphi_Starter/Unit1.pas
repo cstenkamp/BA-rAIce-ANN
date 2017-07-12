@@ -28,6 +28,8 @@ type
     ListBox3: TListBox;
     ListBox4: TListBox;
     Button4: TButton;
+    ListBox5: TListBox;
+    Button5: TButton;
     procedure FormCreate(Sender: TObject);
     procedure Edit1Change(Sender: TObject);
     procedure Edit2Change(Sender: TObject);
@@ -39,6 +41,7 @@ type
     procedure Button1Click(Sender: TObject);
     procedure Timer1Timer(Sender: TObject);
     procedure Button4Click(Sender: TObject);
+    procedure Button5Click(Sender: TObject);
   private
     { Private-Deklarationen }
   public
@@ -259,13 +262,10 @@ end;
  var
     command: String;
 	begin
-	  ShellExecute(handle, '', 'taskkill.exe','/f /im rAIce.exe','c:\windows\system32\', SW_HIDE);
-	  ShellExecute(handle, '', 'taskkill.exe','/f /im cmd.exe','c:\windows\system32\', SW_HIDE);
-	  ShellExecute(handle, '', 'taskkill.exe','/f /im python.exe','c:\windows\system32\', SW_HIDE);
-	  Application.ProcessMessages; Sleep(2000); Application.ProcessMessages;
+    Form1.Button4Click(Sender);
     command := '/C cd "'+ExtractFilePath(pythonPath)+'" && ' + 'python '+ExtractFileName(pythonPath)+' '+args;         
     ShellExecute(0, nil, 'cmd.exe', PChar(command), nil, SW_SHOW);
-	  Application.ProcessMessages; Sleep(80*1000); Application.ProcessMessages;
+	  Application.ProcessMessages; Sleep(60*1000); Application.ProcessMessages;
 	  ShellExecute(handle, nil, Pchar(gamePath), nil, nil, SW_SHOW);
 	  Application.ProcessMessages; Sleep(2000); Application.ProcessMessages;
     PostKeyEx32(VK_RETURN, [], False);   
@@ -323,10 +323,44 @@ end;
 
 procedure TForm1.Button4Click(Sender: TObject);
 begin
+    Form1.Button5Click(Sender);
+    Application.ProcessMessages; Sleep(120*1000); Application.ProcessMessages;
 	  ShellExecute(handle, '', 'taskkill.exe','/f /im rAIce.exe','c:\windows\system32\', SW_HIDE);
 	  ShellExecute(handle, '', 'taskkill.exe','/f /im cmd.exe','c:\windows\system32\', SW_HIDE);
 	  ShellExecute(handle, '', 'taskkill.exe','/f /im python.exe','c:\windows\system32\', SW_HIDE);
 	  Application.ProcessMessages; Sleep(2000); Application.ProcessMessages;
+end;
+
+
+
+
+
+function AllWindows(wHnd: THandle; List: TStringList): Bool; stdcall;
+  var Buffer: array[0..255] of char;
+begin
+    SendMessage(wHnd, WM_GETTEXT, 255, LongInt(@Buffer[0]));
+    if (Buffer <> '') and IsWindow(wHnd) then
+      begin
+        List.AddObject(Buffer, TObject(wHnd));
+      end;
+    Result := True; // continue enumeration
+end;
+
+
+
+
+procedure TForm1.Button5Click(Sender: TObject);
+var
+  wHnd: THandle;
+  Index: integer;
+begin
+  ListBox5.Clear;
+  EnumWindows(@AllWindows, LParam(ListBox5.Items));
+  Index := ListBox5.Items.IndexOf('tk');
+  if Index > -1 then begin
+    wHnd := THandle(ListBox5.Items.Objects[Index]);
+    SendMessage(wHnd, WM_CLOSE, 0, 0);
+  end;
 end;
 
 Initialization

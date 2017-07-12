@@ -1,6 +1,6 @@
 object Form1: TForm1
-  Left = 338
-  Top = 279
+  Left = 317
+  Top = 261
   Width = 767
   Height = 272
   Caption = 'Form1'
@@ -113,7 +113,7 @@ object Form1: TForm1
     OnChange = Edit1Change
   end
   object Button1: TButton
-    Left = 520
+    Left = 416
     Top = 197
     Width = 131
     Height = 33
@@ -187,7 +187,7 @@ object Form1: TForm1
     OnChange = Edit5Change
   end
   object Button2: TButton
-    Left = 288
+    Left = 184
     Top = 197
     Width = 225
     Height = 33
@@ -203,9 +203,9 @@ object Form1: TForm1
     OnClick = Button2Click
   end
   object ListBox1: TListBox
-    Left = 16
-    Top = 208
-    Width = 33
+    Left = 8
+    Top = 200
+    Width = 17
     Height = 25
     ItemHeight = 13
     TabOrder = 7
@@ -227,34 +227,34 @@ object Form1: TForm1
     OnChange = Edit6Change
   end
   object ListBox2: TListBox
-    Left = 56
-    Top = 208
-    Width = 33
+    Left = 32
+    Top = 200
+    Width = 17
     Height = 25
     ItemHeight = 13
     TabOrder = 9
     Visible = False
   end
   object ListBox3: TListBox
-    Left = 96
-    Top = 208
-    Width = 33
+    Left = 56
+    Top = 200
+    Width = 17
     Height = 25
     ItemHeight = 13
     TabOrder = 10
     Visible = False
   end
   object ListBox4: TListBox
-    Left = 136
-    Top = 208
-    Width = 33
+    Left = 80
+    Top = 200
+    Width = 17
     Height = 25
     ItemHeight = 13
     TabOrder = 11
     Visible = False
   end
   object Button4: TButton
-    Left = 664
+    Left = 552
     Top = 197
     Width = 91
     Height = 33
@@ -269,9 +269,34 @@ object Form1: TForm1
     TabOrder = 12
     OnClick = Button4Click
   end
+  object ListBox5: TListBox
+    Left = 104
+    Top = 200
+    Width = 17
+    Height = 25
+    ItemHeight = 13
+    TabOrder = 13
+    Visible = False
+  end
+  object Button5: TButton
+    Left = 648
+    Top = 197
+    Width = 105
+    Height = 33
+    Anchors = [akRight, akBottom]
+    Caption = 'Close Python'
+    Font.Charset = DEFAULT_CHARSET
+    Font.Color = clWindowText
+    Font.Height = -16
+    Font.Name = 'MS Sans Serif'
+    Font.Style = []
+    ParentFont = False
+    TabOrder = 14
+    OnClick = Button5Click
+  end
   object Timer1: TTimer
     OnTimer = Timer1Timer
-    Left = 176
-    Top = 208
+    Left = 128
+    Top = 200
   end
 end

@@ -58,7 +58,7 @@ class RL_Config(Config):
     log_dir = "SummaryLogDirRL/"  
     checkpoint_dir = "RL_Learn/"
     savememorypath = "./" #will be a pickle-file
-    saveMemoryAllMins = 150
+    saveMemoryAllMins = 45
     
     keep_prob = 1
     max_grad_norm = 10
