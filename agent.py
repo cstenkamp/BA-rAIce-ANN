@@ -20,8 +20,7 @@ class AbstractAgent(object):
         super().__init__(*args, **kwargs)
         self.lock = threading.Lock()
         self.isinitialized = False
-        self.containers = containers
-        self.isbusy = False        
+        self.containers = containers  
         self.numIterations = 0
         
     ##############functions that should be impemented##########
@@ -179,8 +178,8 @@ class AbstractRLAgent(AbstractAgent):
 
         
     def calculateReward(self, inputval):
-        progress_old = inputval.previous_otherinputs.progress
-        progress_new = inputval.otherinputs.progress
+        progress_old = inputval.previous_otherinputs.ProgressVec.Progress
+        progress_new = inputval.otherinputs.ProgressVec.Progress
         if progress_old > 90 and progress_new < 10:
             progress_new += 100
         progress = round(progress_new-progress_old,3)*100

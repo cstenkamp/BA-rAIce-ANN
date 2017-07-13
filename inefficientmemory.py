@@ -65,7 +65,6 @@ class Memory(object):
             self._buffer[self._pointer] = obj                      
             self._pointer = (self._pointer + 1) % self.capacity            
             
-                            
             self._appendcount += 1
             if self._size < self.capacity:
                 self._size += 1
@@ -100,13 +99,13 @@ class Memory(object):
 #            batch = [self._buffer[i] for i in samples]  
 #            return batch                   
                        
-    def sample2(self, n):
-        return zip(*self.sample(n))      
-  
-    
-    def sampletest(self, samples):
-        batch = [self._buffer[i] for i in samples]  
-        return batch            
+#    def sample2(self, n):
+#        return zip(*self.sample(n))      
+#  
+#    
+#    def sampletest(self, samples):
+#        batch = [self._buffer[i] for i in samples]  
+#        return batch            
 
         
     def pop(self):

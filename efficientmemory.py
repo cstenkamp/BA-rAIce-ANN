@@ -36,10 +36,14 @@ class Memory(object):
         self.lastsavetime = current_milli_time()
         self._size = 0
         
-        if constantmemorysize: #sollte effizientersein
+        if constantmemorysize: #sollte effizienter sein
             self._visionvecs = np.zeros((capacity+state_stacksize, self.containers.rl_conf.image_dims[0], self.containers.rl_conf.image_dims[1]), dtype=self.containers.rl_conf.visionvecdtype)
+            if self.containers.rl_conf.use_second_camera:
+                self._visionvecs2 = np.zeros((capacity+state_stacksize, self.containers.rl_conf.image_dims[0], self.containers.rl_conf.image_dims[1]), dtype=self.containers.rl_conf.visionvecdtype)
         else:
             self._visionvecs = [None]*(capacity+state_stacksize)
+            if self.containers.rl_conf.use_second_camera:
+                self._visionvecs2 = [None]*(capacity+state_stacksize)
         self._speeds = np.zeros(capacity+1, dtype=np.float) #da das state-speed von n+1 gleich dem folgestate-speed von n ist, muss er nur 1 mal doppelt abspeichern
         self._actions = np.zeros(capacity, dtype=np.int8)
         self._rewards = np.zeros(capacity, dtype=np.float)
@@ -86,6 +90,9 @@ class Memory(object):
         fEnd = self._fEnds[index]
         state = list(reversed(self._visionvecs[index:index+4]))
         folgestate = list(reversed(self._visionvecs[index+1:index+5]))
+        if self.containers.rl_conf.use_second_camera:
+            state2 = list(reversed(self._visionvecs2[index:index+4]))
+            folgestate2 = list(reversed(self._visionvecs2[index+1:index+5]))
                 
         
         for j in range(1, self._state_stacksize):
@@ -93,11 +100,18 @@ class Memory(object):
                 iter1 = True
                 for i in range(j, self._state_stacksize):
                     state[i] = np.zeros(state[i].shape)
+                    if self.containers.rl_conf.use_second_camera:
+                        state2[i] = np.zeros(state2[i].shape)
                     if not iter1: 
                         folgestate[i] = np.zeros(folgestate[i].shape)
+                        if self.containers.rl_conf.use_second_camera:
+                            folgestate2[i] = np.zeros(folgestate2[i].shape)
                     iter1 = False
             
-            
+        if self.containers.rl_conf.use_second_camera:    
+            state = np.concatenate([state, state2])
+            folgestate = np.concatenate([folgestate, folgestate2])
+
         state = (state, speed)
         folgestate = (folgestate, folgespeed)
                         
@@ -112,15 +126,28 @@ class Memory(object):
             oldstate = oldstate[0]
             newspeed = newstate[1]
             newstate = newstate[0]
+            if self.containers.rl_conf.use_second_camera:   
+                oldstat2 = oldstate[oldstate.shape[0]//2:,:,:]
+                oldstate = oldstate[:oldstate.shape[0]//2,:,:]
+                newstat2 = newstate[newstate.shape[0]//2:,:,:]
+                newstate = newstate[:newstate.shape[0]//2,:,:]
+            
             if self._pointer == 0:
                 self._visionvecs[0:self._state_stacksize] = np.array(list(reversed(oldstate)), dtype=self.containers.rl_conf.visionvecdtype)
                 self._visionvecs[self._state_stacksize] = np.array(newstate[0], dtype=self.containers.rl_conf.visionvecdtype)
+                if self.containers.rl_conf.use_second_camera:   
+                    self._visionvecs2[0:self._state_stacksize] = np.array(list(reversed(oldstat2)), dtype=self.containers.rl_conf.visionvecdtype)
+                    self._visionvecs2[self._state_stacksize] = np.array(newstat2[0], dtype=self.containers.rl_conf.visionvecdtype)
                 self._speeds[0] = oldspeed
             else:
                 self._visionvecs[self._pointer+self._state_stacksize] = np.array(newstate[0], dtype=self.containers.rl_conf.visionvecdtype)
+                if self.containers.rl_conf.use_second_camera:   
+                    self._visionvecs2[self._pointer+self._state_stacksize] = np.array(newstat2[0], dtype=self.containers.rl_conf.visionvecdtype)
             
             if self._fEnds[(self._pointer-1 % self.capacity)]:                                          #if he resettet last the last frame, Q-learning doesn't look at its s' anyway...
                 self._visionvecs[(self._pointer+self._state_stacksize-1 % self.capacity)] = np.array(oldstate[0], dtype=self.containers.rl_conf.visionvecdtype) #but we need it this time, because we skipped exactly one frame ("if oldstate is not None" in agents addtomemory)
+                if self.containers.rl_conf.use_second_camera:   
+                    self._visionvecs2[(self._pointer+self._state_stacksize-1 % self.capacity)] = np.array(oldstat2[0], dtype=self.containers.rl_conf.visionvecdtype)  
                 self._speeds[self._pointer] = oldspeed                 
                 
             self._speeds[self._pointer+1] = newspeed

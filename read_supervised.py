@@ -28,16 +28,16 @@ class TrackingPoint(object):
                 
     def make_vecs(self):
        if self.vectors != "":
-           self.visionvec, self.AllOneDs = cutoutandreturnvectors(self.vectors)
+           _, _, self.visionvec, self.vvec2, self.AllOneDs = cutoutandreturnvectors(self.vectors)
            self.vectors = ""
            self.flatten_oneDs()
     
     def flatten_oneDs(self):
         self.FlatOneDs = np.array(flatten(self.AllOneDs))
     
-    def normalize_oneDs(self, normalizers):
-        self.FlatOneDs -= np.array([item[0] for item in normalizers])
-        self.FlatOneDs /= np.array([item[1] for item in normalizers])
+#    def normalize_oneDs(self, normalizers):
+#        self.FlatOneDs -= np.array([item[0] for item in normalizers])
+#        self.FlatOneDs /= np.array([item[1] for item in normalizers])
     
     def discretize_steering(self, numcats):
         self.discreteSteering = discretize_steering(self.steeringValue, numcats)
@@ -202,24 +202,24 @@ class TPList(object):
     def prepare_tplist(self):
         for currpoint in self.all_trackingpoints:
             currpoint.make_vecs();     
-        normalizers = self.find_normalizers()
+#        normalizers = self.find_normalizers()
         for currpoint in self.all_trackingpoints:
-            currpoint.normalize_oneDs(normalizers)
+#            currpoint.normalize_oneDs(normalizers)
             currpoint.discretize_steering(self.steering_steps)  #TODO: numcats sollte nicht ne variable HIER sein
             #currpoint.discretize_acc_break(NUMCATS) #TODO: sollten auch andere variablen sein
             currpoint.discretize_all(self.steering_steps, self.include_accplusbreak)
             
             
-    def find_normalizers(self):
-        #was hier passiert: für jeden werte der FlatOneDs wird durchs gesamte array gegangen, das minimum gefundne, von allen subtrahiert, das maximum gefunden, dadurch geteilt.
-        normalizers = []
-        veclen = len(self.all_trackingpoints[0].FlatOneDs)
-        for i in range(veclen):
-            alle = np.array([curr.FlatOneDs[i] for curr in self.all_trackingpoints])
-            mini = min(alle)      #alle = np.subtract(alle,min(alle))
-            maxi = max(alle)-mini #alle = np.divide(alle,max(alle))
-            normalizers.append([mini,maxi])
-        return normalizers
+#    def find_normalizers(self):
+#        #was hier passiert: für jeden werte der FlatOneDs wird durchs gesamte array gegangen, das minimum gefundne, von allen subtrahiert, das maximum gefunden, dadurch geteilt.
+#        normalizers = []
+#        veclen = len(self.all_trackingpoints[0].FlatOneDs)
+#        for i in range(veclen):
+#            alle = np.array([curr.FlatOneDs[i] for curr in self.all_trackingpoints])
+#            mini = min(alle)      #alle = np.subtract(alle,min(alle))
+#            maxi = max(alle)-mini #alle = np.divide(alle,max(alle))
+#            normalizers.append([mini,maxi])
+#        return normalizers
 
     def reset_batch(self):
         self.batchindex = 0
@@ -245,6 +245,8 @@ class TPList(object):
         for indexindex in range(self.batchindex,self.batchindex+batch_size):
             i = self.randomindices[indexindex]
             vision = [self.all_trackingpoints[(i-j) % len(self.all_trackingpoints)].visionvec for j in range(config.history_frame_nr-1,-1,-1)]
+            if config.use_second_camera:
+                vision = vision + [self.all_trackingpoints[(i-j) % len(self.all_trackingpoints)].vvec2 for j in range(config.history_frame_nr-1,-1,-1)]
             lookahead = [self.all_trackingpoints[(i-j) % len(self.all_trackingpoints)].FlatOneDs for j in range(config.history_frame_nr-1,-1,-1)]
             target = self.all_trackingpoints[i].discreteAll
             if config.history_frame_nr == 1: 
@@ -279,11 +281,18 @@ def inflate_speed(speed, numberneurons, asonehot):
 def cutoutandreturnvectors(string):
     allOneDs  = []
     visionvec = [[]]    
+    STime = 0
+    CTime = 0
     def cutout(string, letter):
-        return string[string.find(letter)+2:string[string.find(letter):].find(")")+string.find(letter)]
+        return string[string.find(letter)+len(letter):string[string.find(letter):].find(")")+string.find(letter)]
+    
+    if string.find("STime") > -1:
+        STime = int(cutout(string, "STime("))        
+    
+    if string.find("CTime") > -1:
+        CTime = int(cutout(string, "CTime("))        
     
     if string.find("P(") > -1:
-        #print("Progress as real Number",self.readOneDArrayFromString(cutout(data, "P(")))
         allOneDs.append(readOneDArrayFromString(cutout(string, "P(")))
 
     if string.find("S(") > -1:
@@ -301,12 +310,22 @@ def cutoutandreturnvectors(string):
     if string.find("L(") > -1:
         #print("Visionvec",self.readTwoDArrayFromString(cutout(data, "V(")))
         allOneDs.append(readOneDArrayFromString(cutout(string, "L(")))
-    
-    if string.find("V(") > -1:
-        #print("Visionvec",self.readTwoDArrayFromString(cutout(data, "V(")))
-        visionvec = readTwoDArrayFromString(cutout(string, "V("))    
         
-    return visionvec, allOneDs
+    if string.find("D(") > -1:
+        #print("Visionvec",self.readTwoDArrayFromString(cutout(data, "V(")))
+        allOneDs.append(readOneDArrayFromString(cutout(string, "D(")))
+    
+    if string.find("V1(") > -1:
+        #print("Visionvec",self.readTwoDArrayFromString(cutout(data, "V(")))
+        visionvec = readTwoDArrayFromString(cutout(string, "V1("))    
+    
+    if string.find("V1(") > -1:
+        #print("Visionvec",self.readTwoDArrayFromString(cutout(data, "V(")))
+        vvec2 = readTwoDArrayFromString(cutout(string, "V2("))    
+    else:
+        vvec2 = None
+        
+    return STime, CTime, visionvec, vvec2, allOneDs
         
 
 def readOneDArrayFromString(string):
@@ -316,6 +335,7 @@ def readOneDArrayFromString(string):
         tmp = i.replace(" ","")
         if len(tmp) > 0:
             try:
+                tmp = ("1" if tmp == "T" else "0" if tmp == "F" else tmp)
                 x = float(str(tmp))
                 tmpfloats.append(x)
             except ValueError:

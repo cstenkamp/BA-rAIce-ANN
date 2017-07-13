@@ -25,8 +25,6 @@ DONT_TRAIN = [] #["Conv1", "Conv2", "FC1"]# ["Conv1", "Conv2"]
 
 lastresult = None
 
-ACTION_ALL_X_MS = 0
-LAST_ACTION = 0
 ONLY_START = False
 
 
@@ -47,22 +45,8 @@ class ReinfNetAgent(AbstractRLAgent):
                 
             self.lock.acquire()
             try:
-                self.isbusy = True 
-                
-                #delete this part
-                if ACTION_ALL_X_MS:
-                    global LAST_ACTION
-                    if current_milli_time()-LAST_ACTION < ACTION_ALL_X_MS:
-                        return
-                    else:
-                        LAST_ACTION = current_milli_time()
-                                
-#                if self.containers.inputval.otherinputs.progress > 0 and self.containers.inputval.otherinputs.progress < 10:
-#                    self.resetUnity()
-#                        return
                 otherinputs, visionvec = self.containers.inputval.read()
                 
-                #add to memory
                 if self.addToMemory(otherinputs, visionvec):
                     return
 
@@ -99,16 +83,13 @@ class ReinfNetAgent(AbstractRLAgent):
                 #im original DQN learnt er halt jetzt direkt, aber er kann doch besser durchgehend lernen?
                 
             finally:
-                self.isbusy = False
                 self.lock.release()
     
     
     def addToMemory(self, otherinputs, visionvec):
         super().addToMemory(otherinputs, visionvec)
         if ONLY_START:
-            global LAST_ACTION
             self.resetUnity()
-            LAST_ACTION -= ACTION_ALL_X_MS
             return True
    
 

@@ -31,6 +31,7 @@ class Config(object):
     
     image_dims = [30,45] 
     msperframe = 200 #50   #ACHTUNG!!! Dieser wert wird von unity überschrieben!!!!! #TODO: dass soll mit unity abgeglichen werden!
+    use_second_camera = False
     
     batch_size = 32
     keep_prob = 0.8
@@ -45,6 +46,7 @@ class Config(object):
     checkpointall = 10
     
     def __init__(self):
+        assert not (self.use_second_camera and (self.history_frame_nr == 1)), "If you're using 2 cameras, you have to use historyframes!"
         assert os.path.exists(self.foldername), "No data to train on at all!"        
         if not os.path.exists(self.log_dir):
             os.makedirs(self.log_dir)         
@@ -149,6 +151,7 @@ class CNN(object):
         self.is_reinforcement = is_reinforcement
         self.iterations = 0
         final_neuron_num = self.config.steering_steps*4 if self.config.INCLUDE_ACCPLUSBREAK else self.config.steering_steps*3
+        self.stacksize = self.config.history_frame_nr*2 if self.config.use_second_camera else self.config.history_frame_nr
         
         self.prepareNumIters()
         self.inputs, self.targets, self.speed_input = self.set_placeholders(is_training, final_neuron_num)
@@ -183,7 +186,8 @@ class CNN(object):
         if self.config.history_frame_nr == 1:
             inputs = tf.placeholder(tf.float32, shape=[None, self.config.image_dims[0], self.config.image_dims[1]], name="inputs")  #first dim is none since inference has another batchsize than training
         else:
-            inputs = tf.placeholder(tf.float32, shape=[None, self.config.history_frame_nr, self.config.image_dims[0], self.config.image_dims[1]], name="inputs")  #first dim is none since inference has another batchsize than training
+            inputs = tf.placeholder(tf.float32, shape=[None, self.stacksize, self.config.image_dims[0], self.config.image_dims[1]], name="inputs")  #first dim is none since inference has another batchsize than training
+            
             
         if is_training:
             targets = tf.placeholder(tf.float32, shape=[None, final_neuron_num], name="targets")    
@@ -246,10 +250,10 @@ class CNN(object):
                     h_fc = tf.nn.dropout(h_fc, self.keep_prob) 
                 return h_fc
 
-        rs_input = tf.reshape(inputs, [-1, self.config.image_dims[0], self.config.image_dims[1],self.config.history_frame_nr]) #final dimension = number of color channels
+        rs_input = tf.reshape(inputs, [-1, self.config.image_dims[0], self.config.image_dims[1],self.stacksize]) #final dimension = number of color channels
                              
         self.keep_prob = tf.Variable(tf.constant(1.0), trainable=False) #wenn nicht gefeedet ist sie standardmäßig 1        
-        h1 = convolutional_layer(rs_input, self.config.history_frame_nr, 32, "Conv1", tf.nn.relu) #reduces to x//2*y//2
+        h1 = convolutional_layer(rs_input, self.stacksize, 32, "Conv1", tf.nn.relu) #reduces to x//2*y//2
         h2 = convolutional_layer(h1, 32, 64, "Conv2", tf.nn.relu)      #reduces to x//4*y//4
         h_pool_flat =  tf.reshape(h2, [-1, math.ceil(self.config.image_dims[0]/4)*math.ceil(self.config.image_dims[1]/4)*64])
         h_fc1 = fc_layer(h_pool_flat, math.ceil(self.config.image_dims[0]/4)*math.ceil(self.config.image_dims[1]/4)*64, final_neuron_num*20, "FC1", tf.nn.relu, do_dropout=for_training)                 
@@ -483,7 +487,7 @@ def run_svtraining(config, dataset):
 #            dataset.reset_batch()
 #            _, visionvec, _, _ = dataset.next_batch(config, 1)
 #            visionvec = np.array(visionvec[0])
-#            print(cnn.run_inference(sess,visionvec, config.history_frame_nr))
+#            print(cnn.run_inference(sess,visionvec, self.stacksize))
  
 
 
