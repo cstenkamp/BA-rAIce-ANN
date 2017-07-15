@@ -17,9 +17,10 @@ from myprint import myprint as print
 SUMMARYALL = 1000
 
 class Config(object):
-    foldername = "SavedLaps/"
-    log_dir = "SummaryLogDir/"  
-    checkpoint_pre_dir = "Checkpoint"
+    LapFolderName = "SavedLaps/"
+    log_dir = "SV_SummaryLogs/"  
+    checkpoint_dir = "SV_Checkpoints/"
+    #einen super-über-ordner für RLLearn, checkpoint, summarylogdir & memory haben für jede kombi aus hframes, secondcam, mspersec
     
     history_frame_nr = 4 #incl. dem jetzigem!
     speed_neurons = 30 #wenn null nutzt er sie nicht
@@ -32,6 +33,7 @@ class Config(object):
     image_dims = [30,45] 
     msperframe = 200 #50   #ACHTUNG!!! Dieser wert wird von unity überschrieben!!!!! #TODO: dass soll mit unity abgeglichen werden!
     use_second_camera = False
+    use_CTimestamp = False
     
     batch_size = 32
     keep_prob = 0.8
@@ -47,21 +49,27 @@ class Config(object):
     
     def __init__(self):
         assert not (self.use_second_camera and (self.history_frame_nr == 1)), "If you're using 2 cameras, you have to use historyframes!"
-        assert os.path.exists(self.foldername), "No data to train on at all!"        
+        assert os.path.exists(self.LapFolderName), "No data to train on at all!"        
+        
+        self.log_dir = self.superfolder()+self.log_dir
         if not os.path.exists(self.log_dir):
             os.makedirs(self.log_dir)         
             
-        self.checkpoint_dir = self.checkpoint_pre_dir + "_hframes"+str(self.history_frame_nr)+"_msperframe"+str(self.msperframe)+"/"
+        self.checkpoint_dir = self.superfolder()+self.checkpoint_dir
         if not os.path.exists(self.checkpoint_dir):
             os.makedirs(self.checkpoint_dir) 
 
+    def superfolder(self):
+        return "data_"+str(self.history_frame_nr)+"hframes_"+("2cams_" if self.use_second_camera else "1cam_") + str(self.msperframe) + "msperframe/"
+
+
+
 
 class RL_Config(Config):
-    log_dir = "SummaryLogDirRL/"  
-    checkpoint_dir = "RL_Learn/"
+    log_dir = "RL_SummaryLogs/"  
+    checkpoint_dir = "RL_Checkpoints/"
     savememorypath = "./" #will be a pickle-file
-    saveMemoryAllMins = 45
-    
+     
     keep_prob = 1
     max_grad_norm = 10
     initial_lr = 0.001
@@ -81,14 +89,22 @@ class RL_Config(Config):
     use_constantbutbigmemory = False
     visionvecdtype = np.int8 #wäre es np.bool würde er den rand als street sehen!
     keep_memory = True
-    
+    saveMemoryAllMins = 45
+   
     ForEveryInf, ComesALearn = False, False
     
     #re-uses history_frame_nr, image_dims, steering_steps, speed_neurons, INCLUDE_ACCPLUSBREAK, SPEED_AS_ONEHOT
     
     def __init__(self):     
+        self.savememorypath = self.superfolder()+self.savememorypath
+        if not os.path.exists(self.savememorypath):
+            os.makedirs(self.savememorypath)
+                                              
+        self.log_dir = self.superfolder()+self.log_dir
         if not os.path.exists(self.log_dir):
             os.makedirs(self.log_dir)     
+            
+        self.checkpoint_dir = self.superfolder()+self.checkpoint_dir 
         if not os.path.exists(self.checkpoint_dir):
             os.makedirs(self.checkpoint_dir)                 
                                     
@@ -124,9 +140,9 @@ class DQN_Config(RL_Config):
     
 class Half_DQN_Config(RL_Config):
     batch_size = 32                     #minibatch size
-    memorysize = 200000                 #replay memory size
+    memorysize = 100000                 #replay memory size
     history_frame_nr = 4                #agent history length
-    copy_target_all = 1000              #target network update frequency (C)
+    copy_target_all = 2000              #target network update frequency (C)
     q_decay = 0.99                      #discount factor
     startepsilon = 1                    #initial exploration
     minepsilon = 0.01                   #final exploration
@@ -498,7 +514,7 @@ def run_svtraining(config, dataset):
 def main():
     config = Config()
         
-    trackingpoints = read_supervised.TPList(config.foldername, config.msperframe, config.steering_steps, config.INCLUDE_ACCPLUSBREAK)
+    trackingpoints = read_supervised.TPList(config.LapFolderName, config.use_second_camera, config.msperframe, config.steering_steps, config.INCLUDE_ACCPLUSBREAK)
     print("Number of samples: %s | Tracking every %s ms with %s historyframes" % (trackingpoints.numsamples, str(config.msperframe), str(config.history_frame_nr)), level=6)
     run_svtraining(config, trackingpoints)        
     

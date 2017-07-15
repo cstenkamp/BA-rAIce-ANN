@@ -188,7 +188,7 @@ class ReinfNetAgent(AbstractRLAgent):
         toprint = [str(i[0])[1:-1]+": "+str(i[1]) for i in b]
         toprint = "\n".join(toprint)
         
-        print(b, level=6)
+        print(b, level=3)
         if self.containers.showscreen:
             infoscreen.print(toprint, containers= self.containers, wname="Current Q Vals")
         

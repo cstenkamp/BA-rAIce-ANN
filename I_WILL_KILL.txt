@@ -1,0 +1,21 @@
+-Unity mitsenden lassen ob runde invalid ist
+-Delta und Feedback vom Recorder mitsenden und mitaufzeichnen
+-CTime für CreationTime kam dazu
+-Progress (P) enthält nun auch Laptime, #runden, fValidLap
+-Time hießt STime für SendTime
+-Delta & Feedback auch beim svlernen abspeichern (>.<)
+-see curb as off muss noch rein
+-"V" für visionvector wurde umbenannt in "V1", "V2" fehlt noch
+-delphi nach dem starten von unity noch den fokus auf das handle setzen lassen
+-read_supervised wird mit verändertem cutoutandreturnvectors nicht mehr klappen
+-delphi nach dem beenden-kommando schicken länger warten lassen
+
+--> SVLernen delta feedback etc!!!
+--> unity das 110sec später nutzen lassen
+--> Dass die vektoren die im Lernen mitgespeichert werden auch in der XML mitgespeichert werden
+--> Ob mit oder ohne zweite cam im filename... UND auch ins XML beim supervised
+--> geschwindigkeitsvergleich wenn 2te cam weg!
+--> 25 und 50 spf durch 30 und 60 ersetzen!
+--> In Python CTime nutzen heißt Unity-Zeit, STime heißt pure aber genaue sendezeit!
+--> dazuschreiben dass mit der zweiten kamera die FPS von 70 auf 40 sinken
+--> Wheel Position Bug fixed

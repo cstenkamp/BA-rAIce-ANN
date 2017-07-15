@@ -156,13 +156,13 @@ class TPList(object):
                 furtherinfo[majorpoint.tag] = majorpoint.text
         return this_trackingpoints, furtherinfo
             
-    def __init__(self, foldername, msperframe, steering_steps, include_accplusbreak):
+    def __init__(self, foldername, twocams, msperframe, steering_steps, include_accplusbreak):
         assert os.path.isdir(foldername) 
         self.all_trackingpoints = []
         self.steering_steps = steering_steps
         self.include_accplusbreak = include_accplusbreak
         for file in os.listdir(foldername):
-            if file.endswith(".svlap"):
+            if file.endswith(".svlap") and (("2cam" in file) if twocams else ("1cam" in file)):
                 currcontent, currinfo = TPList.read_xml(os.path.join(foldername, file))
                 if DELAY_TO_CONSIDER > 0:
                     currcontent = self.consider_delay(currcontent, int(currinfo["trackAllXMS"]))
@@ -317,9 +317,9 @@ def cutoutandreturnvectors(string):
     
     if string.find("V1(") > -1:
         #print("Visionvec",self.readTwoDArrayFromString(cutout(data, "V(")))
-        visionvec = readTwoDArrayFromString(cutout(string, "V1("))    
+        visionvec = readTwoDArrayFromString(cutout(string, "V1("))  
     
-    if string.find("V1(") > -1:
+    if string.find("V2(") > -1:
         #print("Visionvec",self.readTwoDArrayFromString(cutout(data, "V(")))
         vvec2 = readTwoDArrayFromString(cutout(string, "V2("))    
     else:
@@ -337,9 +337,9 @@ def readOneDArrayFromString(string):
             try:
                 tmp = ("1" if tmp == "T" else "0" if tmp == "F" else tmp)
                 x = float(str(tmp))
-                tmpfloats.append(x)
+                tmpfloats.append(x)  
             except ValueError:
-                print("I'm crying") #cry.
+                print("I'm crying") #cry. 
     return tmpfloats
 
 

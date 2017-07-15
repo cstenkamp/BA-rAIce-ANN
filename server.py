@@ -181,7 +181,7 @@ class receiver_thread(threading.Thread):
                 if not self.containers.freezeInf:
                     data = self.clientsocket.myreceive()
                     if data: 
-                        #print("received data:", data, level=10)       
+                        print("received data:", data, level=10)       
                         if self.handle_special_commands(copy.deepcopy(data)):
                             continue
                         elif data[:6] == "STime(":
@@ -190,9 +190,14 @@ class receiver_thread(threading.Thread):
                                 if int(i.timestamp) < int(self.timestamp):
                                     i.killme = True
                         
+                            #we MUST have the inputval, otherwise there wouldn't be the possibility for historyframes.           
                             STime, CTime, visionvec, vvec2, allOneDs = cutoutandreturnvectors(data) 
-                            self.containers.inputval.update(visionvec, vvec2, allOneDs, CTime) #we MUST have the inputval, otherwise there wouldn't be the possibility for historyframes.           
-                            #yes, we ignore the STime (SendTime) here in favor of the CTime (ConstructionTime).
+                            print("PYTHON RECEIVES TIME:", STime, time.time()*1000, level=10)
+                            if self.containers.sv_conf.use_CTimestamp:
+                                self.containers.inputval.update(visionvec, vvec2, allOneDs, CTime) 
+                            else:    
+                                self.containers.inputval.update(visionvec, vvec2, allOneDs, STime) 
+                            
                                                            
                             #CHANGE: only 1 agent 
     #                        if len(self.containers.ANNs) == 1:
@@ -308,10 +313,12 @@ class InputValContainer(object):
             
                 if self.config.history_frame_nr > 1: #in der vvechist steht das älteste hinten: a = [4,3,2,1] -> [5] + a[:-1] -> [5,4,3,2]
                     if self.config.use_second_camera: #wenn wir beide kameras nutzen ist es [4.1, 3.1, 2.1, 1.1, 4.2, 3.2, 2.2, 1.2] 
-                        self.vvec_hist = np.array([visionvec] + [i for i in self.vvec_hist[:-1]], dtype=self.containers.rl_conf.visionvecdtype)
+                        visionvec = np.expand_dims(np.array(visionvec, dtype=self.containers.rl_conf.visionvecdtype), axis=0)
+                        vvec2 = np.expand_dims(np.array(vvec2, dtype=self.containers.rl_conf.visionvecdtype), axis=0)
+                        self.vvec_hist = np.concatenate((visionvec, self.vvec_hist[:self.config.history_frame_nr-1], vvec2, self.vvec_hist[self.config.history_frame_nr:2*self.config.history_frame_nr-1]))
                     else:
-                        self.vvec_hist = np.array([visionvec] + [i for i in self.vvec_hist[:self.config.history_frame_nr-1]] \
-                                                  [vvec2] + [i for i in self.vvec_hist[self.config.history_frame_nr:2*self.config.history_frame_nr-1]], dtype=self.containers.rl_conf.visionvecdtype)
+                        visionvec = np.expand_dims(np.array(visionvec, dtype=self.containers.rl_conf.visionvecdtype), axis=0)
+                        self.vvec_hist = np.concatenate((visionvec, self.vvec_hist[:-1]))
                 else:
                     self.visionvec = np.array(visionvec, dtype=self.containers.rl_conf.visionvecdtype)
                 self.otherinputs = otherinputs
@@ -448,7 +455,8 @@ class OutputValContainer(object):
             
             
     def send_via_senderthread(self, value, timestamp):
-        #nehme die erste verbindung die keinen error schemißt!    
+        #nehme die erste verbindung die keinen error schemißt!   
+        print("PYTHON SENDING TIME:", timestamp, time.time()*1000, level=10)
         if self.containers.KeepRunning:
             assert len(self.containers.senderthreads) > 0, "There is no senderthread at all! How will I send?"
             for i in range(len(self.containers.senderthreads)):
