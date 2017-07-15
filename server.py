@@ -181,7 +181,8 @@ class receiver_thread(threading.Thread):
                 if not self.containers.freezeInf:
                     data = self.clientsocket.myreceive()
                     if data: 
-                        print("received data:", data, level=10)       
+                        print("received data:", data, level=10)   
+                        
                         if self.handle_special_commands(copy.deepcopy(data)):
                             continue
                         elif data[:6] == "STime(":
@@ -193,12 +194,14 @@ class receiver_thread(threading.Thread):
                             #we MUST have the inputval, otherwise there wouldn't be the possibility for historyframes.           
                             STime, CTime, visionvec, vvec2, allOneDs = cutoutandreturnvectors(data) 
                             print("PYTHON RECEIVES TIME:", STime, time.time()*1000, level=10)
+                            
+                            
                             if self.containers.sv_conf.use_CTimestamp:
                                 self.containers.inputval.update(visionvec, vvec2, allOneDs, CTime) 
                             else:    
                                 self.containers.inputval.update(visionvec, vvec2, allOneDs, STime) 
                             
-                                                           
+                                                 
                             #CHANGE: only 1 agent 
     #                        if len(self.containers.ANNs) == 1:
     #                            self.containers.ANNs[0].runInference(UPDATE_ONLY_IF_NEW)
@@ -567,6 +570,8 @@ def main(sv_conf, rl_conf, only_sv, no_learn, show_screen, start_fresh, nomemory
     
     if show_screen:
         screenroot = infoscreen.showScreen(containers)
+    else:
+        containers.showscreen = False
     
     if only_sv:
         agent = svPlayNetAgent.PlayNetAgent

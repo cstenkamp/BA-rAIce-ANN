@@ -20,7 +20,7 @@ class Config(object):
     LapFolderName = "SavedLaps/"
     log_dir = "SV_SummaryLogs/"  
     checkpoint_dir = "SV_Checkpoints/"
-    #einen super-über-ordner für RLLearn, checkpoint, summarylogdir & memory haben für jede kombi aus hframes, secondcam, mspersec
+    #wir haben super-über-ordner für RLLearn, checkpoint, summarylogdir & memory für jede kombi aus hframes, secondcam, mspersec
     
     history_frame_nr = 4 #incl. dem jetzigem!
     speed_neurons = 30 #wenn null nutzt er sie nicht

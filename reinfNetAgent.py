@@ -50,6 +50,12 @@ class ReinfNetAgent(AbstractRLAgent):
                 if self.addToMemory(otherinputs, visionvec):
                     return
 
+
+#                ##############DELETETHISPART##############
+#                self.containers.outputval.send_via_senderthread("[0, 0, 0]", self.containers.inputval.timestamp)
+#                return
+#                ##############DELETETHISPART ENDE##############
+                
                 #run ANN
                 global lastresult
                 try:
@@ -130,7 +136,7 @@ class ReinfNetAgent(AbstractRLAgent):
         })
         
         self.reinfNetSteps += 1
-        print("ReinfLearnSteps:", self.reinfNetSteps)
+        print("ReinfLearnSteps:", self.reinfNetSteps, level=3)
         if self.containers.showscreen:
             infoscreen.print(self.reinfNetSteps, "Iterations: >"+str(self.numIterations), containers= self.containers, wname="ReinfLearnSteps")
                     
