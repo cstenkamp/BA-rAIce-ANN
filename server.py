@@ -233,7 +233,7 @@ class receiver_thread(threading.Thread):
             resetServer(self.containers, data[11:]) 
             specialcommand = True    
         if data[:7] == "wallhit":
-            self.containers.myAgent.punishLastAction(20)   #ist das doppelt gemoppelt damit, dass er eh das if punish > 10 beibehält?       
+            self.containers.myAgent.punishLastAction(15)   #ist das doppelt gemoppelt damit, dass er eh das if punish > 10 beibehält?       
             self.containers.myAgent.endEpisode()
             resetServer(self.containers, self.containers.sv_conf.msperframe) 
             specialcommand = True    

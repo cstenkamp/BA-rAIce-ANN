@@ -19,3 +19,12 @@
 --> In Python CTime nutzen heißt Unity-Zeit, STime heißt pure aber genaue sendezeit!
 --> dazuschreiben dass mit der zweiten kamera die FPS von 70 auf 40 sinken
 --> Wheel Position Bug fixed
+--> so wies jetzt ist ist es auch scheiße weil so nicht mehr recorder und sender gleichzeitig aktiv sein können (bzw doppelte arbeit)
+
+-----------
+-senden und laden doch wieder von der gleichen variable abhängig (get rid of make_vecs_all)
+-beim senden und laden die zeit doch einfach +jetzige
+-senden in nem separate thread, dann kann der +jetzige zeit danach ja machen
+-schon bei unity mehrere ports haben. python listened auch auf mehreren, bottleneck dann beim inputval, inference auf separatem cpucore, zurücksenden auf getport+10, und dann haben wieder 10 receiverclients auf unitys "response"-object zugriff
+-dass er nichts sendet wenn sich nciths verändert ist auch quatsch, da dann das inputval gedöns falsch ist
+-Problems: unitytime wäre sinnvoller weil das dann nicht in realtime wäre, ABER die kann man in non-main-thread nicht aufrufen

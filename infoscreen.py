@@ -47,6 +47,8 @@ def showScreen(containers):
     epsilon.pack(fill=X)
     lastpunish = ThreadSafeConsole(root, width=1, height=1)
     lastpunish.pack(fill=X)
+    lasttargetcopy = ThreadSafeConsole(root, width=1, height=1)
+    lasttargetcopy.pack(fill=X)
     reinflearnsteps = ThreadSafeConsole(root, width=1, height=1)
     reinflearnsteps.pack(fill=X)
     currentqvals = ThreadSafeConsole(root, width=50, height=22)
@@ -56,5 +58,6 @@ def showScreen(containers):
     root.geometry('+%d+%d' % (x, y))   
 
     containers.showscreen = True
-    containers.screenwidgets = {"Last command": lastcommand, "Memorysize": memorysize, "Last memory": lastmemory, "Epsilon": epsilon, "Last big punish": lastpunish, "ReinfLearnSteps": reinflearnsteps, "Current Q Vals": currentqvals}
+    containers.screenwidgets = {"Last command": lastcommand, "Memorysize": memorysize, "Last memory": lastmemory, "Epsilon": epsilon, \
+                                "Last big punish": lastpunish, "Last Targetnet Copy": lasttargetcopy, "ReinfLearnSteps": reinflearnsteps, "Current Q Vals": currentqvals}
     return root

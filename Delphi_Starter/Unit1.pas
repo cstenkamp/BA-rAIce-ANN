@@ -42,12 +42,14 @@ type
     procedure Timer1Timer(Sender: TObject);
     procedure Button4Click(Sender: TObject);
     procedure Button5Click(Sender: TObject);
+    function getHandleOf(name: String): THandle;
   private
     { Private-Deklarationen }
   public
     { Public-Deklarationen }
   end;
 function ExtractNumber(const s: string): integer;
+function ForceForegroundWindow(hwnd: THandle): boolean;
 
 var
   Form1: TForm1;
@@ -263,16 +265,18 @@ end;
     command: String;
 	begin
     Form1.Button4Click(Sender);
-    command := '/C cd "'+ExtractFilePath(pythonPath)+'" && ' + 'python '+ExtractFileName(pythonPath)+' '+args;         
+    command := '/C cd "'+ExtractFilePath(pythonPath)+'" && ' + 'python '+ExtractFileName(pythonPath)+' '+args;
     ShellExecute(0, nil, 'cmd.exe', PChar(command), nil, SW_SHOW);
-	  Application.ProcessMessages; Sleep(60*1000); Application.ProcessMessages;
+	  Application.ProcessMessages; Sleep(120*1000); Application.ProcessMessages;
 	  ShellExecute(handle, nil, Pchar(gamePath), nil, nil, SW_SHOW);
 	  Application.ProcessMessages; Sleep(2000); Application.ProcessMessages;
-    PostKeyEx32(VK_RETURN, [], False);   
+    ForceForegroundWindow(getHandleOf('rAIce Configuration')); Sleep(200); Application.ProcessMessages;
+    PostKeyEx32(VK_RETURN, [], False);
 	  Application.ProcessMessages; Sleep(20*1000); Application.ProcessMessages;
-    PostKeyEx32(VK_DOWN, [], False);          
+    ForceForegroundWindow(getHandleOf('rAIce')); Sleep(200); Application.ProcessMessages;
+    PostKeyEx32(VK_DOWN, [], False);
 	  Application.ProcessMessages; Sleep(500); Application.ProcessMessages;
-    PostKeyEx32(VK_DOWN, [], False);           
+    PostKeyEx32(VK_DOWN, [], False);
 	  Application.ProcessMessages; Sleep(500); Application.ProcessMessages;
     PostKeyEx32(VK_RETURN, [], False);
 	  Application.ProcessMessages; Sleep(500); Application.ProcessMessages;
@@ -324,7 +328,7 @@ end;
 procedure TForm1.Button4Click(Sender: TObject);
 begin
     Form1.Button5Click(Sender);
-    Application.ProcessMessages; Sleep(120*1000); Application.ProcessMessages;
+    Application.ProcessMessages; Sleep(150*1000); Application.ProcessMessages;
 	  ShellExecute(handle, '', 'taskkill.exe','/f /im rAIce.exe','c:\windows\system32\', SW_HIDE);
 	  ShellExecute(handle, '', 'taskkill.exe','/f /im cmd.exe','c:\windows\system32\', SW_HIDE);
 	  ShellExecute(handle, '', 'taskkill.exe','/f /im python.exe','c:\windows\system32\', SW_HIDE);
@@ -362,6 +366,72 @@ begin
     SendMessage(wHnd, WM_CLOSE, 0, 0);
   end;
 end;
+
+function TForm1.getHandleOf(name: String): THandle;
+var
+  index: integer;
+begin        
+  ListBox5.Clear;
+  EnumWindows(@AllWindows, LParam(ListBox5.Items));
+  Index := ListBox5.Items.IndexOf(name);
+  Result := THandle(ListBox5.Items.Objects[Index]);
+end;
+
+
+function ForceForegroundWindow(hwnd: THandle): boolean;
+{
+found here:
+http://delphi.newswhat.com/geoxml/forumhistorythread?groupname=borland.public.delphi.rtl.win32&messageid=501_3f8aac4b@newsgroups.borland.com
+}
+const
+  SPI_GETFOREGROUNDLOCKTIMEOUT = $2000;
+  SPI_SETFOREGROUNDLOCKTIMEOUT = $2001;
+var
+  ForegroundThreadID: DWORD;
+  ThisThreadID: DWORD;
+  timeout: DWORD;
+begin
+  if IsIconic(hwnd) then ShowWindow(hwnd, SW_RESTORE);
+  if GetForegroundWindow = hwnd then Result := true
+  else begin
+    // Windows 98/2000 doesn't want to foreground a window when some other
+    // window has keyboard focus
+
+    if ((Win32Platform = VER_PLATFORM_WIN32_NT) and (Win32MajorVersion > 4)) or
+       ((Win32Platform = VER_PLATFORM_WIN32_WINDOWS) and ((Win32MajorVersion > 4) or
+                                                          ((Win32MajorVersion = 4) and (Win32MinorVersion > 0)))) then begin
+      // Code from Karl E. Peterson, www.mvps.org/vb/sample.htm
+      // Converted to Delphi by Ray Lischner
+      // Published in The Delphi Magazine 55, page 16
+
+      Result := false;
+      ForegroundThreadID := GetWindowThreadProcessID(GetForegroundWindow,nil);
+      ThisThreadID := GetWindowThreadPRocessId(hwnd,nil);
+      if AttachThreadInput(ThisThreadID, ForegroundThreadID, true) then
+      begin
+        BringWindowToTop(hwnd); // IE 5.5 related hack
+        SetForegroundWindow(hwnd);
+        AttachThreadInput(ThisThreadID, ForegroundThreadID, false);  // bingo
+        Result := (GetForegroundWindow = hwnd);
+      end;
+      if not Result then begin
+        // Code by Daniel P. Stasinski
+
+        SystemParametersInfo(SPI_GETFOREGROUNDLOCKTIMEOUT, 0, @timeout, 0);
+        SystemParametersInfo(SPI_SETFOREGROUNDLOCKTIMEOUT, 0, TObject(0), SPIF_SENDCHANGE);
+        BringWindowToTop(hwnd); // IE 5.5 related hack
+        SetForegroundWindow(hWnd);
+        SystemParametersInfo(SPI_SETFOREGROUNDLOCKTIMEOUT, 0, TObject(timeout), SPIF_SENDCHANGE);
+      end;
+    end
+    else begin
+      BringWindowToTop(hwnd); // IE 5.5 related hack
+      SetForegroundWindow(hwnd);
+    end;
+
+    Result := (GetForegroundWindow = hwnd);
+  end;
+end; { ForceForegroundWindow }
 
 Initialization
   iniFileName := ExtractFilePath(ParamStr(0)) + 'settings.ini';

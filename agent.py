@@ -182,12 +182,12 @@ class AbstractRLAgent(AbstractAgent):
         progress_new = inputval.otherinputs.ProgressVec.Progress
         if progress_old > 90 and progress_new < 10:
             progress_new += 100
-        progress = round(progress_new-progress_old,3)*100
+        progress = round(progress_new-progress_old,3)*200
         
         stay_on_street = abs(inputval.otherinputs.CenterDist)
         #wenn er >= 10 war und seitdem keine neue action kam, muss er >= 10 bleiben!
         
-        stay_on_street = round(0 if stay_on_street < 5 else 20 if stay_on_street >= 10 else stay_on_street-5, 3)
+        stay_on_street = round(0 if stay_on_street < 5 else 15 if stay_on_street >= 10 else stay_on_street-5, 3)
         
         return progress-stay_on_street
 
@@ -254,7 +254,10 @@ class AbstractRLAgent(AbstractAgent):
         if not reason in self.freezeInfReasons:
             self.containers.freezeInf = True
             self.freezeInfReasons.append(reason)
-            self.containers.outputval.send_via_senderthread("pleaseFreeze", self.containers.inputval.timestamp)        
+            try:
+                self.containers.outputval.send_via_senderthread("pleaseFreeze", self.containers.inputval.timestamp)        
+            except:
+                pass
         
         
     def unFreezeEverything(self, reason):
@@ -274,7 +277,10 @@ class AbstractRLAgent(AbstractAgent):
             del self.freezeInfReasons[self.freezeInfReasons.index(reason)] 
             if len(self.freezeInfReasons) == 0:
                 self.containers.freezeInf = False
-                self.containers.outputval.send_via_senderthread("pleaseUnFreeze", self.containers.inputval.timestamp)
+                try: #TODO: stattdessen ne variable unity_connected ahben!
+                    self.containers.outputval.send_via_senderthread("pleaseUnFreeze", self.containers.inputval.timestamp)
+                except:
+                    pass
         except ValueError:
             pass #you have nothing to do if it wasnt in there anyway.                      
 

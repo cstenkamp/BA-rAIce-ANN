@@ -147,8 +147,12 @@ class ReinfNetAgent(AbstractRLAgent):
         if self.learn_which == self.online_cnn:
             self.lock.acquire()
             if self.reinfNetSteps % self.rl_config.copy_target_all == 0:
+                self.freezeEverything("saveNet")
                 with self.graph.as_default():    
                     self.session.run([target.assign(online) for online, target in zip(get_variables(scope="onlinenet"), get_variables(scope="targetnet"))])
+                if self.containers.showscreen:
+                    infoscreen.print(time.strftime("%H:%M:%S", time.gmtime()), containers= self.containers, wname="Last Targetnet Copy")
+                self.unFreezeEverything("saveNet")
             self.lock.release()
         
 
