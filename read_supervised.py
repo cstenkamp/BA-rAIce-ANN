@@ -261,22 +261,28 @@ class TPList(object):
         return np.array(lookaheads), np.array(visions), np.array(targets), np.array(speeds)
 
 
+################################################################################
+
+
 def inflate_speed(speed, numberneurons, asonehot):
-    speed = max(0,int(round(speed)))
+    speed = min(max(0,int(round(speed))), MAXSPEED)
     result = [0]*numberneurons
     if speed < 1:
         return result
-    maxone = min(max(0,round((min([speed,MAXSPEED])/MAXSPEED)*numberneurons)), numberneurons-1)
+    maxone = min(max(0,round((speed/MAXSPEED)*numberneurons)), numberneurons-1)
     if asonehot:
         result[maxone] = 1
     else:
-        for i in range(maxone+1):
+        brokenspeed = round((speed/numberneurons)-maxone, 2)
+        if brokenspeed < 0:
+            maxone -= 1
+        for i in range(maxone):
             result[i] = 1
+        result[maxone] = round((speed/numberneurons)-maxone, 2)
         
     return result
 
 
-################################################################################
         
 def cutoutandreturnvectors(string):
     allOneDs  = []
