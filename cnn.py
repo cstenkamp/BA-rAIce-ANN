@@ -31,7 +31,7 @@ class Config(object):
     reset_if_wrongdirection = True
     
     image_dims = [30,45] 
-    msperframe = 200 #50   #ACHTUNG!!! Dieser wert wird von unity überschrieben!!!!! #TODO: dass soll mit unity abgeglichen werden!
+    msperframe = 125 #50   #ACHTUNG!!! Dieser wert wird von unity überschrieben!!!!! #TODO: dass soll mit unity abgeglichen werden!
     use_second_camera = False
     use_CTimestamp = False
     
