@@ -10,6 +10,7 @@ import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' #so that TF doesn't show its warnings
 import time
 import math
+import sys
 #====own classes====
 import read_supervised
 from myprint import myprint as print
@@ -31,9 +32,8 @@ class Config(object):
     reset_if_wrongdirection = True
     
     image_dims = [30,45] 
-    msperframe = 125 #50   #ACHTUNG!!! Dieser wert wird von unity überschrieben!!!!! #TODO: dass soll mit unity abgeglichen werden!
-    use_second_camera = False
-    use_CTimestamp = False
+    msperframe = 100 #50   #ACHTUNG!!! Dieser wert wird von unity überschrieben!!!!! #TODO: dass soll mit unity abgeglichen werden!
+    use_second_camera = True
     
     batch_size = 32
     keep_prob = 0.8
@@ -90,6 +90,7 @@ class RL_Config(Config):
     visionvecdtype = np.int8 #wäre es np.bool würde er den rand als street sehen!
     keep_memory = True
     saveMemoryAllMins = 45
+    train_for = sys.maxsize-1
    
     ForEveryInf, ComesALearn = False, False
     
@@ -436,7 +437,7 @@ class CNN(object):
                 feed_dict[self.speed_input] = np.expand_dims(speed_disc, axis=0)
             
             return True, session.run([self.argmax, self.q], feed_dict=feed_dict)
-        
+
         
         
     def calculate_value(self, session, visionvec, speed, hframes):

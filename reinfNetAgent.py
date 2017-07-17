@@ -51,8 +51,8 @@ class ReinfNetAgent(AbstractRLAgent):
                     return
 
 
-#                ##############DELETETHISPART##############
-#                self.containers.outputval.send_via_senderthread("[0, 0, 0]", self.containers.inputval.timestamp)
+#                ##############DELETETHISPART############## #to check how fast the pure socket connection, whithout ANN, is
+#                self.containers.outputval.send_via_senderthread("[0, 0, 0]", self.containers.inputval.CTimestamp, self.containers.inputval.STimestamp)
 #                return
 #                ##############DELETETHISPART ENDE##############
                 
@@ -83,7 +83,7 @@ class ReinfNetAgent(AbstractRLAgent):
                         infoscreen.print(self.reinfNetSteps, "Iterations: >"+str(self.numIterations), containers= self.containers, wname="ReinfLearnSteps")
 
                 self.containers.inputval.addResultAndBackup(original) 
-                self.containers.outputval.update(returnstuff, self.containers.inputval.timestamp)  
+                self.containers.outputval.update(returnstuff, self.containers.inputval.CTimestamp, self.containers.inputval.STimestamp)  
 
 
                 #im original DQN learnt er halt jetzt direkt, aber er kann doch besser durchgehend lernen?

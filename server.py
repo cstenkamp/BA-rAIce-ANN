@@ -67,7 +67,7 @@ def make_otherinputs(othervecs):
 
 
 MININT = -sys.maxsize+1
-TCP_IP = 'localhost' #TODO check if it also works over internet, in the CLuster
+TCP_IP = 'localhost' #TODO check if it also works over internet, in the Cluster
 TCP_RECEIVER_PORT = 6435
 TCP_SENDER_PORT = 6436
 NUMBER_ANNS = 1 #only one of those will execute the learning, in dauerLearnANN in LearnThread
@@ -172,7 +172,7 @@ class receiver_thread(threading.Thread):
         self.clientsocket = clientsocket
         self.containers = None
         self.killme = False
-        self.timestamp = 0
+        self.CTimestamp, self.STimestamp = MININT, MININT
         
     def run(self):
         print("Starting receiver_thread")
@@ -181,35 +181,23 @@ class receiver_thread(threading.Thread):
                 if not self.containers.freezeInf:
                     data = self.clientsocket.myreceive()
                     if data: 
-                        print("received data:", data, level=10)   
+                        #print("received data:", data, level=10)   
                         
                         if self.handle_special_commands(copy.deepcopy(data)):
                             continue
                         elif data[:6] == "STime(":
-                            self.timestamp = float(data[6:data.find(")")])
-                            for i in self.containers.receiverthreads:
-                                if int(i.timestamp) < int(self.timestamp):
-                                    i.killme = True
                         
                             #we MUST have the inputval, otherwise there wouldn't be the possibility for historyframes.           
                             STime, CTime, visionvec, vvec2, allOneDs = cutoutandreturnvectors(data) 
+                            self.CTimestamp, self.STimestamp = CTime, STime
+                            for i in self.containers.receiverthreads:
+                                if int(i.STimestamp) < int(self.STimestamp):
+                                    i.killme = True
+                                    
                             print("PYTHON RECEIVES TIME:", STime, time.time()*1000, level=10)
                             
+                            self.containers.inputval.update(visionvec, vvec2, allOneDs, STime, CTime) 
                             
-                            if self.containers.sv_conf.use_CTimestamp:
-                                self.containers.inputval.update(visionvec, vvec2, allOneDs, CTime) 
-                            else:    
-                                self.containers.inputval.update(visionvec, vvec2, allOneDs, STime) 
-                            
-                                                 
-                            #CHANGE: only 1 agent 
-    #                        if len(self.containers.ANNs) == 1:
-    #                            self.containers.ANNs[0].runInference(UPDATE_ONLY_IF_NEW)
-    #                        else:                                                       
-    #                            thread = threading.Thread(target=self.runOneANN, args=()) #immediately returns if UPDATE_ONLY_IF_NEW and alreadyreadthread = threading.Thread(target=self.runInference_SaveResult, args=())
-    #                            thread.start() 
-                                #this thread here will also  send the result afterwards
-                                
                             self.containers.myAgent.runInference(UPDATE_ONLY_IF_NEW)
                         
             except TimeoutError:
@@ -239,19 +227,11 @@ class receiver_thread(threading.Thread):
             specialcommand = True    
         return specialcommand
     
-    #CHANGE: only 1 agent
-#    #this will be run in a separate thread
-#    def runOneANN(self):
-#        for currANN in self.containers.ANNs:
-#            if not currANN.isbusy:
-#                currANN.runInference(UPDATE_ONLY_IF_NEW)
-#                break
-            
 
 ###############################################################################
 
 def resetUnity(containers, punish=0):
-    containers.outputval.send_via_senderthread("pleasereset", containers.inputval.timestamp)
+    containers.outputval.send_via_senderthread("pleasereset", containers.inputval.CTimestamp, containers.inputval.STimestamp)
     resetServer(containers, containers.inputval.msperframe, punish)
     
 
@@ -261,10 +241,10 @@ def resetServer(containers, mspersec, punish=0):
 
 
 def freezeUnity(containers):
-    containers.outputval.send_via_senderthread("pleaseFreeze", containers.inputval.timestamp)
+    containers.outputval.send_via_senderthread("pleaseFreeze", containers.inputval.CTimestamp, containers.inputval.STimestamp)
 
 def unFreezeUnity(containers):
-    containers.outputval.send_via_senderthread("pleaseUnFreeze", containers.inputval.timestamp)
+    containers.outputval.send_via_senderthread("pleaseUnFreeze", containers.inputval.CTimestamp, containers.inputval.STimestamp)
     
    
 ###############################################################################
@@ -285,7 +265,7 @@ class InputValContainer(object):
             self.visionvec = np.zeros([config.image_dims[0], config.image_dims[1]], dtype=rl_conf.visionvecdtype)
             self.previous_visionvec = None
         self.otherinputs = empty_inputs() #defined at the top, is a namedtuple
-        self.timestamp = MININT
+        self.CTimestamp, self.STimestamp = MININT, MININT
         self.containers = None
         self.alreadyread = True
         self.previous_action = None
@@ -294,7 +274,7 @@ class InputValContainer(object):
         self.hit_a_wall = False
         
         
-    def update(self, visionvec, vvec2, othervecs, timestamp):
+    def update(self, visionvec, vvec2, othervecs, STimestamp, CTimestamp):
         
         def is_new(visionvec, otherinputs): #wäre überflüssig das auch anhand von vvec2 zu machen
             if self.config.history_frame_nr == 1:
@@ -345,10 +325,10 @@ class InputValContainer(object):
                     self.containers.wrongdirectiontime = 0
                                   
                 self.alreadyread = False
-                self.timestamp = timestamp
-                print("Updated Input-Vec from", timestamp, level=2)
+                self.CTimestamp, self.STimestamp = CTimestamp, STimestamp
+                print("Updated Input-Vec from", STimestamp, level=2)
             else:
-                print("No Input-Vec upgrading needed from", timestamp, level=2)
+                print("No Input-Vec upgrading needed from", STimestamp, level=2)
         finally:
             self.lock.release()
             
@@ -394,7 +374,7 @@ class InputValContainer(object):
                 self.visionvec = np.zeros([self.config.image_dims[0], self.config.image_dims[1]], dtype=self.containers.rl_conf.visionvecdtype)
                 self.previous_visionvec = None
             self.otherinputs = empty_inputs()
-            self.timestamp = 0
+            self.CTimestamp, self.STimestamp = MININT, MININT
             self.alreadyread = True
             self.previous_action = None
             self.previous_otherinputs = None
@@ -424,22 +404,22 @@ class OutputValContainer(object):
     def __init__(self):
         self.lock = threading.Lock()
         self.value = ""
-        self.timestamp = 0
+        self.CTimestamp, self.STimestamp = MININT, MININT
         self.containers = None
         #self.alreadysent = True #nen leeres ding braucht er nicht schicken
         
     #you update only if the new input-timestamp > der alte (in case on ANN-Thread was superslow and thus outdated)
-    def update(self, withwhatval, itstimestamp):
+    def update(self, withwhatval, CTimestamp, STimestamp):
         logging.debug('Outputval-Update: Waiting for lock')
         self.lock.acquire()
         try:
             logging.debug('Acquired lock')
-            if (UPDATE_ONLY_IF_NEW and int(self.timestamp) < int(itstimestamp)) or (not UPDATE_ONLY_IF_NEW and int(self.timestamp) <= int(itstimestamp)):
+            if (UPDATE_ONLY_IF_NEW and int(self.STimestamp) < int(STimestamp)) or (not UPDATE_ONLY_IF_NEW and int(self.STimestamp) <= int(STimestamp)):
                 self.value = withwhatval
-                self.timestamp = itstimestamp #es geht nicht um jetzt, sondern um dann als das ANN gestartet wurde
+                self.CTimestamp, self.STimestamp = CTimestamp, STimestamp #es geht nicht um jetzt, sondern um dann als das ANN gestartet wurde
                 #self.alreadysent = False
                 print("Updated output-value to",withwhatval)
-                self.send_via_senderthread(self.value, self.timestamp)
+                self.send_via_senderthread(self.value, self.CTimestamp, self.STimestamp)
             else:
                 print("Didn't update output-value because the new one wouldn't be newer")
         finally:
@@ -451,20 +431,20 @@ class OutputValContainer(object):
         try:
             logging.debug('Acquired lock')
             self.value = ""
-            self.timestamp = MININT
+            self.CTimestamp, self.STimestamp = MININT, MININT
             logging.debug("Resettet output-value")
         finally:
             self.lock.release()
             
             
-    def send_via_senderthread(self, value, timestamp):
+    def send_via_senderthread(self, value, CTimestamp, STimestamp):
         #nehme die erste verbindung die keinen error schemißt!   
-        print("PYTHON SENDING TIME:", timestamp, time.time()*1000, level=10)
+        print("PYTHON SENDING TIME:", STimestamp, time.time()*1000, level=10)
         if self.containers.KeepRunning:
             assert len(self.containers.senderthreads) > 0, "There is no senderthread at all! How will I send?"
             for i in range(len(self.containers.senderthreads)):
                 try:
-                    self.containers.senderthreads[i].send(value, timestamp)
+                    self.containers.senderthreads[i].send(value, CTimestamp, STimestamp)
                 except (ConnectionResetError, ConnectionAbortedError):
                         #if unity restarted, the old connection is now useless and should be deleted
                         print("I assume you just restarted Unity.")
@@ -514,8 +494,8 @@ class sender_thread(threading.Thread):
         #ist er jetzt wirklich ganz weg?
         
         
-    def send(self, result, timestamp):
-        tosend = str(result) + "Time(" +str(timestamp)+")"
+    def send(self, result, CTimestamp, STimestamp):
+        tosend = str(result) + "CTime(" +str(CTimestamp)+")"+ "STime(" +str(STimestamp)+")"
         print("Sending", tosend, level=3)
         self.clientsocket.mysend(tosend)
 
@@ -577,12 +557,8 @@ def main(sv_conf, rl_conf, only_sv, no_learn, show_screen, start_fresh, nomemory
         agent = svPlayNetAgent.PlayNetAgent
     else:
         agent = reinfNetAgent.ReinfNetAgent #this one, inheriting from abstractRLAgent, will have a memory
+
         
-    #CHANGE: only one agent. that agent can itself run the runInference in separate threads, if need be.
-#    for i in range(NUMBER_ANNS): #only one of those will execute the learning, in dauerLearnANN in LearnThread
-#        ANN = agent(i, sv_conf, containers, rl_conf, start_fresh)
-#        containers.ANNs.append(ANN)
-    
     containers.myAgent = agent(sv_conf, containers, rl_conf, start_fresh) #executes dauerLearnANN in LearnThread
                                                                           #executes runInference in receiver_thread
     if not only_sv:
