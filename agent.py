@@ -70,6 +70,9 @@ class AbstractRLAgent(AbstractAgent):
         self.numLearnAfterInference = 0
         self.freezeInfReasons = []
         self.freezeLearnReasons = []
+        
+        self.wallhitPunish = 15;
+        self.wrongDirPunish = 100;
     
     
     def addToMemory(self, otherinputs, visionvec): 
@@ -177,20 +180,25 @@ class AbstractRLAgent(AbstractAgent):
 
 
         
-    def calculateReward(self, inputval):
-        progress_old = inputval.previous_otherinputs.ProgressVec.Progress
-        progress_new = inputval.otherinputs.ProgressVec.Progress
-        if progress_old > 90 and progress_new < 10:
-            progress_new += 100
-        progress = round(progress_new-progress_old,3)*200
-        
-        stay_on_street = abs(inputval.otherinputs.CenterDist)
-        #wenn er >= 10 war und seitdem keine neue action kam, muss er >= 10 bleiben!
-        
-        stay_on_street = round(0 if stay_on_street < 5 else 15 if stay_on_street >= 10 else stay_on_street-5, 3)
-        
-        return progress-stay_on_street
+#    def calculateReward(self, inputval):
+#        progress_old = inputval.previous_otherinputs.ProgressVec.Progress
+#        progress_new = inputval.otherinputs.ProgressVec.Progress
+#        if progress_old > 90 and progress_new < 10:
+#            progress_new += 100
+#        progress = round(progress_new-progress_old,3)*200
+#        
+#        stay_on_street = abs(inputval.otherinputs.CenterDist)
+#        #wenn er >= 10 war und seitdem keine neue action kam, muss er >= 10 bleiben!
+#        
+#        stay_on_street = round(0 if stay_on_street < 5 else self.wallhitPunish if stay_on_street >= 10 else stay_on_street-5, 3)
+#        
+#        return progress-stay_on_street
 
+
+    def calculateReward(self, inputval):
+        stay_on_street = abs(inputval.otherinputs.CenterDist)
+        stay_on_street = round(0 if stay_on_street < 5 else self.wallhitPunish if stay_on_street >= 10 else stay_on_street-5, 3)
+        return inputval.otherinputs.SpeedSteer.speedInStreetDir-stay_on_street
 
 
     
