@@ -100,8 +100,8 @@ class CNN(object):
         #fc_layer(input_tensor, input_size, output_size, name, is_trainable, batchnorm, is_training,                         weightdecay=False, act=None, keep_prob=1, trainvars=None, varSum=None, initializer=None):
         fc1 = fc_layer(conv2_flat, flat_size, final_neuron_num*20, "FC1", trainable("FC1"), False, for_training, False, tf.nn.relu, self.keep_prob, self.trainvars, variable_summary, initializer=ini)                 
         if self.config.speed_neurons:
-            fc1 = tf.concat([fc1, spinputs], 1)        
-        q = fc_layer(fc1, final_neuron_num*20+self.config.speed_neurons, final_neuron_num, "FC2", trainable("FC2"), False, for_training, False, None, self.keep_prob, self.trainvars, variable_summary, initializer=ini) 
+            fc1 = tf.concat([fc1, spinputs], 1)         #beim letztem layer btw kein dropout
+        q = fc_layer(fc1, final_neuron_num*20+self.config.speed_neurons, final_neuron_num, "FC2", trainable("FC2"), False, for_training, False, None, 1, self.trainvars, variable_summary, initializer=ini) 
 
 
         q = tf.cond(tf.reduce_sum(spinputs) < 1, lambda: settozero(q), lambda: q)#wenn du stehst, brauchste dich nicht mehr für die ohne gas zu interessieren

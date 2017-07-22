@@ -12,6 +12,7 @@ import math
 import numpy as np
 
 
+
 def weight_variable(shape, name, weightdecay, initializer=None, is_trainable=True):
     if weightdecay > 0:    
         weight_decay = tf.constant(weightdecay, dtype=tf.float32) #https://stackoverflow.com/questions/36570904/how-to-define-weight-decay-for-individual-layers-in-tensorflow
@@ -52,9 +53,9 @@ def convolutional_layer(input_tensor, input_channels, kernel_size, stride, outpu
         if batchnorm:
             h_act = tf.layers.batch_normalization(h_act, training=is_training, epsilon=1e-7, momentum=.95)
         if pool:
-            h_pool = max_pool_2x2(h_act)
-        tf.summary.histogram("activations", h_pool)
-        return h_pool
+            h_act = max_pool_2x2(h_act)
+        tf.summary.histogram("activations", h_act)
+        return h_act
     
 
 #is_trainable = True if not self.is_reinforcement else not (name in rl_not_trainables)
