@@ -91,17 +91,17 @@ class CNN(object):
 
         rs_input = tf.reshape(inputs, [-1, self.config.image_dims[0], self.config.image_dims[1], self.stacksize]) #final dimension = number of color channels*number of stacked (history-)frames                  
         self.keep_prob = tf.Variable(tf.constant(1.0), trainable=False) #wenn nicht gefeedet ist sie standardmäßig 1        
-        flat_size = math.ceil(self.config.image_dims[0]/4)*math.ceil(self.config.image_dims[1]/4/(2*2))*64 #die /(2*2) ist wegen dem einen stride=2 
+        flat_size = math.ceil(self.config.image_dims[0]/4)*math.ceil(self.config.image_dims[1]/4)*64 #die /(2*2) ist wegen dem einen stride=2 
         ini = tf.truncated_normal_initializer(stddev=1.0 / math.sqrt(float(self.config.image_dims[0]*self.config.image_dims[1])))
         #convolutional_layer(input_tensor, input_channels, kernel_size, stride, output_channels, name, act, is_trainable, batchnorm, is_training, weightdecay=False, pool=True, trainvars=None, varSum=None, initializer=None)
-        conv1 = convolutional_layer(rs_input, self.stacksize, [5,5], 2, 32, "Conv1", tf.nn.relu, trainable("Conv1"), True, for_training, False, True, self.trainvars, variable_summary, initializer=ini) #reduces to x//2*y//2
-        conv2 = convolutional_layer(conv1, 32, [3,3], 1, 64, "Conv2", tf.nn.relu, trainable("Conv2"), True, for_training, False, True, self.trainvars, variable_summary, initializer=ini)                #reduces to x//4*y//4
-        conv2_flat =  tf.reshape(conv2, [-1, flat_size])
+        conv1 = convolutional_layer(rs_input, self.stacksize, [5,5], 1, 32, "Conv1", tf.nn.relu, trainable("Conv1"), False, for_training, False, True, self.trainvars, variable_summary, initializer=ini) #reduces to x//2*y//2
+        conv2 = convolutional_layer(conv1, 32, [5,5], 1, 64, "Conv2", tf.nn.relu, trainable("Conv2"), False, for_training, False, True, self.trainvars, variable_summary, initializer=ini)                #reduces to x//4*y//4
+        conv2_flat =  tf.reshape(conv2, [-1, flat_size])                                                                #x//4*y//4+speed_neurons
+        #fc_layer(input_tensor, input_size, output_size, name, is_trainable, batchnorm, is_training,                         weightdecay=False, act=None, keep_prob=1, trainvars=None, varSum=None, initializer=None):
+        fc1 = fc_layer(conv2_flat, flat_size, final_neuron_num*20, "FC1", trainable("FC1"), False, for_training, False, tf.nn.relu, self.keep_prob, self.trainvars, variable_summary, initializer=ini)                 
         if self.config.speed_neurons:
-            conv2_flat = tf.concat([conv2_flat, spinputs], 1)                                                                        #x//4*y//4+speed_neurons
-        #fc_layer(input_tensor, input_size, output_size, name, is_trainable, batchnorm, is_training,                                      weightdecay=False, act=None, keep_prob=1, trainvars=None, varSum=None, initializer=None):
-        fc1 = fc_layer(conv2_flat, flat_size+self.config.speed_neurons, final_neuron_num*20, "FC1", trainable("FC1"), True, for_training, False, tf.nn.relu, self.keep_prob, self.trainvars, variable_summary, initializer=ini)                 
-        q = fc_layer(fc1, final_neuron_num*20, final_neuron_num, "FC2", trainable("FC2"), True, for_training,   False, None, self.keep_prob, self.trainvars, variable_summary, initializer=ini) 
+            conv2_flat = tf.concat([fc1, spinputs], 1)        
+        q = fc_layer(fc1, final_neuron_num*20+self.config.speed_neurons, final_neuron_num, "FC2", trainable("FC2"), False,                             for_training, False, None, self.keep_prob, self.trainvars, variable_summary, initializer=ini) 
 
         q = tf.cond(tf.reduce_sum(spinputs) < 1, lambda: settozero(q), lambda: q)#wenn du stehst, brauchste dich nicht mehr für die ohne gas zu interessieren
         q_max = tf.reduce_max(q, axis=1)

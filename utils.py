@@ -79,7 +79,8 @@ def fc_layer(input_tensor, input_size, output_size, name, is_trainable, batchnor
             h_fc = act(h_fc)
         if is_trainable:
             tf.summary.histogram("activations", h_fc)
-            h_fc = tf.nn.dropout(h_fc, keep_prob) 
+            if is_training:
+                h_fc = tf.nn.dropout(h_fc, keep_prob) 
         if batchnorm:
             h_fc = tf.layers.batch_normalization(h_fc, training=is_training, epsilon=1e-7, momentum=.95) #training can be a python bool!
         return h_fc
