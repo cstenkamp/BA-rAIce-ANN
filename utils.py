@@ -66,13 +66,13 @@ def fc_layer(input_tensor, input_size, output_size, name, is_trainable, batchnor
             initializer = tf.random_uniform_initializer(1/np.sqrt(float(input_size)), 1/np.sqrt(float(input_size)))
             
         if is_trainable:
-            trainvars["W_%s" % name] = weight_variable([input_size, output_size], "W_%s" % name, weightdecay, is_trainable=True)
+            trainvars["W_%s" % name] = weight_variable([input_size, output_size], "W_%s" % name, weightdecay, is_trainable=True, initializer=initializer)
             varSum(trainvars["W_%s" % name])
             trainvars["b_%s" % name] = bias_variable([output_size], "b_%s" % name, is_trainable=True)
             varSum(trainvars["b_%s" % name])
             h_fc =  tf.matmul(input_tensor, trainvars["W_%s" % name]) + trainvars["b_%s" % name]
         else:
-            W = weight_variable([input_size, output_size], "W_%s" % name, weightdecay, is_trainable=False)
+            W = weight_variable([input_size, output_size], "W_%s" % name, weightdecay, is_trainable=False, initializer=initializer)
             b = bias_variable([output_size], "b_%s" % name, is_trainable=False)
             h_fc =  tf.matmul(input_tensor, W) + b
         if act is not None:
