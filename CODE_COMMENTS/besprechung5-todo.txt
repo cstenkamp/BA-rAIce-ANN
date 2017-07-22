@@ -1,12 +1,31 @@
--eine streckenbreite mehr sicht nach vorn
--unity einen wert immer genau 110 MS nach dem senden nutzen lassen (ist die max-avg-server-time) (sodass der genau 220/320 (je nachdem ob 10/20FPS) reaktionszeit hat)
--unity doch smoothen lassen "alter input war gas = 0, python sagt gas = 1, ich mach bis zum nächstem shottetem-frame von 0 bis 1" (optional)
+-------------------------------------------------------DONE----------------------------------------------------------------------------
+---PYTHON---
 -playnetagent broke :(
+-speed-neurons: der letzte ist gebrochener wert 
+-updates im DQN-CNN (wo der speedinput reingeht, stride, ...)
+-
+
+
+---UNITY---
+-eine streckenbreite mehr sicht nach vorn
+-optional zweite Kamera, eine sehr weit reingezoomt, eine sehr weit raus (präzisere ortung. Sind untereinander gestackt, verdoppelt in pyhton quasi nur historyframes)
+-einige neue othervecs von unity nach python
+-Unity hat ne fixe Zeit (50ms) wie lange nach dem SENDEN es einen python-wert nutzt (max-avg-server-time)
+-10FPS aktuell, 20 FPS sind locker möglich in realtime (yay)
+-reward ist jetzt geschwindigkeit IN RICHUNG DER STRAßE, wie im ddpg paper
+
+
+---GENERELL---
+-Es gibt 2 Timestamps: CTime (creationtime) which is unity-time, precise inside of unity and stops when unity is frozen, and STime(sending-time) which eg. counts how long pythons RT is
+
+-------------------------------------------------------TODO----------------------------------------------------------------------------
+-Gleichzeitig inference und lernen, beides auf der cpu, ist was für die 300ms reaktionszeit sorgt!! mit -nolearn hab ich 20-30ms Zeit von python!
+  --> Lernen muss entweder remote, oder abwechselnd, oder auf GPU (falls letzteres geht)
+
+-unity doch smoothen lassen "alter input war gas = 0, python sagt gas = 1, ich mach bis zum nächstem shottetem-frame von 0 bis 1" (optional)
 -dropout kann weg
 -leons komplette kurs-slides (besonders alex's ddpg und leons filler session!) anschauen [proof by authority by karpathy] 
 [-mal 4 conv + 1 FC ausprobieren] nach continuous control ddpg
--speed-neurons: der letzte ist gebrochener wert 
--zweite kamera für präzisere ortung, die unter die anderen gestacked ist [also in die selbe dim wie die historyframes]
 -supervised overrepresentation of curves, again
 !!DDPG!!
 -randomaction mit ner gaußverteilung und wie im intrinsic-motivation paper

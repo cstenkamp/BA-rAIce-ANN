@@ -39,7 +39,7 @@ class PlayNetAgent(AbstractAgent):
                 self.isbusy = True 
                 otherinputs, visionvec = self.containers.inputval.read()
                 returnstuff, original = self.performNetwork(otherinputs, visionvec)
-                self.containers.outputval.update(returnstuff, self.containers.inputval.timestamp)    
+                self.containers.outputval.update(returnstuff, self.containers.inputval.CTimestamp, self.containers.inputval.STimestamp)    
                 self.isbusy = False
             finally:
                 self.lock.release()
@@ -74,5 +74,5 @@ class PlayNetAgent(AbstractAgent):
             ckpt = tf.train.get_checkpoint_state(self.config.checkpoint_dir) 
             assert ckpt and ckpt.model_checkpoint_path, "I need a supervisedly pre-trained net!"
             self.saver.restore(self.session, ckpt.model_checkpoint_path)
-            print("network %s initialized" %str(self.number+1))
+            print("network initialized")
             self.isinitialized = True

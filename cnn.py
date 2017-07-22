@@ -10,153 +10,14 @@ import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' #so that TF doesn't show its warnings
 import time
 import math
-import sys
 #====own classes====
 import read_supervised
 from myprint import myprint as print
+import config 
+from utils import convolutional_layer, fc_layer, variable_summary
 
 SUMMARYALL = 1000
 
-class Config(object):
-    LapFolderName = "SavedLaps/"
-    log_dir = "SV_SummaryLogs/"  
-    checkpoint_dir = "SV_Checkpoints/"
-    #wir haben super-über-ordner für RLLearn, checkpoint, summarylogdir & memory für jede kombi aus hframes, secondcam, mspersec
-    
-    history_frame_nr = 4 #incl. dem jetzigem!
-    speed_neurons = 30 #wenn null nutzt er sie nicht
-    SPEED_AS_ONEHOT = False
-    steering_steps = 7
-    INCLUDE_ACCPLUSBREAK = False
-    
-    reset_if_wrongdirection = True
-    
-    image_dims = [30,45] 
-    msperframe = 100 #50   #ACHTUNG!!! Dieser wert wird von unity überschrieben!!!!! #TODO: dass soll mit unity abgeglichen werden!
-    use_second_camera = True
-    
-    batch_size = 32
-    keep_prob = 0.8
-    initscale = 0.1
-    max_grad_norm = 10
-    
-    iterations = 90     #90, 120
-    initial_lr = 0.005
-    lr_decay = 0.9
-    lrdecayafter = iterations//2  #//3 für 90, 120
-    minimal_lr = 1e-6 #mit diesen settings kommt er auf 0.01 loss, 99.7% correct inferences
-    checkpointall = 10
-    
-    def __init__(self):
-        assert not (self.use_second_camera and (self.history_frame_nr == 1)), "If you're using 2 cameras, you have to use historyframes!"
-        assert os.path.exists(self.LapFolderName), "No data to train on at all!"        
-        
-        self.log_dir = self.superfolder()+self.log_dir
-        if not os.path.exists(self.log_dir):
-            os.makedirs(self.log_dir)         
-            
-        self.checkpoint_dir = self.superfolder()+self.checkpoint_dir
-        if not os.path.exists(self.checkpoint_dir):
-            os.makedirs(self.checkpoint_dir) 
-
-    def superfolder(self):
-        return "data_"+str(self.history_frame_nr)+"hframes_"+("2cams_" if self.use_second_camera else "1cam_") + str(self.msperframe) + "msperframe/"
-
-
-
-
-class RL_Config(Config):
-    log_dir = "RL_SummaryLogs/"  
-    checkpoint_dir = "RL_Checkpoints/"
-    savememorypath = "./" #will be a pickle-file
-     
-    keep_prob = 1
-    max_grad_norm = 10
-    initial_lr = 0.001
-    #lr_decay = 1
-    
-    startepsilon = 0.2
-    epsilondecrease = 0.0001
-    minepsilon = 0.005
-    batchsize = 32
-    q_decay = 0.99
-    checkpointall = 300 #RLsteps, not inferences!
-    copy_target_all = 100
-    
-    replaystartsize = 0
-    memorysize = 30000
-    use_efficientmemory = True
-    use_constantbutbigmemory = False
-    visionvecdtype = np.int8 #wäre es np.bool würde er den rand als street sehen!
-    keep_memory = True
-    saveMemoryAllMins = 45
-    train_for = sys.maxsize-1
-   
-    ForEveryInf, ComesALearn = False, False
-    
-    #re-uses history_frame_nr, image_dims, steering_steps, speed_neurons, INCLUDE_ACCPLUSBREAK, SPEED_AS_ONEHOT
-    
-    def __init__(self):     
-        self.savememorypath = self.superfolder()+self.savememorypath
-        if not os.path.exists(self.savememorypath):
-            os.makedirs(self.savememorypath)
-                                              
-        self.log_dir = self.superfolder()+self.log_dir
-        if not os.path.exists(self.log_dir):
-            os.makedirs(self.log_dir)     
-            
-        self.checkpoint_dir = self.superfolder()+self.checkpoint_dir 
-        if not os.path.exists(self.checkpoint_dir):
-            os.makedirs(self.checkpoint_dir)                 
-                                    
-        assert os.path.exists(Config().checkpoint_dir), "I need a pre-trained model"
-
-
-
-    
-class DQN_Config(RL_Config):
-    batch_size = 32                 #minibatch size
-    memorysize = 1000000            #replay memory size
-    history_frame_nr = 4            #agent history length
-    copy_target_all = 10000         #target network update frequency (C)
-    q_decay = 0.99                  #discount factor
-    #action repeat & noop-max
-    initial_lr = 0.00025            #learning rate used by RMSProp
-    lr_decay = 1                    #as the lr seems to stay equal, no decay
-    rms_momentum = 0.95             #gradient momentum (=squared gradient momentum)
-    min_sq_grad = 0.1               #min squared gradient 
-    startepsilon = 1                #initial exploration
-    minepsilon = 0.1                #final exploration
-    finalepsilonframe = 1000000     #final exploration frame
-    replaystartsize = 50000         #replay start size
-    train_for = 50000000            #number of iterations to train for 
-    ForEveryInf, ComesALearn = 4, 1 #update frequency & how often it checks it
-    use_constantbutbigmemory = True
-    keep_memory = True
-
-    def __init__(self):
-        super().__init__()
-        
-        
-    
-class Half_DQN_Config(RL_Config):
-    batch_size = 32                     #minibatch size
-    memorysize = 100000                 #replay memory size
-    history_frame_nr = 4                #agent history length
-    copy_target_all = 2000              #target network update frequency (C)
-    q_decay = 0.99                      #discount factor
-    startepsilon = 1                    #initial exploration
-    minepsilon = 0.01                   #final exploration
-    finalepsilonframe = 200000          #final exploration frame
-    replaystartsize = 2000              #replay start size
-    train_for = 30000000                #number of iterations to train for 
-    ForEveryInf, ComesALearn = 400, 100 #update frequency & how often it checks it
-    use_constantbutbigmemory = True
-    keep_memory = True
-    
-    def __init__(self):
-        super().__init__()
-    
 
                                       
 class CNN(object):
@@ -188,15 +49,7 @@ class CNN(object):
                 self.q, self.argmax, self.q_max, self.action = self.inference(self.inputs, self.speed_input, final_neuron_num, rl_not_trainables, False) 
             
             
-    def variable_summary(self, var, what=""):
-      with tf.name_scope('summaries_'+what):
-        mean = tf.reduce_mean(var)
-        tf.summary.scalar('mean', mean)
-        stddev = tf.sqrt(tf.reduce_mean(tf.square(var - mean)))
-        tf.summary.scalar('stddev', stddev)
-        tf.summary.scalar('max', tf.reduce_max(var))
-        tf.summary.scalar('min', tf.reduce_min(var))
-        tf.summary.histogram('histogram', var)
+
     
     
     def set_placeholders(self, is_training, final_neuron_num):
@@ -221,63 +74,9 @@ class CNN(object):
     
     def inference(self, inputs, spinputs, final_neuron_num, rl_not_trainables, for_training=False):
         self.trainvars = {}
-        
-        def weight_variable(shape, name, is_trainable=True):
-          return tf.get_variable(name, shape, initializer= tf.truncated_normal_initializer(stddev=1.0 / math.sqrt(float(self.config.image_dims[0]*self.config.image_dims[1]))), trainable=is_trainable)
-                
-        def bias_variable(shape, name, is_trainable=True):
-          #Since we're using ReLU neurons, it is also good practice to initialize them with a slightly positive initial bias to avoid "dead neurons"
-          return tf.get_variable(name, shape, initializer=tf.constant_initializer(0.1), trainable=is_trainable)
-      
-        def conv2d(x, W):
-          return tf.nn.conv2d(x, W, strides=[1, 1, 1, 1], padding='SAME')
-        
-        def max_pool_2x2(x):
-          return tf.nn.max_pool(x, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding='SAME')
-  
-        def convolutional_layer(input_tensor, input_channels, output_channels, name, act):
-            with tf.name_scope(name):
-                is_trainable = True if not self.is_reinforcement else not (name in rl_not_trainables)
-                if is_trainable:
-                    self.trainvars["W_%s" % name] = weight_variable([5, 5, input_channels, output_channels], "W_%s" % name, is_trainable=True)
-                    self.variable_summary(self.trainvars["W_%s" % name])
-                    self.trainvars["b_%s" % name] = bias_variable([output_channels], "b_%s" % name, is_trainable=True)
-                    self.variable_summary(self.trainvars["b_%s" % name])
-                    h_act = act(conv2d(input_tensor, self.trainvars["W_%s" % name]) + self.trainvars["b_%s" % name])
-                else:
-                    W = weight_variable([5, 5, input_channels, output_channels], "W_%s" % name, is_trainable=False)
-                    b = bias_variable([output_channels], "b_%s" % name, is_trainable=False)
-                    h_act = act(conv2d(input_tensor, W) + b)                
-                h_pool = max_pool_2x2(h_act)
-                tf.summary.histogram("activations", h_pool)
-                return h_pool
-        
-        def fc_layer(input_tensor, input_size, output_size, name, act=None, do_dropout=False):
-            with tf.name_scope(name):
-                is_trainable = True if not self.is_reinforcement else not (name in rl_not_trainables)
-                self.trainvars["W_%s" % name] = weight_variable([input_size, output_size], "W_%s" % name, is_trainable=is_trainable)
-                self.variable_summary(self.trainvars["W_%s" % name])
-                self.trainvars["b_%s" % name] = bias_variable([output_size], "b_%s" % name, is_trainable=is_trainable)
-                self.variable_summary(self.trainvars["b_%s" % name])
-                h_fc =  tf.matmul(input_tensor, self.trainvars["W_%s" % name]) + self.trainvars["b_%s" % name]
-                if act is not None:
-                    h_fc = act(h_fc)
-                tf.summary.histogram("activations", h_fc)
-                if do_dropout:
-                    h_fc = tf.nn.dropout(h_fc, self.keep_prob) 
-                return h_fc
 
-        rs_input = tf.reshape(inputs, [-1, self.config.image_dims[0], self.config.image_dims[1],self.stacksize]) #final dimension = number of color channels
-                             
-        self.keep_prob = tf.Variable(tf.constant(1.0), trainable=False) #wenn nicht gefeedet ist sie standardmäßig 1        
-        h1 = convolutional_layer(rs_input, self.stacksize, 32, "Conv1", tf.nn.relu) #reduces to x//2*y//2
-        h2 = convolutional_layer(h1, 32, 64, "Conv2", tf.nn.relu)      #reduces to x//4*y//4
-        h_pool_flat =  tf.reshape(h2, [-1, math.ceil(self.config.image_dims[0]/4)*math.ceil(self.config.image_dims[1]/4)*64])
-        h_fc1 = fc_layer(h_pool_flat, math.ceil(self.config.image_dims[0]/4)*math.ceil(self.config.image_dims[1]/4)*64, final_neuron_num*20, "FC1", tf.nn.relu, do_dropout=for_training)                 
-        if self.config.speed_neurons:
-            h_fc1 = tf.concat([h_fc1, spinputs], 1)   #its lengths is now in any case 1024+speed_neurons
-        q = fc_layer(h_fc1, final_neuron_num*20+self.config.speed_neurons, final_neuron_num, "FC2", None, do_dropout=False) 
-
+        def trainable(name):
+            return True if not self.is_reinforcement else not (name in rl_not_trainables)
 
         def settozero(q):
             q = tf.squeeze(q)
@@ -290,8 +89,21 @@ class CNN(object):
             q = tf.expand_dims(q, 0)            
             return q
 
-        q = tf.cond(tf.reduce_sum(spinputs) < 1, lambda: settozero(q), lambda: q)#wenn du stehst, brauchste dich nicht mehr für die ohne gas zu interessieren
+        rs_input = tf.reshape(inputs, [-1, self.config.image_dims[0], self.config.image_dims[1], self.stacksize]) #final dimension = number of color channels*number of stacked (history-)frames                  
+        self.keep_prob = tf.Variable(tf.constant(1.0), trainable=False) #wenn nicht gefeedet ist sie standardmäßig 1        
+        flat_size = math.ceil(self.config.image_dims[0]/4)*math.ceil(self.config.image_dims[1]/4/(2*2))*64 #die /(2*2) ist wegen dem einen stride=2 
+        ini = tf.truncated_normal_initializer(stddev=1.0 / math.sqrt(float(self.config.image_dims[0]*self.config.image_dims[1])))
+        #convolutional_layer(input_tensor, input_channels, kernel_size, stride, output_channels, name, act, is_trainable, batchnorm, is_training, weightdecay=False, pool=True, trainvars=None, varSum=None, initializer=None)
+        conv1 = convolutional_layer(rs_input, self.stacksize, [5,5], 2, 32, "Conv1", tf.nn.relu, trainable("Conv1"), True, for_training, False, True, self.trainvars, variable_summary, initializer=ini) #reduces to x//2*y//2
+        conv2 = convolutional_layer(conv1, 32, [3,3], 1, 64, "Conv2", tf.nn.relu, trainable("Conv2"), True, for_training, False, True, self.trainvars, variable_summary, initializer=ini)                #reduces to x//4*y//4
+        conv2_flat =  tf.reshape(conv2, [-1, flat_size])
+        if self.config.speed_neurons:
+            conv2_flat = tf.concat([conv2_flat, spinputs], 1)                                                                        #x//4*y//4+speed_neurons
+        #fc_layer(input_tensor, input_size, output_size, name, is_trainable, batchnorm, is_training,                                      weightdecay=False, act=None, keep_prob=1, trainvars=None, varSum=None, initializer=None):
+        fc1 = fc_layer(conv2_flat, flat_size+self.config.speed_neurons, final_neuron_num*20, "FC1", trainable("FC1"), True, for_training, False, tf.nn.relu, self.keep_prob, self.trainvars, variable_summary, initializer=ini)                 
+        q = fc_layer(fc1, final_neuron_num*20, final_neuron_num, "FC2", trainable("FC2"), True, for_training,   False, None, self.keep_prob, self.trainvars, variable_summary, initializer=ini) 
 
+        q = tf.cond(tf.reduce_sum(spinputs) < 1, lambda: settozero(q), lambda: q)#wenn du stehst, brauchste dich nicht mehr für die ohne gas zu interessieren
         q_max = tf.reduce_max(q, axis=1)
         action = tf.argmax(q, axis=1) #Todo: kann gut sein dass ich action nicht brauche wenn ich argm hab
         y_conv = tf.nn.softmax(q)
@@ -316,7 +128,7 @@ class CNN(object):
     
     def training(self, loss, init_lr, optimizer_arg):
         #returns the minimizer op
-        self.variable_summary(loss, "loss") #tf.summary.scalar('loss', loss) #für TensorBoard
+        variable_summary(loss, "loss") #tf.summary.scalar('loss', loss) #für TensorBoard
         
         self.learning_rate = tf.Variable(tf.constant(self.config.initial_lr), trainable=False)
         self.new_lr = tf.placeholder(tf.float32, shape=[]) #diese und die nächste zeile nur nötig falls man per extra-aufruf die lr verändern will, so wie ich das mache braucht man die nicht.
@@ -513,11 +325,11 @@ def run_svtraining(config, dataset):
         
         
 def main():
-    config = Config()
+    conf = config.Config()
         
-    trackingpoints = read_supervised.TPList(config.LapFolderName, config.use_second_camera, config.msperframe, config.steering_steps, config.INCLUDE_ACCPLUSBREAK)
-    print("Number of samples: %s | Tracking every %s ms with %s historyframes" % (trackingpoints.numsamples, str(config.msperframe), str(config.history_frame_nr)), level=6)
-    run_svtraining(config, trackingpoints)        
+    trackingpoints = read_supervised.TPList(conf.LapFolderName, conf.use_second_camera, conf.msperframe, conf.steering_steps, conf.INCLUDE_ACCPLUSBREAK)
+    print("Number of samples: %s | Tracking every %s ms with %s historyframes" % (trackingpoints.numsamples, str(conf.msperframe), str(conf.history_frame_nr)), level=6)
+    run_svtraining(conf, trackingpoints)        
     
                 
                 

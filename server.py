@@ -17,6 +17,8 @@ import reinfNetAgent #is an agent, inherits all agent's functions
 import cnn
 from myprint import myprint as print
 import infoscreen
+import config
+
 
 current_milli_time = lambda: int(round(time.time() * 1000))
 logging.basicConfig(level=logging.ERROR, format='(%(threadName)-10s) %(message)s',) #legacy
@@ -221,8 +223,9 @@ class receiver_thread(threading.Thread):
             resetServer(self.containers, data[11:]) 
             specialcommand = True    
         if data[:7] == "wallhit":
-            self.containers.myAgent.punishLastAction(self.containers.myAgent.wallhitPunish)   #ist das doppelt gemoppelt damit, dass er eh das if punish > 10 beibehält?       
-            self.containers.myAgent.endEpisode()
+            if self.containers.usememory:
+                self.containers.myAgent.punishLastAction(self.containers.myAgent.wallhitPunish)   #ist das doppelt gemoppelt damit, dass er eh das if punish > 10 beibehält?       
+                self.containers.myAgent.endEpisode()
             resetServer(self.containers, self.containers.sv_conf.msperframe) 
             specialcommand = True    
         return specialcommand
@@ -562,11 +565,14 @@ def main(sv_conf, rl_conf, only_sv, no_learn, show_screen, start_fresh, nomemory
     containers.myAgent = agent(sv_conf, containers, rl_conf, start_fresh) #executes dauerLearnANN in LearnThread
                                                                           #executes runInference in receiver_thread
     if not only_sv:
+        containers.usememory = True
         if rl_conf.use_efficientmemory:
             containers.myAgent.memory = Efficientmemory(rl_conf.memorysize, containers, rl_conf.history_frame_nr, rl_conf.use_constantbutbigmemory) 
         else:
             containers.myAgent.memory = Precisememory(rl_conf.memorysize, containers)
-
+    else:
+        containers.usememory = False
+        
     print("Everything initialized", level=10)
     
     #THREAD 1 
@@ -618,14 +624,14 @@ def main(sv_conf, rl_conf, only_sv, no_learn, show_screen, start_fresh, nomemory
 
     
 if __name__ == '__main__':  
-    sv_conf = cnn.Config() #TODO: lass dir die infos instead von unity schicken.
+    sv_conf = config.Config() #TODO: lass dir die infos instead von unity schicken.
     
     if ("-DQN" in sys.argv):
-        rl_conf = cnn.DQN_Config()
+        rl_conf = config.DQN_Config()
     elif ("-half_DQN" in sys.argv):
-        rl_conf = cnn.Half_DQN_Config()
+        rl_conf = config.Half_DQN_Config()
     else:
-        rl_conf = cnn.RL_Config()
+        rl_conf = config.RL_Config()
     
     if "-nolearn" in sys.argv:
         rl_conf.minepsilon = 0
