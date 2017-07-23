@@ -50,10 +50,10 @@ def convolutional_layer(input_tensor, input_channels, kernel_size, stride, outpu
             W = weight_variable([kernel_size[0], kernel_size[1], input_channels, output_channels], "W_%s" % name, weightdecay, initializer=initializer, is_trainable=False)
             b = bias_variable([output_channels], "b_%s" % name, is_trainable=False)
             h_act = act(conv2d(input_tensor, W, stride) + b)        
-        if batchnorm:
-            h_act = tf.layers.batch_normalization(h_act, training=is_training, epsilon=1e-7, momentum=.95)
         if pool:
             h_act = max_pool_2x2(h_act)
+        if batchnorm:
+            h_act = tf.layers.batch_normalization(h_act, training=is_training, epsilon=1e-7, momentum=.95)
         tf.summary.histogram("activations", h_act)
         return h_act
     
@@ -81,7 +81,9 @@ def fc_layer(input_tensor, input_size, output_size, name, is_trainable, batchnor
         if is_trainable:
             tf.summary.histogram("activations", h_fc)
             if is_training:
-                h_fc = tf.nn.dropout(h_fc, keep_prob) 
+                if keep_prob < 1:
+                    h_fc = tf.nn.dropout(h_fc, keep_prob)
+                #h_fc = tf.cond(keep_prob < 1, lambda: tf.nn.dropout(h_fc, keep_prob), lambda: h_fc)
         if batchnorm:
             h_fc = tf.layers.batch_normalization(h_fc, training=is_training, epsilon=1e-7, momentum=.95) #training can be a python bool!
         return h_fc
