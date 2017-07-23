@@ -22,52 +22,49 @@ SUMMARYALL = 1000
                                       
 class CNN(object):
     
+    #learning on gpu and application on cpu: https://stackoverflow.com/questions/44255362/tensorflow-simultaneous-prediction-on-gpu-and-cpu
+    
     ######methods for BUILDING the computation graph######
-    def __init__(self, config, is_reinforcement, is_training=True, rl_not_trainables=[]):
+    
+    #since standard DQN consists of online and target-network, the latter of those will ONLY make inferences! If I want to run learning
+    #and inference in parallel, I can simply have the online-net in mode "rl_train", and the target-net in "inference"
+    def __init__(self, config, mode="sv_train", rl_not_trainables=[]):  #modes are "sv_train", "rl_train", "inference"
         #builds the computation graph, using the next few functions (this is basically the interface)
         self.config = config
-        self.is_reinforcement = is_reinforcement
-        self.iterations = 0
+        self.mode = mode
         final_neuron_num = self.config.steering_steps*4 if self.config.INCLUDE_ACCPLUSBREAK else self.config.steering_steps*3
         self.stacksize = self.config.history_frame_nr*2 if self.config.use_second_camera else self.config.history_frame_nr
-        
-        self.prepareNumIters()
-        self.inputs, self.targets, self.speed_input = self.set_placeholders(is_training, final_neuron_num)
-        
-        if is_training:
-            self.q, self.argmax, self.q_max, self.action = self.inference(self.inputs, self.speed_input, final_neuron_num, rl_not_trainables, True)         
-            if is_reinforcement:
-                self.loss = self.rl_loss_func(self.q, self.targets)
-                self.train_op = self.training(self.loss, config.initial_lr, optimizer_arg = tf.train.RMSPropOptimizer)     
-            else:
-                self.loss = self.loss_func(self.q, self.targets)
-                self.train_op = self.training(self.loss, config.initial_lr, optimizer_arg = tf.train.AdamOptimizer) 
-                self.accuracy = self.evaluation(self.argmax, self.targets)    
-            self.summary = tf.summary.merge_all() #für TensorBoard
-        else:
-            with tf.device("/cpu:0"): #less overhead by not trying to switch to gpu
-                self.q, self.argmax, self.q_max, self.action = self.inference(self.inputs, self.speed_input, final_neuron_num, rl_not_trainables, False) 
-            
-            
 
+        self.iterations = 0
+        self.prepareNumIters()
+        
+        if mode == "inference":
+            with tf.device("/cpu:0"): #less overhead by not trying to switch to gpu
+                self.inputs, self.targets, self.speed_input = self.set_placeholders(mode, final_neuron_num)
+                self.q, self.argmax, self.q_max, self.action = self.inference(self.inputs, self.speed_input, final_neuron_num, rl_not_trainables, False) 
+        else:
+            device = "/gpu:0" if config.device_has_gpu() else "/cpu:0"
+            with tf.device(device):
+                self.inputs, self.targets, self.speed_input = self.set_placeholders(mode, final_neuron_num)
+                self.q, self.argmax, self.q_max, self.action = self.inference(self.inputs, self.speed_input, final_neuron_num, rl_not_trainables, True)         
+                if mode == "rl_learn":
+                    self.loss = self.rl_loss_func(self.q, self.targets)
+                    self.train_op = self.training(self.loss, config.initial_lr, optimizer_arg = tf.train.RMSPropOptimizer)     
+                elif mode == "sv_learn":
+                    self.loss = self.loss_func(self.q, self.targets)
+                    self.train_op = self.training(self.loss, config.initial_lr, optimizer_arg = tf.train.AdamOptimizer) 
+                    self.accuracy = self.evaluation(self.argmax, self.targets)    
+                self.summary = tf.summary.merge_all() #für TensorBoard    
+            
     
-    
-    def set_placeholders(self, is_training, final_neuron_num):
+    def set_placeholders(self, mode, final_neuron_num):
         if self.config.history_frame_nr == 1:
             inputs = tf.placeholder(tf.float32, shape=[None, self.config.image_dims[0], self.config.image_dims[1]], name="inputs")  #first dim is none since inference has another batchsize than training
         else:
             inputs = tf.placeholder(tf.float32, shape=[None, self.stacksize, self.config.image_dims[0], self.config.image_dims[1]], name="inputs")  #first dim is none since inference has another batchsize than training
             
-            
-        if is_training:
-            targets = tf.placeholder(tf.float32, shape=[None, final_neuron_num], name="targets")    
-        else:
-            targets = None
-            
-        if self.config.speed_neurons:
-            speeds = tf.placeholder(tf.float32, shape=[None, self.config.speed_neurons], name="speed_inputs")
-        else:
-            speeds = None
+        speeds = tf.placeholder(tf.float32, shape=[None, self.config.speed_neurons], name="speed_inputs") if self.config.speed_neurons else None
+        targets = None if mode=="inference" else tf.placeholder(tf.float32, shape=[None, final_neuron_num], name="targets")    
             
         return inputs, targets, speeds
     
@@ -76,7 +73,7 @@ class CNN(object):
         self.trainvars = {}
 
         def trainable(name):
-            return True if not self.is_reinforcement else not (name in rl_not_trainables)
+            return True if self.mode=="sv_train" else not (name in rl_not_trainables)
 
         def settozero(q):
             q = tf.squeeze(q)
@@ -102,8 +99,6 @@ class CNN(object):
         if self.config.speed_neurons:
             fc1 = tf.concat([fc1, spinputs], 1)         #beim letztem layer btw kein dropout
         q = fc_layer(fc1, final_neuron_num*20+self.config.speed_neurons, final_neuron_num, "FC2", trainable("FC2"), False, for_training, False, None, 1, self.trainvars, variable_summary, initializer=ini) 
-
-        print(self.trainvars, level=10)
 
         q = tf.cond(tf.reduce_sum(spinputs) < 1, lambda: settozero(q), lambda: q)#wenn du stehst, brauchste dich nicht mehr für die ohne gas zu interessieren
         q_max = tf.reduce_max(q, axis=1)
@@ -140,7 +135,6 @@ class CNN(object):
             tvars = tf.trainable_variables()
             grads, _ = tf.clip_by_global_norm(tf.gradients(loss, tvars), self.config.max_grad_norm)
             
-        
         optimizer = optimizer_arg(self.learning_rate)
         
         if (optimizer_arg == tf.train.RMSPropOptimizer):
@@ -192,7 +186,7 @@ class CNN(object):
         
     
     
-    def train_fill_feed_dict(self, config, dataset, batchsize = 0, decay_lr = True):
+    def train_fill_feed_dict(self, config, dataset, batchsize = 0, decay_lr = True): 
         batchsize = config.batch_size if batchsize == 0 else batchsize
         _, visionvec, targets, speeds = dataset.next_batch(config, batchsize)
         if decay_lr:
@@ -233,15 +227,9 @@ class CNN(object):
         return accuracy, loss, dataset.numsamples
             
             
-    def run_inference(self, session, visionvec, otherinputs, hframes):
-        if hframes > 1:
-            if not type(visionvec[0]).__module__ == np.__name__:
-                return False, (None, None) #dann ist das input-array leer
-        else:
-            if not type(visionvec).__module__ == np.__name__:
-                return False, (None, None) #dann ist das input-array leer
-            assert (np.array(visionvec.shape) == np.array(self.inputs.get_shape().as_list()[1:])).all()
-            
+    def run_inference(self, session, visionvec, otherinputs):        
+        assert type(visionvec[0]).__module__ == np.__name__
+        assert (np.array(visionvec.shape) == np.array(self.inputs.get_shape().as_list()[1:])).all()
         
         with tf.device("/cpu:0"):
             visionvec = np.expand_dims(visionvec, axis=0)
@@ -254,7 +242,7 @@ class CNN(object):
 
         
         
-    def calculate_value(self, session, visionvec, speed, hframes):
+    def calculate_value(self, session, visionvec, speed):
         with tf.device("/cpu:0"):
             visionvec = np.expand_dims(visionvec, axis=0)
             feed_dict = {self.inputs: visionvec}  
@@ -274,7 +262,7 @@ def run_svtraining(config, dataset):
                                              
         with tf.name_scope("train"):
             with tf.variable_scope("cnnmodel", reuse=None, initializer=initializer):
-                cnn = CNN(config, is_reinforcement=False, is_training=True)
+                cnn = CNN(config, mode="sv_train")
         
         init = tf.global_variables_initializer()
         cnn.trainvars["global_step"] = cnn.global_step #TODO: try to remove this and see if it still works, cause it should

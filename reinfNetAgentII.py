@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 """
-Created on Thu Jul 20 23:02:36 2017
+Created on Wed May 10 13:31:54 2017
 
-@author: csten_000
+@author: nivradmin
 """
 
 import numpy as np
@@ -11,7 +11,6 @@ from tensorflow.contrib.framework import get_variables
 import time
 import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
-from collections import namedtuple
 #====own classes====
 from agent import AbstractRLAgent
 import cnn
@@ -37,69 +36,22 @@ class ReinfNetAgent(AbstractRLAgent):
         self.epsilon = self.rl_config.startepsilon
         self.initNetwork(start_fresh)
         self.learn_which = self.online_cnn    #TODO: target network ausschalten können
-        
    
 
-    def runInference(self, update_only_if_new):
+    def runInference(self, otherinputs, visionvec):
         if self.isinitialized:
-            if super().runInference(update_only_if_new) == "return":
+            if not self.checkIfInference():
                 return
+            super().runInference(otherinputs, visionvec)
                 
             self.lock.acquire()
-            try:
-                otherinputs, visionvec = self.containers.inputval.read()
-                
-                if self.addToMemory(otherinputs, visionvec):
-                    return
-
-
-#                ##############DELETETHISPART############## #to check how fast the pure socket connection, whithout ANN, is
-#                self.containers.outputval.send_via_senderthread("[0, 0, 0]", self.containers.inputval.CTimestamp, self.containers.inputval.STimestamp)
-#                return
-#                ##############DELETETHISPART ENDE##############
-                
-                #run ANN
-                global lastresult
-                try:
-                    
-                    if self.canLearn() and np.random.random() > self.epsilon:
-                        returnstuff, original = self.performNetwork(otherinputs, visionvec)
-                    else:
-                        returnstuff, original = self.randomAction(otherinputs.SpeedSteer.velocity, self.rl_config)
-                    
-                        if len(self.memory) >= self.rl_config.replaystartsize:
-                            try:
-                                self.epsilon = min(round(max(self.rl_config.startepsilon-((self.rl_config.startepsilon-self.rl_config.minepsilon)*((self.numIterations-self.rl_config.replaystartsize)/self.rl_config.finalepsilonframe)), self.rl_config.minepsilon), 5), 1)
-                            except:
-                                self.epsilon = min(round(max(self.epsilon-self.rl_config.epsilondecrease, self.rl_config.minepsilon), 5), 1)
-                            
-                        if self.containers.showscreen:
-                            infoscreen.print(self.epsilon, containers= self.containers, wname="Epsilon")
-                    lastresult = returnstuff, original
-                except IndexError: #kommt wenn inputval resettet wurde
-                    returnstuff, original = lastresult
-
-                if self.containers.showscreen:
-                    infoscreen.print(returnstuff, containers= self.containers, wname="Last command")
-                    if self.numIterations % 100 == 0:
-                        infoscreen.print(self.reinfNetSteps, "Iterations: >"+str(self.numIterations), containers= self.containers, wname="ReinfLearnSteps")
-
+            try: 
+                returnstuff, original = self.performNetwork(otherinputs, visionvec)
                 self.containers.inputval.addResultAndBackup(original) 
                 self.containers.outputval.update(returnstuff, self.containers.inputval.CTimestamp, self.containers.inputval.STimestamp)  
-
-
-                #im original DQN learnt er halt jetzt direkt, aber er kann doch besser durchgehend lernen?
-                
             finally:
                 self.lock.release()
     
-    
-    def addToMemory(self, otherinputs, visionvec):
-        super().addToMemory(otherinputs, visionvec)
-        if ONLY_START:
-            self.resetUnity()
-            return True
-   
 
     #dauerlearnANN kommt aus der AbstractRLAgent
                 
@@ -179,7 +131,7 @@ class ReinfNetAgent(AbstractRLAgent):
         super().performNetwork(otherinputs, visionvec)
         
         with self.graph.as_default():
-            check, (networkresult, qvals) = self.cnn.run_inference(self.session, visionvec, otherinputs, self.sv_config.history_frame_nr)
+            check, (networkresult, qvals) = self.ddpg.run_inference(self.session, visionvec, otherinputs, self.sv_config.history_frame_nr)
             if check:
                 throttle, brake, steer = self.dediscretize(networkresult[0], self.containers.rl_conf)
                 result = "["+str(throttle)+", "+str(brake)+", "+str(steer)+"]"
@@ -188,23 +140,7 @@ class ReinfNetAgent(AbstractRLAgent):
             else:
                 return lastresult
         
-
-    def showqvals(self, qvals):
-        amount = self.rl_config.steering_steps*4 if self.rl_config.INCLUDE_ACCPLUSBREAK else self.rl_config.steering_steps*3
-        b = []
-        for i in range(amount):
-            a = [0]*amount
-            a[i] = 1
-            b.append(str(self.dediscretize(a, self.rl_config)))
-        b = list(zip(b, qvals))
-        toprint = [str(i[0])[1:-1]+": "+str(i[1]) for i in b]
-        toprint = "\n".join(toprint)
-        
-        print(b, level=3)
-        if self.containers.showscreen:
-            infoscreen.print(toprint, containers= self.containers, wname="Current Q Vals")
-        
-            
+  
     #randomAction ist ebenfalls in der AbstractRLAgent     
             
 

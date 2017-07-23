@@ -9,12 +9,13 @@ import logging
 import numpy as np
 import sys
 from collections import namedtuple
+from functools import partial
 import copy
 
 #====own classes====
 import svPlayNetAgent
-import reinfNetAgent #is an agent, inherits all agent's functions
-import cnn
+#import reinfNetAgentII as reinfNetAgent #is an agent, inherits all agent's functions
+import reinfNetAgent
 from myprint import myprint as print
 import infoscreen
 import config
@@ -73,7 +74,6 @@ TCP_IP = 'localhost' #TODO check if it also works over internet, in the Cluster
 TCP_RECEIVER_PORT = 6435
 TCP_SENDER_PORT = 6436
 NUMBER_ANNS = 1 #only one of those will execute the learning, in dauerLearnANN in LearnThread
-UPDATE_ONLY_IF_NEW = False #sendet immer nach jedem update -> Wenn False sendet er wann immer er was kriegt
 SAVE_MEMORY_ON_EXIT = True
 
 
@@ -200,7 +200,7 @@ class receiver_thread(threading.Thread):
                             
                             self.containers.inputval.update(visionvec, vvec2, allOneDs, STime, CTime) 
                             
-                            self.containers.myAgent.runInference(UPDATE_ONLY_IF_NEW)
+                            self.containers.myAgent.runInference(*self.containers.inputval.read())
                         
             except TimeoutError:
                 if len(self.containers.receiverthreads) < 2:
@@ -242,13 +242,6 @@ def resetServer(containers, mspersec, punish=0):
     containers.outputval.reset()
     containers.inputval.reset(mspersec, nolock = True)
 
-
-def freezeUnity(containers):
-    containers.outputval.send_via_senderthread("pleaseFreeze", containers.inputval.CTimestamp, containers.inputval.STimestamp)
-
-def unFreezeUnity(containers):
-    containers.outputval.send_via_senderthread("pleaseUnFreeze", containers.inputval.CTimestamp, containers.inputval.STimestamp)
-    
    
 ###############################################################################
         
@@ -417,7 +410,7 @@ class OutputValContainer(object):
         self.lock.acquire()
         try:
             logging.debug('Acquired lock')
-            if (UPDATE_ONLY_IF_NEW and int(self.STimestamp) < int(STimestamp)) or (not UPDATE_ONLY_IF_NEW and int(self.STimestamp) <= int(STimestamp)):
+            if (self.containers.sv_conf.UPDATE_ONLY_IF_NEW and int(self.STimestamp) < int(STimestamp)) or (not self.containers.sv_conf.UPDATE_ONLY_IF_NEW and int(self.STimestamp) <= int(STimestamp)):
                 self.value = withwhatval
                 self.CTimestamp, self.STimestamp = CTimestamp, STimestamp #es geht nicht um jetzt, sondern um dann als das ANN gestartet wurde
                 #self.alreadysent = False
@@ -439,6 +432,13 @@ class OutputValContainer(object):
         finally:
             self.lock.release()
             
+            
+    def freezeUnity(self):
+        self.send_via_senderthread("pleaseFreeze", self.containers.inputval.CTimestamp, self.containers.inputval.STimestamp)
+
+    def unFreezeUnity(self):
+        self.send_via_senderthread("pleaseUnFreeze", self.containers.inputval.CTimestamp, self.containers.inputval.STimestamp)
+    
             
     def send_via_senderthread(self, value, CTimestamp, STimestamp):
         #nehme die erste verbindung die keinen error schemißt!   
@@ -546,7 +546,9 @@ def main(sv_conf, rl_conf, only_sv, no_learn, show_screen, start_fresh, nomemory
     containers.sv_conf = sv_conf
     containers.rl_conf = rl_conf   
     containers.keep_memory = False if nomemorykeep else containers.rl_conf.keep_memory
-    
+    containers.only_sv = only_sv
+    containers.no_learn = no_learn
+    containers.start_fresh = start_fresh
     
     containers.receiverportsocket = create_socket(TCP_RECEIVER_PORT)
     containers.senderportsocket = create_socket(TCP_SENDER_PORT)
@@ -586,9 +588,11 @@ def main(sv_conf, rl_conf, only_sv, no_learn, show_screen, start_fresh, nomemory
     SenderConnecterThread.start()
 
     #THREAD 3 (learning)
-    if not only_sv and not no_learn:
-        learnthread = threading.Thread(target=containers.myAgent.dauerLearnANN) #TODO: das hier geht nicht bei > 1 ANN #BUG
+    if not only_sv and not no_learn and rl_conf.learnMode == "parallel":
+        dauerLearn = partial(containers.myAgent.dauerLearnANN, learnSteps=rl_conf.train_for)
+        learnthread = threading.Thread(target=dauerLearn) #TODO: das hier geht nicht bei > 1 ANN #BUG
         learnthread.start()
+
     
    #THREAD 4 (self/GUI)
     try:      
@@ -610,10 +614,10 @@ def main(sv_conf, rl_conf, only_sv, no_learn, show_screen, start_fresh, nomemory
         senderthread.join()
     ReceiverConnecterThread.join() #takes max. 1 second until socket timeouts
     SenderConnecterThread.join()
-    if not only_sv and not no_learn:
+    if not only_sv and not no_learn and rl_conf.learnMode == "parallel":
         learnthread.join()
         
-    if SAVE_MEMORY_ON_EXIT and containers.keep_memory:
+    if SAVE_MEMORY_ON_EXIT and containers.usememory and containers.keep_memory:
         containers.myAgent.memory.save_memory()
         
     time.sleep(0.1)

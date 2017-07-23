@@ -18,8 +18,13 @@ class Config(object):
     history_frame_nr = 4 #incl. dem jetzigem!
     speed_neurons = 30 #wenn null nutzt er sie nicht
     SPEED_AS_ONEHOT = False
+    #for discretized algorithms
     steering_steps = 7
     INCLUDE_ACCPLUSBREAK = False
+    #for continuus algorithms
+    num_actions = 3
+    UPDATE_ONLY_IF_NEW = False #sendet immer nach jedem update -> Wenn False sendet er wann immer er was kriegt
+    
     
     reset_if_wrongdirection = True
     
@@ -83,11 +88,16 @@ class RL_Config(Config):
     keep_memory = True
     saveMemoryAllMins = 45
     train_for = sys.maxsize-1
+       
+    ForEveryInf, ComesALearn = 40, 10
+    learnMode = "between" #"parallel", "between", "remote" (the latter is tobedone)
    
-    ForEveryInf, ComesALearn = False, False
-    
     #re-uses history_frame_nr, image_dims, steering_steps, speed_neurons, INCLUDE_ACCPLUSBREAK, SPEED_AS_ONEHOT
     
+    def device_has_gpu(self):
+        from tensorflow.python.client import device_lib
+        return "gpu" in ",".join([x.name for x in device_lib.list_local_devices()])
+
     def __init__(self):     
         self.savememorypath = self.superfolder()+self.savememorypath
         if not os.path.exists(self.savememorypath):
@@ -103,6 +113,7 @@ class RL_Config(Config):
                                     
         assert os.path.exists(Config().checkpoint_dir), "I need a pre-trained model"
 
+        if self.learnMode == "parallel" and not self.device_has_gpu(): self.learnMode = "between"
 
 
     
