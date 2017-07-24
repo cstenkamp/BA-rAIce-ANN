@@ -33,9 +33,10 @@ class AbstractAgent(object):
             return False
         return True
         
-    def postRunInference(self, returnstuff, original):
-        self.containers.inputval.addResultAndBackup(original) 
-        self.containers.outputval.update(returnstuff, self.containers.inputval.CTimestamp, self.containers.inputval.STimestamp)  
+    
+    def postRunInference(self, toUse, toSave):
+        self.containers.inputval.addResultAndBackup(toSave) 
+        self.containers.outputval.update(toUse, self.containers.inputval.CTimestamp, self.containers.inputval.STimestamp)  
         
 
         
@@ -90,11 +91,19 @@ class AbstractRLAgent(AbstractAgent):
             newstate = (visionvec, otherinputs.SpeedSteer.velocity)
             reward = self.calculateReward(self.containers.inputval)
             #print(np.all(np.all(oldstate[0][0] == newstate[0][1]), np.all(oldstate[0][1] == newstate[0][2]), np.all(oldstate[0][2] == newstate[0][3])), level=10) #this is why our efficient memory works
-            self.memory.append([oldstate, np.argmax(action), reward, newstate, False]) 
-            print(self.dediscretize(action, self.rl_conf), reward, level=6)
+            
+            if not self.SAVE_ACTION_AS_ARGMAX: #action ist entweder das argmax der final_neurons ODER das (throttle, brake, steer)-tuple
+                actuAction = action                                                                                         
+                action = self.memory.make_long_from_floats(*action)
+            else:
+                actuAction = self.dediscretize(action, self.rl_conf)
+            
+            self.memory.append([oldstate, action, reward, newstate, False])  
+            
+            print(actuAction, reward, level=6)
             
             if self.containers.showscreen:
-                infoscreen.print(self.dediscretize(action, self.rl_conf), round(reward,2), round(self.target_cnn.calculate_value(self.session, newstate[0], newstate[1])[0],2), containers= self.containers, wname="Last memory")
+                infoscreen.print(actuAction, round(reward,2), round(self.target_cnn.calculate_value(self.session, newstate[0], newstate[1])[0],2), containers= self.containers, wname="Last memory")
                 if len(self.memory) % 20 == 0:
                     infoscreen.print(">"+str(len(self.memory)), containers= self.containers, wname="Memorysize")
       
@@ -128,8 +137,8 @@ class AbstractRLAgent(AbstractAgent):
         super().preRunInference(otherinputs, visionvec)
         
 
-    def postRunInference(self, returnstuff, original):
-        super().postRunInference(returnstuff, original)
+    def postRunInference(self, toUse, toSave):
+        super().postRunInference(toUse, toSave)
         if self.containers.rl_conf.learnMode == "between":
             print("freezing python because after", self.numIterations, "iterations I need to learn (between)", level=2)
             if self.numIterations % self.containers.rl_conf.ForEveryInf == 0:
@@ -237,7 +246,11 @@ class AbstractRLAgent(AbstractAgent):
             
         #throttle, brake, steer = 1, 0, 0
         result = "["+str(throttle)+", "+str(brake)+", "+str(steer)+"]"
-        return result, self.discretize(throttle, brake, steer, config) 
+        
+        if self.SAVE_ACTION_AS_ARGMAX:
+            return result, self.discretize(throttle, brake, steer, config) #er returned immer toUse, toSave
+        else:
+            return result, (throttle, brake, steer)                        #er returned immer toUse, toSave     
 
 
 

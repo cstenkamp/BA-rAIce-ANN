@@ -33,7 +33,7 @@ class DDPG(object):
         
     
     self.action, init_op, self.train_op = self.make_network(action_states, states, actions, rewards, terminals, folgestates,
-            training=self.training, action_bounds=env.action_bounds,            steps=self.planned_steps)
+            training=self.training, action_bounds=env.action_bounds, steps=self.planned_steps)
         
             
             

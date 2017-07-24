@@ -34,12 +34,10 @@ class ReinfNetAgent(AbstractRLAgent):
         self.epsilon = self.rl_conf.startepsilon
         self.initNetwork(start_fresh)
         self.learn_which = self.online_cnn    #TODO: target network ausschalten können
-   
+        self.SAVE_ACTION_AS_ARGMAX = False #lecacy und speicher-effizienter ists true, aber dann lässt sich das memory nicht als grundlage für ddpg
 
     def runInference(self, otherinputs, visionvec):
-        if self.isinitialized:
-            if not self.checkIfInference():
-                return
+        if self.isinitialized and self.checkIfInference():
             super().preRunInference(otherinputs, visionvec)
                 
 
@@ -54,9 +52,9 @@ class ReinfNetAgent(AbstractRLAgent):
             try:
                 
                 if self.canLearn() and np.random.random() > self.epsilon:
-                    returnstuff, original = self.performNetwork(otherinputs, visionvec)
+                    toUse, toSave = self.performNetwork(otherinputs, visionvec)
                 else:
-                    returnstuff, original = self.randomAction(otherinputs.SpeedSteer.velocity, self.rl_conf)
+                    toUse, toSave = self.randomAction(otherinputs.SpeedSteer.velocity, self.rl_conf)
                 
                     if len(self.memory) >= self.rl_conf.replaystartsize:
                         try:
@@ -66,16 +64,16 @@ class ReinfNetAgent(AbstractRLAgent):
                         
                     if self.containers.showscreen:
                         infoscreen.print(self.epsilon, containers= self.containers, wname="Epsilon")
-                lastresult = returnstuff, original
+                lastresult = toUse, toSave 
             except IndexError: #kommt wenn inputval resettet wurde
-                returnstuff, original = lastresult
+                toUse, toSave = lastresult
 
             if self.containers.showscreen:
-                infoscreen.print(returnstuff, containers= self.containers, wname="Last command")
+                infoscreen.print(toUse, containers= self.containers, wname="Last command")
                 if self.numIterations % 100 == 0:
                     infoscreen.print(self.reinfNetSteps, "Iterations: >"+str(self.numIterations), containers= self.containers, wname="ReinfLearnSteps")
 
-            super().postRunInference(returnstuff, original)
+            super().postRunInference(toUse, toSave)
     
 
     #dauerlearnANN kommt aus der AbstractRLAgent
@@ -91,13 +89,19 @@ class ReinfNetAgent(AbstractRLAgent):
             
             
         batch = self.memory.sample(self.rl_conf.batchsize)
-        oldstates, argmactions, rewards, newstates, resetafters = zip(*batch)      
-        actions = np.zeros([len(argmactions), ((4*self.rl_conf.steering_steps) if self.rl_conf.INCLUDE_ACCPLUSBREAK else (3*self.rl_conf.steering_steps))])
-        for i in range(len(argmactions)):
-            actions[i][argmactions[i]] = 1
         
-        
-        actualActions = [self.dediscretize(i, self.rl_conf) for i in actions]
+        if self.SAVE_ACTION_AS_ARGMAX: 
+            oldstates, argmactions, rewards, newstates, resetafters = zip(*batch)      
+            actions = np.zeros([len(argmactions), ((4*self.rl_conf.steering_steps) if self.rl_conf.INCLUDE_ACCPLUSBREAK else (3*self.rl_conf.steering_steps))])
+            for i in range(len(argmactions)):
+                actions[i][argmactions[i]] = 1
+                actualActions = [self.dediscretize(i, self.rl_conf) for i in actions]
+        else:
+            oldstates, actualActions, rewards, newstates, resetafters = zip(*batch)      
+            actualActions = [self.memory.make_floats_from_long(i) for i in actualActions]
+            actions = [self.discretize(throttle, brake, steer, self.rl_conf) for throttle, brake, steer in actualActions]
+            argmactions = [np.argmax(i) for i in actions]
+            
         print(list(zip(rewards,actualActions)), level=4)
         
         qs = self.session.run(self.learn_which.q, feed_dict = prepare_feed_dict(oldstates, self.learn_which)) 
@@ -154,16 +158,15 @@ class ReinfNetAgent(AbstractRLAgent):
 
     def performNetwork(self, otherinputs, visionvec):        
         super().performNetwork(otherinputs, visionvec)
-        
         with self.graph.as_default():
-            check, (networkresult, qvals) = self.target_cnn.run_inference(self.session, visionvec, otherinputs)
-            if check:
-                throttle, brake, steer = self.dediscretize(networkresult[0], self.containers.rl_conf)
-                result = "["+str(throttle)+", "+str(brake)+", "+str(steer)+"]"
-                self.showqvals(qvals[0])
-                return result, networkresult[0]
+            onehot, qvals = self.target_cnn.run_inference(self.session, visionvec, otherinputs) #former is argmax, latter are individual qvals
+            throttle, brake, steer = self.dediscretize(onehot[0], self.containers.rl_conf)
+            result = "["+str(throttle)+", "+str(brake)+", "+str(steer)+"]"
+            self.showqvals(qvals[0])
+            if self.SAVE_ACTION_AS_ARGMAX:
+                return result, np.argmax(onehot[0])     #er returned immer toUse, toSave
             else:
-                return lastresult
+                return result, (throttle, brake, steer) #er returned immer toUse, toSave
         
 
     def showqvals(self, qvals):

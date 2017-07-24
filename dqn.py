@@ -18,7 +18,6 @@ from utils import convolutional_layer, fc_layer, variable_summary
 
 SUMMARYALL = 1000
 
-
                                       
 class CNN(object):
     
@@ -42,19 +41,19 @@ class CNN(object):
             device = "/gpu:0" if (config.has_gpu() and (hasattr(config, "learnMode") and config.learnMode == "between")) else "/cpu:0"
             with tf.device(device): #less overhead by not trying to switch to gpu
                 self.inputs, self.targets, self.speed_input = self.set_placeholders(mode, final_neuron_num)
-                self.q, self.argmax, self.q_max, self.action = self.inference(self.inputs, self.speed_input, final_neuron_num, rl_not_trainables, False) 
+                self.q, self.onehot, self.q_max, self.action = self.inference(self.inputs, self.speed_input, final_neuron_num, rl_not_trainables, False) 
         else:
             device = "/gpu:0" if config.has_gpu() else "/cpu:0"
             with tf.device(device):
                 self.inputs, self.targets, self.speed_input = self.set_placeholders(mode, final_neuron_num)
-                self.q, self.argmax, self.q_max, self.action = self.inference(self.inputs, self.speed_input, final_neuron_num, rl_not_trainables, True)         
+                self.q, self.onehot, self.q_max, self.action = self.inference(self.inputs, self.speed_input, final_neuron_num, rl_not_trainables, True)         
                 if mode == "rl_train":
                     self.loss = self.rl_loss_func(self.q, self.targets)
                     self.train_op = self.training(self.loss, config.initial_lr, optimizer_arg = tf.train.RMSPropOptimizer)     
                 elif mode == "sv_train":
                     self.loss = self.loss_func(self.q, self.targets)
                     self.train_op = self.training(self.loss, config.initial_lr, optimizer_arg = tf.train.AdamOptimizer) 
-                    self.accuracy = self.evaluation(self.argmax, self.targets)    
+                    self.accuracy = self.evaluation(self.onehot, self.targets)    
                 self.summary = tf.summary.merge_all() #für TensorBoard    
         
     
@@ -101,13 +100,13 @@ class CNN(object):
             fc1 = tf.concat([fc1, spinputs], 1)         #beim letztem layer btw kein dropout
         q = fc_layer(fc1, final_neuron_num*20+self.config.speed_neurons, final_neuron_num, "FC2", trainable("FC2"), False, for_training, False, None, 1, self.trainvars, variable_summary, initializer=ini) 
 
-        q = tf.cond(tf.reduce_sum(spinputs) < 1, lambda: settozero(q), lambda: q)#wenn du stehst, brauchste dich nicht mehr für die ohne gas zu interessieren
-        q_max = tf.reduce_max(q, axis=1)
-        action = tf.argmax(q, axis=1) #Todo: kann gut sein dass ich action nicht brauche wenn ich argm hab
-        y_conv = tf.nn.softmax(q)
-        argm = tf.one_hot(tf.argmax(y_conv, dimension=1), depth=final_neuron_num)
+        q = tf.cond(tf.reduce_sum(spinputs) < 1, lambda: settozero(q), lambda: q)   #[10.3, 23.1, ...] #wenn du stehst, brauchste dich nicht mehr für die ohne gas zu interessieren
+        y_conv = tf.nn.softmax(q)                                                   #[ 0.1,  0.2, ...]
+        onehot = tf.one_hot(tf.argmax(y_conv, dimension=1), depth=final_neuron_num) #[   0,    1, ...]
+        q_max = tf.reduce_max(q, axis=1)                                            #23.1
+        action = tf.argmax(q, axis=1)                                               #2
         
-        return q, argm, q_max, action
+        return q, onehot, q_max, action
     
     
     def loss_func(self, logits, targets):
@@ -162,9 +161,9 @@ class CNN(object):
         return train_op
     
         
-    def evaluation(self, argmaxs, targets):
+    def evaluation(self, onehots, targets):
         #returns how many percent it got correct
-        made = tf.cast(argmaxs, tf.bool)
+        made = tf.cast(onehots, tf.bool)
         real = tf.cast(targets, tf.bool)
         compare = tf.reduce_mean(tf.cast(tf.reduce_all(tf.equal(made, real),axis=1), tf.float32))
         tf.summary.scalar('accuracy', compare)
@@ -231,26 +230,24 @@ class CNN(object):
         assert type(visionvec[0]).__module__ == np.__name__
         assert (np.array(visionvec.shape) == np.array(self.inputs.get_shape().as_list()[1:])).all()
         
-        with tf.device("/cpu:0"):
-            visionvec = np.expand_dims(visionvec, axis=0)
-            feed_dict = {self.inputs: visionvec}  
-            if self.config.speed_neurons:
-                speed_disc = read_supervised.inflate_speed(otherinputs.SpeedSteer.velocity, self.config.speed_neurons, self.config.SPEED_AS_ONEHOT)
-                feed_dict[self.speed_input] = np.expand_dims(speed_disc, axis=0)
-            
-            return True, session.run([self.argmax, self.q], feed_dict=feed_dict)
+        visionvec = np.expand_dims(visionvec, axis=0)
+        feed_dict = {self.inputs: visionvec}  
+        if self.config.speed_neurons:
+            speed_disc = read_supervised.inflate_speed(otherinputs.SpeedSteer.velocity, self.config.speed_neurons, self.config.SPEED_AS_ONEHOT)
+            feed_dict[self.speed_input] = np.expand_dims(speed_disc, axis=0)
+        
+        return session.run([self.onehot, self.q], feed_dict=feed_dict)
 
         
         
     def calculate_value(self, session, visionvec, speed):
-        with tf.device("/cpu:0"):
-            visionvec = np.expand_dims(visionvec, axis=0)
-            feed_dict = {self.inputs: visionvec}  
-            if self.config.speed_neurons:
-               speed_disc = read_supervised.inflate_speed(speed, self.config.speed_neurons, self.config.SPEED_AS_ONEHOT)
-               feed_dict[self.speed_input] = np.expand_dims(speed_disc, axis=0)
-            
-            return session.run(self.q_max, feed_dict=feed_dict)
+        visionvec = np.expand_dims(visionvec, axis=0)
+        feed_dict = {self.inputs: visionvec}  
+        if self.config.speed_neurons:
+           speed_disc = read_supervised.inflate_speed(speed, self.config.speed_neurons, self.config.SPEED_AS_ONEHOT)
+           feed_dict[self.speed_input] = np.expand_dims(speed_disc, axis=0)
+        
+        return session.run(self.q_max, feed_dict=feed_dict)
             
         
        

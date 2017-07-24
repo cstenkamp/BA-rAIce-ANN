@@ -45,7 +45,7 @@ class Memory(object):
             if self.containers.rl_conf.use_second_camera:
                 self._visionvecs2 = [None]*(capacity+state_stacksize)
         self._speeds = np.zeros(capacity+1, dtype=np.float) #da das state-speed von n+1 gleich dem folgestate-speed von n ist, muss er nur 1 mal doppelt abspeichern
-        self._actions = np.zeros(capacity, dtype=np.int8)
+        self._actions = np.zeros(capacity, dtype=np.uint32) #if I stored only the argmax, it could be np.int8
         self._rewards = np.zeros(capacity, dtype=np.float)
         self._fEnds = np.zeros(capacity, dtype=np.bool)
         #keine Folgestates, da die ja im n+1ten Element stecken
@@ -242,3 +242,24 @@ class Memory(object):
         del odict['_lock']  
         with open(filename, 'wb') as f:
             pickle.dump(odict, f, pickle.HIGHEST_PROTOCOL)
+
+
+
+    #I changed from storing the action as argmax to storing the action as (throttle, brake, steer)... this is necessary for that to still be an int
+    @staticmethod
+    def make_long_from_floats(throttle, brake, steer):
+        ACCURACY = 2 #ab accuracy=3 müssste man uint64 nehmen
+        throttle = round(throttle, ACCURACY)*10**(ACCURACY*3+2)
+        brake = round(brake, ACCURACY)*10**(ACCURACY*2+1)
+        steer = round((1+steer), ACCURACY)*10**(ACCURACY*1)
+        return throttle+brake+steer
+    
+    
+    @staticmethod
+    def make_floats_from_long(value):
+        ACCURACY = 2 
+        throttle = round(value / (10**(ACCURACY*3+2)), ACCURACY)
+        brake = round((value % 10**(ACCURACY*2+2))/ (10**(ACCURACY*2+1)), ACCURACY)
+        steer = round((value % 10**(ACCURACY*1+1))/ (10**(ACCURACY*1)) -1, ACCURACY)
+        return throttle, brake, steer
+        

@@ -156,3 +156,14 @@ class Memory(object):
         del odict['_lock']  
         with open(filename, 'wb') as f:
             pickle.dump(odict, f, pickle.HIGHEST_PROTOCOL)
+
+
+
+
+    @staticmethod
+    def make_long_from_floats(acc, brk, steer):
+        return acc, brk, steer
+    
+    @staticmethod
+    def make_floats_from_long(acc, brk, steer):
+        return acc, brk, steer
