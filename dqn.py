@@ -47,10 +47,10 @@ class CNN(object):
             with tf.device(device):
                 self.inputs, self.targets, self.speed_input = self.set_placeholders(mode, final_neuron_num)
                 self.q, self.argmax, self.q_max, self.action = self.inference(self.inputs, self.speed_input, final_neuron_num, rl_not_trainables, True)         
-                if mode == "rl_learn":
+                if mode == "rl_train":
                     self.loss = self.rl_loss_func(self.q, self.targets)
                     self.train_op = self.training(self.loss, config.initial_lr, optimizer_arg = tf.train.RMSPropOptimizer)     
-                elif mode == "sv_learn":
+                elif mode == "sv_train":
                     self.loss = self.loss_func(self.q, self.targets)
                     self.train_op = self.training(self.loss, config.initial_lr, optimizer_arg = tf.train.AdamOptimizer) 
                     self.accuracy = self.evaluation(self.argmax, self.targets)    
@@ -268,7 +268,7 @@ def run_svtraining(config, dataset):
         cnn.trainvars["global_step"] = cnn.global_step #TODO: try to remove this and see if it still works, cause it should
         saver = tf.train.Saver(cnn.trainvars, max_to_keep=2)
 
-        with tf.Session(graph=graph) as sess:
+        with tf.Session(graph=graph, config=tf.ConfigProto(allow_soft_placement=True)) as sess:
             summary_writer = tf.summary.FileWriter(config.log_dir, sess.graph) #aus dem toy-example
             
             sess.run(init)

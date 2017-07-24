@@ -16,7 +16,7 @@ import tensorflow as tf
 
 #====own classes====
 from agent import AbstractAgent
-import cnn
+import dqn
 from myprint import myprint as print
 
 
@@ -65,7 +65,7 @@ class PlayNetAgent(AbstractAgent):
                                                  
             with tf.name_scope("runAsServ"):
                 with tf.variable_scope("cnnmodel", reuse=None, initializer=initializer): 
-                    self.cnn = cnn.CNN(self.config, is_reinforcement = False, is_training=False)
+                    self.cnn = dqn.CNN(self.config, mode="inference")
             
             print(self.cnn.trainvars)
             

@@ -44,6 +44,10 @@ class Config(object):
     minimal_lr = 1e-6 #mit diesen settings kommt er auf 0.01 loss, 99.7% correct inferences
     checkpointall = 10
     
+    def has_gpu(self):
+        from tensorflow.python.client import device_lib
+        return "gpu" in ",".join([x.name for x in device_lib.list_local_devices()])
+    
     def __init__(self):
         assert not (self.use_second_camera and (self.history_frame_nr == 1)), "If you're using 2 cameras, you have to use historyframes!"
         assert os.path.exists(self.LapFolderName), "No data to train on at all!"        
@@ -94,10 +98,6 @@ class RL_Config(Config):
    
     #re-uses history_frame_nr, image_dims, steering_steps, speed_neurons, INCLUDE_ACCPLUSBREAK, SPEED_AS_ONEHOT
     
-    def has_gpu(self):
-        from tensorflow.python.client import device_lib
-        return "gpu" in ",".join([x.name for x in device_lib.list_local_devices()])
-
     def __init__(self):     
         self.savememorypath = self.superfolder()+self.savememorypath
         if not os.path.exists(self.savememorypath):
