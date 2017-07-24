@@ -1,5 +1,6 @@
 from tkinter import Text, END, Tk, X
 import queue
+import time
 
 class ThreadSafeConsole(Text):
     def __init__(self, master, **options):
@@ -36,7 +37,8 @@ def print(*args, containers, wname):
     
     
 def showScreen(containers):
-    root = Tk()                         
+    root = Tk()     
+    root.title("rAIce-ANN - Started "+time.strftime("%H:%M:%S", time.gmtime()))                    
     lastcommand = ThreadSafeConsole(root, width=1, height=1)
     lastcommand.pack(fill=X)
     memorysize = ThreadSafeConsole(root, width=1, height=1)

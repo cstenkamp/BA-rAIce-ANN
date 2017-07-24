@@ -32,3 +32,4 @@
 -in den options für jeden einzelnen inputvalue nen true/false ob python ihn nutzt, NUR visual network vergleichen mit inkl speed, nach und nach weitere variablen rein
 -die ganzen sachen die sinvoll sind gegeneinander zu testen, die sollen unbedingt als option!
 -DDPG-Paper lesen
+-bei -nolearn soll er überhaupt kein online-net einrichten! nur targetnet!

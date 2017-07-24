@@ -252,8 +252,8 @@ class ReinfNetAgent(AbstractRLAgent):
                     self.saver = tf.train.Saver(max_to_keep=1)
                     self.saver.restore(self.session, ckpt.model_checkpoint_path)
                     self.session.run([online.assign(target) for online, target in zip(get_variables(scope="onlinenet"), get_variables(scope="targetnet"))])
-                    self.session.run(self.target_cnn.global_step.assign(self.online_cnn.global_step))
-                    self.reinfNetSteps = self.target_cnn.global_step.eval(session=self.session)
+                    self.session.run(self.online_cnn.global_step.assign(self.target_cnn.global_step))
+                    self.reinfNetSteps = self.online_cnn.global_step.eval(session=self.session)
                     self.numIterations = self.target_cnn.restoreNumIters(self.session)
             
             print("network initialized with %i reinfNetSteps already run." % self.reinfNetSteps)

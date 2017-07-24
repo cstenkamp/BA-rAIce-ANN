@@ -37,9 +37,10 @@ class CNN(object):
 
         self.iterations = 0
         self.prepareNumIters()
-        
+        self.global_step = tf.Variable(0, dtype=tf.int32, name='global_step', trainable=False) #wird hier: https://github.com/tensorflow/tensorflow/blob/master/tensorflow/examples/tutorials/mnist/mnist.py halt gemacht... warum hiernochmal weiß ich nicht.            
         if mode == "inference":
-            with tf.device("/cpu:0"): #less overhead by not trying to switch to gpu
+            device = "/gpu:0" if (config.has_gpu() and (hasattr(config, "learnMode") and config.learnMode == "between")) else "/cpu:0"
+            with tf.device(device): #less overhead by not trying to switch to gpu
                 self.inputs, self.targets, self.speed_input = self.set_placeholders(mode, final_neuron_num)
                 self.q, self.argmax, self.q_max, self.action = self.inference(self.inputs, self.speed_input, final_neuron_num, rl_not_trainables, False) 
         else:
@@ -55,7 +56,7 @@ class CNN(object):
                     self.train_op = self.training(self.loss, config.initial_lr, optimizer_arg = tf.train.AdamOptimizer) 
                     self.accuracy = self.evaluation(self.argmax, self.targets)    
                 self.summary = tf.summary.merge_all() #für TensorBoard    
-            
+        
     
     def set_placeholders(self, mode, final_neuron_num):
         if self.config.history_frame_nr == 1:
@@ -155,7 +156,6 @@ class CNN(object):
         #TODO: AUSSUCHEN können welchen optimizer, und meinen ausgesuchten verteidigen können
         #https://www.tensorflow.org/api_guides/python/train#optimizers
         
-        self.global_step = tf.Variable(0, dtype=tf.int32, name='global_step', trainable=False) #wird hier: https://github.com/tensorflow/tensorflow/blob/master/tensorflow/examples/tutorials/mnist/mnist.py halt gemacht... warum hiernochmal weiß ich nicht.
         
         train_op = optimizer.minimize(loss, global_step=self.global_step)
         

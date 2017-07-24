@@ -93,8 +93,8 @@ class RL_Config(Config):
     saveMemoryAllMins = 45
     train_for = sys.maxsize-1
        
-    ForEveryInf, ComesALearn = 40, 10
-    learnMode = "parallel" #"parallel", "between", "remote" (the latter is tobedone)
+    ForEveryInf, ComesALearn = 400, 100
+    learnMode = "between" #"parallel", "between", "remote" (the latter is tobedone)
    
     #re-uses history_frame_nr, image_dims, steering_steps, speed_neurons, INCLUDE_ACCPLUSBREAK, SPEED_AS_ONEHOT
     
