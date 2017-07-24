@@ -13,7 +13,7 @@ import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 #====own classes====
 from agent import AbstractRLAgent
-import cnn
+import dqn
 from myprint import myprint as print
 import infoscreen
 
@@ -190,16 +190,16 @@ class ReinfNetAgent(AbstractRLAgent):
         self.graph = tf.Graph()
         with self.graph.as_default():    
             
-            self.session = tf.Session()
+            self.session = tf.Session(config=tf.ConfigProto(log_device_placement=True, intra_op_parallelism_threads=2))
             ckpt = tf.train.get_checkpoint_state(self.rl_conf.checkpoint_dir) 
             initializer = tf.random_uniform_initializer(-0.1, 0.1)
             
             if start_fresh:
                 with tf.name_scope("ReinfLearn"): 
                     with tf.variable_scope("targetnet", reuse=None, initializer=initializer):
-                        self.target_cnn = cnn.CNN(self.rl_conf, mode="inference", rl_not_trainables=DONT_TRAIN)                
+                        self.target_cnn = dqn.CNN(self.rl_conf, mode="inference", rl_not_trainables=DONT_TRAIN)                
                     with tf.variable_scope("onlinenet", reuse=None, initializer=initializer):
-                        self.online_cnn = cnn.CNN(self.rl_conf, mode="rl_learn", rl_not_trainables=DONT_TRAIN)                
+                        self.online_cnn = dqn.CNN(self.rl_conf, mode="rl_learn", rl_not_trainables=DONT_TRAIN)                
                 init = tf.global_variables_initializer()
                 self.session.run(init)        
                 self.saver = tf.train.Saver(max_to_keep=1)
@@ -216,16 +216,16 @@ class ReinfNetAgent(AbstractRLAgent):
             else:
                 if not (ckpt and ckpt.model_checkpoint_path):
                     
-                    cnn.CNN(self.rl_conf, mode="sv_train")
+                    dqn.CNN(self.rl_conf, mode="sv_train")
                     varlist = dict(zip([v.name for v in tf.trainable_variables()], tf.trainable_variables()))
                     varlist = list(eraseneccessary(varlist, DONT_COPY_WEIGHTS).keys())
                     print(varlist)
                     
                     with tf.name_scope("ReinfLearn"): 
                         with tf.variable_scope("targetnet", reuse=None, initializer=initializer):
-                            self.target_cnn = cnn.CNN(self.rl_conf, mode="inference", rl_not_trainables=DONT_TRAIN)                
+                            self.target_cnn = dqn.CNN(self.rl_conf, mode="inference", rl_not_trainables=DONT_TRAIN)                
                         with tf.variable_scope("onlinenet", reuse=None, initializer=initializer):
-                            self.online_cnn = cnn.CNN(self.rl_conf, mode="rl_learn", rl_not_trainables=DONT_TRAIN)                
+                            self.online_cnn = dqn.CNN(self.rl_conf, mode="rl_learn", rl_not_trainables=DONT_TRAIN)                
                             
                     restorevars = {}
                     for i in tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope='targetnet'):
@@ -246,9 +246,9 @@ class ReinfNetAgent(AbstractRLAgent):
                 else:
                     with tf.name_scope("ReinfLearn"): 
                         with tf.variable_scope("targetnet", reuse=None, initializer=initializer):
-                            self.target_cnn = cnn.CNN(self.rl_conf, mode="inference", rl_not_trainables=DONT_TRAIN)
+                            self.target_cnn = dqn.CNN(self.rl_conf, mode="inference", rl_not_trainables=DONT_TRAIN)
                         with tf.variable_scope("onlinenet", reuse=None, initializer=initializer):
-                            self.online_cnn = cnn.CNN(self.rl_conf, mode="rl_learn", rl_not_trainables=DONT_TRAIN)                                            
+                            self.online_cnn = dqn.CNN(self.rl_conf, mode="rl_learn", rl_not_trainables=DONT_TRAIN)                                            
                     self.saver = tf.train.Saver(max_to_keep=1)
                     self.saver.restore(self.session, ckpt.model_checkpoint_path)
                     self.session.run([online.assign(target) for online, target in zip(get_variables(scope="onlinenet"), get_variables(scope="targetnet"))])

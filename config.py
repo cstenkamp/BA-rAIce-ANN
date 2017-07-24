@@ -90,11 +90,11 @@ class RL_Config(Config):
     train_for = sys.maxsize-1
        
     ForEveryInf, ComesALearn = 40, 10
-    learnMode = "between" #"parallel", "between", "remote" (the latter is tobedone)
+    learnMode = "parallel" #"parallel", "between", "remote" (the latter is tobedone)
    
     #re-uses history_frame_nr, image_dims, steering_steps, speed_neurons, INCLUDE_ACCPLUSBREAK, SPEED_AS_ONEHOT
     
-    def device_has_gpu(self):
+    def has_gpu(self):
         from tensorflow.python.client import device_lib
         return "gpu" in ",".join([x.name for x in device_lib.list_local_devices()])
 
@@ -113,7 +113,7 @@ class RL_Config(Config):
                                     
         assert os.path.exists(Config().checkpoint_dir), "I need a pre-trained model"
 
-        if self.learnMode == "parallel" and not self.device_has_gpu(): self.learnMode = "between"
+        if self.learnMode == "parallel" and not self.has_gpu(): self.learnMode = "between"
 
 
     

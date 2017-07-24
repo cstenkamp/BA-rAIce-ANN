@@ -558,6 +558,9 @@ def main(sv_conf, rl_conf, only_sv, no_learn, show_screen, start_fresh, nomemory
     else:
         containers.showscreen = False
     
+    if no_learn:
+        rl_conf.learnMode = ""
+    
     if only_sv:
         agent = svPlayNetAgent.PlayNetAgent
     else:

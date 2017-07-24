@@ -266,7 +266,7 @@ class AbstractRLAgent(AbstractAgent):
 
     def freezeInf(self, reason):
         if not reason in self.freezeInfReasons:
-            print("freezing because",reason, level=10)
+            print("freezing Unity because",reason, level=10)
             self.containers.freezeInf = True
             self.freezeInfReasons.append(reason)
             self.containers.outputval.send_via_senderthread("pleaseFreeze", self.containers.inputval.CTimestamp, self.containers.inputval.STimestamp)        
@@ -275,7 +275,7 @@ class AbstractRLAgent(AbstractAgent):
             except:
                 pass
         
-        
+                
     def unFreezeEverything(self, reason):
         self.unFreezeLearn(reason)
         self.unFreezeInf(reason)
@@ -294,6 +294,7 @@ class AbstractRLAgent(AbstractAgent):
             if len(self.freezeInfReasons) == 0:
                 self.containers.freezeInf = False
                 try: #TODO: stattdessen ne variable unity_connected ahben!
+                    print("unfreezing Unity because",reason, level=10)
                     self.containers.outputval.unFreezeUnity()
                 except:
                     pass

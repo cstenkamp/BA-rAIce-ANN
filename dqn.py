@@ -43,7 +43,7 @@ class CNN(object):
                 self.inputs, self.targets, self.speed_input = self.set_placeholders(mode, final_neuron_num)
                 self.q, self.argmax, self.q_max, self.action = self.inference(self.inputs, self.speed_input, final_neuron_num, rl_not_trainables, False) 
         else:
-            device = "/gpu:0" if config.device_has_gpu() else "/cpu:0"
+            device = "/gpu:0" if config.has_gpu() else "/cpu:0"
             with tf.device(device):
                 self.inputs, self.targets, self.speed_input = self.set_placeholders(mode, final_neuron_num)
                 self.q, self.argmax, self.q_max, self.action = self.inference(self.inputs, self.speed_input, final_neuron_num, rl_not_trainables, True)         
