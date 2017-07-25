@@ -34,8 +34,7 @@ class AbstractAgent(object):
         return True
         
     
-    def postRunInference(self, toUse, toSave):
-        self.containers.inputval.addResultAndBackup(toSave) 
+    def postRunInference(self, toUse, _):
         self.containers.outputval.update(toUse, self.containers.inputval.CTimestamp, self.containers.inputval.STimestamp)  
         
 
@@ -138,7 +137,8 @@ class AbstractRLAgent(AbstractAgent):
         
 
     def postRunInference(self, toUse, toSave):
-        super().postRunInference(toUse, toSave)
+        super().postRunInference(toUse, None)
+        self.containers.inputval.addResultAndBackup(toSave) 
         if self.containers.rl_conf.learnMode == "between":
             print("freezing python because after", self.numIterations, "iterations I need to learn (between)", level=2)
             if self.numIterations % self.containers.rl_conf.ForEveryInf == 0:

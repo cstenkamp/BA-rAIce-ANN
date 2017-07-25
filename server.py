@@ -219,7 +219,8 @@ class receiver_thread(threading.Thread):
             data = data[data.find(")")+1:]
     
         if data[:11] == "resetServer":
-            self.containers.myAgent.endEpisode()
+            if self.containers.usememory:
+                self.containers.myAgent.endEpisode()
             resetServer(self.containers, data[11:]) 
             specialcommand = True    
         if data[:7] == "wallhit":
@@ -546,7 +547,6 @@ def main(sv_conf, rl_conf, only_sv, no_learn, show_screen, start_fresh, nomemory
     containers.sv_conf = sv_conf
     containers.rl_conf = rl_conf   
     containers.keep_memory = False if nomemorykeep else containers.rl_conf.keep_memory
-    containers.only_sv = only_sv
     containers.no_learn = no_learn
     containers.start_fresh = start_fresh
     

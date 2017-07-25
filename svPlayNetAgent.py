@@ -25,21 +25,20 @@ STANDARDRETURN = ("[0.5,0,0.0]", [0.5, 0, 0.0])
 
 class PlayNetAgent(AbstractAgent):
     def __init__(self, config, containers, rl_config_dummy=None, startfreshdummy=False, *args, **kwargs): #der dummy ist da damit man playnet & reinfnet austauschen kan
-        super().__init__(containers, *args, **kwargs)
+        super().__init__(config, containers, *args, **kwargs)
         self.config = config
         self.initNetwork()
 
     
-    def runInference(self, update_only_if_new):
-        if self.isinitialized:
-            super().runInference(update_only_if_new)
+    def runInference(self, otherinputs, visionvec):
+        if self.isinitialized and self.checkIfInference():
+            super().preRunInference(otherinputs, visionvec)
                 
             self.lock.acquire()
             try:
                 self.isbusy = True 
-                otherinputs, visionvec = self.containers.inputval.read()
-                returnstuff, original = self.performNetwork(otherinputs, visionvec)
-                self.containers.outputval.update(returnstuff, self.containers.inputval.CTimestamp, self.containers.inputval.STimestamp)    
+                toUse, _ = self.performNetwork(otherinputs, visionvec)
+                super().postRunInference(toUse, _)
                 self.isbusy = False
             finally:
                 self.lock.release()
@@ -48,14 +47,10 @@ class PlayNetAgent(AbstractAgent):
 
     def performNetwork(self, otherinputs, visionvec):
         super().performNetwork(otherinputs, visionvec)
-        
-        check, (networkresult, _) = self.cnn.run_inference(self.session, visionvec, otherinputs, self.config.history_frame_nr)
-        if check:
-            throttle, brake, steer = self.dediscretize(networkresult[0], self.config)
-            result = "["+str(throttle)+", "+str(brake)+", "+str(steer)+"]"
-            return result, [throttle, brake, steer]
-        else:
-            return STANDARDRETURN
+        networkresult, _ = self.cnn.run_inference(self.session, visionvec, otherinputs)
+        throttle, brake, steer = self.dediscretize(networkresult[0], self.config)
+        result = "["+str(throttle)+", "+str(brake)+", "+str(steer)+"]"
+        return result, None
 
             
 
