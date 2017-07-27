@@ -34,14 +34,14 @@ class ReinfNetAgent(AbstractRLAgent):
         self.epsilon = self.rl_conf.startepsilon
         self.initNetwork(start_fresh)
         self.learn_which = self.online_cnn    #TODO: target network ausschalten können
-        self.SAVE_ACTION_AS_ARGMAX = False #lecacy und speicher-effizienter ists true, aber dann lässt sich das memory nicht als grundlage für ddpg
+        self.SAVE_ACTION_AS_ARGMAX = False #legacy und speicher-effizienter ists true, aber dann lässt sich das memory nicht als grundlage für ddpg
+
+
 
     def runInference(self, otherinputs, visionvec):
         if self.isinitialized and self.checkIfInference():
-            super().preRunInference(otherinputs, visionvec)
+            self.preRunInference(otherinputs, visionvec)
                 
-
-
 #            ##############DELETETHISPART############## #to check how fast the pure socket connection, whithout ANN, is
 #            self.containers.outputval.send_via_senderthread("[0, 0, 0]", self.containers.inputval.CTimestamp, self.containers.inputval.STimestamp)
 #            return
@@ -73,7 +73,7 @@ class ReinfNetAgent(AbstractRLAgent):
                 if self.numIterations % 100 == 0:
                     infoscreen.print(self.reinfNetSteps, "Iterations: >"+str(self.numIterations), containers= self.containers, wname="ReinfLearnSteps")
 
-            super().postRunInference(toUse, toSave)
+            self.postRunInference(toUse, toSave)
     
 
     #dauerlearnANN kommt aus der AbstractRLAgent

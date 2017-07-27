@@ -53,6 +53,9 @@ class otherinputs(preotherinputs):
            and np.all(self.LookAheadVec == other.LookAheadVec)
            #and np.all(self.CenterDistVec == other.CenterDistVec) \ #can be skipped because then the centerdist is also equal
            #FBDelta werden auch nicht beachtet, da die ebenfalls von Zeit abhängen
+    def returnRelevant(self):
+        return [i for i in self.SpeedSteer]+[i for i in self.StatusVector]+[self.CenterDist]+[i for i in self.LookAheadVec]
+        
                       
 empty_progressvec = lambda: progressvec(0, 0, 0, 0)
 empty_speedsteer = lambda: speedsteer(0, 0, 0, 0, 0, 0, 0, 0, 0)
@@ -73,7 +76,7 @@ MININT = -sys.maxsize+1
 TCP_IP = 'localhost' #TODO check if it also works over internet, in the Cluster
 TCP_RECEIVER_PORT = 6435
 TCP_SENDER_PORT = 6436
-NUMBER_ANNS = 1 #only one of those will execute the learning, in dauerLearnANN in LearnThread
+#NUMBER_ANNS = 1 #only one of those will execute the learning, in dauerLearnANN in LearnThread
 SAVE_MEMORY_ON_EXIT = True
 
 
@@ -143,7 +146,7 @@ class MySocket:
 # there is a receiver-listener-thread, constantly waiting on the receiverport if unity wants to connect.
 # Unity will connect only once, and if so, the receiverlistenerthread will create a new receiver_thread, 
 # handling everything from there on. If unity wants to reconnect for any reason, it will create a new receiver_thread
-# which kills all old ones, such that there is only one receiver_thread active most of the time.
+# which kills all old ones, such that there is only one receiver_thread active almost all the time.
 class ReceiverListenerThread(threading.Thread):
     def __init__(self):
         threading.Thread.__init__(self)
@@ -165,8 +168,8 @@ class ReceiverListenerThread(threading.Thread):
                 pass   
 
 
-# A receiver-thread represents a stable connection to unity. It runs constantly, getting the newest information from unity constantly.
-# If unity deconnects, it stops. If any instance of this finds receiver_threads with older data, it will deem the thread deprecated 
+# A receiver-thread represents a stable one-sided connection to unity. It runs constantly, getting the newest information from unity constantly.
+# If unity disconnects, it stops. If any instance of this finds receiver_threads with older data, it will deem the thread deprecated 
 # and kill it. The receiver_thread updates the global inputval (which is certainly only one!), containing the race-info, as soon as it gets new info.
 class receiver_thread(threading.Thread):
     def __init__(self, clientsocket):
@@ -196,10 +199,8 @@ class receiver_thread(threading.Thread):
                                 if int(i.STimestamp) < int(self.STimestamp):
                                     i.killme = True
                                     
-                            print("PYTHON RECEIVES TIME:", STime, time.time()*1000, level=10)
-                            
-                            self.containers.inputval.update(visionvec, vvec2, allOneDs, STime, CTime) 
-                            
+                            print("PYTHON RECEIVES TIME:", STime, time.time()*1000, level=4)
+                            self.containers.inputval.update(visionvec, vvec2, allOneDs, STime, CTime)  #note that visionvec and vvec2 can both be None
                             self.containers.myAgent.runInference(*self.containers.inputval.read())
                         
             except TimeoutError:
@@ -246,21 +247,26 @@ def resetServer(containers, mspersec, punish=0):
    
 ###############################################################################
         
+#the InputValContainer contains the vectors (visionvec, visionvec2, othervecs) Unity send to python. To decrease the amount of what Unity has to send to python, 
+#it always only sends the newest vectors. It is pythons job to keep track of the history-frames, in case the structure of the used network requires them.
+#There will definitely only be one object of the inputvalcontainer-class, and every receiver-thread appends the newest vectors to this object. In case of multiple
+#Agents, the speed of the threadsafe inputvalcontainer will be the bottleneck.
 class InputValContainer(object):   
     
     def __init__(self, config, rl_conf):
         self.lock = threading.Lock()
         self.config = config
         self.rl_conf = rl_conf
-        if self.config.history_frame_nr > 1:            
-            if self.config.use_second_camera:
-                self.vvec_hist = np.zeros([config.history_frame_nr*2, config.image_dims[0], config.image_dims[1]], dtype=rl_conf.visionvecdtype) 
+        if self.config.use_cameras:
+            if self.config.history_frame_nr > 1:            
+                if self.config.use_second_camera:
+                    self.vvec_hist = np.zeros([config.history_frame_nr*2, config.image_dims[0], config.image_dims[1]], dtype=rl_conf.visionvecdtype) 
+                else:
+                    self.vvec_hist = np.zeros([config.history_frame_nr, config.image_dims[0], config.image_dims[1]], dtype=rl_conf.visionvecdtype) 
+                self.previous_vvechist = None
             else:
-                self.vvec_hist = np.zeros([config.history_frame_nr, config.image_dims[0], config.image_dims[1]], dtype=rl_conf.visionvecdtype) 
-            self.previous_vvechist = None
-        else:
-            self.visionvec = np.zeros([config.image_dims[0], config.image_dims[1]], dtype=rl_conf.visionvecdtype)
-            self.previous_visionvec = None
+                self.visionvec = np.zeros([config.image_dims[0], config.image_dims[1]], dtype=rl_conf.visionvecdtype)
+                self.previous_visionvec = None
         self.otherinputs = empty_inputs() #defined at the top, is a namedtuple
         self.CTimestamp, self.STimestamp = MININT, MININT
         self.containers = None
@@ -274,33 +280,38 @@ class InputValContainer(object):
     def update(self, visionvec, vvec2, othervecs, STimestamp, CTimestamp):
         
         def is_new(visionvec, otherinputs): #wäre überflüssig das auch anhand von vvec2 zu machen
-            if self.config.history_frame_nr == 1:
-                return not (np.all(self.visionvec == visionvec) and self.otherinputs == otherinputs)
+            if self.config.use_cameras:
+                if self.config.history_frame_nr == 1:
+                    return not (np.all(self.visionvec == visionvec) and np.all(self.otherinputs == otherinputs))
+                else:
+                    tmp_vvec_hist = [visionvec] + [i for i in self.vvec_hist[:-1]]
+                    allequal = True
+                    for i in range(len(tmp_vvec_hist)):
+                        if not np.all(self.vvec_hist[i] == tmp_vvec_hist[i]):
+                            allequal = False
+                    return not (allequal and np.all(self.otherinputs == otherinputs))
             else:
-                tmp_vvec_hist = [visionvec] + [i for i in self.vvec_hist[:-1]]
-                allequal = True
-                for i in range(len(tmp_vvec_hist)):
-                    if not np.all(self.vvec_hist[i] == tmp_vvec_hist[i]):
-                        allequal = False
-                return not (allequal and np.all(self.otherinputs == otherinputs))
+                return np.all(self.otherinputs == otherinputs)
         
         logging.debug('Inputval-Update: Waiting for lock')
         self.lock.acquire()
         try:
             logging.debug('Acquired lock')
             otherinputs = make_otherinputs(othervecs) #is now a namedtuple instead of an array
+            print(len(otherinputs.returnRelevant()), level=11)
             if is_new(visionvec, otherinputs):
             
-                if self.config.history_frame_nr > 1: #in der vvechist steht das älteste hinten: a = [4,3,2,1] -> [5] + a[:-1] -> [5,4,3,2]
-                    if self.config.use_second_camera: #wenn wir beide kameras nutzen ist es [4.1, 3.1, 2.1, 1.1, 4.2, 3.2, 2.2, 1.2] 
-                        visionvec = np.expand_dims(np.array(visionvec, dtype=self.containers.rl_conf.visionvecdtype), axis=0)
-                        vvec2 = np.expand_dims(np.array(vvec2, dtype=self.containers.rl_conf.visionvecdtype), axis=0)
-                        self.vvec_hist = np.concatenate((visionvec, self.vvec_hist[:self.config.history_frame_nr-1], vvec2, self.vvec_hist[self.config.history_frame_nr:2*self.config.history_frame_nr-1]))
+                if self.config.use_cameras:
+                    if self.config.history_frame_nr > 1: #in der vvechist steht das älteste hinten: a = [4,3,2,1] -> [5] + a[:-1] -> [5,4,3,2]
+                        if self.config.use_second_camera: #wenn wir beide kameras nutzen ist es [4.1, 3.1, 2.1, 1.1, 4.2, 3.2, 2.2, 1.2] 
+                            visionvec = np.expand_dims(np.array(visionvec, dtype=self.containers.rl_conf.visionvecdtype), axis=0)
+                            vvec2 = np.expand_dims(np.array(vvec2, dtype=self.containers.rl_conf.visionvecdtype), axis=0)
+                            self.vvec_hist = np.concatenate((visionvec, self.vvec_hist[:self.config.history_frame_nr-1], vvec2, self.vvec_hist[self.config.history_frame_nr:2*self.config.history_frame_nr-1]))
+                        else:
+                            visionvec = np.expand_dims(np.array(visionvec, dtype=self.containers.rl_conf.visionvecdtype), axis=0)
+                            self.vvec_hist = np.concatenate((visionvec, self.vvec_hist[:-1]))
                     else:
-                        visionvec = np.expand_dims(np.array(visionvec, dtype=self.containers.rl_conf.visionvecdtype), axis=0)
-                        self.vvec_hist = np.concatenate((visionvec, self.vvec_hist[:-1]))
-                else:
-                    self.visionvec = np.array(visionvec, dtype=self.containers.rl_conf.visionvecdtype)
+                        self.visionvec = np.array(visionvec, dtype=self.containers.rl_conf.visionvecdtype)
                 self.otherinputs = otherinputs
                 
                 #wenn otherinputs.CenterDist >= 10 war und seitdem keine neue action kam, muss er >= 10 bleiben!
@@ -387,11 +398,13 @@ class InputValContainer(object):
     def read(self):
         self.alreadyread = True
         #print(self.visionvec) #TODO: der sollte nicht leer sein wenn not UPDATE_ONLY_IF_NEW
-        if self.config.history_frame_nr > 1:
-            return self.otherinputs, self.vvec_hist
+        if self.config.use_cameras:
+            if self.config.history_frame_nr > 1:
+                return self.otherinputs, self.vvec_hist
+            else:
+                return self.otherinputs, self.visionvec
         else:
-            return self.otherinputs, self.visionvec
-        
+            return self.otherinputs, None
         
     
     

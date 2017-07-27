@@ -324,6 +324,8 @@ def cutoutandreturnvectors(string):
     if string.find("V1(") > -1:
         #print("Visionvec",self.readTwoDArrayFromString(cutout(data, "V(")))
         visionvec = readTwoDArrayFromString(cutout(string, "V1("))  
+    else:
+        visionvec = None
     
     if string.find("V2(") > -1:
         #print("Visionvec",self.readTwoDArrayFromString(cutout(data, "V(")))

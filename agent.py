@@ -25,7 +25,7 @@ class AbstractAgent(object):
         self.numIterations = 0
         
     ##############functions that should be impemented##########
-    def preRunInference(self, otherinputs, visionvec):       
+    def preRunInference(self, _, __):       
         self.numIterations += 1
     
     def checkIfInference(self):
@@ -39,7 +39,7 @@ class AbstractAgent(object):
         
 
         
-    def performNetwork(self, otherinputs, visionvec):
+    def performNetwork(self, _, __):
         print("Another ANN Inference", level=3)
         
         
@@ -82,12 +82,11 @@ class AbstractRLAgent(AbstractAgent):
         self.wrongDirPunish = 100;
     
     
-    def addToMemory(self, otherinputs, visionvec): 
+    def addToMemory(self, newstate): 
         assert self.memory is not None, "It should be specified in server right afterwards"
         
         oldstate, action = self.containers.inputval.get_previous_state()
         if oldstate is not None: #was der Fall DIREKT nach reset oder nach start ist
-            newstate = (visionvec, otherinputs.SpeedSteer.velocity)
             reward = self.calculateReward(self.containers.inputval)
             #print(np.all(np.all(oldstate[0][0] == newstate[0][1]), np.all(oldstate[0][1] == newstate[0][2]), np.all(oldstate[0][2] == newstate[0][3])), level=10) #this is why our efficient memory works
             
@@ -132,7 +131,11 @@ class AbstractRLAgent(AbstractAgent):
 
 
     def preRunInference(self, otherinputs, visionvec):
-        self.addToMemory(otherinputs, visionvec)
+        if visionvec != None:
+            state = (visionvec, otherinputs.SpeedSteer.velocity)
+        else:
+            state = otherinputs.returnRelevant
+        self.addToMemory(state)
         super().preRunInference(otherinputs, visionvec)
         
 

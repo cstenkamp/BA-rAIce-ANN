@@ -34,94 +34,91 @@ class ReinfNetAgent(AbstractRLAgent):
         self.epsilon = self.rl_conf.startepsilon
         self.initNetwork(start_fresh)
         self.learn_which = self.online_cnn    #TODO: target network ausschalten können
-   
+        self.SAVE_ACTION_AS_ARGMAX = False #legacy und speicher-effizienter ists true, aber dann lässt sich das memory nicht als grundlage für ddpg
+
 
     def runInference(self, otherinputs, visionvec):
         if self.isinitialized and self.checkIfInference():
             super().preRunInference(otherinputs, visionvec)
-                
-            global lastresult
-            try:
-                
-                returnstuff, original = self.performNetwork(otherinputs, visionvec)
-                lastresult = returnstuff, original
-            except IndexError: #kommt wenn inputval resettet wurde
-                returnstuff, original = lastresult
-
-            if self.containers.showscreen:
-                infoscreen.print(returnstuff, containers= self.containers, wname="Last command")
-                if self.numIterations % 100 == 0:
-                    infoscreen.print(self.reinfNetSteps, "Iterations: >"+str(self.numIterations), containers= self.containers, wname="ReinfLearnSteps")
-
-            super().postRunInference(returnstuff, original)
+            toUse, toSave = self.performNetwork(otherinputs, visionvec)
+            super().postRunInference(toUse, toSave)
     
-                
-    def learnANN(self):   
-        def prepare_feed_dict(states, which_net):
-            feed_dict = {
-              which_net.inputs: np.array([state[0] for state in states]),
-              which_net.speed_input:  np.array([self.inflate_speed(state[1], self.rl_conf) for state in states])
-            }
-            return feed_dict
-            
-            
-        batch = self.memory.sample(self.rl_conf.batchsize)
-        oldstates, argmactions, rewards, newstates, resetafters = zip(*batch)      
-        actions = np.zeros([len(argmactions), ((4*self.rl_conf.steering_steps) if self.rl_conf.INCLUDE_ACCPLUSBREAK else (3*self.rl_conf.steering_steps))])
-        for i in range(len(argmactions)):
-            actions[i][argmactions[i]] = 1
-        
-        
-        actualActions = [self.dediscretize(i, self.rl_conf) for i in actions]
-        print(list(zip(rewards,actualActions)), level=4)
-        
-        qs = self.session.run(self.learn_which.q, feed_dict = prepare_feed_dict(oldstates, self.learn_which)) 
-        max_qs = self.session.run(self.learn_which.q_max, feed_dict=prepare_feed_dict(newstates, self.learn_which))
-                                     
-        #Bellman equation: Q(s,a) = r + y(max(Q(s',a')))
-        #qs[np.arange(BATCHSIZE), argmactions] += learning_rate*((rewards + Q_DECAY * max_qs * (not resetafters))-qs[np.arange(BATCHSIZE), argmactions]) #so wäre es wenn wir kein ANN nutzen würden!
-        #https://medium.com/emergent-future/simple-reinforcement-learning-with-tensorflow-part-0-q-learning-with-tables-and-neural-networks-d195264329d0
-        qs[np.arange(self.rl_conf.batchsize), argmactions] = rewards + self.rl_conf.q_decay * max_qs * (not resetafters) #wenn anschließend resettet wurde war es bspw ein wallhit und damit quasi ein final state
-        
-        self.session.run(self.learn_which.train_op, feed_dict={
-            self.learn_which.inputs: np.array([curr[0] for curr in oldstates]),
-            self.learn_which.speed_input:np.array([self.inflate_speed(curr[1], self.rl_conf) for curr in oldstates]),
-            self.learn_which.targets: qs,
-        })
-        
-        self.reinfNetSteps += 1
-        print("ReinfLearnSteps:", self.reinfNetSteps, level=3)
-        if self.containers.showscreen:
-            infoscreen.print(self.reinfNetSteps, "Iterations: >"+str(self.numIterations), containers= self.containers, wname="ReinfLearnSteps")
-                    
-        if self.reinfNetSteps % self.rl_conf.checkpointall == 0 or self.numIterations >= self.rl_conf.train_for:
-            self.saveNet()
-            
-            
-        if self.learn_which == self.online_cnn:
-            self.lock.acquire()
-            if self.reinfNetSteps % self.rl_conf.copy_target_all == 0:
-                self.freezeEverything("saveNet")
-                with self.graph.as_default():    
-                    self.session.run([target.assign(online) for online, target in zip(get_variables(scope="onlinenet"), get_variables(scope="targetnet"))])
-                if self.containers.showscreen:
-                    infoscreen.print(time.strftime("%H:%M:%S", time.gmtime()), containers= self.containers, wname="Last Targetnet Copy")
-                self.unFreezeEverything("saveNet")
-            self.lock.release()
-        
 
-                        
-                
-    def saveNet(self):
-        #self.freezeEverything("saveNet")
-        self.target_cnn.saveNumIters(self.session, self.numIterations)
-        checkpoint_file = os.path.join(self.rl_conf.checkpoint_dir, 'model.ckpt')
-        self.saver.save(self.session, checkpoint_file, global_step=self.learn_which.global_step.eval(session=self.session))       
-        print("saved", level=6)
-        #self.unFreezeEverything("saveNet")
+    #dauerlearnANN kommt aus der AbstractRLAgent
                 
                 
-    #calculateReward ist in der AbstractRLAgent von der er erbt
+#    def learnANN(self):   
+#        def prepare_feed_dict(states, which_net):
+#            feed_dict = {
+#              which_net.inputs: np.array([state[0] for state in states]),
+#              which_net.speed_input:  np.array([self.inflate_speed(state[1], self.rl_conf) for state in states])
+#            }
+#            return feed_dict
+#            
+#            
+#        batch = self.memory.sample(self.rl_conf.batchsize)
+#        
+#        if self.SAVE_ACTION_AS_ARGMAX: 
+#            oldstates, argmactions, rewards, newstates, resetafters = zip(*batch)      
+#            actions = np.zeros([len(argmactions), ((4*self.rl_conf.steering_steps) if self.rl_conf.INCLUDE_ACCPLUSBREAK else (3*self.rl_conf.steering_steps))])
+#            for i in range(len(argmactions)):
+#                actions[i][argmactions[i]] = 1
+#                actualActions = [self.dediscretize(i, self.rl_conf) for i in actions]
+#        else:
+#            oldstates, actualActions, rewards, newstates, resetafters = zip(*batch)      
+#            actualActions = [self.memory.make_floats_from_long(i) for i in actualActions]
+#            actions = [self.discretize(throttle, brake, steer, self.rl_conf) for throttle, brake, steer in actualActions]
+#            argmactions = [np.argmax(i) for i in actions]
+#            
+#        print(list(zip(rewards,actualActions)), level=4)
+#        
+#        qs = self.session.run(self.learn_which.q, feed_dict = prepare_feed_dict(oldstates, self.learn_which)) 
+#        max_qs = self.session.run(self.learn_which.q_max, feed_dict=prepare_feed_dict(newstates, self.learn_which))
+#                                     
+#        #Bellman equation: Q(s,a) = r + y(max(Q(s',a')))
+#        #qs[np.arange(BATCHSIZE), argmactions] += learning_rate*((rewards + Q_DECAY * max_qs * (not resetafters))-qs[np.arange(BATCHSIZE), argmactions]) #so wäre es wenn wir kein ANN nutzen würden!
+#        #https://medium.com/emergent-future/simple-reinforcement-learning-with-tensorflow-part-0-q-learning-with-tables-and-neural-networks-d195264329d0
+#        qs[np.arange(self.rl_conf.batchsize), argmactions] = rewards + self.rl_conf.q_decay * max_qs * (not resetafters) #wenn anschließend resettet wurde war es bspw ein wallhit und damit quasi ein final state
+#        
+#        self.session.run(self.learn_which.train_op, feed_dict={
+#            self.learn_which.inputs: np.array([curr[0] for curr in oldstates]),
+#            self.learn_which.speed_input:np.array([self.inflate_speed(curr[1], self.rl_conf) for curr in oldstates]),
+#            self.learn_which.targets: qs,
+#        })
+#        
+#        self.reinfNetSteps += 1
+#        print("ReinfLearnSteps:", self.reinfNetSteps, level=3)
+#        if self.containers.showscreen:
+#            infoscreen.print(self.reinfNetSteps, "Iterations: >"+str(self.numIterations), containers= self.containers, wname="ReinfLearnSteps")
+#                    
+#        if self.reinfNetSteps % self.rl_conf.checkpointall == 0 or self.numIterations >= self.rl_conf.train_for:
+#            self.saveNet()
+#            
+#            
+#        if self.learn_which == self.online_cnn:
+#            self.lock.acquire()
+#            if self.reinfNetSteps % self.rl_conf.copy_target_all == 0:
+#                self.freezeEverything("saveNet")
+#                with self.graph.as_default():    
+#                    self.session.run([target.assign(online) for online, target in zip(get_variables(scope="onlinenet"), get_variables(scope="targetnet"))])
+#                if self.containers.showscreen:
+#                    infoscreen.print(time.strftime("%H:%M:%S", time.gmtime()), containers= self.containers, wname="Last Targetnet Copy")
+#                self.unFreezeEverything("saveNet")
+#            self.lock.release()
+#        
+#
+#                        
+#                
+#    def saveNet(self):
+#        #self.freezeEverything("saveNet")
+#        self.target_cnn.saveNumIters(self.session, self.numIterations)
+#        checkpoint_file = os.path.join(self.rl_conf.checkpoint_dir, 'model.ckpt')
+#        self.saver.save(self.session, checkpoint_file, global_step=self.learn_which.global_step.eval(session=self.session))       
+#        print("saved", level=6)
+#        #self.unFreezeEverything("saveNet")
+#                
+#                
+#    #calculateReward ist in der AbstractRLAgent von der er erbt
 
         
                         
@@ -129,17 +126,17 @@ class ReinfNetAgent(AbstractRLAgent):
 
     def performNetwork(self, otherinputs, visionvec):        
         super().performNetwork(otherinputs, visionvec)
-        
         with self.graph.as_default():
-            check, (networkresult, qvals) = self.target_cnn.run_inference(self.session, visionvec, otherinputs)
-            if check:
-                throttle, brake, steer = self.dediscretize(networkresult[0], self.containers.rl_conf)
-                result = "["+str(throttle)+", "+str(brake)+", "+str(steer)+"]"
-                self.showqvals(qvals[0])
-                return result, networkresult[0]
+            onehot, qvals = self.target_cnn.run_inference(self.session, visionvec, otherinputs) #former is argmax, latter are individual qvals
+            throttle, brake, steer = self.dediscretize(onehot[0], self.containers.rl_conf)
+            result = "["+str(throttle)+", "+str(brake)+", "+str(steer)+"]"
+            self.showqvals(qvals[0])
+            if self.SAVE_ACTION_AS_ARGMAX:
+                return result, np.argmax(onehot[0])     #er returned immer toUse, toSave
             else:
-                return lastresult
+                return result, (throttle, brake, steer) #er returned immer toUse, toSave
         
+
 
     def showqvals(self, qvals):
         amount = self.rl_conf.steering_steps*4 if self.rl_conf.INCLUDE_ACCPLUSBREAK else self.rl_conf.steering_steps*3

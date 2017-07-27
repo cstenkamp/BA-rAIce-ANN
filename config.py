@@ -30,7 +30,8 @@ class Config(object):
     
     image_dims = [30,45] 
     msperframe = 100 #50   #ACHTUNG!!! Dieser wert wird von unity überschrieben!!!!! #TODO: dass soll mit unity abgeglichen werden!
-    use_second_camera = True
+    use_cameras = False
+    use_second_camera = False
     
     batch_size = 32
     keep_prob = 0.8
@@ -61,7 +62,8 @@ class Config(object):
             os.makedirs(self.checkpoint_dir) 
 
     def superfolder(self):
-        return "data/data_"+str(self.history_frame_nr)+"hframes_"+("2cams_" if self.use_second_camera else "1cam_") + str(self.msperframe) + "msperframe/"
+        numcams = "0cams_" if self.use_cameras else "2cams_" if self.use_second_camera else "1cam_"
+        return "data/data_"+str(self.history_frame_nr)+"hframes_"+numcams+ str(self.msperframe) + "msperframe/"
 
 
 
@@ -93,7 +95,7 @@ class RL_Config(Config):
     saveMemoryAllMins = 45
     train_for = sys.maxsize-1
        
-    ForEveryInf, ComesALearn = 400, 100
+    ForEveryInf, ComesALearn = 400, 10
     learnMode = "between" #"parallel", "between", "remote" (the latter is tobedone)
    
     #re-uses history_frame_nr, image_dims, steering_steps, speed_neurons, INCLUDE_ACCPLUSBREAK, SPEED_AS_ONEHOT
@@ -114,7 +116,7 @@ class RL_Config(Config):
         assert os.path.exists(Config().checkpoint_dir), "I need a pre-trained model"
 
         if self.learnMode == "parallel" and not self.has_gpu(): self.learnMode = "between"
-
+        if not self.use_cameras: self.use_efficientmemory = False
 
     
 class DQN_Config(RL_Config):

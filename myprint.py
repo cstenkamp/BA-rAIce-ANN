@@ -6,7 +6,7 @@ Created on Fri May 19 18:40:44 2017
 """
 #10 is highest, 1 is lowest, 5 prints everything not specified
 
-PRINTLEVEL = 10
+PRINTLEVEL = 5
 MAX_NORMAL_LEVEL = 10
 
 #nicht auf 10 reduzieren, sondern sobald mal einer mit über 10 kam, printet er von da an nur noch den
