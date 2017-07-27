@@ -30,8 +30,8 @@ class Config(object):
     
     image_dims = [30,45] 
     msperframe = 100 #50   #ACHTUNG!!! Dieser wert wird von unity überschrieben!!!!! #TODO: dass soll mit unity abgeglichen werden!
-    use_cameras = False
-    use_second_camera = False
+    use_cameras = True
+    use_second_camera = True
     
     batch_size = 32
     keep_prob = 0.8
@@ -62,9 +62,8 @@ class Config(object):
             os.makedirs(self.checkpoint_dir) 
 
     def superfolder(self):
-        numcams = "0cams_" if self.use_cameras else "2cams_" if self.use_second_camera else "1cam_"
+        numcams = "0cams_" if not self.use_cameras else ("2cams_" if self.use_second_camera else "1cam_")
         return "data/data_"+str(self.history_frame_nr)+"hframes_"+numcams+ str(self.msperframe) + "msperframe/"
-
 
 
 

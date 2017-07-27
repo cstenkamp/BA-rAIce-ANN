@@ -25,23 +25,26 @@ class AbstractAgent(object):
         self.numIterations = 0
         
     ##############functions that should be impemented##########
-    def preRunInference(self, _, __):       
-        self.numIterations += 1
-    
     def checkIfInference(self):
         if self.containers.sv_conf.UPDATE_ONLY_IF_NEW and self.containers.inputval.alreadyread:
             return False
         return True
         
+    def preRunInference(self, _):       
+        self.numIterations += 1
     
-    def postRunInference(self, toUse, _):
-        self.containers.outputval.update(toUse, self.containers.inputval.CTimestamp, self.containers.inputval.STimestamp)  
+    def postRunInference(self, toUse, toSave): #toUse will already be a prepared string, toSave will be raw.
+        self.containers.outputval.update(toUse, toSave, self.containers.inputval.CTimestamp, self.containers.inputval.STimestamp)  
         
-
+    #creates the Agents state from the real state. this is the base version, other agents may overwrite it.
+    def getAgentState(self, vvec1_hist, vvec2_hist, otherinput_hist, action_hist): 
+        conv_inputs = np.concatenate([vvec1_hist, vvec2_hist]) if vvec2_hist is not None else vvec1_hist
+        other_inputs = self.inflate_speed(otherinput_hist[0].SpeedSteer.velocity)
+        other_inputs_toSave = otherinput_hist[0].SpeedSteer.velocity
+        return conv_inputs, other_inputs, other_inputs_toSave
         
     def performNetwork(self, _, __):
         print("Another ANN Inference", level=3)
-        
         
         
     def initNetwork(self, start_fresh):
@@ -56,8 +59,8 @@ class AbstractAgent(object):
         discreteSteer = read_supervised.discretize_steering(steer, config.steering_steps)
         return read_supervised.discretize_all(throttle, brake, discreteSteer, config.steering_steps, config.INCLUDE_ACCPLUSBREAK)
 
-    def inflate_speed(self, speed, config):
-        return read_supervised.inflate_speed(speed, config.speed_neurons, config.SPEED_AS_ONEHOT)
+    def inflate_speed(self, speed):
+        return read_supervised.inflate_speed(speed, self.sv_conf.speed_neurons, self.sv_conf.SPEED_AS_ONEHOT)
     
     def resetUnity(self):
         import server
@@ -141,7 +144,7 @@ class AbstractRLAgent(AbstractAgent):
 
     def postRunInference(self, toUse, toSave):
         super().postRunInference(toUse, None)
-        self.containers.inputval.addResultAndBackup(toSave) 
+        #ACHTUNG! self.containers.inputval.addResultAndBackup(toSave)  WURDE HIER ENTFERNT!
         if self.containers.rl_conf.learnMode == "between":
             print("freezing python because after", self.numIterations, "iterations I need to learn (between)", level=2)
             if self.numIterations % self.containers.rl_conf.ForEveryInf == 0:

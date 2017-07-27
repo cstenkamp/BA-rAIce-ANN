@@ -19,14 +19,16 @@ import reinfNetAgent
 from myprint import myprint as print
 import infoscreen
 import config
+from read_supervised import cutoutandreturnvectors
+from inefficientmemory import Memory as Precisememory
+from efficientmemory import Memory as Efficientmemory
 
+import warnings
+warnings.filterwarnings("ignore")
 
 current_milli_time = lambda: int(round(time.time() * 1000))
 logging.basicConfig(level=logging.ERROR, format='(%(threadName)-10s) %(message)s',) #legacy
 
-from read_supervised import cutoutandreturnvectors
-from inefficientmemory import Memory as Precisememory
-from efficientmemory import Memory as Efficientmemory
 
 
 #this very long part is the comparable namedtuple otherinputs!
@@ -46,6 +48,8 @@ class statusvector(prestatusvector):
         return np.all([self[i] == other[i] for i in range(len(self))])
 class otherinputs(preotherinputs):
     def __eq__(self, other):
+        if other == None:
+            return self.empty()
         return self.ProgressVec == other.ProgressVec \
            and self.SpeedSteer ==  other.SpeedSteer \
            and self.StatusVector == other.StatusVector \
@@ -53,6 +57,8 @@ class otherinputs(preotherinputs):
            and np.all(self.LookAheadVec == other.LookAheadVec)
            #and np.all(self.CenterDistVec == other.CenterDistVec) \ #can be skipped because then the centerdist is also equal
            #FBDelta werden auch nicht beachtet, da die ebenfalls von Zeit abhängen
+    def empty(self):
+        return self.__eq__(empty_inputs())
     def returnRelevant(self):
         return [i for i in self.SpeedSteer]+[i for i in self.StatusVector]+[self.CenterDist]+[i for i in self.LookAheadVec]
         
@@ -71,7 +77,7 @@ def make_otherinputs(othervecs):
                        othervecs[5])
 #this very long part end
 
-
+RELEVANT_OTHERINPUTS = 49
 MININT = -sys.maxsize+1
 TCP_IP = 'localhost' #TODO check if it also works over internet, in the Cluster
 TCP_RECEIVER_PORT = 6435
@@ -201,7 +207,8 @@ class receiver_thread(threading.Thread):
                                     
                             print("PYTHON RECEIVES TIME:", STime, time.time()*1000, level=4)
                             self.containers.inputval.update(visionvec, vvec2, allOneDs, STime, CTime)  #note that visionvec and vvec2 can both be None
-                            self.containers.myAgent.runInference(*self.containers.inputval.read())
+                            agentState = self.containers.myAgent.getAgentState(*self.containers.inputval.read())
+                            self.containers.myAgent.runInference(*agentState)
                         
             except TimeoutError:
                 if len(self.containers.receiverthreads) < 2:
@@ -251,195 +258,173 @@ def resetServer(containers, mspersec, punish=0):
 #it always only sends the newest vectors. It is pythons job to keep track of the history-frames, in case the structure of the used network requires them.
 #There will definitely only be one object of the inputvalcontainer-class, and every receiver-thread appends the newest vectors to this object. In case of multiple
 #Agents, the speed of the threadsafe inputvalcontainer will be the bottleneck.
+#In RL, there is the difference between the state of the environment and the state of the agent. The inputval will be the thing in between: It represents the maximum
+#of a state the agent could know (historyframes times 2visionvecs + othervecs). The agent will then decide what from those it will use as its state, 
+#for example visionvecs of the last 4 frames plus speed of the last frame.
 class InputValContainer(object):   
-    
+        
     def __init__(self, config, rl_conf):
         self.lock = threading.Lock()
         self.config = config
         self.rl_conf = rl_conf
         if self.config.use_cameras:
-            if self.config.history_frame_nr > 1:            
-                if self.config.use_second_camera:
-                    self.vvec_hist = np.zeros([config.history_frame_nr*2, config.image_dims[0], config.image_dims[1]], dtype=rl_conf.visionvecdtype) 
-                else:
-                    self.vvec_hist = np.zeros([config.history_frame_nr, config.image_dims[0], config.image_dims[1]], dtype=rl_conf.visionvecdtype) 
-                self.previous_vvechist = None
+            if self.config.use_second_camera:
+                self.vvec_hist = np.zeros([(config.history_frame_nr+1)*2, config.image_dims[0], config.image_dims[1]], dtype=rl_conf.visionvecdtype) #+1 weil das past timestep da immer bei ist
             else:
-                self.visionvec = np.zeros([config.image_dims[0], config.image_dims[1]], dtype=rl_conf.visionvecdtype)
-                self.previous_visionvec = None
-        self.otherinputs = empty_inputs() #defined at the top, is a namedtuple
+                self.vvec_hist = np.zeros([(config.history_frame_nr+1), config.image_dims[0], config.image_dims[1]], dtype=rl_conf.visionvecdtype) 
+        else:
+            self.vvec_hist = None
+        self.action_hist = [None]*(self.config.history_frame_nr+1)
+        self.otherinput_hist = [empty_inputs()]*(self.config.history_frame_nr+1) #defined at the top, is a namedtuple #again +1 because of past timestep
         self.CTimestamp, self.STimestamp = MININT, MININT
         self.containers = None
         self.alreadyread = True
-        self.previous_action = None
-        self.previous_otherinputs = None
         self.msperframe = config.msperframe
         self.hit_a_wall = False
+        self.just_reset = True
         
         
+    def _read_vvec_hist(self, readPast=False):
+        if self.vvec_hist == None: 
+            return None
+        hframes = self.config.history_frame_nr 
+        if hframes == 1 and self.config.use_second_camera:
+            return ("error", "error")
+                
+        if self.config.use_second_camera:
+            return (self.vvec_hist[1:hframes+1], self.vvec_hist[hframes+2:hframes*2+2]) if readPast else (self.vvec_hist[:hframes], self.vvec_hist[hframes+1:hframes*2+1])
+        else:
+            return (self.vvec_hist[1:hframes+1], None) if readPast else (self.vvec_hist[:hframes], None)
+
+    #in der vvechist steht das älteste hinten: a = [4,3,2,1,0] -> [5] + a[:-1] -> [5,4,3,2,1]   (wobei die current vvec_hist [5,4,3,2] ist und die past [4,3,2,1])
+    #wenn wir beide kameras nutzen ist es [4.1, 3.1, 2.1, 1.1, 0.1, 4.2, 3.2, 2.2, 1.2, 0.2]           
+    def _append_vvec_hist(self, cam1, cam2):
+        hframes = self.config.history_frame_nr 
+        visionvec = np.expand_dims(np.array(cam1, dtype=self.containers.rl_conf.visionvecdtype), axis=0)
+        vvec2 = np.expand_dims(np.array(cam2, dtype=self.containers.rl_conf.visionvecdtype), axis=0)
+        if self.config.use_second_camera:  
+            self.vvec_hist = np.concatenate((visionvec, self.vvec_hist[:hframes+1-1], vvec2, self.vvec_hist[hframes+1:-1]))
+        else:
+            self.vvec_hist = np.concatenate((visionvec, self.vvec_hist[:hframes+1-1]))
+    
+    def _append_other(self, toadd, original):
+        original = [toadd]+original[:-1]
+        return original
+
+    def _read_other(self, what, readPast=False):
+        hframes = self.config.history_frame_nr
+        return what[1:hframes+1] if readPast else what[:hframes]
+
+    
     def update(self, visionvec, vvec2, othervecs, STimestamp, CTimestamp):
-        
-        def is_new(visionvec, otherinputs): #wäre überflüssig das auch anhand von vvec2 zu machen
-            if self.config.use_cameras:
-                if self.config.history_frame_nr == 1:
-                    return not (np.all(self.visionvec == visionvec) and np.all(self.otherinputs == otherinputs))
-                else:
-                    tmp_vvec_hist = [visionvec] + [i for i in self.vvec_hist[:-1]]
-                    allequal = True
-                    for i in range(len(tmp_vvec_hist)):
-                        if not np.all(self.vvec_hist[i] == tmp_vvec_hist[i]):
-                            allequal = False
-                    return not (allequal and np.all(self.otherinputs == otherinputs))
-            else:
-                return np.all(self.otherinputs == otherinputs)
-        
-        logging.debug('Inputval-Update: Waiting for lock')
         self.lock.acquire()
         try:
-            logging.debug('Acquired lock')
+            if not self.just_reset:
+                assert self.action_hist[0] is not None, "the output-val didn't add the last action before runing again!"
+            #20.7.: deleted the "if is_new..." functionality, as I think its absolutely not helpful
             otherinputs = make_otherinputs(othervecs) #is now a namedtuple instead of an array
-            print(len(otherinputs.returnRelevant()), level=11)
-            if is_new(visionvec, otherinputs):
             
-                if self.config.use_cameras:
-                    if self.config.history_frame_nr > 1: #in der vvechist steht das älteste hinten: a = [4,3,2,1] -> [5] + a[:-1] -> [5,4,3,2]
-                        if self.config.use_second_camera: #wenn wir beide kameras nutzen ist es [4.1, 3.1, 2.1, 1.1, 4.2, 3.2, 2.2, 1.2] 
-                            visionvec = np.expand_dims(np.array(visionvec, dtype=self.containers.rl_conf.visionvecdtype), axis=0)
-                            vvec2 = np.expand_dims(np.array(vvec2, dtype=self.containers.rl_conf.visionvecdtype), axis=0)
-                            self.vvec_hist = np.concatenate((visionvec, self.vvec_hist[:self.config.history_frame_nr-1], vvec2, self.vvec_hist[self.config.history_frame_nr:2*self.config.history_frame_nr-1]))
-                        else:
-                            visionvec = np.expand_dims(np.array(visionvec, dtype=self.containers.rl_conf.visionvecdtype), axis=0)
-                            self.vvec_hist = np.concatenate((visionvec, self.vvec_hist[:-1]))
-                    else:
-                        self.visionvec = np.array(visionvec, dtype=self.containers.rl_conf.visionvecdtype)
-                self.otherinputs = otherinputs
+            if self.config.use_cameras:
+                self._append_vvec_hist(visionvec, vvec2)
+            self.otherinput_hist = self._append_other(otherinputs, self.otherinput_hist)
+            self.action_hist = self._append_other(None, self.action_hist)   #will be updated in addAction         
+            
+            #wenn otherinputs.CenterDist >= 10 war und seitdem keine neue action kam, muss er >= 10 bleiben!
+            if self.otherinput_hist[0].CenterDist >= 10:
+                self.hit_a_wall = True 
+            #wird erst sobald ne action kommt wieder false gesetzt.. und solange es true ist:
+            if self.hit_a_wall:
+                self.otherinput_hist[0] = self.otherinput_hist[0]._replace(CenterDist = 10)
                 
-                #wenn otherinputs.CenterDist >= 10 war und seitdem keine neue action kam, muss er >= 10 bleiben!
-                if otherinputs.CenterDist >= 10:
-                    self.hit_a_wall = True 
-                #wird erst sobald ne action kommt wieder false gesetzt.. und solange es true ist:
-                if self.hit_a_wall:
-                    self.otherinputs = self.otherinputs._replace(CenterDist = 10)
-                    
-                try:
-                    if self.config.reset_if_wrongdirection:
-                        if not self.otherinputs.SpeedSteer.rightDirection:
-                            self.containers.wrongdirectiontime += self.containers.sv_conf.msperframe
-                            if self.containers.wrongdirectiontime >= 2000: #bei 2 sekunden falsche richtung
-                                resetUnity(self.containers, punish=self.containers.myAgent.wrongDirPunish)
-                        else:
-                            self.containers.wrongdirectiontime = 0
-                except IndexError:
-                    self.containers.wrongdirectiontime = 0
-                                  
-                self.alreadyread = False
-                self.CTimestamp, self.STimestamp = CTimestamp, STimestamp
-                print("Updated Input-Vec from", STimestamp, level=2)
-            else:
-                print("No Input-Vec upgrading needed from", STimestamp, level=2)
+            try:
+                if self.config.reset_if_wrongdirection:
+                    if not self.otherinput_hist[0].SpeedSteer.rightDirection:
+                        self.containers.wrongdirectiontime += self.containers.sv_conf.msperframe
+                        if self.containers.wrongdirectiontime >= 2000: #bei 2 sekunden falsche richtung
+                            resetUnity(self.containers, punish=self.containers.myAgent.wrongDirPunish)
+                    else:
+                        self.containers.wrongdirectiontime = 0
+            except IndexError:
+                self.containers.wrongdirectiontime = 0
+                              
+            self.alreadyread = False
+            self.CTimestamp, self.STimestamp = CTimestamp, STimestamp
+            print("Updated Input-Vec from", STimestamp, level=2)
+            self.just_reset = False
         finally:
             self.lock.release()
             
             
-    def addResultAndBackup(self, action):
-        self.hit_a_wall = False #sobald ne action danach kommt ist es unrelated #TODO: gilt nur wenn walhit_means_reset
-        self.previous_action = action
-        self.previous_otherinputs = copy.deepcopy(self.otherinputs) 
-        if self.config.history_frame_nr > 1:
-            self.previous_vvechist = copy.deepcopy(self.vvec_hist)
-        else:
-            self.previous_visionvec = copy.deepcopy(self.visionvec)
+    def addAction(self, action):
+        self.hit_a_wall = False #sobald ne action danach kommt ist es unrelated #TODO: gilt nur wenn wallhit_means_reset in Unity
+        self.action_hist[0] = action
             
-        
-    def get_previous_state(self):
-        if self.previous_action is None or self.previous_otherinputs is None:
-            return None, False
-        
-        if self.config.history_frame_nr > 1:
-            state = (self.previous_vvechist, self.previous_otherinputs.SpeedSteer.velocity) #vision plus speed
-        else:
-            state = (self.previous_visionvec, self.previous_otherinputs.SpeedSteer.velocity) #vision plus speed
-        action = self.previous_action
-            
-        return state, action
-
-
         
     def reset(self, interval, nolock = False):
-        logging.debug('Inputval-Reset: Waiting for lock')
         if not nolock: 
             self.lock.acquire()
-        try:
-            logging.debug('Acquired lock')
-            
-            if self.config.history_frame_nr > 1:            
+        try:      
+            config = self.config
+            if self.config.use_cameras:
                 if self.config.use_second_camera:
-                    self.vvec_hist = np.zeros([self.config.history_frame_nr*2, self.config.image_dims[0], self.config.image_dims[1]], dtype=self.containers.rl_conf.visionvecdtype) 
+                    self.vvec_hist = np.zeros([(config.history_frame_nr+1)*2, config.image_dims[0], config.image_dims[1]], dtype=rl_conf.visionvecdtype) #+1 weil das past timestep da immer bei ist
                 else:
-                    self.vvec_hist = np.zeros([self.config.history_frame_nr, self.config.image_dims[0], self.config.image_dims[1]], dtype=self.containers.rl_conf.visionvecdtype) 
-                self.previous_vvechist = None
+                    self.vvec_hist = np.zeros([(config.history_frame_nr+1), config.image_dims[0], config.image_dims[1]], dtype=rl_conf.visionvecdtype) 
             else:
-                self.visionvec = np.zeros([self.config.image_dims[0], self.config.image_dims[1]], dtype=self.containers.rl_conf.visionvecdtype)
-                self.previous_visionvec = None
-            self.otherinputs = empty_inputs()
+                self.vvec_hist = None
+            self.action_hist = [None]*(self.config.history_frame_nr+1)
+            self.otherinput_hist = [empty_inputs()]*(self.config.history_frame_nr+1) #defined at the top, is a namedtuple #again +1 because of past timestep
             self.CTimestamp, self.STimestamp = MININT, MININT
             self.alreadyread = True
-            self.previous_action = None
-            self.previous_otherinputs = None
             self.msperframe = interval #da Unity im diesen Wert immer bei spielstart schickt, wird msperframe immer richtig sein            
             assert int(self.msperframe) == int(self.config.msperframe)
             self.hit_a_wall = False
+            self.just_reset = True
             logging.debug("Resettet input-value")
         finally:
             if not nolock:
                 self.lock.release() 
 
-
-    def read(self):
-        self.alreadyread = True
-        #print(self.visionvec) #TODO: der sollte nicht leer sein wenn not UPDATE_ONLY_IF_NEW
-        if self.config.use_cameras:
-            if self.config.history_frame_nr > 1:
-                return self.otherinputs, self.vvec_hist
-            else:
-                return self.otherinputs, self.visionvec
-        else:
-            return self.otherinputs, None
+    def read(self, pastState=False):
+        if not pastState:
+            self.alreadyread = True
+        return self._read_vvec_hist(pastState)[0], self._read_vvec_hist(pastState)[1], self._read_other(self.otherinput_hist,pastState), self._read_other(self.action_hist,pastState)
+        #like I said, this return everything that could be used by an agent. Not every agent uses that. The standard-agent for example uses...
+        #state = (vvec1_hist, vvec2_hist, otherinput_hist[0].SpeedSteer.velocity) #vision plus speed
+        #action = action_hist[0]
+ 
         
-    
-    
-        
-
+#once the agent's network ran on what it got from the inputvec, it will update the value of the otputvalcontainer. 
+#There is also guaranteedly only one outputvalcontainer, and the outputvalcontainer is also the one responsible for sending the result back to Unity as soon as its done.
+#When the outputval is updated, it will also add the action python suggests back to the inputval, as some kinds of agents also require the last action as input of the net.
 class OutputValContainer(object):    
     def __init__(self):
         self.lock = threading.Lock()
         self.value = ""
         self.CTimestamp, self.STimestamp = MININT, MININT
         self.containers = None
-        #self.alreadysent = True #nen leeres ding braucht er nicht schicken
         
-    #you update only if the new input-timestamp > der alte (in case on ANN-Thread was superslow and thus outdated)
-    def update(self, withwhatval, CTimestamp, STimestamp):
-        logging.debug('Outputval-Update: Waiting for lock')
+        
+    #you update only if the new input-timestamp > der alte 
+    def update(self, toSend, toSave, CTimestamp, STimestamp):
         self.lock.acquire()
         try:
-            logging.debug('Acquired lock')
-            if (self.containers.sv_conf.UPDATE_ONLY_IF_NEW and int(self.STimestamp) < int(STimestamp)) or (not self.containers.sv_conf.UPDATE_ONLY_IF_NEW and int(self.STimestamp) <= int(STimestamp)):
-                self.value = withwhatval
+            if int(self.STimestamp) < int(STimestamp):
+                self.value = toSend
+                self.containers.inputval.addAction(toSave)
                 self.CTimestamp, self.STimestamp = CTimestamp, STimestamp #es geht nicht um jetzt, sondern um dann als das ANN gestartet wurde
-                #self.alreadysent = False
-                print("Updated output-value to",withwhatval)
+                print("Updated output-value to", toSend, level=4)
                 self.send_via_senderthread(self.value, self.CTimestamp, self.STimestamp)
             else:
-                print("Didn't update output-value because the new one wouldn't be newer")
+                print("Didn't update output-value because the new one wouldn't be newer", level=10)
+                raise
         finally:
             self.lock.release()
 
+
     def reset(self):
-        logging.debug('Outputval-reset: Waiting for lock')
         self.lock.acquire()
         try:
-            logging.debug('Acquired lock')
             self.value = ""
             self.CTimestamp, self.STimestamp = MININT, MININT
             logging.debug("Resettet output-value")
@@ -456,7 +441,7 @@ class OutputValContainer(object):
             
     def send_via_senderthread(self, value, CTimestamp, STimestamp):
         #nehme die erste verbindung die keinen error schemißt!   
-        print("PYTHON SENDING TIME:", STimestamp, time.time()*1000, level=10)
+        print("PYTHON SENDING TIME:", STimestamp, time.time()*1000, level=4)
         if self.containers.KeepRunning:
             assert len(self.containers.senderthreads) > 0, "There is no senderthread at all! How will I send?"
             for i in range(len(self.containers.senderthreads)):
@@ -473,7 +458,7 @@ class OutputValContainer(object):
 
 ###############################################################################
     
-#just like the ReceiverListenerThread waits for Unity connecting to RECEIVE info, this one waits for unity to connnect to SEND info TO UNITY
+#just like the ReceiverListenerThread waits for Unity connecting to RECEIVE info, this one waits for unity to connnect to SEND info TO UNITY (they listen on different ports)
 class SenderListenerThread(threading.Thread):
     def __init__(self):
         threading.Thread.__init__(self)
@@ -535,12 +520,10 @@ class Containers():
         self.KeepRunning = True
         self.receiverthreads = []
         self.senderthreads = []
-        #self.ANNs = []
         self.myAgent = None
-        #self.reinfNetSteps = 0
         self.wrongdirectiontime = 0
         self.freezeInf = self.freezeLearn = False
-        #numIterations steckt in self.myAgent.numIterations
+        
         
 def create_socket(port):
     server_socket = MySocket()
@@ -580,8 +563,8 @@ def main(sv_conf, rl_conf, only_sv, no_learn, show_screen, start_fresh, nomemory
         agent = reinfNetAgent.ReinfNetAgent #this one, inheriting from abstractRLAgent, will have a memory
 
         
-    containers.myAgent = agent(sv_conf, containers, rl_conf, start_fresh) #executes dauerLearnANN in LearnThread
-                                                                          #executes runInference in receiver_thread
+    containers.myAgent = agent(sv_conf, containers, rl_conf, start_fresh) #executes runInference in receiver_thread
+                                                                          #executes dauerLearnANN in LearnThread if its a learning agent
     if not only_sv:
         containers.usememory = True
         if rl_conf.use_efficientmemory:
@@ -606,7 +589,7 @@ def main(sv_conf, rl_conf, only_sv, no_learn, show_screen, start_fresh, nomemory
     #THREAD 3 (learning)
     if not only_sv and not no_learn and rl_conf.learnMode == "parallel":
         dauerLearn = partial(containers.myAgent.dauerLearnANN, learnSteps=rl_conf.train_for)
-        learnthread = threading.Thread(target=dauerLearn) #TODO: das hier geht nicht bei > 1 ANN #BUG
+        learnthread = threading.Thread(target=dauerLearn)
         learnthread.start()
 
     

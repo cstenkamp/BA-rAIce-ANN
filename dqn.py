@@ -226,15 +226,13 @@ class CNN(object):
         return accuracy, loss, dataset.numsamples
             
             
-    def run_inference(self, session, visionvec, otherinputs):        
-        assert type(visionvec[0]).__module__ == np.__name__
-        assert (np.array(visionvec.shape) == np.array(self.inputs.get_shape().as_list()[1:])).all()
+    def run_inference(self, session, conv_inputs, other_inputs):        
+        assert type(conv_inputs[0]).__module__ == np.__name__
+        assert (np.array(conv_inputs.shape) == np.array(self.inputs.get_shape().as_list()[1:])).all()
         
-        visionvec = np.expand_dims(visionvec, axis=0)
-        feed_dict = {self.inputs: visionvec}  
-        if self.config.speed_neurons:
-            speed_disc = read_supervised.inflate_speed(otherinputs.SpeedSteer.velocity, self.config.speed_neurons, self.config.SPEED_AS_ONEHOT)
-            feed_dict[self.speed_input] = np.expand_dims(speed_disc, axis=0)
+        feed_dict = {self.inputs: np.expand_dims(conv_inputs, axis=0)}  #expand_dims weil hier quasi batchsize=1 ist
+        if self.config.speed_neurons:  #das config.speed_neurons muss anders... puhhhh....
+            feed_dict[self.speed_input] = np.expand_dims(other_inputs, axis=0) #ES HEIßT JETZT NICHT MEHR SPEED_INPUT SONDERN EINFACH OTHER-IPNUTS UND CONV-INPUTS
         
         return session.run([self.onehot, self.q], feed_dict=feed_dict)
 
@@ -243,7 +241,7 @@ class CNN(object):
     def calculate_value(self, session, visionvec, speed):
         visionvec = np.expand_dims(visionvec, axis=0)
         feed_dict = {self.inputs: visionvec}  
-        if self.config.speed_neurons:
+        if self.config.speed_neurons: #das config.speed_neurons muss anders... puhhhh....
            speed_disc = read_supervised.inflate_speed(speed, self.config.speed_neurons, self.config.SPEED_AS_ONEHOT)
            feed_dict[self.speed_input] = np.expand_dims(speed_disc, axis=0)
         
