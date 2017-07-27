@@ -20,14 +20,15 @@ class PlayNetAgent(AbstractAgent):
         self.initNetwork()
 
 
-    def runInference(self, conv_inputs, other_inputs, _): #since we don't have a memory in this agent, we don't care for other_inputs_toSave
+    def runInference(self, gameState, pastState): #since we don't have a memory in this agent, we don't care for other_inputs_toSave
         if self.isinitialized and self.checkIfInference():
-            super().preRunInference(None)
+            conv_inputs, other_inputs = self.getAgentState(*gameState)
+            super().preRunInference()
                 
             self.lock.acquire()
             try:
                 self.isbusy = True 
-                toUse, toSave = self.performNetwork(other_inputs, conv_inputs)
+                toUse, toSave = self.performNetwork(conv_inputs, self.makeNetUsableOtherInputs(other_inputs))
                 super().postRunInference(toUse, toSave)
                 self.isbusy = False
             finally:
@@ -35,9 +36,9 @@ class PlayNetAgent(AbstractAgent):
                   
                 
 
-    def performNetwork(self, other_inputs, conv_inputs):
-        super().performNetwork(other_inputs, conv_inputs)
-        networkresult, _ = self.cnn.run_inference(self.session, conv_inputs, other_inputs) 
+    def performNetwork(self, conv_inputs, inflated_other_inputs):
+        super().performNetwork(conv_inputs, inflated_other_inputs)
+        networkresult, _ = self.cnn.run_inference(self.session, conv_inputs, inflated_other_inputs) 
         throttle, brake, steer = self.dediscretize(networkresult[0], self.sv_conf)
         toUse = "["+str(throttle)+", "+str(brake)+", "+str(steer)+"]"
         return toUse, (throttle, brake, steer)

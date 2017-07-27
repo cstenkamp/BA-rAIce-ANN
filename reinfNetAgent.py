@@ -23,8 +23,6 @@ STANDARDRETURN = ("[0.5,0,0.0]", [0]*42)
 DONT_COPY_WEIGHTS = [] #["FC1", "FC2"]
 DONT_TRAIN = [] #["Conv1", "Conv2", "FC1"]# ["Conv1", "Conv2"]
 
-lastresult = None
-
 ONLY_START = False
 
 
@@ -33,40 +31,35 @@ class ReinfNetAgent(AbstractRLAgent):
         super().__init__(sv_conf, containers, rl_conf, *args, **kwargs)
         self.epsilon = self.rl_conf.startepsilon
         self.initNetwork(start_fresh)
-        self.learn_which = self.online_cnn    #TODO: target network ausschalten können
+        self.learn_which = self.online_cnn   
         self.SAVE_ACTION_AS_ARGMAX = False #legacy und speicher-effizienter ists true, aber dann lässt sich das memory nicht als grundlage für ddpg
 
 
 
-    def runInference(self, otherinputs, visionvec):
+    def runInference(self, gameState, pastState):
         if self.isinitialized and self.checkIfInference():
-            self.preRunInference(otherinputs, visionvec)
+            self.preRunInference(gameState, pastState) #eg. adds to memory
+            conv_inputs, other_inputs = self.getAgentState(*gameState)
                 
 #            ##############DELETETHISPART############## #to check how fast the pure socket connection, whithout ANN, is
-#            self.containers.outputval.send_via_senderthread("[0, 0, 0]", self.containers.inputval.CTimestamp, self.containers.inputval.STimestamp)
+#            self.containers.outputval.send_via_senderthread("[1, 0, 0]", self.containers.inputval.CTimestamp, self.containers.inputval.STimestamp)
 #            return
 #            ##############DELETETHISPART ENDE##############
             
-            #run ANN
-            global lastresult
-            try:
-                
-                if self.canLearn() and np.random.random() > self.epsilon:
-                    toUse, toSave = self.performNetwork(otherinputs, visionvec)
-                else:
-                    toUse, toSave = self.randomAction(otherinputs.SpeedSteer.velocity, self.rl_conf)
-                
-                    if len(self.memory) >= self.rl_conf.replaystartsize:
-                        try:
-                            self.epsilon = min(round(max(self.rl_conf.startepsilon-((self.rl_conf.startepsilon-self.rl_conf.minepsilon)*((self.numIterations-self.rl_conf.replaystartsize)/self.rl_conf.finalepsilonframe)), self.rl_conf.minepsilon), 5), 1)
-                        except:
-                            self.epsilon = min(round(max(self.epsilon-self.rl_conf.epsilondecrease, self.rl_conf.minepsilon), 5), 1)
-                        
-                    if self.containers.showscreen:
-                        infoscreen.print(self.epsilon, containers= self.containers, wname="Epsilon")
-                lastresult = toUse, toSave 
-            except IndexError: #kommt wenn inputval resettet wurde
-                toUse, toSave = lastresult
+            if self.canLearn() and np.random.random() > self.epsilon:
+                toUse, toSave = self.performNetwork(conv_inputs, self.makeNetUsableOtherInputs(other_inputs))
+            else:
+                toUse, toSave = self.randomAction(gameState[2][0].SpeedSteer.velocity, self.rl_conf)
+            
+                if len(self.memory) >= self.rl_conf.replaystartsize:
+                    try:
+                        self.epsilon = min(round(max(self.rl_conf.startepsilon-((self.rl_conf.startepsilon-self.rl_conf.minepsilon)*((self.numIterations-self.rl_conf.replaystartsize)/self.rl_conf.finalepsilonframe)), self.rl_conf.minepsilon), 5), 1)
+                    except:
+                        self.epsilon = min(round(max(self.epsilon-self.rl_conf.epsilondecrease, self.rl_conf.minepsilon), 5), 1)
+                    
+                if self.containers.showscreen:
+                    infoscreen.print(self.epsilon, containers= self.containers, wname="Epsilon")
+
 
             if self.containers.showscreen:
                 infoscreen.print(toUse, containers= self.containers, wname="Last command")
@@ -76,18 +69,40 @@ class ReinfNetAgent(AbstractRLAgent):
             self.postRunInference(toUse, toSave)
     
 
+
+    def performNetwork(self, conv_inputs, inflated_other_inputs):        
+        super().performNetwork(conv_inputs, inflated_other_inputs)
+        with self.graph.as_default():
+            onehot, qvals = self.target_cnn.run_inference(self.session, conv_inputs, inflated_other_inputs) #former is argmax, latter are individual qvals
+            throttle, brake, steer = self.dediscretize(onehot[0], self.containers.rl_conf)
+            result = "["+str(throttle)+", "+str(brake)+", "+str(steer)+"]"
+            self.showqvals(qvals[0])
+            if self.SAVE_ACTION_AS_ARGMAX:
+                return result, np.argmax(onehot[0])     #er returned immer toUse, toSave
+            else:
+                return result, (throttle, brake, steer) #er returned immer toUse, toSave
+
+
+
+    def showqvals(self, qvals):
+        amount = self.rl_conf.steering_steps*4 if self.rl_conf.INCLUDE_ACCPLUSBREAK else self.rl_conf.steering_steps*3
+        b = []
+        for i in range(amount):
+            a = [0]*amount
+            a[i] = 1
+            b.append(str(self.dediscretize(a, self.rl_conf)))
+        b = list(zip(b, qvals))
+        toprint = [str(i[0])[1:-1]+": "+str(i[1]) for i in b]
+        toprint = "\n".join(toprint)
+        
+        print(b, level=3)
+        if self.containers.showscreen:
+            infoscreen.print(toprint, containers= self.containers, wname="Current Q Vals")
+
     #dauerlearnANN kommt aus der AbstractRLAgent
                 
                 
     def learnANN(self):   
-        def prepare_feed_dict(states, which_net):
-            feed_dict = {
-              which_net.inputs: np.array([state[0] for state in states]),
-              which_net.speed_input:  np.array([self.inflate_speed(state[1], self.rl_conf) for state in states])
-            }
-            return feed_dict
-            
-            
         batch = self.memory.sample(self.rl_conf.batchsize)
         
         if self.SAVE_ACTION_AS_ARGMAX: 
@@ -101,23 +116,22 @@ class ReinfNetAgent(AbstractRLAgent):
             actualActions = [self.memory.make_floats_from_long(i) for i in actualActions]
             actions = [self.discretize(throttle, brake, steer, self.rl_conf) for throttle, brake, steer in actualActions]
             argmactions = [np.argmax(i) for i in actions]
-            
-        print(list(zip(rewards,actualActions)), level=4)
+        #soooo, actions[x] = [0,0,1,0,0], argmactions[x] = 2, actualAcitions[x] = (1,0,0)
         
-        qs = self.session.run(self.learn_which.q, feed_dict = prepare_feed_dict(oldstates, self.learn_which)) 
-        max_qs = self.session.run(self.learn_which.q_max, feed_dict=prepare_feed_dict(newstates, self.learn_which))
+        old_convs = np.array([i[0] for i in oldstates])
+        old_other = np.array([self.makeNetUsableOtherInputs(i[1]) for i in oldstates])
+        new_convs = np.array([i[0] for i in newstates])
+        new_other = np.array([self.makeNetUsableOtherInputs(i[1]) for i in newstates])
+
+        qs, max_qs = self.learn_which.rl_learn_forward(self.session, old_convs, old_other, new_convs, new_other)
                                      
         #Bellman equation: Q(s,a) = r + y(max(Q(s',a')))
         #qs[np.arange(BATCHSIZE), argmactions] += learning_rate*((rewards + Q_DECAY * max_qs * (not resetafters))-qs[np.arange(BATCHSIZE), argmactions]) #so wäre es wenn wir kein ANN nutzen würden!
         #https://medium.com/emergent-future/simple-reinforcement-learning-with-tensorflow-part-0-q-learning-with-tables-and-neural-networks-d195264329d0
         qs[np.arange(self.rl_conf.batchsize), argmactions] = rewards + self.rl_conf.q_decay * max_qs * (not resetafters) #wenn anschließend resettet wurde war es bspw ein wallhit und damit quasi ein final state
         
-        self.session.run(self.learn_which.train_op, feed_dict={
-            self.learn_which.inputs: np.array([curr[0] for curr in oldstates]),
-            self.learn_which.speed_input:np.array([self.inflate_speed(curr[1], self.rl_conf) for curr in oldstates]),
-            self.learn_which.targets: qs,
-        })
-        
+        self.learn_which.rl_learn_step(self.session, old_convs, old_other, qs)
+           
         self.reinfNetSteps += 1
         print("ReinfLearnSteps:", self.reinfNetSteps, level=3)
         if self.containers.showscreen:
@@ -152,37 +166,6 @@ class ReinfNetAgent(AbstractRLAgent):
                 
     #calculateReward ist in der AbstractRLAgent von der er erbt
 
-        
-                        
-                
-
-    def performNetwork(self, otherinputs, visionvec):        
-        super().performNetwork(otherinputs, visionvec)
-        with self.graph.as_default():
-            onehot, qvals = self.target_cnn.run_inference(self.session, visionvec, otherinputs) #former is argmax, latter are individual qvals
-            throttle, brake, steer = self.dediscretize(onehot[0], self.containers.rl_conf)
-            result = "["+str(throttle)+", "+str(brake)+", "+str(steer)+"]"
-            self.showqvals(qvals[0])
-            if self.SAVE_ACTION_AS_ARGMAX:
-                return result, np.argmax(onehot[0])     #er returned immer toUse, toSave
-            else:
-                return result, (throttle, brake, steer) #er returned immer toUse, toSave
-        
-
-    def showqvals(self, qvals):
-        amount = self.rl_conf.steering_steps*4 if self.rl_conf.INCLUDE_ACCPLUSBREAK else self.rl_conf.steering_steps*3
-        b = []
-        for i in range(amount):
-            a = [0]*amount
-            a[i] = 1
-            b.append(str(self.dediscretize(a, self.rl_conf)))
-        b = list(zip(b, qvals))
-        toprint = [str(i[0])[1:-1]+": "+str(i[1]) for i in b]
-        toprint = "\n".join(toprint)
-        
-        print(b, level=3)
-        if self.containers.showscreen:
-            infoscreen.print(toprint, containers= self.containers, wname="Current Q Vals")
         
             
     #randomAction ist ebenfalls in der AbstractRLAgent     

@@ -87,7 +87,7 @@ class RL_Config(Config):
     
     replaystartsize = 0
     memorysize = 30000
-    use_efficientmemory = True
+    use_efficientmemory = False
     use_constantbutbigmemory = False
     visionvecdtype = np.int8 #wäre es np.bool würde er den rand als street sehen!
     keep_memory = True

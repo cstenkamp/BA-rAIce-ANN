@@ -207,8 +207,7 @@ class receiver_thread(threading.Thread):
                                     
                             print("PYTHON RECEIVES TIME:", STime, time.time()*1000, level=4)
                             self.containers.inputval.update(visionvec, vvec2, allOneDs, STime, CTime)  #note that visionvec and vvec2 can both be None
-                            agentState = self.containers.myAgent.getAgentState(*self.containers.inputval.read())
-                            self.containers.myAgent.runInference(*agentState)
+                            self.containers.myAgent.runInference(self.containers.inputval.read(), self.containers.inputval.read(pastState=True))
                         
             except TimeoutError:
                 if len(self.containers.receiverthreads) < 2:
@@ -282,6 +281,7 @@ class InputValContainer(object):
         self.msperframe = config.msperframe
         self.hit_a_wall = False
         self.just_reset = True
+        self.has_past_state = False
         
         
     def _read_vvec_hist(self, readPast=False):
@@ -321,6 +321,7 @@ class InputValContainer(object):
         try:
             if not self.just_reset:
                 assert self.action_hist[0] is not None, "the output-val didn't add the last action before runing again!"
+                self.has_past_state = True
             #20.7.: deleted the "if is_new..." functionality, as I think its absolutely not helpful
             otherinputs = make_otherinputs(othervecs) #is now a namedtuple instead of an array
             
@@ -380,6 +381,7 @@ class InputValContainer(object):
             assert int(self.msperframe) == int(self.config.msperframe)
             self.hit_a_wall = False
             self.just_reset = True
+            self.has_past_state = False
             logging.debug("Resettet input-value")
         finally:
             if not nolock:
@@ -388,6 +390,8 @@ class InputValContainer(object):
     def read(self, pastState=False):
         if not pastState:
             self.alreadyread = True
+        if pastState and not self.has_past_state:
+            return None, None, None, None
         return self._read_vvec_hist(pastState)[0], self._read_vvec_hist(pastState)[1], self._read_other(self.otherinput_hist,pastState), self._read_other(self.action_hist,pastState)
         #like I said, this return everything that could be used by an agent. Not every agent uses that. The standard-agent for example uses...
         #state = (vvec1_hist, vvec2_hist, otherinput_hist[0].SpeedSteer.velocity) #vision plus speed

@@ -98,7 +98,7 @@ class Memory(object):
 #            samples = np.random.permutation(self._size-4)[:n]
 #            batch = [self._buffer[i] for i in samples]  
 #            return batch                   
-                       
+#                  
 #    def sample2(self, n):
 #        return zip(*self.sample(n))      
 #  

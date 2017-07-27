@@ -225,19 +225,6 @@ class CNN(object):
         accuracy, loss = session.run([self.accuracy, self.loss], feed_dict=feed_dict)
         return accuracy, loss, dataset.numsamples
             
-            
-    def run_inference(self, session, conv_inputs, other_inputs):        
-        assert type(conv_inputs[0]).__module__ == np.__name__
-        assert (np.array(conv_inputs.shape) == np.array(self.inputs.get_shape().as_list()[1:])).all()
-        
-        feed_dict = {self.inputs: np.expand_dims(conv_inputs, axis=0)}  #expand_dims weil hier quasi batchsize=1 ist
-        if self.config.speed_neurons:  #das config.speed_neurons muss anders... puhhhh....
-            feed_dict[self.speed_input] = np.expand_dims(other_inputs, axis=0) #ES HEIßT JETZT NICHT MEHR SPEED_INPUT SONDERN EINFACH OTHER-IPNUTS UND CONV-INPUTS
-        
-        return session.run([self.onehot, self.q], feed_dict=feed_dict)
-
-        
-        
     def calculate_value(self, session, visionvec, speed):
         visionvec = np.expand_dims(visionvec, axis=0)
         feed_dict = {self.inputs: visionvec}  
@@ -247,7 +234,42 @@ class CNN(object):
         
         return session.run(self.q_max, feed_dict=feed_dict)
             
+
+##############################################################################################################################
+    
+    
+    def rl_fill_feeddict(self, conv_inputs, other_inputs):
+        if len(conv_inputs.shape) <= 3:
+            feed_dict = {self.inputs: np.expand_dims(conv_inputs, axis=0)}  #expand_dims weil hier quasi batchsize=1 ist
+            if self.config.speed_neurons:  #das config.speed_neurons muss anders... puhhhh.... #ES HEIßZT NICHT MEHR SPEED_INPUT SONDERN EINFACH OTHER-IPNUTS UND CONV-INPUTS
+                feed_dict[self.speed_input] = np.expand_dims(other_inputs, axis=0)         
+        else:
+            feed_dict = {self.inputs: conv_inputs}
+            if self.config.speed_neurons:
+                feed_dict[self.speed_input] = other_inputs
+        return feed_dict
         
+        
+    def run_inference(self, session, conv_inputs, other_inputs):        
+        assert type(conv_inputs[0]).__module__ == np.__name__
+        assert (np.array(conv_inputs.shape) == np.array(self.inputs.get_shape().as_list()[1:])).all()
+        feed_dict = self.rl_fill_feeddict(conv_inputs, other_inputs)
+        return session.run([self.onehot, self.q], feed_dict=feed_dict)
+
+        
+    
+    def rl_learn_forward(self, session, conv_inputs, other_inputs, following_conv_inputs, following_other_inputs):
+        qs = session.run(self.q, feed_dict = self.rl_fill_feeddict(conv_inputs, other_inputs)) 
+        max_qs = session.run(self.q_max, feed_dict = self.rl_fill_feeddict(following_conv_inputs, following_other_inputs))
+        return qs, max_qs
+
+
+    def rl_learn_step(self, session, conv_inputs, other_inputs, qs):
+        feed_dict = self.rl_fill_feeddict(conv_inputs, other_inputs)
+        feed_dict[self.targets] = qs
+        session.run(self.learn_which.train_op, feed_dict=feed_dict)    
+    
+    
        
 def run_svtraining(config, dataset):
     graph = tf.Graph()

@@ -30,7 +30,7 @@ class AbstractAgent(object):
             return False
         return True
         
-    def preRunInference(self, _):       
+    def preRunInference(self):       
         self.numIterations += 1
     
     def postRunInference(self, toUse, toSave): #toUse will already be a prepared string, toSave will be raw.
@@ -39,9 +39,14 @@ class AbstractAgent(object):
     #creates the Agents state from the real state. this is the base version, other agents may overwrite it.
     def getAgentState(self, vvec1_hist, vvec2_hist, otherinput_hist, action_hist): 
         conv_inputs = np.concatenate([vvec1_hist, vvec2_hist]) if vvec2_hist is not None else vvec1_hist
-        other_inputs = self.inflate_speed(otherinput_hist[0].SpeedSteer.velocity)
-        other_inputs_toSave = otherinput_hist[0].SpeedSteer.velocity
-        return conv_inputs, other_inputs, other_inputs_toSave
+        other_inputs = otherinput_hist[0].SpeedSteer.velocity
+        return conv_inputs, other_inputs
+    
+    def makeNetUsableOtherInputs(self, other_inputs): #normally, the otherinputs are stored as compact as possible. Networks may need to unpack that.
+        return self.inflate_speed(other_inputs)
+    
+    def getAction(self, _, __, ___, action_hist):
+        return action_hist[0] 
         
     def performNetwork(self, _, __):
         print("Another ANN Inference", level=3)
@@ -85,30 +90,34 @@ class AbstractRLAgent(AbstractAgent):
         self.wrongDirPunish = 100;
     
     
-    def addToMemory(self, newstate): 
+    def addToMemory(self, gameState, pastState): 
         assert self.memory is not None, "It should be specified in server right afterwards"
         
-        oldstate, action = self.containers.inputval.get_previous_state()
-        if oldstate is not None: #was der Fall DIREKT nach reset oder nach start ist
-            reward = self.calculateReward(self.containers.inputval)
-            #print(np.all(np.all(oldstate[0][0] == newstate[0][1]), np.all(oldstate[0][1] == newstate[0][2]), np.all(oldstate[0][2] == newstate[0][3])), level=10) #this is why our efficient memory works
+        if pastState[0] is not None: #was der Fall DIREKT nach reset oder nach start ist
             
+            past_conv_inputs, _, past_other_inputs_tosave = self.getAgentState(*pastState)
+            s  = (past_conv_inputs, past_other_inputs_tosave)
+            a  = self.getAction(*pastState)
+            r = self.calculateReward(*gameState)
+            conv_inputs, _, other_inputs_tosave = self.getAgentState(*gameState)
+            s2 = (conv_inputs, other_inputs_tosave)
+        
             if not self.SAVE_ACTION_AS_ARGMAX: #action ist entweder das argmax der final_neurons ODER das (throttle, brake, steer)-tuple
-                actuAction = action                                                                                         
-                action = self.memory.make_long_from_floats(*action)
+                actuAction = a                                                                                         
+                a = self.memory.make_long_from_floats(*a)
             else:
-                actuAction = self.dediscretize(action, self.rl_conf)
+                actuAction = self.dediscretize(a, self.rl_conf)
             
-            self.memory.append([oldstate, action, reward, newstate, False])  
+            self.memory.append([s, a, r, s2, False])  
             
-            print(actuAction, reward, level=6)
+            print(actuAction, r, level=6)
             
             if self.containers.showscreen:
-                infoscreen.print(actuAction, round(reward,2), round(self.target_cnn.calculate_value(self.session, newstate[0], newstate[1])[0],2), containers= self.containers, wname="Last memory")
+                infoscreen.print(actuAction, round(r,2), round(self.target_cnn.calculate_value(self.session, s2[0], s2[1])[0],2), containers= self.containers, wname="Last memory")
                 if len(self.memory) % 20 == 0:
                     infoscreen.print(">"+str(len(self.memory)), containers= self.containers, wname="Memorysize")
       
-                                    
+       
      
     def checkIfInference(self):
         if self.containers.freezeInf:
@@ -133,13 +142,9 @@ class AbstractRLAgent(AbstractAgent):
         return super().checkIfInference()
 
 
-    def preRunInference(self, otherinputs, visionvec):
-        if visionvec != None:
-            state = (visionvec, otherinputs.SpeedSteer.velocity)
-        else:
-            state = otherinputs.returnRelevant
-        self.addToMemory(state)
-        super().preRunInference(otherinputs, visionvec)
+    def preRunInference(self, gameState, pastState):
+        self.addToMemory(gameState, pastState)
+        super().preRunInference()
         
 
     def postRunInference(self, toUse, toSave):
@@ -216,10 +221,10 @@ class AbstractRLAgent(AbstractAgent):
 #        return progress-stay_on_street
 
 
-    def calculateReward(self, inputval):
-        stay_on_street = abs(inputval.otherinputs.CenterDist)
+    def calculateReward(self, vvec1_hist, vvec2_hist, otherinput_hist, action_hist):
+        stay_on_street = abs(otherinput_hist[0].CenterDist)
         stay_on_street = round(0 if stay_on_street < 5 else self.wallhitPunish if stay_on_street >= 10 else stay_on_street-5, 3)
-        return inputval.otherinputs.SpeedSteer.speedInStreetDir-stay_on_street
+        return otherinput_hist[0].SpeedSteer.speedInStreetDir-stay_on_street
 
 
     
