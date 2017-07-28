@@ -4,17 +4,66 @@ import numpy as np
 np.set_printoptions(threshold=np.nan)
 from copy import deepcopy
 from math import floor
+from collections import namedtuple
 #====own classes====
 from myprint import myprint as print
 
+flatten = lambda l: [item for sublist in l for item in sublist]
 MAXSPEED = 250
 DELAY_TO_CONSIDER = 100
-
-
 FOLDERNAME = "SavedLaps/"
-flatten = lambda l: [item for sublist in l for item in sublist]
 
-    
+###############################################################################
+###############################################################################
+
+#this very long part is the comparable namedtuple otherinputs!
+Preprogressvec = namedtuple('ProgressVec', ['Progress', 'Laptime', 'NumRounds', 'fValidLap'])
+Prespeedsteer = namedtuple('SpeedSteer', ['RLTorque', 'RRTorque', 'FLSteer', 'FRSteer', 'velocity', 'rightDirection', 'velocityPerpendicular', 'carAngle', 'speedInStreetDir'])
+Prestatusvector = namedtuple('StatusVector', ['velocity', 'FLSlip0', 'FRSlip0', 'RLSlip0', 'RRSlip0', 'FLSlip1', 'FRSlip1', 'RLSlip1', 'RRSlip1'])
+                                             #4 elems       9 elems       9 elems         1 elem        15 elems         30 elems =      2 elems    = 70 elems
+Preotherinputs = namedtuple('OtherInputs', ['ProgressVec', 'SpeedSteer', 'StatusVector', 'CenterDist', 'CenterDistVec', 'LookAheadVec', 'FBDelta'])
+class Progressvec(Preprogressvec):
+    def __eq__(self, other):
+        return np.all([self[i] == other[i] for i in [0,1,2]]) #Zeit wird nicht berücksichtigt!
+class Speedsteer(Prespeedsteer):
+    def __eq__(self, other):
+        return np.all([self[i] == other[i] for i in range(len(self))])
+class Statusvector(Prestatusvector):
+    def __eq__(self, other):
+        return np.all([self[i] == other[i] for i in range(len(self))])
+class Otherinputs(Preotherinputs):
+    def __eq__(self, other):
+        if other == None:
+            return self.empty()
+        return self.ProgressVec == other.ProgressVec \
+           and self.SpeedSteer ==  other.SpeedSteer \
+           and self.StatusVector == other.StatusVector \
+           and self.CenterDist == other.CenterDist \
+           and np.all(self.LookAheadVec == other.LookAheadVec)
+           #and np.all(self.CenterDistVec == other.CenterDistVec) \ #can be skipped because then the centerdist is also equal
+           #FBDelta werden auch nicht beachtet, da die ebenfalls von Zeit abhängen
+    def empty(self):
+        return self.__eq__(empty_inputs())
+    def returnRelevant(self):
+        return [i for i in self.SpeedSteer]+[i for i in self.StatusVector]+[self.CenterDist]+[i for i in self.LookAheadVec]
+        
+                      
+empty_progressvec = lambda: Progressvec(0, 0, 0, 0)
+empty_speedsteer = lambda: Speedsteer(0, 0, 0, 0, 0, 0, 0, 0, 0)
+empty_statusvector = lambda: Statusvector(0, 0, 0, 0, 0, 0, 0, 0, 0)
+empty_inputs = lambda: Otherinputs(empty_progressvec(), empty_speedsteer(), empty_statusvector(), 0, np.zeros(15), np.zeros(30), np.zeros(2))
+def make_otherinputs(othervecs):
+    return Otherinputs(Progressvec(othervecs[0][0], othervecs[0][1], othervecs[0][2], othervecs[0][3]), \
+                       Speedsteer(othervecs[1][0], othervecs[1][1], othervecs[1][2], othervecs[1][3], othervecs[1][4], othervecs[1][5], othervecs[1][6], othervecs[1][7], othervecs[1][8]), \
+                       Statusvector(othervecs[2][0], othervecs[2][1], othervecs[2][2], othervecs[2][3], othervecs[2][4], othervecs[2][5], othervecs[2][6], othervecs[2][7], othervecs[2][8]), \
+                       othervecs[3][0], \
+                       othervecs[3][1:], \
+                       othervecs[4], \
+                       othervecs[5])
+#this very long part end
+
+###############################################################################
+###############################################################################
     
 #this is supposed to resemble the TrackingPoint-Class from the recorder from Unity
 class TrackingPoint(object):
@@ -29,39 +78,33 @@ class TrackingPoint(object):
                 
     def make_vecs(self):
        if self.vectors != "":
-           _, _, self.visionvec, self.vvec2, self.AllOneDs = cutoutandreturnvectors(self.vectors)
+           _, _, self.visionvec, self.vvec2, othervecs = cutoutandreturnvectors(self.vectors)
            self.vectors = ""
-           self.flatten_oneDs()
-    
-    def flatten_oneDs(self):
-        self.FlatOneDs = np.array(flatten(self.AllOneDs))
-    
-#    def normalize_oneDs(self, normalizers):
-#        self.FlatOneDs -= np.array([item[0] for item in normalizers])
-#        self.FlatOneDs /= np.array([item[1] for item in normalizers])
-    
-    def discretize_steering(self, numcats):
-        self.discreteSteering = discretize_steering(self.steeringValue, numcats)
+           self.otherinputs = make_otherinputs(othervecs)
 
-    def discretize_all(self, numcats, include_apb):#
-        self.discreteAll = discretize_all(self.throttlePedalValue, self.brakePedalValue, self.discreteSteering, numcats, include_apb)
+    def discretize_all(self, numcats, include_apb):
+        self.discreteAll = discretize_all(self.throttlePedalValue, self.brakePedalValue, self.steeringValue, numcats, include_apb)
 
         
-        
-def discretize_steering(steeringVal, numcats):
-    limits = [(2/numcats)*i-1 for i in range(numcats+1)]
-    limits[0] = -2
-    val = numcats
-    for i in range(len(limits)):
-        if steeringVal > limits[i]:
-            val = i
-    discreteSteering = [0]*numcats
-    discreteSteering[val] = 1     
-    return discreteSteering                   
+###############################################################################
+###############################################################################
 
-#input: throttle, brake, steer_AS_DISCRETE
+#input: throttle, brake, steer as int, int, real
 #output: 3*speed_neurons / 4*speed_neurons                  
-def discretize_all(throttle, brake, discreteSteer, numcats, include_apb):
+def discretize_all(throttle, brake, steer, numcats, include_apb):
+    def discretize_steering(steeringVal, numcats):
+        limits = [(2/numcats)*i-1 for i in range(numcats+1)]
+        limits[0] = -2
+        val = numcats
+        for i in range(len(limits)):
+            if steeringVal > limits[i]:
+                val = i
+        discreteSteering = [0]*numcats
+        discreteSteering[val] = 1     
+        return discreteSteering      
+    
+    discreteSteer = discretize_steering(steer, numcats)
+    
     if include_apb:
         if throttle > 0.5:
             if brake > 0.5:
@@ -85,21 +128,22 @@ def discretize_all(throttle, brake, discreteSteer, numcats, include_apb):
                 
     
         
-def dediscretize_steer(discrete):
-    if type(discrete).__module__ == np.__name__:
-        discrete = discrete.tolist()
-    try:
-        result = round(-1+(2/len(discrete))*(discrete.index(1)+0.5), 3)
-    except ValueError:
-        result = 0
-    return result
-
 
 #input:  3*speed_neurons / 4*speed_neurons
-#output: throttle, brake, steer
+#output: throttle, brake, steer (as int, int, real)
 def dediscretize_all(discrete, numcats, include_apb):
     if type(discrete).__module__ == np.__name__:
         discrete = discrete.tolist()
+        
+    def dediscretize_steer(discrete):
+        if type(discrete).__module__ == np.__name__:
+            discrete = discrete.tolist()
+        try:
+            result = round(-1+(2/len(discrete))*(discrete.index(1)+0.5), 3)
+        except ValueError:
+            result = 0
+        return result
+
     if include_apb:
         if discrete.index(1) >= numcats*3:
             throttle = 1
@@ -117,7 +161,6 @@ def dediscretize_all(discrete, numcats, include_apb):
             throttle = 0
             brake = 0
             steer = dediscretize_steer(discrete[0:numcats])
-        return throttle, brake, steer
     else:
         if discrete.index(1) >= numcats*2:
             throttle = 0
@@ -131,10 +174,12 @@ def dediscretize_all(discrete, numcats, include_apb):
             throttle = 0
             brake = 0
             steer = dediscretize_steer(discrete[0:numcats])
-        return throttle, brake, steer
-        #TODO: das dediscretize_steer und das ganze unnötige wegmachen!
+    return throttle, brake, steer
 
    
+###############################################################################
+###############################################################################
+
 
 class TPList(object):
     
@@ -156,7 +201,7 @@ class TPList(object):
             else:
                 furtherinfo[majorpoint.tag] = majorpoint.text
         return this_trackingpoints, furtherinfo
-            
+    
     def __init__(self, foldername, twocams, msperframe, steering_steps, include_accplusbreak):
         assert os.path.isdir(foldername) 
         self.all_trackingpoints = []
@@ -203,24 +248,8 @@ class TPList(object):
     def prepare_tplist(self):
         for currpoint in self.all_trackingpoints:
             currpoint.make_vecs();     
-#        normalizers = self.find_normalizers()
-        for currpoint in self.all_trackingpoints:
-#            currpoint.normalize_oneDs(normalizers)
-            currpoint.discretize_steering(self.steering_steps)  #TODO: numcats sollte nicht ne variable HIER sein
-            #currpoint.discretize_acc_break(NUMCATS) #TODO: sollten auch andere variablen sein
             currpoint.discretize_all(self.steering_steps, self.include_accplusbreak)
             
-            
-#    def find_normalizers(self):
-#        #was hier passiert: für jeden werte der FlatOneDs wird durchs gesamte array gegangen, das minimum gefundne, von allen subtrahiert, das maximum gefunden, dadurch geteilt.
-#        normalizers = []
-#        veclen = len(self.all_trackingpoints[0].FlatOneDs)
-#        for i in range(veclen):
-#            alle = np.array([curr.FlatOneDs[i] for curr in self.all_trackingpoints])
-#            mini = min(alle)      #alle = np.subtract(alle,min(alle))
-#            maxi = max(alle)-mini #alle = np.divide(alle,max(alle))
-#            normalizers.append([mini,maxi])
-#        return normalizers
 
     def reset_batch(self):
         self.batchindex = 0
@@ -236,34 +265,56 @@ class TPList(object):
     #TODO: sample according to information gain, what DQN didn't do yet.
     #TODO: uhm, das st jezt simples ziehen mit zurücklegen, every time... ne richtige next_batch funktion, bei der jedes mal vorkommt wäre sinnvoller, oder?
     #TODO: splitting into training and validation set??    
-    def next_batch(self, config, batch_size):
+    def next_batch(self, config, agent, batch_size):
         if self.batchindex + batch_size > self.numsamples:
             raise IndexError("No more batches left")
-        visions = []
-        targets = []
-        lookaheads = []
-        speeds = []
+            
+        vvec_batch = []
+        past_vvec_batch = []
+        vvec2_batch = []
+        past_vvec2_batch = []
+        otherinputs_batch = []
+        past_otherinputs_batch = []
+        actions_batch = []
+        past_actions_batch = []
+        
         for indexindex in range(self.batchindex,self.batchindex+batch_size):
-            i = self.randomindices[indexindex]
-            vision = [self.all_trackingpoints[(i-j) % len(self.all_trackingpoints)].visionvec for j in range(config.history_frame_nr-1,-1,-1)]
-            if config.use_second_camera:
-                vision = vision + [self.all_trackingpoints[(i-j) % len(self.all_trackingpoints)].vvec2 for j in range(config.history_frame_nr-1,-1,-1)]
-            lookahead = [self.all_trackingpoints[(i-j) % len(self.all_trackingpoints)].FlatOneDs for j in range(config.history_frame_nr-1,-1,-1)]
-            target = self.all_trackingpoints[i].discreteAll
-            if config.history_frame_nr == 1: 
-                vision = vision[0]
-                lookahead = lookahead[0]
-            visions.append(np.array(vision))
-            targets.append(np.array(target))
-            lookaheads.append(lookahead)
-            if config.speed_neurons > 0:
-                speeds.append(inflate_speed(int(self.all_trackingpoints[i].speed), config.speed_neurons, config.SPEED_AS_ONEHOT))
+            
+            vvec1_hist, vvec2_hist, otherinput_hist, action_hist = self._read(config, agent, batch_size, self.randomindices[indexindex])
+            past_vvec1_hist, past_vvec2_hist, past_otherinput_hist, past_action_hist = self._read(config, agent, batch_size, self.randomindices[indexindex], readPast = True)
+            
+            vvec_batch.append(vvec1_hist)
+            past_vvec_batch.append(past_vvec1_hist)
+            vvec2_batch.append(vvec2_hist)
+            past_vvec2_batch.append(past_vvec2_hist)
+            otherinputs_batch.append(otherinput_hist)
+            past_otherinputs_batch.append(past_otherinput_hist)
+            actions_batch.append(action_hist)
+            past_actions_batch.append(past_action_hist)
+
         self.batchindex += batch_size
-        return np.array(lookaheads), np.array(visions), np.array(targets), np.array(speeds)
+        return np.array(vvec_batch), np.array(vvec2_batch), np.array(otherinputs_batch), np.array(actions_batch), \
+               np.array(past_vvec_batch), np.array(past_vvec2_batch), np.array(past_otherinputs_batch), np.array(past_actions_batch)
+
+    
+    def _read(self, config, agent, batch_size, index, readPast = False):
+            vh = [] if agent.usesConv else None
+            v2h = [] if agent.usesConv and config.use_second_camera else None
+            oih = []
+            ah = []
+            for j in range(config.history_frame_nr-1,-1,-1):
+                index = (index-j-1) % len(self.all_trackingpoints) if readPast else (index-j) % len(self.all_trackingpoints)
+                if agent.usesConv:
+                    vh.append(self.all_trackingpoints[index].visionvec)
+                    if config.use_second_camera:
+                        v2h.append(self.all_trackingpoints[index].vvec2)
+                oih.append(self.all_trackingpoints[index].otherinputs)
+                ah.append((self.all_trackingpoints[index].throttlePedalValue, self.all_trackingpoints[index].brakePedalValue, self.all_trackingpoints[index].steeringValue))
+            return np.array(vh), np.array(v2h), np.array(oih), np.array(ah)
 
 
-################################################################################
-
+###############################################################################
+###############################################################################
 
 def inflate_speed(speed, numberneurons, asonehot):
     speed = min(max(0,int(round(speed))), MAXSPEED)
@@ -377,23 +428,24 @@ def readTwoDArrayFromString(string):
                 print("I'm crying") #cry.
     return np.array(tmpreturn)
 
-################################################################################
 
+###############################################################################
+###############################################################################
 
     
 if __name__ == '__main__':    
-    import supervisedcnn
-    config = supervisedcnn.Config()
-    trackingpoints = TPList(FOLDERNAME, config.msperframe, config.steering_steps, config.INCLUDE_ACCPLUSBREAK)
+    import config
+    config = config.Config()
+    import agent
+    agent = agent.AbstractAgent(config, None)
+    trackingpoints = TPList(FOLDERNAME, config.use_second_camera, config.msperframe, config.steering_steps, config.INCLUDE_ACCPLUSBREAK)
     print("Number of samples:",trackingpoints.numsamples)
-    #print(trackingpoints.all_trackingpoints[220].throttlePedalValue)
-    #print(trackingpoints.all_trackingpoints[220].discreteThrottle)
     while trackingpoints.has_next(10):
-        lookaheads, vision, targets, speeds = trackingpoints.next_batch(config, 10)
-    print(lookaheads)
-    print(targets)
-    print(vision.shape)
-    print(speeds)
+        vvec, vvec2, otherinputs, actions, _, _, _, _ = trackingpoints.next_batch(config, agent, 10)
+    print(vvec.shape)
+    print(vvec2.shape)
+    print(otherinputs.shape)
+    print(actions.shape)
     
     #sooo jetzt hab ich hier eine liste an trackingpoints. was ich tun muss ist jetzt dem vectors per ANN die brake, steering, throttlevalues zuzuweisen.
     

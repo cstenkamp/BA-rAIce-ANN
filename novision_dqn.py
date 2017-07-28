@@ -1,10 +1,9 @@
 # -*- coding: utf-8 -*-
 """
-Created on Thu Jul 27 10:31:41 2017
+Created on Sat Mar 25 13:41:09 2017
 
 @author: csten_000
 """
-
 import tensorflow as tf
 import numpy as np
 import os
@@ -15,7 +14,7 @@ import math
 import read_supervised
 from myprint import myprint as print
 import config 
-from utils import fc_layer, variable_summary, convolutional_layer
+from utils import fc_layer, variable_summary
 
 SUMMARYALL = 1000
 
@@ -33,7 +32,7 @@ class CNN(object):
         self.config = config
         self.mode = mode
         final_neuron_num = self.config.steering_steps*4 if self.config.INCLUDE_ACCPLUSBREAK else self.config.steering_steps*3
-        #self.stacksize = self.config.history_frame_nr*2 if self.config.use_second_camera else self.config.history_frame_nr
+        self.stacksize = self.config.history_frame_nr*2 if self.config.use_second_camera else self.config.history_frame_nr
 
         self.iterations = 0
         self.prepareNumIters()
@@ -41,7 +40,7 @@ class CNN(object):
         if mode == "inference":
             device = "/gpu:0" if (config.has_gpu() and (hasattr(config, "learnMode") and config.learnMode == "between")) else "/cpu:0"
             with tf.device(device): #less overhead by not trying to switch to gpu
-                self.inputs, self.targets = self.set_placeholders(mode, final_neuron_num)
+                self.inputs, self.targets, self.speed_input = self.set_placeholders(mode, final_neuron_num)
                 self.q, self.onehot, self.q_max, self.action = self.inference(self.inputs, self.speed_input, final_neuron_num, rl_not_trainables, False) 
         else:
             device = "/gpu:0" if config.has_gpu() else "/cpu:0"
@@ -59,17 +58,15 @@ class CNN(object):
         
     
     def set_placeholders(self, mode, final_neuron_num):
-#        if self.config.history_frame_nr == 1:
-#            inputs = tf.placeholder(tf.float32, shape=[None, self.config.image_dims[0], self.config.image_dims[1]], name="inputs")  #first dim is none since inference has another batchsize than training
-#        else:
-#            inputs = tf.placeholder(tf.float32, shape=[None, self.stacksize, self.config.image_dims[0], self.config.image_dims[1]], name="inputs")  #first dim is none since inference has another batchsize than training
-#            
-#        speeds = tf.placeholder(tf.float32, shape=[None, self.config.speed_neurons], name="speed_inputs") if self.config.speed_neurons else None
-                               
-        inputs = tf.placeholder(tf.float32, shape=[None, 49], name="inputs")  
+        if self.config.history_frame_nr == 1:
+            inputs = tf.placeholder(tf.float32, shape=[None, self.config.image_dims[0], self.config.image_dims[1]], name="inputs")  #first dim is none since inference has another batchsize than training
+        else:
+            inputs = tf.placeholder(tf.float32, shape=[None, self.stacksize, self.config.image_dims[0], self.config.image_dims[1]], name="inputs")  #first dim is none since inference has another batchsize than training
+            
+        speeds = tf.placeholder(tf.float32, shape=[None, self.config.speed_neurons], name="speed_inputs") if self.config.speed_neurons else None
         targets = None if mode=="inference" else tf.placeholder(tf.float32, shape=[None, final_neuron_num], name="targets")    
             
-        return inputs, targets#, speeds
+        return inputs, targets, speeds
     
     
     def inference(self, inputs, spinputs, final_neuron_num, rl_not_trainables, for_training=False):
@@ -89,23 +86,21 @@ class CNN(object):
             q = tf.expand_dims(q, 0)            
             return q
 
-#        rs_input = tf.reshape(inputs, [-1, self.config.image_dims[0], self.config.image_dims[1], self.stacksize]) #final dimension = number of color channels*number of stacked (history-)frames                  
-#        self.keep_prob = tf.Variable(tf.constant(1.0), trainable=False) #wenn nicht gefeedet ist sie standardmäßig 1        
-#        flat_size = math.ceil(self.config.image_dims[0]/4)*math.ceil(self.config.image_dims[1]/4)*64 #die /(2*2) ist wegen dem einen stride=2 
-#        ini = tf.truncated_normal_initializer(stddev=1.0 / math.sqrt(float(self.config.image_dims[0]*self.config.image_dims[1])))
-        ini = tf.truncated_normal_initializer()
+        rs_input = tf.reshape(inputs, [-1, self.config.image_dims[0], self.config.image_dims[1], self.stacksize]) #final dimension = number of color channels*number of stacked (history-)frames                  
+        self.keep_prob = tf.Variable(tf.constant(1.0), trainable=False) #wenn nicht gefeedet ist sie standardmäßig 1        
+        flat_size = math.ceil(self.config.image_dims[0]/4)*math.ceil(self.config.image_dims[1]/4)*64 #die /(2*2) ist wegen dem einen stride=2 
+        ini = tf.truncated_normal_initializer(stddev=1.0 / math.sqrt(float(self.config.image_dims[0]*self.config.image_dims[1])))
         #convolutional_layer(input_tensor, input_channels, kernel_size, stride, output_channels, name, act, is_trainable, batchnorm, is_training, weightdecay=False, pool=True, trainvars=None, varSum=None, initializer=None)
-#        conv1 = convolutional_layer(rs_input, self.stacksize, [5,5], 1, 32, "Conv1", tf.nn.relu, trainable("Conv1"), False, for_training, False, True, self.trainvars, variable_summary, initializer=ini) #reduces to x//2*y//2
-#        conv2 = convolutional_layer(conv1, 32, [5,5], 1, 64, "Conv2", tf.nn.relu, trainable("Conv2"), False, for_training, False, True, self.trainvars, variable_summary, initializer=ini)                #reduces to x//4*y//4
-#        conv2_flat =  tf.reshape(conv2, [-1, flat_size])                                                                #x//4*y//4+speed_neurons
+        conv1 = convolutional_layer(rs_input, self.stacksize, [5,5], 1, 32, "Conv1", tf.nn.relu, trainable("Conv1"), False, for_training, False, True, self.trainvars, variable_summary, initializer=ini) #reduces to x//2*y//2
+        conv2 = convolutional_layer(conv1, 32, [5,5], 1, 64, "Conv2", tf.nn.relu, trainable("Conv2"), False, for_training, False, True, self.trainvars, variable_summary, initializer=ini)                #reduces to x//4*y//4
+        conv2_flat =  tf.reshape(conv2, [-1, flat_size])                                                                #x//4*y//4+speed_neurons
         #fc_layer(input_tensor, input_size, output_size, name, is_trainable, batchnorm, is_training, weightdecay=False, act=None, keep_prob=1, trainvars=None, varSum=None, initializer=None):
-        fc1 = fc_layer(inputs, 49, 100, "FC1", trainable("FC1"), False, for_training, False, tf.nn.relu, 1 if for_training else self.keep_prob, self.trainvars, variable_summary, initializer=ini)                 
-        fc2 = fc_layer(fc1, 100, 100, "FC2", trainable("FC2"), False, for_training, False, tf.nn.relu, 1 if for_training else self.keep_prob, self.trainvars, variable_summary, initializer=ini)                 
-#        if self.config.speed_neurons:
-#            fc1 = tf.concat([fc1, spinputs], 1)         #beim letztem layer btw kein dropout
-        q = fc_layer(fc2, 100, final_neuron_num, "FC2", trainable("FC2"), False, for_training, False, None, 1, self.trainvars, variable_summary, initializer=ini) 
+        fc1 = fc_layer(conv2_flat, flat_size, final_neuron_num*20, "FC1", trainable("FC1"), False, for_training, False, tf.nn.relu, 1 if for_training else self.keep_prob, self.trainvars, variable_summary, initializer=ini)                 
+        if self.config.speed_neurons:
+            fc1 = tf.concat([fc1, spinputs], 1)         #beim letztem layer btw kein dropout
+        q = fc_layer(fc1, final_neuron_num*20+self.config.speed_neurons, final_neuron_num, "FC2", trainable("FC2"), False, for_training, False, None, 1, self.trainvars, variable_summary, initializer=ini) 
 
-#        q = tf.cond(tf.reduce_sum(spinputs) < 1, lambda: settozero(q), lambda: q)   #[10.3, 23.1, ...] #wenn du stehst, brauchste dich nicht mehr für die ohne gas zu interessieren
+        q = tf.cond(tf.reduce_sum(spinputs) < 1, lambda: settozero(q), lambda: q)   #[10.3, 23.1, ...] #wenn du stehst, brauchste dich nicht mehr für die ohne gas zu interessieren
         y_conv = tf.nn.softmax(q)                                                   #[ 0.1,  0.2, ...]
         onehot = tf.one_hot(tf.argmax(y_conv, dimension=1), depth=final_neuron_num) #[   0,    1, ...]
         q_max = tf.reduce_max(q, axis=1)                                            #23.1
@@ -230,31 +225,51 @@ class CNN(object):
         accuracy, loss = session.run([self.accuracy, self.loss], feed_dict=feed_dict)
         return accuracy, loss, dataset.numsamples
             
-            
-    def run_inference(self, session, visionvec, otherinputs):        
-        assert type(visionvec[0]).__module__ == np.__name__
-        assert (np.array(visionvec.shape) == np.array(self.inputs.get_shape().as_list()[1:])).all()
-        
-        visionvec = np.expand_dims(visionvec, axis=0)
-        feed_dict = {self.inputs: visionvec}  
-        if self.config.speed_neurons:
-            speed_disc = read_supervised.inflate_speed(otherinputs.SpeedSteer.velocity, self.config.speed_neurons, self.config.SPEED_AS_ONEHOT)
-            feed_dict[self.speed_input] = np.expand_dims(speed_disc, axis=0)
-        
-        return session.run([self.onehot, self.q], feed_dict=feed_dict)
-
-        
-        
     def calculate_value(self, session, visionvec, speed):
         visionvec = np.expand_dims(visionvec, axis=0)
         feed_dict = {self.inputs: visionvec}  
-        if self.config.speed_neurons:
+        if self.config.speed_neurons: #das config.speed_neurons muss anders... puhhhh....
            speed_disc = read_supervised.inflate_speed(speed, self.config.speed_neurons, self.config.SPEED_AS_ONEHOT)
            feed_dict[self.speed_input] = np.expand_dims(speed_disc, axis=0)
         
         return session.run(self.q_max, feed_dict=feed_dict)
             
+
+##############################################################################################################################
+    
+    
+    def rl_fill_feeddict(self, conv_inputs, other_inputs):
+        if len(conv_inputs.shape) <= 3:
+            feed_dict = {self.inputs: np.expand_dims(conv_inputs, axis=0)}  #expand_dims weil hier quasi batchsize=1 ist
+            if self.config.speed_neurons:  #das config.speed_neurons muss anders... puhhhh.... #ES HEIßZT NICHT MEHR SPEED_INPUT SONDERN EINFACH OTHER-IPNUTS UND CONV-INPUTS
+                feed_dict[self.speed_input] = np.expand_dims(other_inputs, axis=0)         
+        else:
+            feed_dict = {self.inputs: conv_inputs}
+            if self.config.speed_neurons:
+                feed_dict[self.speed_input] = other_inputs
+        return feed_dict
         
+        
+    def run_inference(self, session, conv_inputs, other_inputs):        
+        assert type(conv_inputs[0]).__module__ == np.__name__
+        assert (np.array(conv_inputs.shape) == np.array(self.inputs.get_shape().as_list()[1:])).all()
+        feed_dict = self.rl_fill_feeddict(conv_inputs, other_inputs)
+        return session.run([self.onehot, self.q], feed_dict=feed_dict)
+
+        
+    
+    def rl_learn_forward(self, session, conv_inputs, other_inputs, following_conv_inputs, following_other_inputs):
+        qs = session.run(self.q, feed_dict = self.rl_fill_feeddict(conv_inputs, other_inputs)) 
+        max_qs = session.run(self.q_max, feed_dict = self.rl_fill_feeddict(following_conv_inputs, following_other_inputs))
+        return qs, max_qs
+
+
+    def rl_learn_step(self, session, conv_inputs, other_inputs, qs):
+        feed_dict = self.rl_fill_feeddict(conv_inputs, other_inputs)
+        feed_dict[self.targets] = qs
+        session.run(self.train_op, feed_dict=feed_dict)    
+    
+    
        
 def run_svtraining(config, dataset):
     graph = tf.Graph()

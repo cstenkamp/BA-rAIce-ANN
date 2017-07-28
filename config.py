@@ -23,9 +23,8 @@ class Config(object):
     INCLUDE_ACCPLUSBREAK = False
     #for continuus algorithms
     num_actions = 3
+    
     UPDATE_ONLY_IF_NEW = False #sendet immer nach jedem update -> Wenn False sendet er wann immer er was kriegt
-    
-    
     reset_if_wrongdirection = True
     
     image_dims = [30,45] 

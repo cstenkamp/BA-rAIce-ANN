@@ -8,7 +8,6 @@ import time
 import logging
 import numpy as np
 import sys
-from collections import namedtuple
 from functools import partial
 import copy
 
@@ -17,6 +16,7 @@ import svPlayNetAgent
 #import reinfNetAgentII as reinfNetAgent #is an agent, inherits all agent's functions
 import reinfNetAgent
 from myprint import myprint as print
+from read_supervised import empty_inputs, make_otherinputs 
 import infoscreen
 import config
 from read_supervised import cutoutandreturnvectors
@@ -30,52 +30,6 @@ current_milli_time = lambda: int(round(time.time() * 1000))
 logging.basicConfig(level=logging.ERROR, format='(%(threadName)-10s) %(message)s',) #legacy
 
 
-
-#this very long part is the comparable namedtuple otherinputs!
-preprogressvec = namedtuple('ProgressVec', ['Progress', 'Laptime', 'NumRounds', 'fValidLap'])
-prespeedsteer = namedtuple('SpeedSteer', ['RLTorque', 'RRTorque', 'FLSteer', 'FRSteer', 'velocity', 'rightDirection', 'velocityPerpendicular', 'carAngle', 'speedInStreetDir'])
-prestatusvector = namedtuple('StatusVector', ['velocity', 'FLSlip0', 'FRSlip0', 'RLSlip0', 'RRSlip0', 'FLSlip1', 'FRSlip1', 'RLSlip1', 'RRSlip1'])
-                                             #4 elems       9 elems       9 elems         1 elem        15 elems         30 elems =      2 elems    = 70 elems
-preotherinputs = namedtuple('OtherInputs', ['ProgressVec', 'SpeedSteer', 'StatusVector', 'CenterDist', 'CenterDistVec', 'LookAheadVec', 'FBDelta'])
-class progressvec(preprogressvec):
-    def __eq__(self, other):
-        return np.all([self[i] == other[i] for i in [0,1,2]]) #Zeit wird nicht berücksichtigt!
-class speedsteer(prespeedsteer):
-    def __eq__(self, other):
-        return np.all([self[i] == other[i] for i in range(len(self))])
-class statusvector(prestatusvector):
-    def __eq__(self, other):
-        return np.all([self[i] == other[i] for i in range(len(self))])
-class otherinputs(preotherinputs):
-    def __eq__(self, other):
-        if other == None:
-            return self.empty()
-        return self.ProgressVec == other.ProgressVec \
-           and self.SpeedSteer ==  other.SpeedSteer \
-           and self.StatusVector == other.StatusVector \
-           and self.CenterDist == other.CenterDist \
-           and np.all(self.LookAheadVec == other.LookAheadVec)
-           #and np.all(self.CenterDistVec == other.CenterDistVec) \ #can be skipped because then the centerdist is also equal
-           #FBDelta werden auch nicht beachtet, da die ebenfalls von Zeit abhängen
-    def empty(self):
-        return self.__eq__(empty_inputs())
-    def returnRelevant(self):
-        return [i for i in self.SpeedSteer]+[i for i in self.StatusVector]+[self.CenterDist]+[i for i in self.LookAheadVec]
-        
-                      
-empty_progressvec = lambda: progressvec(0, 0, 0, 0)
-empty_speedsteer = lambda: speedsteer(0, 0, 0, 0, 0, 0, 0, 0, 0)
-empty_statusvector = lambda: statusvector(0, 0, 0, 0, 0, 0, 0, 0, 0)
-empty_inputs = lambda: otherinputs(empty_progressvec(), empty_speedsteer(), empty_statusvector(), 0, np.zeros(15), np.zeros(30), np.zeros(2))
-def make_otherinputs(othervecs):
-    return otherinputs(progressvec(othervecs[0][0], othervecs[0][1], othervecs[0][2], othervecs[0][3]), \
-                       speedsteer(othervecs[1][0], othervecs[1][1], othervecs[1][2], othervecs[1][3], othervecs[1][4], othervecs[1][5], othervecs[1][6], othervecs[1][7], othervecs[1][8]), \
-                       statusvector(othervecs[2][0], othervecs[2][1], othervecs[2][2], othervecs[2][3], othervecs[2][4], othervecs[2][5], othervecs[2][6], othervecs[2][7], othervecs[2][8]), \
-                       othervecs[3][0], \
-                       othervecs[3][1:], \
-                       othervecs[4], \
-                       othervecs[5])
-#this very long part end
 
 RELEVANT_OTHERINPUTS = 49
 MININT = -sys.maxsize+1
