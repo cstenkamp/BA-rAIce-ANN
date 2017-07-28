@@ -8,20 +8,15 @@ import tensorflow as tf
 import numpy as np
 import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' #so that TF doesn't show its warnings
-import time
 import math
 #====own classes====
-import read_supervised
 from myprint import myprint as print
 from utils import convolutional_layer, fc_layer, variable_summary
 
 SUMMARYALL = 1000
 
                                       
-class CNN(object):
-    
-    #learning on gpu and application on cpu: https://stackoverflow.com/questions/44255362/tensorflow-simultaneous-prediction-on-gpu-and-cpu
-    
+class CNN(object): #learning on gpu and application on cpu: https://stackoverflow.com/questions/44255362/tensorflow-simultaneous-prediction-on-gpu-and-cpu
     ######methods for BUILDING the computation graph######
     
     #since standard DQN consists of online and target-network, the latter of those will ONLY make inferences! If I want to run learning
@@ -46,7 +41,7 @@ class CNN(object):
             device = "/gpu:0" if config.has_gpu() else "/cpu:0"
             with tf.device(device):
                 self.conv_inputs, self.ff_inputs, self.targets, _ = self.set_placeholders(mode, final_neuron_num)
-                self.q, self.onehot, self.q_max, self.action = self.inference(self.conv_inputs.inputs, self.ff_inputs, final_neuron_num, rl_not_trainables, True)         
+                self.q, self.onehot, self.q_max, self.action = self.inference(self.conv_inputs, self.ff_inputs, final_neuron_num, rl_not_trainables, True)         
                 if mode == "rl_train":
                     self.loss = self.rl_loss_func(self.q, self.targets)
                     self.train_op = self.training(self.loss, config.initial_lr, optimizer_arg = tf.train.RMSPropOptimizer)     
@@ -58,14 +53,14 @@ class CNN(object):
         
     
     def set_placeholders(self, mode, final_neuron_num):
-        conv_inputs = tf.placeholder(tf.float32, shape=[None, self.stacksize, self.config.image_dims[0], self.config.image_dims[1]], name="inputs")  if self.agent.useConv else None
+        conv_inputs = tf.placeholder(tf.float32, shape=[None, self.stacksize, self.config.image_dims[0], self.config.image_dims[1]], name="inputs")  if self.agent.usesConv else None
         ff_inputs = tf.placeholder(tf.float32, shape=[None, self.agent.ff_inputsize], name="speed_inputs") if self.agent.ff_inputsize else None
         targets = None if mode=="inference" else tf.placeholder(tf.float32, shape=[None, final_neuron_num], name="targets")    
-        speed = tf.placeholder(tf.float32, shape=[1], name="speed") #necessary for settozero
-        return conv_inputs, ff_inputs, targets, speed
+        speeds = tf.placeholder(tf.float32, shape=[None, 1], name="speed") #necessary for settozero
+        return conv_inputs, ff_inputs, targets, speeds
     
     
-    def inference(self, conv_inputs, ff_inputs, final_neuron_num, rl_not_trainables, for_training=False, speed=tf.Variable(tf.constant(1), trainable=False)):
+    def inference(self, conv_inputs, ff_inputs, final_neuron_num, rl_not_trainables, for_training=False, speeds=tf.Variable(tf.constant(1), trainable=False)):
         assert(conv_inputs is not None or ff_inputs is not None)
         self.trainvars = {}
         flat_size = 0
@@ -101,9 +96,9 @@ class CNN(object):
         
         #fc_layer(input_tensor, input_size, output_size, name, is_trainable, batchnorm, is_training, weightdecay=False, act=None, keep_prob=1, trainvars=None, varSum=None, initializer=None):
         fc1 = fc_layer(fc0, flat_size, final_neuron_num*20, "FC1", trainable("FC1"), False, for_training, False, tf.nn.relu, 1 if for_training else self.keep_prob, self.trainvars, variable_summary, initializer=ini)                 
-        q = fc_layer(fc1, final_neuron_num*20+self.config.speed_neurons, final_neuron_num, "FC2", trainable("FC2"), False, for_training, False, None, 1, self.trainvars, variable_summary, initializer=ini) 
+        q = fc_layer(fc1, final_neuron_num*20, final_neuron_num, "FC2", trainable("FC2"), False, for_training, False, None, 1, self.trainvars, variable_summary, initializer=ini) 
 
-        q = tf.cond(speed < 1, lambda: settozero(q), lambda: q)   #[10.3, 23.1, ...] #wenn du stehst, brauchste dich nicht mehr für die ohne gas zu interessieren
+        #q = tf.cond(tf.reduce_sum(speeds) < 1, lambda: settozero(q), lambda: q)   #[10.3, 23.1, ...] #wenn du stehst, brauchste dich nicht mehr für die ohne gas zu interessieren
         y_conv = tf.nn.softmax(q)                                                   #[ 0.1,  0.2, ...]
         onehot = tf.one_hot(tf.argmax(y_conv, dimension=1), depth=final_neuron_num) #[   0,    1, ...]
         q_max = tf.reduce_max(q, axis=1)                                            #23.1
@@ -189,7 +184,13 @@ class CNN(object):
     
     def train_fill_feed_dict(self, config, dataset, batchsize = 0, decay_lr = True): 
         batchsize = config.batch_size if batchsize == 0 else batchsize
-        conv_inputs, other_inputs, targets, _ = dataset.next_batch(config, batchsize)
+        
+        presentStates, _ = dataset.next_batch(config, self.agent, batchsize)
+        presentStates = list(zip(*presentStates))
+        conv_inputs, other_inputs = list(zip(*[self.agent.getAgentState(*presentState) for presentState in presentStates]))
+        other_inputs = [self.agent.makeNetUsableOtherInputs(i) for i in other_inputs]
+        targets = [self.agent.makeNetUsableAction(self.agent.getAction(*presentState)) for presentState in presentStates]
+                
         if decay_lr:
             lr_decay = config.lr_decay ** max(self.iterations-config.lrdecayafter, 0.0)
             new_lr = max(config.initial_lr*lr_decay, config.minimal_lr)
@@ -206,21 +207,22 @@ class CNN(object):
      
 
     def run_train_epoch(self, session, dataset, summarywriter = None):
-        gesamtLoss = 0
-        self.iterations += 1
-        
-        dataset.reset_batch()
-        for i in range(dataset.num_batches(self.config.batch_size)):
-            feed_dict = self.train_fill_feed_dict(self.config, dataset)
-            if self.iterations % SUMMARYALL == 0 and summarywriter is not None:
-                _, loss, summary_str = session.run([self.train_op, self.loss, self.summary], feed_dict=feed_dict)   
-                summarywriter.add_summary(summary_str, session.run(self.global_step))
-                summarywriter.flush()
-            else:
-                _, loss = session.run([self.train_op, self.loss], feed_dict=feed_dict)   
-            gesamtLoss += loss
-        
-        return gesamtLoss
+        with self.agent.graph.as_default():
+            gesamtLoss = 0
+            self.iterations += 1
+            
+            dataset.reset_batch()
+            for i in range(dataset.num_batches(self.config.batch_size)):
+                feed_dict = self.train_fill_feed_dict(self.config, dataset)
+                if self.iterations % SUMMARYALL == 0 and summarywriter is not None:
+                    _, loss, summary_str = session.run([self.train_op, self.loss, self.summary], feed_dict=feed_dict)   
+                    summarywriter.add_summary(summary_str, session.run(self.global_step))
+                    summarywriter.flush()
+                else:
+                    _, loss = session.run([self.train_op, self.loss], feed_dict=feed_dict)   
+                gesamtLoss += loss
+            
+            return gesamtLoss
         
     
     def run_eval(self, session, dataset):            

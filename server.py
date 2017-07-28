@@ -521,8 +521,9 @@ def main(sv_conf, rl_conf, only_sv, no_learn, show_screen, start_fresh, nomemory
         agent = reinfNetAgent.ReinfNetAgent #this one, inheriting from abstractRLAgent, will have a memory
 
         
-    containers.myAgent = agent(sv_conf, containers, rl_conf, start_fresh) #executes runInference in receiver_thread
-                                                                          #executes dauerLearnANN in LearnThread if its a learning agent
+    containers.myAgent = agent(sv_conf, containers, rl_conf, start_fresh) 
+    containers.myAgent.initNetwork()
+                                                                          
     if not only_sv:
         containers.usememory = True
         if rl_conf.use_efficientmemory:

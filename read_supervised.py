@@ -293,8 +293,8 @@ class TPList(object):
             past_actions_batch.append(past_action_hist)
 
         self.batchindex += batch_size
-        return np.array(vvec_batch), np.array(vvec2_batch), np.array(otherinputs_batch), np.array(actions_batch), \
-               np.array(past_vvec_batch), np.array(past_vvec2_batch), np.array(past_otherinputs_batch), np.array(past_actions_batch)
+        return (np.array(vvec_batch), np.array(vvec2_batch), otherinputs_batch, np.array(actions_batch)), \
+               (np.array(past_vvec_batch), np.array(past_vvec2_batch), past_otherinputs_batch, np.array(past_actions_batch))
 
     
     def _read(self, config, agent, batch_size, index, readPast = False):
@@ -310,7 +310,7 @@ class TPList(object):
                         v2h.append(self.all_trackingpoints[index].vvec2)
                 oih.append(self.all_trackingpoints[index].otherinputs)
                 ah.append((self.all_trackingpoints[index].throttlePedalValue, self.all_trackingpoints[index].brakePedalValue, self.all_trackingpoints[index].steeringValue))
-            return np.array(vh), np.array(v2h), np.array(oih), np.array(ah)
+            return np.array(vh), np.array(v2h), oih, np.array(ah)
 
 
 ###############################################################################
@@ -441,7 +441,9 @@ if __name__ == '__main__':
     trackingpoints = TPList(FOLDERNAME, config.use_second_camera, config.msperframe, config.steering_steps, config.INCLUDE_ACCPLUSBREAK)
     print("Number of samples:",trackingpoints.numsamples)
     while trackingpoints.has_next(10):
-        vvec, vvec2, otherinputs, actions, _, _, _, _ = trackingpoints.next_batch(config, agent, 10)
+        presentState, pastState = trackingpoints.next_batch(config, agent, 10)
+    
+    vvec, vvec2, otherinputs, actions = presentState
     print(vvec.shape)
     print(vvec2.shape)
     print(otherinputs.shape)

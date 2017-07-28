@@ -19,8 +19,6 @@ class DQN_SV_Agent(AbstractAgent):
         super().__init__(config, containers, *args, **kwargs)
         self.ff_inputsize = 30
         self.network = dqn.CNN
-        self.usesConf = True
-        self.initNetwork()
 
 
     def runInference(self, gameState, pastState): #since we don't have a memory in this agent, we don't care for other_inputs_toSave
@@ -48,25 +46,27 @@ class DQN_SV_Agent(AbstractAgent):
 
             
 
-    def initNetwork(self):
-        with tf.Graph().as_default():    
-            initializer = tf.random_uniform_initializer(-0.1, 0.1)
-                                                 
-            with tf.name_scope("runAsServ"):
-                with tf.variable_scope("cnnmodel", reuse=None, initializer=initializer): 
-                    self.cnn = self.network(self.sv_conf, self, mode="inference")
-            
-            print(self.cnn.trainvars)
-            
-            self.saver = tf.train.Saver(self.cnn.trainvars)
-            self.session = tf.Session()
-            ckpt = tf.train.get_checkpoint_state(self.sv_conf.checkpoint_dir) 
-            assert ckpt and ckpt.model_checkpoint_path, "I need a supervisedly pre-trained net!"
-            self.saver.restore(self.session, ckpt.model_checkpoint_path)
-            print("network initialized")
-            self.isinitialized = True
+    def initNetwork(self):        
+        initializer = tf.random_uniform_initializer(-0.1, 0.1)
+                                             
+        with tf.name_scope("runAsServ"):
+            with tf.variable_scope("cnnmodel", reuse=None, initializer=initializer): 
+                self.cnn = self.network(self.sv_conf, self, mode="inference")
+        
+        print(self.cnn.trainvars)
+        
+        self.saver = tf.train.Saver(self.cnn.trainvars)
+        self.session = tf.Session()
+        ckpt = tf.train.get_checkpoint_state(self.sv_conf.checkpoint_dir) 
+        assert ckpt and ckpt.model_checkpoint_path, "I need a supervisedly pre-trained net!"
+        self.saver.restore(self.session, ckpt.model_checkpoint_path)
+        print("network initialized")
+        self.isinitialized = True
             
             
 ###############################################################################
 if __name__ == '__main__':  
-    
+    import config
+    conf = config.Config()
+    agent = DQN_SV_Agent(conf, None)
+    agent.svTrain()

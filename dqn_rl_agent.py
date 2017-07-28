@@ -32,9 +32,8 @@ class DQN_RL_Agent(AbstractRLAgent):
         self.ff_inputsize = 30
         self.network = dqn.CNN
         self.epsilon = self.rl_conf.startepsilon
-        self.initNetwork(start_fresh)
+        self.start_fresh = start_fresh
         self.learn_which = self.online_cnn   
-        self.usesConf = True
         self.SAVE_ACTION_AS_ARGMAX = False #legacy und speicher-effizienter ists true, aber dann lässt sich das memory nicht als grundlage für ddpg
 
 
@@ -174,79 +173,75 @@ class DQN_RL_Agent(AbstractRLAgent):
     #randomAction ist ebenfalls in der AbstractRLAgent     
             
 
-    def initNetwork(self, start_fresh):
+    def initNetwork(self):
+        self.session = tf.Session(config=tf.ConfigProto(intra_op_parallelism_threads=2, allow_soft_placement=True))
+        ckpt = tf.train.get_checkpoint_state(self.rl_conf.checkpoint_dir) 
+        initializer = tf.random_uniform_initializer(-0.1, 0.1)
         
-        self.graph = tf.Graph()
-        with self.graph.as_default():    
+        if self.start_fresh:
+            with tf.name_scope("ReinfLearn"): 
+                with tf.variable_scope("targetnet", reuse=None, initializer=initializer):
+                    self.target_cnn = self.network(self.rl_conf, self, mode="inference", rl_not_trainables=DONT_TRAIN)                
+                with tf.variable_scope("onlinenet", reuse=None, initializer=initializer):
+                    self.online_cnn = self.network(self.rl_conf, self, mode="rl_train", rl_not_trainables=DONT_TRAIN)                
+            init = tf.global_variables_initializer()
+            self.session.run(init)        
+            self.saver = tf.train.Saver(max_to_keep=1)
             
-            self.session = tf.Session(config=tf.ConfigProto(intra_op_parallelism_threads=2, allow_soft_placement=True))
-            ckpt = tf.train.get_checkpoint_state(self.rl_conf.checkpoint_dir) 
-            initializer = tf.random_uniform_initializer(-0.1, 0.1)
+            self.session.run([target.assign(online) for online, target in zip(get_variables(scope="onlinenet"), get_variables(scope="targetnet"))])
             
-            if start_fresh:
-                with tf.name_scope("ReinfLearn"): 
-                    with tf.variable_scope("targetnet", reuse=None, initializer=initializer):
-                        self.target_cnn = self.network(self.rl_conf, self, mode="inference", rl_not_trainables=DONT_TRAIN)                
-                    with tf.variable_scope("onlinenet", reuse=None, initializer=initializer):
-                        self.online_cnn = self.network(self.rl_conf, self, mode="rl_train", rl_not_trainables=DONT_TRAIN)                
-                init = tf.global_variables_initializer()
-                self.session.run(init)        
-                self.saver = tf.train.Saver(max_to_keep=1)
-                
-                self.session.run([target.assign(online) for online, target in zip(get_variables(scope="onlinenet"), get_variables(scope="targetnet"))])
-                
 #                for i in tf.trainable_variables():
 #                    if i.name.startswith("learning"):
 #                        for j in tf.trainable_variables():
 #                            if (not(j.name.startswith("learning"))) and j.name[j.name.find("/"):] == i.name[i.name.find("/"):]:
 #                                #self.session.run(i.assign(j));
 #                                print(i.eval(session=self.session) == j.eval(session=self.session), level=10)
+            
+        else:
+            if not (ckpt and ckpt.model_checkpoint_path):
+                
+                self.network(self.rl_conf, self, mode="sv_train")
+                varlist = dict(zip([v.name for v in tf.trainable_variables()], tf.trainable_variables()))
+                varlist = list(eraseneccessary(varlist, DONT_COPY_WEIGHTS).keys())
+                print(varlist)
+                
+                with tf.name_scope("ReinfLearn"): 
+                    with tf.variable_scope("targetnet", reuse=None, initializer=initializer):
+                        self.target_cnn = self.network(self.rl_conf, self, mode="inference", rl_not_trainables=DONT_TRAIN)                
+                    with tf.variable_scope("onlinenet", reuse=None, initializer=initializer):
+                        self.online_cnn = self.network(self.rl_conf, self, mode="rl_train", rl_not_trainables=DONT_TRAIN)                
+                        
+                restorevars = {}
+                for i in tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope='targetnet'):
+                    for j in varlist:
+                        if j in i.name:
+                            restorevars[i.name.replace("targetnet/","").replace(":0","")] = i
+                
+                init = tf.global_variables_initializer()
+                self.session.run(init)        
+                self.pretrainsaver = tf.train.Saver(restorevars)
+                sv_ckpt = tf.train.get_checkpoint_state(self.sv_conf.checkpoint_dir) 
+                assert sv_ckpt and sv_ckpt.model_checkpoint_path, "I need at least a supervisedly pre-trained net!"
+                self.pretrainsaver.restore(self.session, sv_ckpt.model_checkpoint_path)
+                self.session.run([online.assign(target) for online, target in zip(get_variables(scope="onlinenet"), get_variables(scope="targetnet"))])
+
+                self.saver = tf.train.Saver(max_to_keep=1)
                 
             else:
-                if not (ckpt and ckpt.model_checkpoint_path):
-                    
-                    self.network(self.rl_conf, self, mode="sv_train")
-                    varlist = dict(zip([v.name for v in tf.trainable_variables()], tf.trainable_variables()))
-                    varlist = list(eraseneccessary(varlist, DONT_COPY_WEIGHTS).keys())
-                    print(varlist)
-                    
-                    with tf.name_scope("ReinfLearn"): 
-                        with tf.variable_scope("targetnet", reuse=None, initializer=initializer):
-                            self.target_cnn = self.network(self.rl_conf, self, mode="inference", rl_not_trainables=DONT_TRAIN)                
-                        with tf.variable_scope("onlinenet", reuse=None, initializer=initializer):
-                            self.online_cnn = self.network(self.rl_conf, self, mode="rl_train", rl_not_trainables=DONT_TRAIN)                
-                            
-                    restorevars = {}
-                    for i in tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope='targetnet'):
-                        for j in varlist:
-                            if j in i.name:
-                                restorevars[i.name.replace("targetnet/","").replace(":0","")] = i
-                    
-                    init = tf.global_variables_initializer()
-                    self.session.run(init)        
-                    self.pretrainsaver = tf.train.Saver(restorevars)
-                    sv_ckpt = tf.train.get_checkpoint_state(self.sv_conf.checkpoint_dir) 
-                    assert sv_ckpt and sv_ckpt.model_checkpoint_path, "I need at least a supervisedly pre-trained net!"
-                    self.pretrainsaver.restore(self.session, sv_ckpt.model_checkpoint_path)
-                    self.session.run([online.assign(target) for online, target in zip(get_variables(scope="onlinenet"), get_variables(scope="targetnet"))])
-    
-                    self.saver = tf.train.Saver(max_to_keep=1)
-                    
-                else:
-                    with tf.name_scope("ReinfLearn"): 
-                        with tf.variable_scope("targetnet", reuse=None, initializer=initializer):
-                            self.target_cnn = self.network(self.rl_conf, self, mode="inference", rl_not_trainables=DONT_TRAIN)
-                        with tf.variable_scope("onlinenet", reuse=None, initializer=initializer):
-                            self.online_cnn = self.network(self.rl_conf, self, mode="rl_train", rl_not_trainables=DONT_TRAIN)                                            
-                    self.saver = tf.train.Saver(max_to_keep=1)
-                    self.saver.restore(self.session, ckpt.model_checkpoint_path)
-                    self.session.run([online.assign(target) for online, target in zip(get_variables(scope="onlinenet"), get_variables(scope="targetnet"))])
-                    self.session.run(self.online_cnn.global_step.assign(self.target_cnn.global_step))
-                    self.reinfNetSteps = self.online_cnn.global_step.eval(session=self.session)
-                    self.numIterations = self.target_cnn.restoreNumIters(self.session)
-            
-            print("network initialized with %i reinfNetSteps already run." % self.reinfNetSteps)
-            self.isinitialized = True
+                with tf.name_scope("ReinfLearn"): 
+                    with tf.variable_scope("targetnet", reuse=None, initializer=initializer):
+                        self.target_cnn = self.network(self.rl_conf, self, mode="inference", rl_not_trainables=DONT_TRAIN)
+                    with tf.variable_scope("onlinenet", reuse=None, initializer=initializer):
+                        self.online_cnn = self.network(self.rl_conf, self, mode="rl_train", rl_not_trainables=DONT_TRAIN)                                            
+                self.saver = tf.train.Saver(max_to_keep=1)
+                self.saver.restore(self.session, ckpt.model_checkpoint_path)
+                self.session.run([online.assign(target) for online, target in zip(get_variables(scope="onlinenet"), get_variables(scope="targetnet"))])
+                self.session.run(self.online_cnn.global_step.assign(self.target_cnn.global_step))
+                self.reinfNetSteps = self.online_cnn.global_step.eval(session=self.session)
+                self.numIterations = self.target_cnn.restoreNumIters(self.session)
+        
+        print("network initialized with %i reinfNetSteps already run." % self.reinfNetSteps)
+        self.isinitialized = True
             
             
             

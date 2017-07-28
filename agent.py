@@ -28,6 +28,7 @@ class AbstractAgent(object):
         self.ff_inputsize = 0
         self.usesConv = True
         self.network = None
+        self.graph = tf.Graph()
         
     ##############functions that should be impemented##########
     def checkIfInference(self):
@@ -49,11 +50,15 @@ class AbstractAgent(object):
     
     def makeNetUsableOtherInputs(self, other_inputs): #normally, the otherinputs are stored as compact as possible. Networks may need to unpack that.
         other_inputs = self.inflate_speed(other_inputs)
-        assert len(other_inputs) == self.otherInputSize        
+        assert len(other_inputs) == self.ff_inputsize        
         return other_inputs
     
     def getAction(self, _, __, ___, action_hist):
         return action_hist[0] 
+    
+    def makeNetUsableAction(self, action):
+        #TODO: wenn du die action als 3 werte speichest, dann...
+        return self.discretize(*action)
         
     def performNetwork(self, _, __):
         print("Another ANN Inference", level=3)
@@ -64,36 +69,35 @@ class AbstractAgent(object):
 
 
     def svTrain(self):
-        trackingpoints = read_supervised.TPList(self.sv_conf.LapFolderName, self.sv_conf.use_second_camera, self.sv_conf.msperframe, self.sv_conf.steering_steps, self.sv_conf.INCLUDE_ACCPLUSBREAK)
-        print("Number of samples: %s | Tracking every %s ms with %s historyframes" % (trackingpoints.numsamples, str(self.sv_conf.msperframe), str(self.sv_conf.history_frame_nr)), level=10)
-
-        with tf.Graph().as_default():    
+        with tf.Graph().as_default(): 
+            trackingpoints = read_supervised.TPList(self.sv_conf.LapFolderName, self.sv_conf.use_second_camera, self.sv_conf.msperframe, self.sv_conf.steering_steps, self.sv_conf.INCLUDE_ACCPLUSBREAK)
+            print("Number of samples: %s | Tracking every %s ms with %s historyframes" % (trackingpoints.numsamples, str(self.sv_conf.msperframe), str(self.sv_conf.history_frame_nr)), level=10)
+       
             #initializer = tf.constant_initializer(0.0) #bei variablescopes kann ich nen default-initializer für get_variables festlegen
             initializer = tf.random_uniform_initializer(-0.1, 0.1)
-                                                 
-            with tf.name_scope("train"):
-                with tf.variable_scope("cnnmodel", reuse=None, initializer=initializer):
-                    sv_model = self.network(self.config, self, mode="sv_train")
-            
+                              
+            with tf.variable_scope("cnnmodel", reuse=None, initializer=initializer):
+                sv_model = self.network(self.sv_conf, self, mode="sv_train")
+              
             init = tf.global_variables_initializer()
             sv_model.trainvars["global_step"] = sv_model.global_step #TODO: try to remove this and see if it still works, cause it should
             saver = tf.train.Saver(sv_model.trainvars, max_to_keep=2)
     
             with tf.Session(config=tf.ConfigProto(allow_soft_placement=True)) as sess:
-                summary_writer = tf.summary.FileWriter(self.config.log_dir, sess.graph) #aus dem toy-example
+                summary_writer = tf.summary.FileWriter(self.sv_conf.log_dir, sess.graph) #aus dem toy-example
                 
                 sess.run(init)
-                ckpt = tf.train.get_checkpoint_state(self.config.checkpoint_dir) 
+                ckpt = tf.train.get_checkpoint_state(self.sv_conf.checkpoint_dir) 
                 if ckpt and ckpt.model_checkpoint_path:
                     saver.restore(sess, ckpt.model_checkpoint_path)
-                    stepsPerIt = trackingpoints.numsamples//self.config.batch_size
+                    stepsPerIt = trackingpoints.numsamples//self.sv_conf.batch_size
                     already_run_iterations = sv_model.global_step.eval()//stepsPerIt
                     sv_model.iterations = already_run_iterations
                     print("Restored checkpoint with",already_run_iterations,"Iterations run already", level=10) 
                 else:
                     already_run_iterations = 0
                     
-                num_iterations = self.config.iterations - already_run_iterations
+                num_iterations = self.sv_conf.iterations - already_run_iterations
                 print("Running for",num_iterations,"further iterations" if already_run_iterations>0 else "iterations", level=10)
                 for _ in range(num_iterations):
                     start_time = time.time()
@@ -102,8 +106,8 @@ class AbstractAgent(object):
                     train_loss = sv_model.run_train_epoch(sess, trackingpoints, summary_writer)
                     
                     savedpoint = ""
-                    if sv_model.iterations % self.config.checkpointall == 0 or sv_model.iterations == self.config.iterations:
-                        checkpoint_file = os.path.join(self.config.checkpoint_dir, 'model.ckpt')
+                    if sv_model.iterations % self.sv_conf.checkpointall == 0 or sv_model.iterations == self.sv_conf.iterations:
+                        checkpoint_file = os.path.join(self.sv_conf.checkpoint_dir, 'model.ckpt')
                         saver.save(sess, checkpoint_file, global_step=step)       
                         savedpoint = "(checkpoint saved)"
                     
@@ -121,12 +125,11 @@ class AbstractAgent(object):
  
     
     #################### Helper functions#######################
-    def dediscretize(self, discrete, config):
-        return read_supervised.dediscretize_all(discrete, config.steering_steps, config.INCLUDE_ACCPLUSBREAK)
+    def dediscretize(self, discrete):
+        return read_supervised.dediscretize_all(discrete, self.sv_conf.steering_steps, self.sv_conf.INCLUDE_ACCPLUSBREAK)
 
-    def discretize(self, throttle, brake, steer, config):
-        discreteSteer = read_supervised.discretize_steering(steer, config.steering_steps)
-        return read_supervised.discretize_all(throttle, brake, discreteSteer, config.steering_steps, config.INCLUDE_ACCPLUSBREAK)
+    def discretize(self, throttle, brake, steer):
+        return read_supervised.discretize_all(throttle, brake, steer, self.sv_conf.steering_steps, self.sv_conf.INCLUDE_ACCPLUSBREAK)
 
     def inflate_speed(self, speed):
         return read_supervised.inflate_speed(speed, self.sv_conf.speed_neurons, self.sv_conf.SPEED_AS_ONEHOT)
