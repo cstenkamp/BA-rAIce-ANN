@@ -13,7 +13,6 @@ import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 #====own classes====
 from agent import AbstractRLAgent
-import novision_dqn as dqn
 from myprint import myprint as print
 import infoscreen
 
@@ -30,10 +29,8 @@ class DQN_RL_Agent(AbstractRLAgent):
     def __init__(self, sv_conf, containers, rl_conf, start_fresh, *args, **kwargs):
         super().__init__(sv_conf, containers, rl_conf, *args, **kwargs)
         self.ff_inputsize = 30
-        self.network = dqn.CNN
         self.epsilon = self.rl_conf.startepsilon
         self.start_fresh = start_fresh
-        self.learn_which = self.online_cnn   
         self.SAVE_ACTION_AS_ARGMAX = False #legacy und speicher-effizienter ists true, aber dann lässt sich das memory nicht als grundlage für ddpg
 
 
@@ -74,15 +71,15 @@ class DQN_RL_Agent(AbstractRLAgent):
 
     def performNetwork(self, conv_inputs, inflated_other_inputs):        
         super().performNetwork(conv_inputs, inflated_other_inputs)
-        with self.graph.as_default():
-            onehot, qvals = self.target_cnn.run_inference(self.session, conv_inputs, inflated_other_inputs) #former is argmax, latter are individual qvals
-            throttle, brake, steer = self.dediscretize(onehot[0], self.containers.rl_conf)
-            result = "["+str(throttle)+", "+str(brake)+", "+str(steer)+"]"
-            self.showqvals(qvals[0])
-            if self.SAVE_ACTION_AS_ARGMAX:
-                return result, np.argmax(onehot[0])     #er returned immer toUse, toSave
-            else:
-                return result, (throttle, brake, steer) #er returned immer toUse, toSave
+        onehot, qvals = self.target_cnn.run_inference(self.session, conv_inputs, inflated_other_inputs) #former is argmax, latter are individual qvals
+        throttle, brake, steer = self.dediscretize(onehot[0])
+        result = "["+str(throttle)+", "+str(brake)+", "+str(steer)+"]"
+        self.showqvals(qvals[0])
+        if self.SAVE_ACTION_AS_ARGMAX:
+            return result, np.argmax(onehot[0])     #er returned immer toUse, toSave
+        else:
+            return result, (throttle, brake, steer) #er returned immer toUse, toSave
+
 
 
 
@@ -92,7 +89,7 @@ class DQN_RL_Agent(AbstractRLAgent):
         for i in range(amount):
             a = [0]*amount
             a[i] = 1
-            b.append(str(self.dediscretize(a, self.rl_conf)))
+            b.append(str(self.dediscretize(a)))
         b = list(zip(b, qvals))
         toprint = [str(i[0])[1:-1]+": "+str(i[1]) for i in b]
         toprint = "\n".join(toprint)
@@ -112,11 +109,11 @@ class DQN_RL_Agent(AbstractRLAgent):
             actions = np.zeros([len(argmactions), ((4*self.rl_conf.steering_steps) if self.rl_conf.INCLUDE_ACCPLUSBREAK else (3*self.rl_conf.steering_steps))])
             for i in range(len(argmactions)):
                 actions[i][argmactions[i]] = 1
-                actualActions = [self.dediscretize(i, self.rl_conf) for i in actions]
+                actualActions = [self.dediscretize(i) for i in actions]
         else:
             oldstates, actualActions, rewards, newstates, resetafters = zip(*batch)      
             actualActions = [self.memory.make_floats_from_long(i) for i in actualActions]
-            actions = [self.discretize(throttle, brake, steer, self.rl_conf) for throttle, brake, steer in actualActions]
+            actions = [self.discretize(throttle, brake, steer) for throttle, brake, steer in actualActions]
             argmactions = [np.argmax(i) for i in actions]
         #soooo, actions[x] = [0,0,1,0,0], argmactions[x] = 2, actualAcitions[x] = (1,0,0)
         
@@ -173,7 +170,7 @@ class DQN_RL_Agent(AbstractRLAgent):
     #randomAction ist ebenfalls in der AbstractRLAgent     
             
 
-    def initNetwork(self):
+    def initNetwork(self): 
         self.session = tf.Session(config=tf.ConfigProto(intra_op_parallelism_threads=2, allow_soft_placement=True))
         ckpt = tf.train.get_checkpoint_state(self.rl_conf.checkpoint_dir) 
         initializer = tf.random_uniform_initializer(-0.1, 0.1)
@@ -242,6 +239,7 @@ class DQN_RL_Agent(AbstractRLAgent):
         
         print("network initialized with %i reinfNetSteps already run." % self.reinfNetSteps)
         self.isinitialized = True
+        self.learn_which = self.online_cnn  
             
             
             

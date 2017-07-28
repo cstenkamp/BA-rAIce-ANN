@@ -9,7 +9,6 @@ import tensorflow as tf
 
 #====own classes====
 from agent import AbstractAgent
-import dqn
 from myprint import myprint as print
 
 
@@ -18,7 +17,6 @@ class DQN_SV_Agent(AbstractAgent):
     def __init__(self, config, containers, rl_config_dummy=None, startfresh_dummy=False, *args, **kwargs): #der dummy ist da damit man playnet & reinfnet austauschen kan
         super().__init__(config, containers, *args, **kwargs)
         self.ff_inputsize = 30
-        self.network = dqn.CNN
 
 
     def runInference(self, gameState, pastState): #since we don't have a memory in this agent, we don't care for other_inputs_toSave

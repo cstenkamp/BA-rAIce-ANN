@@ -15,6 +15,8 @@ from utils import convolutional_layer, fc_layer, variable_summary
 
 SUMMARYALL = 1000
 
+###############################################################################
+###############################################################################
                                       
 class CNN(object): #learning on gpu and application on cpu: https://stackoverflow.com/questions/44255362/tensorflow-simultaneous-prediction-on-gpu-and-cpu
     ######methods for BUILDING the computation graph######
@@ -30,37 +32,37 @@ class CNN(object): #learning on gpu and application on cpu: https://stackoverflo
         self.stacksize = self.config.history_frame_nr*2 if self.config.use_second_camera else self.config.history_frame_nr
 
         self.iterations = 0
-        self.prepareNumIters()
+        self._prepareNumIters()
         self.global_step = tf.Variable(0, dtype=tf.int32, name='global_step', trainable=False) #wird hier: https://github.com/tensorflow/tensorflow/blob/master/tensorflow/examples/tutorials/mnist/mnist.py halt gemacht... warum hiernochmal weiß ich nicht.            
         if mode == "inference":
             device = "/gpu:0" if (config.has_gpu() and (hasattr(config, "learnMode") and config.learnMode == "between")) else "/cpu:0"
             with tf.device(device): #less overhead by not trying to switch to gpu
-                self.conv_inputs, self.ff_inputs, self.targets, speed = self.set_placeholders(mode, final_neuron_num)
-                self.q, self.onehot, self.q_max, self.action = self.inference(self.conv_inputs, self.ff_inputs, final_neuron_num, rl_not_trainables, False, speed) 
+                self.conv_inputs, self.ff_inputs, self.targets, self.stands_inputs = self._set_placeholders(mode, final_neuron_num)
+                self.q, self.onehot, self.q_max, self.action = self._inference(self.conv_inputs, self.ff_inputs, final_neuron_num, rl_not_trainables, False, self.stands_inputs) 
         else:
             device = "/gpu:0" if config.has_gpu() else "/cpu:0"
             with tf.device(device):
-                self.conv_inputs, self.ff_inputs, self.targets, _ = self.set_placeholders(mode, final_neuron_num)
-                self.q, self.onehot, self.q_max, self.action = self.inference(self.conv_inputs, self.ff_inputs, final_neuron_num, rl_not_trainables, True)         
+                self.conv_inputs, self.ff_inputs, self.targets, self.stands_inputs = self._set_placeholders(mode, final_neuron_num)
+                self.q, self.onehot, self.q_max, self.action = self._inference(self.conv_inputs, self.ff_inputs, final_neuron_num, rl_not_trainables, True)         
                 if mode == "rl_train":
-                    self.loss = self.rl_loss_func(self.q, self.targets)
-                    self.train_op = self.training(self.loss, config.initial_lr, optimizer_arg = tf.train.RMSPropOptimizer)     
+                    self.loss = self._rl_loss_func(self.q, self.targets)
+                    self.train_op = self._training(self.loss, config.initial_lr, optimizer_arg = tf.train.RMSPropOptimizer)     
                 elif mode == "sv_train":
-                    self.loss = self.loss_func(self.q, self.targets)
-                    self.train_op = self.training(self.loss, config.initial_lr, optimizer_arg = tf.train.AdamOptimizer) 
-                    self.accuracy = self.evaluation(self.onehot, self.targets)    
+                    self.loss = self._loss_func(self.q, self.targets)
+                    self.train_op = self._training(self.loss, config.initial_lr, optimizer_arg = tf.train.AdamOptimizer) 
+                    self.accuracy = self._evaluation(self.onehot, self.targets)    
                 self.summary = tf.summary.merge_all() #für TensorBoard    
         
     
-    def set_placeholders(self, mode, final_neuron_num):
-        conv_inputs = tf.placeholder(tf.float32, shape=[None, self.stacksize, self.config.image_dims[0], self.config.image_dims[1]], name="inputs")  if self.agent.usesConv else None
-        ff_inputs = tf.placeholder(tf.float32, shape=[None, self.agent.ff_inputsize], name="speed_inputs") if self.agent.ff_inputsize else None
-        targets = None if mode=="inference" else tf.placeholder(tf.float32, shape=[None, final_neuron_num], name="targets")    
-        speeds = tf.placeholder(tf.float32, shape=[None, 1], name="speed") #necessary for settozero
-        return conv_inputs, ff_inputs, targets, speeds
+    def _set_placeholders(self, mode, final_neuron_num):
+        conv_inputs = tf.placeholder(tf.float32, shape=[None, self.stacksize, self.config.image_dims[0], self.config.image_dims[1]], name="conv_inputs")  if self.agent.usesConv else None
+        ff_inputs = tf.placeholder(tf.float32, shape=[None, self.agent.ff_inputsize], name="ff_inputs") if self.agent.ff_inputsize else None
+        targets = None if mode=="inference" else tf.placeholder(tf.float32, shape=[None, final_neuron_num], name="sv_targets")    
+        stands_inputs = tf.placeholder(tf.float32, shape=[None, 1], name="standing_inputs") #necessary for settozero
+        return conv_inputs, ff_inputs, targets, stands_inputs
     
     
-    def inference(self, conv_inputs, ff_inputs, final_neuron_num, rl_not_trainables, for_training=False, speeds=tf.Variable(tf.constant(1), trainable=False)):
+    def _inference(self, conv_inputs, ff_inputs, final_neuron_num, rl_not_trainables, for_training=False, stands_inputs=tf.expand_dims(tf.constant(0),axis=0)):
         assert(conv_inputs is not None or ff_inputs is not None)
         self.trainvars = {}
         flat_size = 0
@@ -98,7 +100,8 @@ class CNN(object): #learning on gpu and application on cpu: https://stackoverflo
         fc1 = fc_layer(fc0, flat_size, final_neuron_num*20, "FC1", trainable("FC1"), False, for_training, False, tf.nn.relu, 1 if for_training else self.keep_prob, self.trainvars, variable_summary, initializer=ini)                 
         q = fc_layer(fc1, final_neuron_num*20, final_neuron_num, "FC2", trainable("FC2"), False, for_training, False, None, 1, self.trainvars, variable_summary, initializer=ini) 
 
-        #q = tf.cond(tf.reduce_sum(speeds) < 1, lambda: settozero(q), lambda: q)   #[10.3, 23.1, ...] #wenn du stehst, brauchste dich nicht mehr für die ohne gas zu interessieren
+        #wenn sowohl stands_inputs first dimension 1 ist UND stands_inputs  == 1, dann settozero
+        #q = tf.cond(stands_inputs == 1, lambda: settozero(q), lambda: q)              #[10.3, 23.1, ...] #wenn du stehst, brauchste dich nicht mehr für die ohne gas zu interessieren
         y_conv = tf.nn.softmax(q)                                                   #[ 0.1,  0.2, ...]
         onehot = tf.one_hot(tf.argmax(y_conv, dimension=1), depth=final_neuron_num) #[   0,    1, ...]
         q_max = tf.reduce_max(q, axis=1)                                            #23.1
@@ -107,7 +110,7 @@ class CNN(object): #learning on gpu and application on cpu: https://stackoverflo
         return q, onehot, q_max, action
     
     
-    def loss_func(self, logits, targets):
+    def _loss_func(self, logits, targets):
         #tf.nn.softmax_cross_entropy_with_logits vergleicht 1-hot-labels mit integer-logits
         #"Note that tf.nn.softmax_cross_entropy_with_logits internally applies the softmax on the model's unnormalized model prediction and sums across all classes"
         #The raw formulation of cross-entropy (one line below) can be numerically unstable. -> use tf's function!
@@ -116,12 +119,12 @@ class CNN(object): #learning on gpu and application on cpu: https://stackoverflo
         return tf.reduce_mean(cross_entropy)
         
     
-    def rl_loss_func(self, q, q_target):
+    def _rl_loss_func(self, q, q_target):
         return tf.reduce_mean(tf.square(q_target - q))
     
     
     
-    def training(self, loss, init_lr, optimizer_arg):
+    def _training(self, loss, init_lr, optimizer_arg):
         #returns the minimizer op
         variable_summary(loss, "loss") #tf.summary.scalar('loss', loss) #für TensorBoard
         
@@ -159,7 +162,7 @@ class CNN(object): #learning on gpu and application on cpu: https://stackoverflo
         return train_op
     
         
-    def evaluation(self, onehots, targets):
+    def _evaluation(self, onehots, targets):
         #returns how many percent it got correct
         made = tf.cast(onehots, tf.bool)
         real = tf.cast(targets, tf.bool)
@@ -168,12 +171,14 @@ class CNN(object): #learning on gpu and application on cpu: https://stackoverflo
         return compare
         
     
-    def prepareNumIters(self):
+    def _prepareNumIters(self):
         self.numIterations = tf.Variable(tf.constant(0), trainable=False)
         self.newIters = tf.placeholder(tf.int32, shape=[]) 
         self.iterUpdate = tf.assign(self.numIterations, self.newIters)           
-    
+
+###############################################################################
     ######methods for RUNNING the computation graph######
+###############################################################################
     
     def saveNumIters(self, session, value):
         session.run(self.iterUpdate, feed_dict={self.newIters: value})
@@ -181,20 +186,23 @@ class CNN(object): #learning on gpu and application on cpu: https://stackoverflo
     def restoreNumIters(self, session):
         return self.numIterations.eval(session=session)
         
-    
-    def train_fill_feed_dict(self, config, dataset, batchsize = 0, decay_lr = True): 
-        batchsize = config.batch_size if batchsize == 0 else batchsize
+    def assign_lr(self, session, lr_value):
+        session.run(self.lr_update, feed_dict={self.new_lr: lr_value})
         
-        presentStates, _ = dataset.next_batch(config, self.agent, batchsize)
-        presentStates = list(zip(*presentStates))
+        
+    
+    def sv_fill_feed_dict(self, config, stateBatch, decay_lr = True, dropout = True): 
+        presentStates = list(zip(*stateBatch))
         conv_inputs, other_inputs = list(zip(*[self.agent.getAgentState(*presentState) for presentState in presentStates]))
         other_inputs = [self.agent.makeNetUsableOtherInputs(i) for i in other_inputs]
         targets = [self.agent.makeNetUsableAction(self.agent.getAction(*presentState)) for presentState in presentStates]
                 
+        feed_dict = {self.targets: targets}
+        feed_dict[self.keep_prob] = config.keep_prob if dropout else None
         if decay_lr:
             lr_decay = config.lr_decay ** max(self.iterations-config.lrdecayafter, 0.0)
             new_lr = max(config.initial_lr*lr_decay, config.minimal_lr)
-        feed_dict = {self.targets: targets, self.keep_prob: config.keep_prob, self.learning_rate: new_lr}
+            feed_dict[self.learning_rate] = new_lr
         if self.agent.usesConv:
             feed_dict[self.conv_inputs] = conv_inputs
         if self.agent.ff_inputsize:
@@ -202,18 +210,15 @@ class CNN(object): #learning on gpu and application on cpu: https://stackoverflo
         return feed_dict            
 
 
-    def assign_lr(self, session, lr_value):
-        session.run(self.lr_update, feed_dict={self.new_lr: lr_value})
-     
-
-    def run_train_epoch(self, session, dataset, summarywriter = None):
+    def run_sv_train_epoch(self, session, dataset, summarywriter = None):
         with self.agent.graph.as_default():
             gesamtLoss = 0
             self.iterations += 1
             
             dataset.reset_batch()
             for i in range(dataset.num_batches(self.config.batch_size)):
-                feed_dict = self.train_fill_feed_dict(self.config, dataset)
+                stateBatch, _ = dataset.next_batch(self.config, self.agent, self.config.batch_size)
+                feed_dict = self.train_fill_feed_dict(self.config, stateBatch)
                 if self.iterations % SUMMARYALL == 0 and summarywriter is not None:
                     _, loss, summary_str = session.run([self.train_op, self.loss, self.summary], feed_dict=feed_dict)   
                     summarywriter.add_summary(summary_str, session.run(self.global_step))
@@ -222,50 +227,47 @@ class CNN(object): #learning on gpu and application on cpu: https://stackoverflo
                     _, loss = session.run([self.train_op, self.loss], feed_dict=feed_dict)   
                 gesamtLoss += loss
             
-            return gesamtLoss
+        return gesamtLoss
         
     
-    def run_eval(self, session, dataset):            
+    def run_sv_eval(self, session, dataset):            
         dataset.reset_batch()
-        feed_dict = self.train_fill_feed_dict(self.config, dataset, dataset.numsamples) #would be terribly slow if we learned, but luckily we only evaluate. should be fine.
+        stateBatch, _ = dataset.next_batch(self.config, self.agent, dataset.numsamples)
+        feed_dict = self.train_fill_feed_dict(self.config, stateBatch, decay_lr=False, dropout=False) #would be terribly slow if we learned, but luckily we only evaluate. should be fine.
         accuracy, loss = session.run([self.accuracy, self.loss], feed_dict=feed_dict)
         return accuracy, loss, dataset.numsamples
             
+           
     
-    def calculate_value(self, session, conv_inputs, other_inputs):
-        conv_inputs = np.expand_dims(conv_inputs, axis=0)
-        feed_dict = {}
-        if self.agent.usesConv:
-            feed_dict[self.conv_inputs] = conv_inputs
-        if self.agent.ff_inputsize:
-            feed_dict[self.ff_inputs] = other_inputs
-        return session.run(self.q_max, feed_dict=feed_dict)
-            
-
-##############################################################################################################################
+##################### RL-stuff ################################################
     
     
-    def rl_fill_feeddict(self, conv_inputs, other_inputs, speeds):
+    def rl_fill_feeddict(self, conv_inputs, other_inputs, stands_inputs=False):
         feed_dict = {}
         if len(conv_inputs.shape) <= 3: 
             conv_inputs = np.expand_dims(conv_inputs, axis=0) #expand_dims weil hier quasi batchsize=1
             other_inputs= np.expand_dims(other_inputs, axis=0) 
-            speeds = np.expand_dims(speeds, axis=0)
+            stands_inputs = np.expand_dims(stands_inputs, axis=0)
         if self.agent.usesConv:
             feed_dict[self.conv_inputs] = conv_inputs
         if self.agent.ff_inputsize:
             feed_dict[self.ff_inputs] = other_inputs 
-        if speeds:
-            feed_dict[self.speed] = speeds
+        if stands_inputs: 
+            feed_dict[self.stands_inputs] = stands_inputs 
         return feed_dict
         
         
-    def run_inference(self, session, conv_inputs, other_inputs, speeds):        
+    def run_inference(self, session, conv_inputs, other_inputs, stands_inputs=False):        
         assert type(conv_inputs[0]).__module__ == np.__name__
-        assert (np.array(conv_inputs.shape) == np.array(self.inputs.get_shape().as_list()[1:])).all()
-        feed_dict = self.rl_fill_feeddict(conv_inputs, other_inputs, speeds)
+        assert (np.array(conv_inputs.shape) == np.array(self.conv_inputs.get_shape().as_list()[1:])).all()
+        feed_dict = self.rl_fill_feeddict(conv_inputs, other_inputs, stands_inputs)
         return session.run([self.onehot, self.q], feed_dict=feed_dict)
 
+    
+    def calculate_value(self, session, conv_inputs, other_inputs, stands_inputs=False):
+        feed_dict = self.rl_fill_feeddict(conv_inputs, other_inputs, stands_inputs)
+        return session.run(self.q_max, feed_dict=feed_dict)
+    
         
     def rl_learn_forward(self, session, conv_inputs, other_inputs, following_conv_inputs, following_other_inputs):
         qs = session.run(self.q, feed_dict = self.rl_fill_feeddict(conv_inputs, other_inputs)) 
@@ -280,4 +282,3 @@ class CNN(object): #learning on gpu and application on cpu: https://stackoverflo
     
     
        
-

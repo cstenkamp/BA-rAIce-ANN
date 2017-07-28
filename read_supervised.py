@@ -125,8 +125,16 @@ def discretize_all(throttle, brake, steer, numcats, include_apb):
             else:
                 discreteAll = discreteSteer + [0]*(numcats*2)                
     return discreteAll
-                
-    
+               
+ 
+def dediscretize_steer(discrete):
+    if type(discrete).__module__ == np.__name__:
+        discrete = discrete.tolist()
+    try:
+        result = round(-1+(2/len(discrete))*(discrete.index(1)+0.5), 3)
+    except ValueError:
+        result = 0
+    return result    
         
 
 #input:  3*speed_neurons / 4*speed_neurons
@@ -135,15 +143,6 @@ def dediscretize_all(discrete, numcats, include_apb):
     if type(discrete).__module__ == np.__name__:
         discrete = discrete.tolist()
         
-    def dediscretize_steer(discrete):
-        if type(discrete).__module__ == np.__name__:
-            discrete = discrete.tolist()
-        try:
-            result = round(-1+(2/len(discrete))*(discrete.index(1)+0.5), 3)
-        except ValueError:
-            result = 0
-        return result
-
     if include_apb:
         if discrete.index(1) >= numcats*3:
             throttle = 1

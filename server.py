@@ -12,9 +12,8 @@ from functools import partial
 import copy
 
 #====own classes====
-import svPlayNetAgent
-#import reinfNetAgentII as reinfNetAgent #is an agent, inherits all agent's functions
-import reinfNetAgent
+import dqn_rl_agent #is an agent, inherits all agent's functions
+import dqn_sv_agent
 from myprint import myprint as print
 from read_supervised import empty_inputs, make_otherinputs 
 import infoscreen
@@ -24,19 +23,14 @@ from inefficientmemory import Memory as Precisememory
 from efficientmemory import Memory as Efficientmemory
 
 import warnings
-warnings.filterwarnings("ignore")
-
 current_milli_time = lambda: int(round(time.time() * 1000))
+if current_milli_time() < 1508101200000: warnings.filterwarnings("ignore")
 logging.basicConfig(level=logging.ERROR, format='(%(threadName)-10s) %(message)s',) #legacy
 
-
-
-RELEVANT_OTHERINPUTS = 49
 MININT = -sys.maxsize+1
 TCP_IP = 'localhost' #TODO check if it also works over internet, in the Cluster
 TCP_RECEIVER_PORT = 6435
 TCP_SENDER_PORT = 6436
-#NUMBER_ANNS = 1 #only one of those will execute the learning, in dauerLearnANN in LearnThread
 SAVE_MEMORY_ON_EXIT = True
 
 
@@ -159,7 +153,7 @@ class receiver_thread(threading.Thread):
                                 if int(i.STimestamp) < int(self.STimestamp):
                                     i.killme = True
                                     
-                            print("PYTHON RECEIVES TIME:", STime, time.time()*1000, level=4)
+                            print("PYTHON RECEIVES TIME:", STime, time.time()*1000, level=10)
                             self.containers.inputval.update(visionvec, vvec2, allOneDs, STime, CTime)  #note that visionvec and vvec2 can both be None
                             self.containers.myAgent.runInference(self.containers.inputval.read(), self.containers.inputval.read(pastState=True))
                         
@@ -516,9 +510,9 @@ def main(sv_conf, rl_conf, only_sv, no_learn, show_screen, start_fresh, nomemory
         rl_conf.learnMode = ""
     
     if only_sv:
-        agent = svPlayNetAgent.PlayNetAgent
+        agent = dqn_sv_agent.DQN_SV_Agent
     else:
-        agent = reinfNetAgent.ReinfNetAgent #this one, inheriting from abstractRLAgent, will have a memory
+        agent = dqn_rl_agent.DQN_RL_Agent #this one, inheriting from abstractRLAgent, will have a memory
 
         
     containers.myAgent = agent(sv_conf, containers, rl_conf, start_fresh) 

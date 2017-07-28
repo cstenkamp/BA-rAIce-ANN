@@ -14,6 +14,7 @@ import os
 from myprint import myprint as print
 import read_supervised
 import infoscreen
+import dqn
 
 ###################################################################################################
 
@@ -29,6 +30,7 @@ class AbstractAgent(object):
         self.usesConv = True
         self.network = None
         self.graph = tf.Graph()
+        self.network = dqn.CNN
         
     ##############functions that should be impemented##########
     def checkIfInference(self):
@@ -183,10 +185,11 @@ class AbstractRLAgent(AbstractAgent):
             
             self.memory.append([s, a, r, s2, False])  
             
-            print("adding to Memoery:",actuAction, r, level=4)
+            print("adding to Memoery:",actuAction, r, level=4) 
             
             if self.containers.showscreen:
-                infoscreen.print(actuAction, round(r,2), round(self.target_cnn.calculate_value(self.session, s2[0], s2[1])[0],2), containers= self.containers, wname="Last memory")
+                conv_inputs, other_inputs = self.getAgentState(*gameState)
+                infoscreen.print(actuAction, round(r,2), round(self.target_cnn.calculate_value(self.session, conv_inputs, self.makeNetUsableOtherInputs(other_inputs))[0],2), containers= self.containers, wname="Last memory")
                 if len(self.memory) % 20 == 0:
                     infoscreen.print(">"+str(len(self.memory)), containers= self.containers, wname="Memorysize")
       
