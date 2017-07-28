@@ -320,7 +320,7 @@ class InputValContainer(object):
         self.lock.acquire()
         try:
             if not self.just_reset:
-                assert self.action_hist[0] is not None, "the output-val didn't add the last action before runing again!"
+                assert self.action_hist[0] is not None, "the output-val didn't add the last action before running again!"
                 self.has_past_state = True
             #20.7.: deleted the "if is_new..." functionality, as I think its absolutely not helpful
             otherinputs = make_otherinputs(othervecs) #is now a namedtuple instead of an array

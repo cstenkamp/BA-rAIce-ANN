@@ -95,12 +95,12 @@ class AbstractRLAgent(AbstractAgent):
         
         if pastState[0] is not None: #was der Fall DIREKT nach reset oder nach start ist
             
-            past_conv_inputs, _, past_other_inputs_tosave = self.getAgentState(*pastState)
-            s  = (past_conv_inputs, past_other_inputs_tosave)
+            past_conv_inputs, past_other_inputs = self.getAgentState(*pastState)
+            s  = (past_conv_inputs, past_other_inputs)
             a  = self.getAction(*pastState)
             r = self.calculateReward(*gameState)
-            conv_inputs, _, other_inputs_tosave = self.getAgentState(*gameState)
-            s2 = (conv_inputs, other_inputs_tosave)
+            conv_inputs, other_inputs = self.getAgentState(*gameState)
+            s2 = (conv_inputs, other_inputs)
         
             if not self.SAVE_ACTION_AS_ARGMAX: #action ist entweder das argmax der final_neurons ODER das (throttle, brake, steer)-tuple
                 actuAction = a                                                                                         
@@ -110,7 +110,7 @@ class AbstractRLAgent(AbstractAgent):
             
             self.memory.append([s, a, r, s2, False])  
             
-            print(actuAction, r, level=6)
+            print("adding to Memoery:",actuAction, r, level=4)
             
             if self.containers.showscreen:
                 infoscreen.print(actuAction, round(r,2), round(self.target_cnn.calculate_value(self.session, s2[0], s2[1])[0],2), containers= self.containers, wname="Last memory")
@@ -148,7 +148,7 @@ class AbstractRLAgent(AbstractAgent):
         
 
     def postRunInference(self, toUse, toSave):
-        super().postRunInference(toUse, None)
+        super().postRunInference(toUse, toSave)
         #ACHTUNG! self.containers.inputval.addResultAndBackup(toSave)  WURDE HIER ENTFERNT!
         if self.containers.rl_conf.learnMode == "between":
             print("freezing python because after", self.numIterations, "iterations I need to learn (between)", level=2)

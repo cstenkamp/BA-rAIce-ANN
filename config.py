@@ -83,7 +83,7 @@ class RL_Config(Config):
     batchsize = 32
     q_decay = 0.99
     checkpointall = 300 #RLsteps, not inferences!
-    copy_target_all = 100
+    copy_target_all = 20
     
     replaystartsize = 0
     memorysize = 30000

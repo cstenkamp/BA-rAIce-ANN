@@ -3,6 +3,7 @@ import os
 import numpy as np
 np.set_printoptions(threshold=np.nan)
 from copy import deepcopy
+from math import floor
 #====own classes====
 from myprint import myprint as print
 
@@ -269,19 +270,17 @@ def inflate_speed(speed, numberneurons, asonehot):
     result = [0]*numberneurons
     if speed < 1:
         return result
-    maxone = min(max(0,round((speed/MAXSPEED)*numberneurons)), numberneurons-1)
+    maxone = min(max(0,floor((speed/MAXSPEED)*numberneurons)), numberneurons-1)
     if asonehot:
         result[maxone] = 1
     else:
-        brokenspeed = round((speed/numberneurons)-maxone, 2)
-        if brokenspeed < 0:
-            maxone -= 1
+        brokenspeed = round((speed - (maxone/numberneurons*MAXSPEED)) / (MAXSPEED/numberneurons), 2)
+    
         for i in range(maxone):
             result[i] = 1
-        result[maxone] = round((speed/numberneurons)-maxone, 2)
+        result[maxone] = brokenspeed
         
     return result
-
 
         
 def cutoutandreturnvectors(string):

@@ -267,7 +267,7 @@ class CNN(object):
     def rl_learn_step(self, session, conv_inputs, other_inputs, qs):
         feed_dict = self.rl_fill_feeddict(conv_inputs, other_inputs)
         feed_dict[self.targets] = qs
-        session.run(self.learn_which.train_op, feed_dict=feed_dict)    
+        session.run(self.train_op, feed_dict=feed_dict)    
     
     
        

@@ -165,5 +165,5 @@ class Memory(object):
         return acc, brk, steer
     
     @staticmethod
-    def make_floats_from_long(acc, brk, steer):
-        return acc, brk, steer
+    def make_floats_from_long(content):
+        return content[0], content[1], content[2]
