@@ -53,10 +53,10 @@ def showScreen(containers):
     lasttargetcopy.pack(fill=X)
     reinflearnsteps = ThreadSafeConsole(root, width=1, height=1)
     reinflearnsteps.pack(fill=X)
-    currentqvals = ThreadSafeConsole(root, width=50, height=22)
+    currentqvals = ThreadSafeConsole(root, width=55, height=22)
     currentqvals.pack(fill=X)
-    x = root.winfo_screenwidth()-420
-    y = 5 #root.winfo_screenheight()-200
+    x = root.winfo_screenwidth()-449
+    y = 0 #root.winfo_screenheight()-200
     root.geometry('+%d+%d' % (x, y))   
 
     containers.showscreen = True

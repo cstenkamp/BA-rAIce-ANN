@@ -20,8 +20,8 @@ FOLDERNAME = "SavedLaps/"
 Preprogressvec = namedtuple('ProgressVec', ['Progress', 'Laptime', 'NumRounds', 'fValidLap'])
 Prespeedsteer = namedtuple('SpeedSteer', ['RLTorque', 'RRTorque', 'FLSteer', 'FRSteer', 'velocity', 'rightDirection', 'velocityPerpendicular', 'carAngle', 'speedInStreetDir'])
 Prestatusvector = namedtuple('StatusVector', ['velocity', 'FLSlip0', 'FRSlip0', 'RLSlip0', 'RRSlip0', 'FLSlip1', 'FRSlip1', 'RLSlip1', 'RRSlip1'])
-                                             #4 elems       9 elems       9 elems         1 elem        15 elems         30 elems =      2 elems    = 70 elems
-Preotherinputs = namedtuple('OtherInputs', ['ProgressVec', 'SpeedSteer', 'StatusVector', 'CenterDist', 'CenterDistVec', 'LookAheadVec', 'FBDelta'])
+                                             #4 elems       9 elems       9 elems         1 elem        15 elems         30 elems =      2 elems    3 elems  = 73 elems
+Preotherinputs = namedtuple('OtherInputs', ['ProgressVec', 'SpeedSteer', 'StatusVector', 'CenterDist', 'CenterDistVec', 'LookAheadVec', 'FBDelta', 'Action'])
 class Progressvec(Preprogressvec):
     def __eq__(self, other):
         return np.all([self[i] == other[i] for i in [0,1,2]]) #Zeit wird nicht berücksichtigt!
@@ -40,8 +40,9 @@ class Otherinputs(Preotherinputs):
            and self.StatusVector == other.StatusVector \
            and self.CenterDist == other.CenterDist \
            and np.all(self.LookAheadVec == other.LookAheadVec)
+           #and np.all(self.Action == other.Action) #? macht das sinn? #TODO: is the performed action relevant??? hmm.
            #and np.all(self.CenterDistVec == other.CenterDistVec) \ #can be skipped because then the centerdist is also equal
-           #FBDelta werden auch nicht beachtet, da die ebenfalls von Zeit abhängen
+           #FBDelta werden auch nicht beachtet, da die ebenfalls von Zeit abhängen 
     def empty(self):
         return self.__eq__(empty_inputs())
     def returnRelevant(self):
@@ -51,7 +52,7 @@ class Otherinputs(Preotherinputs):
 empty_progressvec = lambda: Progressvec(0, 0, 0, 0)
 empty_speedsteer = lambda: Speedsteer(0, 0, 0, 0, 0, 0, 0, 0, 0)
 empty_statusvector = lambda: Statusvector(0, 0, 0, 0, 0, 0, 0, 0, 0)
-empty_inputs = lambda: Otherinputs(empty_progressvec(), empty_speedsteer(), empty_statusvector(), 0, np.zeros(15), np.zeros(30), np.zeros(2))
+empty_inputs = lambda: Otherinputs(empty_progressvec(), empty_speedsteer(), empty_statusvector(), 0, np.zeros(15), np.zeros(30), np.zeros(2), np.zeros(3))
 def make_otherinputs(othervecs):
     return Otherinputs(Progressvec(othervecs[0][0], othervecs[0][1], othervecs[0][2], othervecs[0][3]), \
                        Speedsteer(othervecs[1][0], othervecs[1][1], othervecs[1][2], othervecs[1][3], othervecs[1][4], othervecs[1][5], othervecs[1][6], othervecs[1][7], othervecs[1][8]), \
@@ -59,7 +60,8 @@ def make_otherinputs(othervecs):
                        othervecs[3][0], \
                        othervecs[3][1:], \
                        othervecs[4], \
-                       othervecs[5])
+                       othervecs[5],
+                       othervecs[6])
 #this very long part end
 
 ###############################################################################
@@ -369,6 +371,10 @@ def cutoutandreturnvectors(string):
     if string.find("D(") > -1:
         #print("Visionvec",self.readTwoDArrayFromString(cutout(data, "V(")))
         allOneDs.append(readOneDArrayFromString(cutout(string, "D(")))
+    
+    if string.find("A(") > -1:
+        #print("Visionvec",self.readTwoDArrayFromString(cutout(data, "V(")))
+        allOneDs.append(readOneDArrayFromString(cutout(string, "A(")))
     
     if string.find("V1(") > -1:
         #print("Visionvec",self.readTwoDArrayFromString(cutout(data, "V(")))

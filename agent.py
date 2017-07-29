@@ -105,7 +105,7 @@ class AbstractAgent(object):
                     start_time = time.time()
     
                     step = sv_model.global_step.eval() 
-                    train_loss = sv_model.run_train_epoch(sess, trackingpoints, summary_writer)
+                    train_loss = sv_model.run_sv_train_epoch(sess, trackingpoints, summary_writer)
                     
                     savedpoint = ""
                     if sv_model.iterations % self.sv_conf.checkpointall == 0 or sv_model.iterations == self.sv_conf.iterations:
@@ -185,11 +185,11 @@ class AbstractRLAgent(AbstractAgent):
             
             self.memory.append([s, a, r, s2, False])  
             
-            print("adding to Memoery:",actuAction, r, level=4) 
+            print("adding to Memory:",actuAction, r, level=4) 
             
             if self.containers.showscreen:
                 conv_inputs, other_inputs = self.getAgentState(*gameState)
-                infoscreen.print(actuAction, round(r,2), round(self.target_cnn.calculate_value(self.session, conv_inputs, self.makeNetUsableOtherInputs(other_inputs))[0],2), containers= self.containers, wname="Last memory")
+                infoscreen.print(actuAction, round(r,2), round(self.target_cnn.calculate_value(self.session, conv_inputs, self.makeNetUsableOtherInputs(other_inputs))[0],2), self.humantakingcontrolstring, containers= self.containers, wname="Last memory")
                 if len(self.memory) % 20 == 0:
                     infoscreen.print(">"+str(len(self.memory)), containers= self.containers, wname="Memorysize")
       

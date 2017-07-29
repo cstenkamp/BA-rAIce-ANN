@@ -276,8 +276,11 @@ class InputValContainer(object):
             if self.config.use_cameras:
                 self._append_vvec_hist(visionvec, vvec2)
             self.otherinput_hist = self._append_other(otherinputs, self.otherinput_hist)
+            self.containers.myAgent.humantakingcontrolstring = "(H)" if (self.action_hist[0] != tuple(otherinputs.Action)) else ""
+            self.action_hist[0] = tuple(otherinputs.Action) #it was already added in addAction, and will only overwritten here if humantakingcontrol changed it
             self.action_hist = self._append_other(None, self.action_hist)   #will be updated in addAction         
             
+                                                 
             #wenn otherinputs.CenterDist >= 10 war und seitdem keine neue action kam, muss er >= 10 bleiben!
             if self.otherinput_hist[0].CenterDist >= 10:
                 self.hit_a_wall = True 

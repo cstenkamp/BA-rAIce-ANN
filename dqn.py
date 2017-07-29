@@ -218,7 +218,7 @@ class CNN(object): #learning on gpu and application on cpu: https://stackoverflo
             dataset.reset_batch()
             for i in range(dataset.num_batches(self.config.batch_size)):
                 stateBatch, _ = dataset.next_batch(self.config, self.agent, self.config.batch_size)
-                feed_dict = self.train_fill_feed_dict(self.config, stateBatch)
+                feed_dict = self.sv_fill_feed_dict(self.config, stateBatch)
                 if self.iterations % SUMMARYALL == 0 and summarywriter is not None:
                     _, loss, summary_str = session.run([self.train_op, self.loss, self.summary], feed_dict=feed_dict)   
                     summarywriter.add_summary(summary_str, session.run(self.global_step))
@@ -233,7 +233,7 @@ class CNN(object): #learning on gpu and application on cpu: https://stackoverflo
     def run_sv_eval(self, session, dataset):            
         dataset.reset_batch()
         stateBatch, _ = dataset.next_batch(self.config, self.agent, dataset.numsamples)
-        feed_dict = self.train_fill_feed_dict(self.config, stateBatch, decay_lr=False, dropout=False) #would be terribly slow if we learned, but luckily we only evaluate. should be fine.
+        feed_dict = self.sv_fill_feed_dict(self.config, stateBatch, decay_lr=False, dropout=False) #would be terribly slow if we learned, but luckily we only evaluate. should be fine.
         accuracy, loss = session.run([self.accuracy, self.loss], feed_dict=feed_dict)
         return accuracy, loss, dataset.numsamples
             
