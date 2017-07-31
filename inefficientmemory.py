@@ -26,12 +26,12 @@ SAVENAME = "memory"
 class Memory(object):
     def __init__(self, capacity, containers):
         self._lock = lock = threading.Lock()
+        self.containers = containers
         self.memorypath = self.containers.myAgent.folder(self.containers.rl_conf.memory_dir)
         self.capacity = capacity
         self._buffer = [None]*capacity #deque(elemtype, capacity)
         self._pointer = 0
         self._appendcount = 0
-        self.containers = containers
         self.lastsavetime = current_milli_time()
         self._size = 0
         

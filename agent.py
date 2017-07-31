@@ -28,6 +28,8 @@ class AbstractAgent(object):
         self.numIterations = 0
         self.ff_inputsize = 0
         self.usesConv = True
+        self.conv_stacked = True
+        self.ff_stacked = False
         self.network = None
         self.graph = tf.Graph()
         self.network = dqn.CNN
@@ -49,7 +51,8 @@ class AbstractAgent(object):
         assert self.sv_conf.use_cameras, "You disabled cameras in the config, which is impossible for this agent!"
         conv_inputs = np.concatenate([vvec1_hist, vvec2_hist]) if vvec2_hist is not None else vvec1_hist
         other_inputs = otherinput_hist[0].SpeedSteer.velocity
-        return conv_inputs, other_inputs
+        stands_inputs = otherinput_hist[0].SpeedSteer.velocity < 2
+        return conv_inputs, other_inputs, stands_inputs
     
     def makeNetUsableOtherInputs(self, other_inputs): #normally, the otherinputs are stored as compact as possible. Networks may need to unpack that.
         other_inputs = self.inflate_speed(other_inputs)
@@ -63,7 +66,7 @@ class AbstractAgent(object):
         #TODO: wenn du die action als 3 werte speichest, dann...
         return self.discretize(*action)
         
-    def performNetwork(self, _, __):
+    def performNetwork(self, _, __, ___):
         print("Another ANN Inference", level=3)
         
         
@@ -78,7 +81,7 @@ class AbstractAgent(object):
 
             initializer = tf.random_uniform_initializer(-0.1, 0.1) #bei variablescopes kann ich nen default-initializer für get_variables festlegen
                               
-            with tf.variable_scope("cnnmodel", reuse=None, initializer=initializer):
+            with tf.variable_scope("model", reuse=None, initializer=initializer):
                 sv_model = self.network(self.sv_conf, self, mode="sv_train")
               
             init = tf.global_variables_initializer()
@@ -116,7 +119,7 @@ class AbstractAgent(object):
                     print('Iteration %3d (step %4d): loss = %.2f (%.3f sec)' % (sv_model.iterations, step+1, train_loss, time.time()-start_time), savedpoint, level=8)
                     
                     
-                ev, loss, _ = sv_model.run_eval(sess, trackingpoints)
+                ev, loss, _ = sv_model.run_sv_eval(sess, trackingpoints)
                 print("Result of evaluation:", level=8)
                 print("Loss: %.2f,  Correct inferences: %.2f%%" % (loss, ev*100), level=10)
     
@@ -141,7 +144,7 @@ class AbstractAgent(object):
         server.resetUnity(self.containers)
         
     def folder(self, actualfolder):
-        folder = self.sv_conf.superfolder()+self.name+"/"+actualfolder+"/"
+        folder = self.sv_conf.superfolder()+self.name+"/"+actualfolder
         if not os.path.exists(folder):
             os.makedirs(folder)   
         return folder
@@ -174,11 +177,11 @@ class AbstractRLAgent(AbstractAgent):
         
         if pastState[0] is not None: #was der Fall DIREKT nach reset oder nach start ist
             
-            past_conv_inputs, past_other_inputs = self.getAgentState(*pastState)
+            past_conv_inputs, past_other_inputs, _ = self.getAgentState(*pastState)
             s  = (past_conv_inputs, past_other_inputs)
             a  = self.getAction(*pastState)
             r = self.calculateReward(*gameState)
-            conv_inputs, other_inputs = self.getAgentState(*gameState)
+            conv_inputs, other_inputs, _ = self.getAgentState(*gameState)
             s2 = (conv_inputs, other_inputs)
         
             if not self.SAVE_ACTION_AS_ARGMAX: #action ist entweder das argmax der final_neurons ODER das (throttle, brake, steer)-tuple
@@ -192,7 +195,7 @@ class AbstractRLAgent(AbstractAgent):
             print("adding to Memory:",actuAction, r, level=4) 
             
             if self.containers.showscreen:
-                conv_inputs, other_inputs = self.getAgentState(*gameState)
+                conv_inputs, other_inputs, _ = self.getAgentState(*gameState)
                 infoscreen.print(actuAction, round(r,2), round(self.target_cnn.calculate_value(self.session, conv_inputs, self.makeNetUsableOtherInputs(other_inputs))[0],2), self.humantakingcontrolstring, containers= self.containers, wname="Last memory")
                 if len(self.memory) % 20 == 0:
                     infoscreen.print(">"+str(len(self.memory)), containers= self.containers, wname="Memorysize")

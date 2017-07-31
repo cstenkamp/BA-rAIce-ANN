@@ -26,12 +26,12 @@ SAVENAME = "Ememory"
 class Memory(object):
     def __init__(self, capacity, containers, state_stacksize, constantmemorysize):
         self._lock = lock = threading.Lock()
+        self.containers = containers
         self.memorypath = self.containers.myAgent.folder(self.containers.rl_conf.memory_dir)
         self.capacity = capacity
         self._state_stacksize = state_stacksize
         self._pointer = 0
         self._appendcount = 0
-        self.containers = containers
         self.lastsavetime = current_milli_time()
         self._size = 0
         

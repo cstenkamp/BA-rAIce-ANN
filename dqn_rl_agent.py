@@ -39,7 +39,7 @@ class Agent(AbstractRLAgent):
     def runInference(self, gameState, pastState):
         if self.isinitialized and self.checkIfInference():
             self.preRunInference(gameState, pastState) #eg. adds to memory
-            conv_inputs, other_inputs = self.getAgentState(*gameState)
+            conv_inputs, other_inputs, stands_inputs = self.getAgentState(*gameState)
                 
 #            ##############DELETETHISPART############## #to check how fast the pure socket connection, whithout ANN, is
 #            self.containers.outputval.send_via_senderthread("[1, 0, 0]", self.containers.inputval.CTimestamp, self.containers.inputval.STimestamp)
@@ -47,7 +47,7 @@ class Agent(AbstractRLAgent):
 #            ##############DELETETHISPART ENDE##############
             
             if self.canLearn() and np.random.random() > self.epsilon:
-                toUse, toSave = self.performNetwork(conv_inputs, self.makeNetUsableOtherInputs(other_inputs))
+                toUse, toSave = self.performNetwork(conv_inputs, self.makeNetUsableOtherInputs(other_inputs), stands_inputs)
             else:
                 toUse, toSave = self.randomAction(gameState[2][0].SpeedSteer.velocity, self.rl_conf)
             
@@ -70,9 +70,9 @@ class Agent(AbstractRLAgent):
     
 
 
-    def performNetwork(self, conv_inputs, inflated_other_inputs):        
-        super().performNetwork(conv_inputs, inflated_other_inputs)
-        onehot, qvals = self.target_cnn.run_inference(self.session, conv_inputs, inflated_other_inputs) #former is argmax, latter are individual qvals
+    def performNetwork(self, conv_inputs, inflated_other_inputs, stands_inputs):        
+        super().performNetwork(conv_inputs, inflated_other_inputs, stands_inputs)
+        onehot, qvals = self.target_cnn.run_inference(self.session, conv_inputs, inflated_other_inputs, stands_inputs) #former is argmax, latter are individual qvals
         throttle, brake, steer = self.dediscretize(onehot[0])
         result = "["+str(throttle)+", "+str(brake)+", "+str(steer)+"]"
         self.showqvals(qvals[0])
@@ -177,11 +177,10 @@ class Agent(AbstractRLAgent):
         initializer = tf.random_uniform_initializer(-0.1, 0.1)
         
         if self.start_fresh:
-            with tf.name_scope("ReinfLearn"): 
-                with tf.variable_scope("targetnet", reuse=None, initializer=initializer):
-                    self.target_cnn = self.network(self.rl_conf, self, mode="inference", rl_not_trainables=DONT_TRAIN)                
-                with tf.variable_scope("onlinenet", reuse=None, initializer=initializer):
-                    self.online_cnn = self.network(self.rl_conf, self, mode="rl_train", rl_not_trainables=DONT_TRAIN)                
+            with tf.variable_scope("targetnet", reuse=None, initializer=initializer):
+                self.target_cnn = self.network(self.rl_conf, self, mode="inference", rl_not_trainables=DONT_TRAIN)                
+            with tf.variable_scope("onlinenet", reuse=None, initializer=initializer):
+                self.online_cnn = self.network(self.rl_conf, self, mode="rl_train", rl_not_trainables=DONT_TRAIN)                
             init = tf.global_variables_initializer()
             self.session.run(init)        
             self.saver = tf.train.Saver(max_to_keep=1)
@@ -203,11 +202,10 @@ class Agent(AbstractRLAgent):
                 varlist = list(eraseneccessary(varlist, DONT_COPY_WEIGHTS).keys())
                 print(varlist)
                 
-                with tf.name_scope("ReinfLearn"): 
-                    with tf.variable_scope("targetnet", reuse=None, initializer=initializer):
-                        self.target_cnn = self.network(self.rl_conf, self, mode="inference", rl_not_trainables=DONT_TRAIN)                
-                    with tf.variable_scope("onlinenet", reuse=None, initializer=initializer):
-                        self.online_cnn = self.network(self.rl_conf, self, mode="rl_train", rl_not_trainables=DONT_TRAIN)                
+                with tf.variable_scope("targetnet", reuse=None, initializer=initializer):
+                    self.target_cnn = self.network(self.rl_conf, self, mode="inference", rl_not_trainables=DONT_TRAIN)                
+                with tf.variable_scope("onlinenet", reuse=None, initializer=initializer):
+                    self.online_cnn = self.network(self.rl_conf, self, mode="rl_train", rl_not_trainables=DONT_TRAIN)                
                         
                 restorevars = {}
                 for i in tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope='targetnet'):
@@ -226,11 +224,10 @@ class Agent(AbstractRLAgent):
                 self.saver = tf.train.Saver(max_to_keep=1)
                 
             else:
-                with tf.name_scope("ReinfLearn"): 
-                    with tf.variable_scope("targetnet", reuse=None, initializer=initializer):
-                        self.target_cnn = self.network(self.rl_conf, self, mode="inference", rl_not_trainables=DONT_TRAIN)
-                    with tf.variable_scope("onlinenet", reuse=None, initializer=initializer):
-                        self.online_cnn = self.network(self.rl_conf, self, mode="rl_train", rl_not_trainables=DONT_TRAIN)                                            
+                with tf.variable_scope("targetnet", reuse=None, initializer=initializer):
+                    self.target_cnn = self.network(self.rl_conf, self, mode="inference", rl_not_trainables=DONT_TRAIN)
+                with tf.variable_scope("onlinenet", reuse=None, initializer=initializer):
+                    self.online_cnn = self.network(self.rl_conf, self, mode="rl_train", rl_not_trainables=DONT_TRAIN)                                            
                 self.saver = tf.train.Saver(max_to_keep=1)
                 self.saver.restore(self.session, ckpt.model_checkpoint_path)
                 self.session.run([online.assign(target) for online, target in zip(get_variables(scope="onlinenet"), get_variables(scope="targetnet"))])
@@ -264,3 +261,11 @@ def print_trainables(session):
         print("Variable: ", k)
         print("Shape: ", v.shape)
         #print(v)
+
+
+###############################################################################
+if __name__ == '__main__':  
+    import config
+    conf = config.Config()
+    agent = Agent(conf, None)
+    agent.svTrain()

@@ -15,20 +15,20 @@ from myprint import myprint as print
 
 class Agent(AbstractAgent):
     def __init__(self, config, containers, rl_config_dummy=None, startfresh_dummy=False, *args, **kwargs): #der dummy ist da damit man playnet & reinfnet austauschen kan
-        self.name = __file__[__file__.rfind("\\")+1:__file__.rfind(".")]
+        self.name = "dqn_rl_agent" #weil das der selbe ist, nur halt dass hier das lernen nicht rein-implementiert ist
         super().__init__(config, containers, *args, **kwargs)
         self.ff_inputsize = 30
 
 
     def runInference(self, gameState, pastState): #since we don't have a memory in this agent, we don't care for other_inputs_toSave
         if self.isinitialized and self.checkIfInference():
-            conv_inputs, other_inputs = self.getAgentState(*gameState)
+            conv_inputs, other_inputs, stands_inputs = self.getAgentState(*gameState)
             super().preRunInference()
                 
             self.lock.acquire()
             try:
                 self.isbusy = True 
-                toUse, toSave = self.performNetwork(conv_inputs, self.makeNetUsableOtherInputs(other_inputs))
+                toUse, toSave = self.performNetwork(conv_inputs, self.makeNetUsableOtherInputs(other_inputs), stands_inputs)
                 super().postRunInference(toUse, toSave)
                 self.isbusy = False
             finally:
@@ -36,10 +36,10 @@ class Agent(AbstractAgent):
                   
                 
 
-    def performNetwork(self, conv_inputs, inflated_other_inputs):
-        super().performNetwork(conv_inputs, inflated_other_inputs)
-        networkresult, _ = self.cnn.run_inference(self.session, conv_inputs, inflated_other_inputs) 
-        throttle, brake, steer = self.dediscretize(networkresult[0], self.sv_conf)
+    def performNetwork(self, conv_inputs, inflated_other_inputs, stands_inputs):
+        super().performNetwork(conv_inputs, inflated_other_inputs, stands_inputs)
+        networkresult, _ = self.cnn.run_inference(self.session, conv_inputs, inflated_other_inputs, stands_inputs) 
+        throttle, brake, steer = self.dediscretize(networkresult[0])
         toUse = "["+str(throttle)+", "+str(brake)+", "+str(steer)+"]"
         return toUse, (throttle, brake, steer)
 
@@ -47,10 +47,9 @@ class Agent(AbstractAgent):
 
     def initNetwork(self):        
         initializer = tf.random_uniform_initializer(-0.1, 0.1)
-                                             
-        with tf.name_scope("runAsServ"):
-            with tf.variable_scope("cnnmodel", reuse=None, initializer=initializer): 
-                self.cnn = self.network(self.sv_conf, self, mode="inference")
+                                           
+        with tf.variable_scope("model", reuse=None, initializer=initializer): 
+            self.cnn = self.network(self.sv_conf, self, mode="inference")
         
         print(self.cnn.trainvars)
         

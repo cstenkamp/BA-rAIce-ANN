@@ -29,7 +29,9 @@ class CNN(object): #learning on gpu and application on cpu: https://stackoverflo
         self.mode = mode
         self.agent = agent
         final_neuron_num = self.config.steering_steps*4 if self.config.INCLUDE_ACCPLUSBREAK else self.config.steering_steps*3
-        self.stacksize = self.config.history_frame_nr*2 if self.config.use_second_camera else self.config.history_frame_nr
+        self.conv_stacksize = (self.config.history_frame_nr*2 if self.config.use_second_camera else self.config.history_frame_nr) if self.agent.conv_stacked else 1
+        self.ff_stacksize = self.config.history_frame_nr if self.agent.ff_stacked else 1
+        self.stood_frames_ago = 0 #das wird benutzt damit er, wenn er einmal stand, sich merken kann ob erst kurz her ist (für settozero)
 
         self.iterations = 0
         self._prepareNumIters()
@@ -55,14 +57,14 @@ class CNN(object): #learning on gpu and application on cpu: https://stackoverflo
         
     
     def _set_placeholders(self, mode, final_neuron_num):
-        conv_inputs = tf.placeholder(tf.float32, shape=[None, self.stacksize, self.config.image_dims[0], self.config.image_dims[1]], name="conv_inputs")  if self.agent.usesConv else None
-        ff_inputs = tf.placeholder(tf.float32, shape=[None, self.agent.ff_inputsize], name="ff_inputs") if self.agent.ff_inputsize else None
+        conv_inputs = tf.placeholder(tf.float32, shape=[None, self.conv_stacksize, self.config.image_dims[0], self.config.image_dims[1]], name="conv_inputs")  if self.agent.usesConv else None
+        ff_inputs = tf.placeholder(tf.float32, shape=[None, self.ff_stacksize*self.agent.ff_inputsize], name="ff_inputs") if self.agent.ff_inputsize else None
         targets = None if mode=="inference" else tf.placeholder(tf.float32, shape=[None, final_neuron_num], name="sv_targets")    
-        stands_inputs = tf.placeholder(tf.float32, shape=[None, 1], name="standing_inputs") #necessary for settozero
+        stands_inputs = tf.placeholder(tf.float32, shape=[None], name="standing_inputs") #necessary for settozero
         return conv_inputs, ff_inputs, targets, stands_inputs
     
     
-    def _inference(self, conv_inputs, ff_inputs, final_neuron_num, rl_not_trainables, for_training=False, stands_inputs=tf.expand_dims(tf.constant(0),axis=0)):
+    def _inference(self, conv_inputs, ff_inputs, final_neuron_num, rl_not_trainables, for_training=False, stands_inputs=False): #stands_inputs existiert nur bei inference, sonst ists eh immer 0
         assert(conv_inputs is not None or ff_inputs is not None)
         self.trainvars = {}
         flat_size = 0
@@ -80,32 +82,33 @@ class CNN(object): #learning on gpu and application on cpu: https://stackoverflo
                 q = tf.concat([tf.multiply(tf.ones(tf.shape(q)*2), -50), q, tf.multiply(tf.ones(tf.shape(q)),-50)], axis=0)                   
             q = tf.expand_dims(q, 0)            
             return q
-
+        
+        ini = tf.truncated_normal_initializer(stddev=1.0 / math.sqrt(float(self.config.image_dims[0]*self.config.image_dims[1])))
+        self.keep_prob = tf.Variable(tf.constant(1.0), trainable=False) #wenn nicht gefeedet ist sie standardmäßig 1        
+            
         if conv_inputs is not None:
-            rs_input = tf.reshape(conv_inputs, [-1, self.config.image_dims[0], self.config.image_dims[1], self.stacksize]) #final dimension = number of color channels*number of stacked (history-)frames                  
-            self.keep_prob = tf.Variable(tf.constant(1.0), trainable=False) #wenn nicht gefeedet ist sie standardmäßig 1        
+            rs_input = tf.reshape(conv_inputs, [-1, self.config.image_dims[0], self.config.image_dims[1], self.conv_stacksize]) #final dimension = number of color channels*number of stacked (history-)frames                  
             flat_size = math.ceil(self.config.image_dims[0]/4)*math.ceil(self.config.image_dims[1]/4)*64 #die /(2*2) ist wegen dem einen stride=2 
-            ini = tf.truncated_normal_initializer(stddev=1.0 / math.sqrt(float(self.config.image_dims[0]*self.config.image_dims[1])))
             #convolutional_layer(input_tensor, input_channels, kernel_size, stride, output_channels, name, act, is_trainable, batchnorm, is_training, weightdecay=False, pool=True, trainvars=None, varSum=None, initializer=None)
-            conv1 = convolutional_layer(rs_input, self.stacksize, [5,5], 1, 32, "Conv1", tf.nn.relu, trainable("Conv1"), False, for_training, False, True, self.trainvars, variable_summary, initializer=ini) #reduces to x//2*y//2
+            conv1 = convolutional_layer(rs_input, self.conv_stacksize, [5,5], 1, 32, "Conv1", tf.nn.relu, trainable("Conv1"), False, for_training, False, True, self.trainvars, variable_summary, initializer=ini) #reduces to x//2*y//2
             conv2 = convolutional_layer(conv1, 32, [5,5], 1, 64, "Conv2", tf.nn.relu, trainable("Conv2"), False, for_training, False, True, self.trainvars, variable_summary, initializer=ini)                #reduces to x//4*y//4
             conv2_flat =  tf.reshape(conv2, [-1, flat_size])    #x//4*y//4+speed_neurons
             if ff_inputs is not None:
                 fc0 = tf.concat([conv2_flat, ff_inputs], 1) 
         else:
-            fc0 = ff_inputs   
+            fc0 = fc_layer(ff_inputs, self.ff_stacksize*self.agent.ff_inputsize, self.agent.ff_inputsize, "FC0", trainable("FC0"), False, for_training, False, tf.nn.relu, 1 if for_training else self.keep_prob, self.trainvars, variable_summary, initializer=ini)   
         flat_size += self.agent.ff_inputsize    
         
         #fc_layer(input_tensor, input_size, output_size, name, is_trainable, batchnorm, is_training, weightdecay=False, act=None, keep_prob=1, trainvars=None, varSum=None, initializer=None):
         fc1 = fc_layer(fc0, flat_size, final_neuron_num*20, "FC1", trainable("FC1"), False, for_training, False, tf.nn.relu, 1 if for_training else self.keep_prob, self.trainvars, variable_summary, initializer=ini)                 
         q = fc_layer(fc1, final_neuron_num*20, final_neuron_num, "FC2", trainable("FC2"), False, for_training, False, None, 1, self.trainvars, variable_summary, initializer=ini) 
 
-        #wenn sowohl stands_inputs first dimension 1 ist UND stands_inputs  == 1, dann settozero
-        #q = tf.cond(stands_inputs == 1, lambda: settozero(q), lambda: q)              #[10.3, 23.1, ...] #wenn du stehst, brauchste dich nicht mehr für die ohne gas zu interessieren
-        y_conv = tf.nn.softmax(q)                                                   #[ 0.1,  0.2, ...]
-        onehot = tf.one_hot(tf.argmax(y_conv, dimension=1), depth=final_neuron_num) #[   0,    1, ...]
-        q_max = tf.reduce_max(q, axis=1)                                            #23.1
-        action = tf.argmax(q, axis=1)                                               #2
+        if self.mode == "inference":
+            q = tf.cond(tf.reduce_sum(stands_inputs) > 0, lambda: settozero(q), lambda: q) #[10.3, 23.1, ...] #wenn du stehst, brauchste dich nicht mehr für die ohne gas zu interessieren
+        y_conv = tf.nn.softmax(q)                                                          #[ 0.1,  0.2, ...]
+        onehot = tf.one_hot(tf.argmax(y_conv, dimension=1), depth=final_neuron_num)        #[   0,    1, ...]
+        q_max = tf.reduce_max(q, axis=1)                                                   #23.1
+        action = tf.argmax(q, axis=1)                                                      #2
         
         return q, onehot, q_max, action
     
@@ -193,7 +196,7 @@ class CNN(object): #learning on gpu and application on cpu: https://stackoverflo
     
     def sv_fill_feed_dict(self, config, stateBatch, decay_lr = True, dropout = True): 
         presentStates = list(zip(*stateBatch))
-        conv_inputs, other_inputs = list(zip(*[self.agent.getAgentState(*presentState) for presentState in presentStates]))
+        conv_inputs, other_inputs, _ = list(zip(*[self.agent.getAgentState(*presentState) for presentState in presentStates]))
         other_inputs = [self.agent.makeNetUsableOtherInputs(i) for i in other_inputs]
         targets = [self.agent.makeNetUsableAction(self.agent.getAction(*presentState)) for presentState in presentStates]
                 
@@ -243,8 +246,15 @@ class CNN(object): #learning on gpu and application on cpu: https://stackoverflo
     
     
     def rl_fill_feeddict(self, conv_inputs, other_inputs, stands_inputs=False):
+        
+        def is_inference(conv_inputs, other_inputs):
+            return len(conv_inputs.shape) <= 3 if conv_inputs is not None else len(other_inputs.shape) <= 2
+        
         feed_dict = {}
-        if len(conv_inputs.shape) <= 3: 
+        self.stood_frames_ago = 0 if stands_inputs else self.stood_frames_ago + 1
+        if self.stood_frames_ago < 10:
+            stands_inputs = True
+        if is_inference(conv_inputs, other_inputs): 
             conv_inputs = np.expand_dims(conv_inputs, axis=0) #expand_dims weil hier quasi batchsize=1
             other_inputs= np.expand_dims(other_inputs, axis=0) 
             stands_inputs = np.expand_dims(stands_inputs, axis=0)
@@ -252,14 +262,14 @@ class CNN(object): #learning on gpu and application on cpu: https://stackoverflo
             feed_dict[self.conv_inputs] = conv_inputs
         if self.agent.ff_inputsize:
             feed_dict[self.ff_inputs] = other_inputs 
-        if stands_inputs: 
-            feed_dict[self.stands_inputs] = stands_inputs 
+        feed_dict[self.stands_inputs] = stands_inputs #ist halt 0 wenn false, was richtig ist
         return feed_dict
         
         
     def run_inference(self, session, conv_inputs, other_inputs, stands_inputs=False):        
-        assert type(conv_inputs[0]).__module__ == np.__name__
-        assert (np.array(conv_inputs.shape) == np.array(self.conv_inputs.get_shape().as_list()[1:])).all()
+        if conv_inputs is not None:
+            assert type(conv_inputs[0]).__module__ == np.__name__
+            assert (np.array(conv_inputs.shape) == np.array(self.conv_inputs.get_shape().as_list()[1:])).all()
         feed_dict = self.rl_fill_feeddict(conv_inputs, other_inputs, stands_inputs)
         return session.run([self.onehot, self.q], feed_dict=feed_dict)
 

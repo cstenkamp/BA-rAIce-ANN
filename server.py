@@ -210,11 +210,13 @@ def resetServer(containers, mspersec, punish=0):
 #for example visionvecs of the last 4 frames plus speed of the last frame.
 class InputValContainer(object):   
         
-    def __init__(self, config, rl_conf):
+    def __init__(self, config, rl_conf, containers, agent):
         self.lock = threading.Lock()
         self.config = config
         self.rl_conf = rl_conf
-        if self.config.use_cameras:
+        self.containers = containers
+        self.agent = agent
+        if self.config.use_cameras and self.agent.usesConv:
             if self.config.use_second_camera:
                 self.vvec_hist = np.zeros([(config.history_frame_nr+1)*2, config.image_dims[0], config.image_dims[1]], dtype=rl_conf.visionvecdtype) #+1 weil das past timestep da immer bei ist
             else:
@@ -224,7 +226,6 @@ class InputValContainer(object):
         self.action_hist = [None]*(self.config.history_frame_nr+1)
         self.otherinput_hist = [empty_inputs()]*(self.config.history_frame_nr+1) #defined at the top, is a namedtuple #again +1 because of past timestep
         self.CTimestamp, self.STimestamp = MININT, MININT
-        self.containers = None
         self.alreadyread = True
         self.msperframe = config.msperframe
         self.hit_a_wall = False
@@ -273,7 +274,7 @@ class InputValContainer(object):
             #20.7.: deleted the "if is_new..." functionality, as I think its absolutely not helpful
             otherinputs = make_otherinputs(othervecs) #is now a namedtuple instead of an array
             
-            if self.config.use_cameras:
+            if self.config.use_cameras and self.agent.usesConv:
                 self._append_vvec_hist(visionvec, vvec2)
             self.otherinput_hist = self._append_other(otherinputs, self.otherinput_hist)
             self.containers.myAgent.humantakingcontrolstring = "(H)" if (self.action_hist[0] != tuple(otherinputs.Action)) else ""
@@ -317,7 +318,7 @@ class InputValContainer(object):
             self.lock.acquire()
         try:      
             config = self.config
-            if self.config.use_cameras:
+            if self.config.use_cameras and self.agent.usesConv:
                 if self.config.use_second_camera:
                     self.vvec_hist = np.zeros([(config.history_frame_nr+1)*2, config.image_dims[0], config.image_dims[1]], dtype=rl_conf.visionvecdtype) #+1 weil das past timestep da immer bei ist
                 else:
@@ -343,7 +344,10 @@ class InputValContainer(object):
             self.alreadyread = True
         if pastState and not self.has_past_state:
             return None, None, None, None
-        return self._read_vvec_hist(pastState)[0], self._read_vvec_hist(pastState)[1], self._read_other(self.otherinput_hist,pastState), self._read_other(self.action_hist,pastState)
+        if self.config.use_cameras and self.agent.usesConv:
+            return self._read_vvec_hist(pastState)[0], self._read_vvec_hist(pastState)[1], self._read_other(self.otherinput_hist,pastState), self._read_other(self.action_hist,pastState)
+        else:
+            return None, None, self._read_other(self.otherinput_hist,pastState), self._read_other(self.action_hist,pastState)
         #like I said, this return everything that could be used by an agent. Not every agent uses that. The standard-agent for example uses...
         #state = (vvec1_hist, vvec2_hist, otherinput_hist[0].SpeedSteer.velocity) #vision plus speed
         #action = action_hist[0]
@@ -353,11 +357,11 @@ class InputValContainer(object):
 #There is also guaranteedly only one outputvalcontainer, and the outputvalcontainer is also the one responsible for sending the result back to Unity as soon as its done.
 #When the outputval is updated, it will also add the action python suggests back to the inputval, as some kinds of agents also require the last action as input of the net.
 class OutputValContainer(object):    
-    def __init__(self):
+    def __init__(self, containers):
         self.lock = threading.Lock()
         self.value = ""
         self.CTimestamp, self.STimestamp = MININT, MININT
-        self.containers = None
+        self.containers = containers
         
         
     #you update only if the new input-timestamp > der alte 
@@ -490,10 +494,6 @@ def create_socket(port):
 def main(sv_conf, rl_conf, agentname, no_learn, show_screen, start_fresh, nomemorykeep):
   
     containers = Containers()
-    containers.inputval = InputValContainer(sv_conf, rl_conf)
-    containers.inputval.containers = containers #lol.    
-    containers.outputval = OutputValContainer()
-    containers.outputval.containers = containers
     containers.sv_conf = sv_conf
     containers.rl_conf = rl_conf   
     containers.keep_memory = False if nomemorykeep else containers.rl_conf.keep_memory
@@ -525,6 +525,10 @@ def main(sv_conf, rl_conf, agentname, no_learn, show_screen, start_fresh, nomemo
             containers.myAgent.memory = Efficientmemory(rl_conf.memorysize, containers, rl_conf.history_frame_nr, rl_conf.use_constantbutbigmemory) 
         else:
             containers.myAgent.memory = Precisememory(rl_conf.memorysize, containers)
+
+    containers.inputval = InputValContainer(sv_conf, rl_conf, containers, containers.myAgent)
+    containers.outputval = OutputValContainer(containers)  
+        
         
     print("Everything initialized", level=10)
     
