@@ -9,25 +9,21 @@ import tensorflow as tf
 
 #====own classes====
 from agent import AbstractAgent
-import dqn
 from myprint import myprint as print
 
 
 
-class DQN_Novision_SV_Agent(AbstractAgent):
+class Agent(AbstractAgent):
     def __init__(self, config, containers, rl_config_dummy=None, startfresh_dummy=False, *args, **kwargs): #der dummy ist da damit man playnet & reinfnet austauschen kan
+        self.name = __file__[__file__.rfind("\\")+1:__file__.rfind(".")]
         super().__init__(config, containers, *args, **kwargs)
         self.ff_inputsize = 49
         self.usesConv = False
-        self.network = dqn.CNN
-        self.initNetwork()
-
-
+        
     #Override
-    def getAgentState(self, vvec1_hist, vvec2_hist, otherinput_hist, action_hist): 
-        conv_inputs = None
+    def getAgentState(self, vvec1_hist, vvec2_hist, otherinput_hist, action_hist):  
         other_inputs = [i.returnRelevant for i in otherinput_hist]
-        return conv_inputs, other_inputs
+        return None, other_inputs
     
     #Override
     def makeNetUsableOtherInputs(self, other_inputs): #normally, the otherinputs are stored as compact as possible. Networks may need to unpack that.
@@ -48,7 +44,7 @@ class DQN_Novision_SV_Agent(AbstractAgent):
                 self.isbusy = False
             finally:
                 self.lock.release()
-                  
+                
                 
 
     def performNetwork(self, conv_inputs, inflated_other_inputs):
@@ -61,18 +57,18 @@ class DQN_Novision_SV_Agent(AbstractAgent):
             
 
     def initNetwork(self):
-        with tf.Graph().as_default():    
+        with self.graph.as_default():    
             initializer = tf.random_uniform_initializer(-0.1, 0.1)
                                                  
             with tf.name_scope("runAsServ"):
-                with tf.variable_scope("cnnmodel", reuse=None, initializer=initializer): 
+                with tf.variable_scope("blindmodel", reuse=None, initializer=initializer): 
                     self.cnn = self.network(self.sv_conf, self, mode="inference")
             
             print(self.cnn.trainvars)
             
             self.saver = tf.train.Saver(self.cnn.trainvars)
             self.session = tf.Session()
-            ckpt = tf.train.get_checkpoint_state(self.sv_conf.checkpoint_dir) 
+            ckpt = tf.train.get_checkpoint_state(self.folder(self.sv_conf.checkpoint_dir)) 
             assert ckpt and ckpt.model_checkpoint_path, "I need a supervisedly pre-trained net!"
             self.saver.restore(self.session, ckpt.model_checkpoint_path)
             print("network initialized")

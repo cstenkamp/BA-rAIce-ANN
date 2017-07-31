@@ -18,21 +18,22 @@ import infoscreen
 
 current_milli_time = lambda: int(round(time.time() * 1000))
 
-STANDARDRETURN = ("[0.5,0,0.0]", [0]*42)
 DONT_COPY_WEIGHTS = [] #["FC1", "FC2"]
 DONT_TRAIN = [] #["Conv1", "Conv2", "FC1"]# ["Conv1", "Conv2"]
 
 ONLY_START = False
 
 
-class DQN_RL_Agent(AbstractRLAgent):
+class Agent(AbstractRLAgent):
     def __init__(self, sv_conf, containers, rl_conf, start_fresh, *args, **kwargs):
+        self.name = __file__[__file__.rfind("\\")+1:__file__.rfind(".")]
         super().__init__(sv_conf, containers, rl_conf, *args, **kwargs)
         self.ff_inputsize = 30
         self.epsilon = self.rl_conf.startepsilon
         self.start_fresh = start_fresh
         self.SAVE_ACTION_AS_ARGMAX = False #legacy und speicher-effizienter ists true, aber dann lässt sich das memory nicht als grundlage für ddpg
-
+        if not start_fresh:
+            assert os.path.exists(self.folder(self.sv_conf.checkpoint_dir)), "I need a pre-trained model"
 
 
     def runInference(self, gameState, pastState):
@@ -157,7 +158,7 @@ class DQN_RL_Agent(AbstractRLAgent):
     def saveNet(self):
         #self.freezeEverything("saveNet")
         self.target_cnn.saveNumIters(self.session, self.numIterations)
-        checkpoint_file = os.path.join(self.rl_conf.checkpoint_dir, 'model.ckpt')
+        checkpoint_file = os.path.join(self.folder(self.rl_conf.checkpoint_dir), 'model.ckpt')
         self.saver.save(self.session, checkpoint_file, global_step=self.learn_which.global_step.eval(session=self.session))       
         print("saved", level=6)
         #self.unFreezeEverything("saveNet")
@@ -172,7 +173,7 @@ class DQN_RL_Agent(AbstractRLAgent):
 
     def initNetwork(self): 
         self.session = tf.Session(config=tf.ConfigProto(intra_op_parallelism_threads=2, allow_soft_placement=True))
-        ckpt = tf.train.get_checkpoint_state(self.rl_conf.checkpoint_dir) 
+        ckpt = tf.train.get_checkpoint_state(self.folder(self.rl_conf.checkpoint_dir))
         initializer = tf.random_uniform_initializer(-0.1, 0.1)
         
         if self.start_fresh:
@@ -217,7 +218,7 @@ class DQN_RL_Agent(AbstractRLAgent):
                 init = tf.global_variables_initializer()
                 self.session.run(init)        
                 self.pretrainsaver = tf.train.Saver(restorevars)
-                sv_ckpt = tf.train.get_checkpoint_state(self.sv_conf.checkpoint_dir) 
+                sv_ckpt = tf.train.get_checkpoint_state(self.folder(self.sv_conf.checkpoint_dir))
                 assert sv_ckpt and sv_ckpt.model_checkpoint_path, "I need at least a supervisedly pre-trained net!"
                 self.pretrainsaver.restore(self.session, sv_ckpt.model_checkpoint_path)
                 self.session.run([online.assign(target) for online, target in zip(get_variables(scope="onlinenet"), get_variables(scope="targetnet"))])

@@ -26,6 +26,7 @@ SAVENAME = "memory"
 class Memory(object):
     def __init__(self, capacity, containers):
         self._lock = lock = threading.Lock()
+        self.memorypath = self.containers.myAgent.folder(self.containers.rl_conf.memory_dir)
         self.capacity = capacity
         self._buffer = [None]*capacity #deque(elemtype, capacity)
         self._pointer = 0
@@ -36,10 +37,10 @@ class Memory(object):
         
         if self.containers.keep_memory:
             corrupted = False
-            if os.path.exists(self.containers.rl_conf.savememorypath+SAVENAME+'.pkl'):
+            if os.path.exists(self.memorypath+SAVENAME+'.pkl'):
                 try:
-                    if os.path.getsize(self.containers.rl_conf.savememorypath+SAVENAME+'.pkl') > 1024 and (os.path.getsize(self.containers.rl_conf.savememorypath+SAVENAME+'.pkl') >= os.path.getsize(self.containers.rl_conf.savememorypath+SAVENAME+'TMP.pkl')-10240):
-                        self.pload(self.containers.rl_conf.savememorypath+SAVENAME+'.pkl', containers, lock)
+                    if os.path.getsize(self.memorypath+'.pkl') > 1024 and (os.path.getsize(self.memorypath+SAVENAME+'.pkl') >= os.path.getsize(self.memorypath+'TMP.pkl')-10240):
+                        self.pload(self.memorypath+SAVENAME+'.pkl', containers, lock)
                         print("Loading existing memory with", self._size, "entries", level=10)
                     else:
                         corrupted = True
@@ -47,10 +48,10 @@ class Memory(object):
                     corrupted = True
             if corrupted:
                 print("Previous memory was corrupted!", level=10) 
-                if os.path.exists(self.containers.rl_conf.savememorypath+SAVENAME+'TMP.pkl'):
-                    if os.path.getsize(self.containers.rl_conf.savememorypath+SAVENAME+'TMP.pkl') > 1024: 
-                        shutil.copyfile(self.containers.rl_conf.savememorypath+SAVENAME+'TMP.pkl', self.containers.rl_conf.savememorypath+SAVENAME+'.pkl')
-                        self.pload(self.containers.rl_conf.savememorypath+SAVENAME+'.pkl', containers, lock)
+                if os.path.exists(self.memorypath+SAVENAME+'TMP.pkl'):
+                    if os.path.getsize(self.memorypath+SAVENAME+'TMP.pkl') > 1024: 
+                        shutil.copyfile(self.memorypath+SAVENAME+'TMP.pkl', self.memorypath+SAVENAME+'.pkl')
+                        self.pload(self.memorypath+SAVENAME+'.pkl', containers, lock)
                         print("Loading Backup-Memory with", self._size, "entries", level=10)
         
         
@@ -78,11 +79,11 @@ class Memory(object):
         with self._lock:
             if self.containers.keep_memory: 
                 self.containers.myAgent.freezeEverything("saveMem")
-                self.psave(self.containers.rl_conf.savememorypath+SAVENAME+'TMP.pkl')
+                self.psave(self.memorypath+SAVENAME+'TMP.pkl')
                 print("Saving Memory at",time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime()), level=6)
-                if os.path.exists(self.containers.rl_conf.savememorypath+SAVENAME+'TMP.pkl'):
-                    if os.path.getsize(self.containers.rl_conf.savememorypath+SAVENAME+'TMP.pkl') > 1024: #only use it as memory if you weren't disturbed while writing
-                        shutil.copyfile(self.containers.rl_conf.savememorypath+SAVENAME+'TMP.pkl', self.containers.rl_conf.savememorypath+SAVENAME+'.pkl')
+                if os.path.exists(self.memorypath+SAVENAME+'TMP.pkl'):
+                    if os.path.getsize(self.memorypath+SAVENAME+'TMP.pkl') > 1024: #only use it as memory if you weren't disturbed while writing
+                        shutil.copyfile(self.memorypath+SAVENAME+'TMP.pkl', self.memorypath+SAVENAME+'.pkl')
                 self.lastsavetime = current_milli_time()
                 self.containers.myAgent.unFreezeEverything("saveMem")   
            

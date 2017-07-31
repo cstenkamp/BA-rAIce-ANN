@@ -12,8 +12,6 @@ from functools import partial
 import copy
 
 #====own classes====
-import dqn_rl_agent #is an agent, inherits all agent's functions
-import dqn_sv_agent
 from myprint import myprint as print
 from read_supervised import empty_inputs, make_otherinputs 
 import infoscreen
@@ -21,6 +19,8 @@ import config
 from read_supervised import cutoutandreturnvectors
 from inefficientmemory import Memory as Precisememory
 from efficientmemory import Memory as Efficientmemory
+#die Agents werden untem imported, da sie abhängig von sys-commands sind
+
 
 import warnings
 current_milli_time = lambda: int(round(time.time() * 1000))
@@ -469,9 +469,7 @@ class sender_thread(threading.Thread):
 ###############################################################################
 
 class Containers():
-    def __init__(self, play_only):
-        self.play_only = play_only
-        self.IExist = True
+    def __init__(self):
         self.KeepRunning = True
         self.receiverthreads = []
         self.senderthreads = []
@@ -489,8 +487,9 @@ def create_socket(port):
 
 
 
-def main(sv_conf, rl_conf, only_sv, no_learn, show_screen, start_fresh, nomemorykeep):
-    containers = Containers(only_sv)
+def main(sv_conf, rl_conf, agentname, no_learn, show_screen, start_fresh, nomemorykeep):
+  
+    containers = Containers()
     containers.inputval = InputValContainer(sv_conf, rl_conf)
     containers.inputval.containers = containers #lol.    
     containers.outputval = OutputValContainer()
@@ -511,24 +510,21 @@ def main(sv_conf, rl_conf, only_sv, no_learn, show_screen, start_fresh, nomemory
     
     if no_learn:
         rl_conf.learnMode = ""
+        rl_conf.minepsilon = 0
+        rl_conf.startepsilon = 0 #or whatever random-value will be in 
+            
+    agentclass = __import__(agentname).Agent
+    agent = agentclass(sv_conf, containers, rl_conf, start_fresh) 
+    containers.usememory = hasattr(agent, "memory")
     
-    if only_sv:
-        agent = dqn_sv_agent.DQN_SV_Agent
-    else:
-        agent = dqn_rl_agent.DQN_RL_Agent #this one, inheriting from abstractRLAgent, will have a memory
-
-        
-    containers.myAgent = agent(sv_conf, containers, rl_conf, start_fresh) 
+    containers.myAgent = agent
     containers.myAgent.initNetwork()
                                                                           
-    if not only_sv:
-        containers.usememory = True
-        if rl_conf.use_efficientmemory:
+    if containers.usememory:
+        if rl_conf.use_efficientmemory: #das soll noch anders, der agent soll jeweils sagen ob und welches efficientmemory er unterstützt
             containers.myAgent.memory = Efficientmemory(rl_conf.memorysize, containers, rl_conf.history_frame_nr, rl_conf.use_constantbutbigmemory) 
         else:
             containers.myAgent.memory = Precisememory(rl_conf.memorysize, containers)
-    else:
-        containers.usememory = False
         
     print("Everything initialized", level=10)
     
@@ -543,7 +539,7 @@ def main(sv_conf, rl_conf, only_sv, no_learn, show_screen, start_fresh, nomemory
     SenderConnecterThread.start()
 
     #THREAD 3 (learning)
-    if not only_sv and not no_learn and rl_conf.learnMode == "parallel":
+    if containers.usememory and not no_learn and rl_conf.learnMode == "parallel":
         dauerLearn = partial(containers.myAgent.dauerLearnANN, learnSteps=rl_conf.train_for)
         learnthread = threading.Thread(target=dauerLearn)
         learnthread.start()
@@ -569,7 +565,7 @@ def main(sv_conf, rl_conf, only_sv, no_learn, show_screen, start_fresh, nomemory
         senderthread.join()
     ReceiverConnecterThread.join() #takes max. 1 second until socket timeouts
     SenderConnecterThread.join()
-    if not only_sv and not no_learn and rl_conf.learnMode == "parallel":
+    if containers.usememory and not no_learn and rl_conf.learnMode == "parallel":
         learnthread.join()
         
     if SAVE_MEMORY_ON_EXIT and containers.usememory and containers.keep_memory:
@@ -583,7 +579,7 @@ def main(sv_conf, rl_conf, only_sv, no_learn, show_screen, start_fresh, nomemory
 
     
 if __name__ == '__main__':  
-    sv_conf = config.Config() #TODO: lass dir die infos instead von unity schicken.
+    sv_conf = config.Config() 
     
     if ("-DQN" in sys.argv):
         rl_conf = config.DQN_Config()
@@ -591,10 +587,20 @@ if __name__ == '__main__':
         rl_conf = config.Half_DQN_Config()
     else:
         rl_conf = config.RL_Config()
-    
-    if "-nolearn" in sys.argv:
-        rl_conf.minepsilon = 0
-        rl_conf.startepsilon = 0 #or whatever random-value will be in 
-        
-                
-    main(sv_conf, rl_conf, ("-svplay" in sys.argv), ("-nolearn" in sys.argv), not ("-noscreen" in sys.argv), ("-startfresh" in sys.argv), ("-nomemorykeep" in sys.argv))    
+            
+
+    if "--agent" in sys.argv:
+        num = sys.argv.index("--agent")
+        try:
+            agentname = sys.argv[num+1]
+            if agentname[0] == "-": raise IndexError
+        except IndexError:
+            print("With the '--agent'-Parameter, you need to specify an agent!")
+            exit(0)
+    else:
+        if "-svplay" in sys.argv:
+            agentname = "dqn_sv_agent"
+        else:
+            agentname = "dqn_rl_agent"
+            
+    main(sv_conf, rl_conf, agentname, ("-nolearn" in sys.argv), not ("-noscreen" in sys.argv), ("-startfresh" in sys.argv), ("-nomemorykeep" in sys.argv))    

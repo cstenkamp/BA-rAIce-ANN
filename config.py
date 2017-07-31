@@ -52,13 +52,13 @@ class Config(object):
         assert not (self.use_second_camera and (self.history_frame_nr == 1)), "If you're using 2 cameras, you have to use historyframes!"
         assert os.path.exists(self.LapFolderName), "No data to train on at all!"        
         
-        self.log_dir = self.superfolder()+self.log_dir
-        if not os.path.exists(self.log_dir):
-            os.makedirs(self.log_dir)         
-            
-        self.checkpoint_dir = self.superfolder()+self.checkpoint_dir
-        if not os.path.exists(self.checkpoint_dir):
-            os.makedirs(self.checkpoint_dir) 
+#        self.log_dir = self.superfolder()+self.log_dir
+#        if not os.path.exists(self.log_dir):
+#            os.makedirs(self.log_dir)         
+#            
+#        self.checkpoint_dir = self.superfolder()+self.checkpoint_dir
+#        if not os.path.exists(self.checkpoint_dir):
+#            os.makedirs(self.checkpoint_dir) 
 
     def superfolder(self):
         numcams = "0cams_" if not self.use_cameras else ("2cams_" if self.use_second_camera else "1cam_")
@@ -66,10 +66,12 @@ class Config(object):
 
 
 
+
+
 class RL_Config(Config):
     log_dir = "RL_SummaryLogs/"  
     checkpoint_dir = "RL_Checkpoints/"
-    savememorypath = "./" #will be a pickle-file
+    memory_dir = "./" #will be a pickle-file
      
     keep_prob = 1
     max_grad_norm = 10
@@ -99,22 +101,23 @@ class RL_Config(Config):
     #re-uses history_frame_nr, image_dims, steering_steps, speed_neurons, INCLUDE_ACCPLUSBREAK, SPEED_AS_ONEHOT
     
     def __init__(self):     
-        self.savememorypath = self.superfolder()+self.savememorypath
-        if not os.path.exists(self.savememorypath):
-            os.makedirs(self.savememorypath)
-                                              
-        self.log_dir = self.superfolder()+self.log_dir
-        if not os.path.exists(self.log_dir):
-            os.makedirs(self.log_dir)     
-            
-        self.checkpoint_dir = self.superfolder()+self.checkpoint_dir 
-        if not os.path.exists(self.checkpoint_dir):
-            os.makedirs(self.checkpoint_dir)                 
-                                    
-        assert os.path.exists(Config().checkpoint_dir), "I need a pre-trained model"
-
+#        self.memory_dir = self.superfolder()+self.memory_dir
+#        if not os.path.exists(self.memory_dir):
+#            os.makedirs(self.memory_dir)
+#                                              
+#        self.log_dir = self.superfolder()+self.log_dir
+#        if not os.path.exists(self.log_dir):
+#            os.makedirs(self.log_dir)     
+#            
+#        self.checkpoint_dir = self.superfolder()+self.checkpoint_dir 
+#        if not os.path.exists(self.checkpoint_dir):
+#            os.makedirs(self.checkpoint_dir)                 
+        
         if self.learnMode == "parallel" and not self.has_gpu(): self.learnMode = "between"
         if not self.use_cameras: self.use_efficientmemory = False
+
+
+
 
     
 class DQN_Config(RL_Config):
@@ -141,6 +144,8 @@ class DQN_Config(RL_Config):
         super().__init__()
         
         
+    
+    
     
 class Half_DQN_Config(RL_Config):
     batch_size = 32                     #minibatch size

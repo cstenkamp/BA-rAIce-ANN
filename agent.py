@@ -46,6 +46,7 @@ class AbstractAgent(object):
     
     #creates the Agents state from the real state. this is the base version, other agents may overwrite it.
     def getAgentState(self, vvec1_hist, vvec2_hist, otherinput_hist, action_hist): 
+        assert self.sv_conf.use_cameras, "You disabled cameras in the config, which is impossible for this agent!"
         conv_inputs = np.concatenate([vvec1_hist, vvec2_hist]) if vvec2_hist is not None else vvec1_hist
         other_inputs = otherinput_hist[0].SpeedSteer.velocity
         return conv_inputs, other_inputs
@@ -71,12 +72,11 @@ class AbstractAgent(object):
 
 
     def svTrain(self):
-        with tf.Graph().as_default(): 
+        with self.graph.as_default(): 
             trackingpoints = read_supervised.TPList(self.sv_conf.LapFolderName, self.sv_conf.use_second_camera, self.sv_conf.msperframe, self.sv_conf.steering_steps, self.sv_conf.INCLUDE_ACCPLUSBREAK)
             print("Number of samples: %s | Tracking every %s ms with %s historyframes" % (trackingpoints.numsamples, str(self.sv_conf.msperframe), str(self.sv_conf.history_frame_nr)), level=10)
-       
-            #initializer = tf.constant_initializer(0.0) #bei variablescopes kann ich nen default-initializer für get_variables festlegen
-            initializer = tf.random_uniform_initializer(-0.1, 0.1)
+
+            initializer = tf.random_uniform_initializer(-0.1, 0.1) #bei variablescopes kann ich nen default-initializer für get_variables festlegen
                               
             with tf.variable_scope("cnnmodel", reuse=None, initializer=initializer):
                 sv_model = self.network(self.sv_conf, self, mode="sv_train")
@@ -86,10 +86,10 @@ class AbstractAgent(object):
             saver = tf.train.Saver(sv_model.trainvars, max_to_keep=2)
     
             with tf.Session(config=tf.ConfigProto(allow_soft_placement=True)) as sess:
-                summary_writer = tf.summary.FileWriter(self.sv_conf.log_dir, sess.graph) #aus dem toy-example
+                summary_writer = tf.summary.FileWriter(self.folder(self.sv_conf.log_dir), sess.graph) #aus dem toy-example
                 
                 sess.run(init)
-                ckpt = tf.train.get_checkpoint_state(self.sv_conf.checkpoint_dir) 
+                ckpt = tf.train.get_checkpoint_state(self.folder(self.sv_conf.checkpoint_dir))
                 if ckpt and ckpt.model_checkpoint_path:
                     saver.restore(sess, ckpt.model_checkpoint_path)
                     stepsPerIt = trackingpoints.numsamples//self.sv_conf.batch_size
@@ -109,7 +109,7 @@ class AbstractAgent(object):
                     
                     savedpoint = ""
                     if sv_model.iterations % self.sv_conf.checkpointall == 0 or sv_model.iterations == self.sv_conf.iterations:
-                        checkpoint_file = os.path.join(self.sv_conf.checkpoint_dir, 'model.ckpt')
+                        checkpoint_file = os.path.join(self.folder(self.sv_conf.checkpoint_dir), 'model.ckpt')
                         saver.save(sess, checkpoint_file, global_step=step)       
                         savedpoint = "(checkpoint saved)"
                     
@@ -139,7 +139,12 @@ class AbstractAgent(object):
     def resetUnity(self):
         import server
         server.resetUnity(self.containers)
-
+        
+    def folder(self, actualfolder):
+        folder = self.sv_conf.superfolder()+self.name+"/"+actualfolder+"/"
+        if not os.path.exists(folder):
+            os.makedirs(folder)   
+        return folder
 
 ###################################################################################################   
 ###################################################################################################   
@@ -160,7 +165,6 @@ class AbstractRLAgent(AbstractAgent):
         self.numLearnAfterInference = 0
         self.freezeInfReasons = []
         self.freezeLearnReasons = []
-        
         self.wallhitPunish = 15;
         self.wrongDirPunish = 100;
     
@@ -343,12 +347,12 @@ class AbstractRLAgent(AbstractAgent):
 
     def endEpisode(self):
         #bei actions, nach denen resettet wurde, soll er den folgestate nicht mehr beachten (später gucken wenn reset=true dann setze Q_DECAY auf quasi 100%)
-        if not self.containers.play_only:
+        if self.containers.usememory:
             self.memory.endEpisode()
             
             
     def punishLastAction(self, howmuch):
-        if not self.containers.play_only:
+        if self.containers.usememory:
             if self.containers.showscreen:
                 infoscreen.print(str(-abs(howmuch)), time.strftime("%H:%M:%S", time.gmtime()), containers=self.containers, wname="Last big punish")
             self.memory.punishLastAction(howmuch)

@@ -13,8 +13,9 @@ from myprint import myprint as print
 
 
 
-class DQN_SV_Agent(AbstractAgent):
+class Agent(AbstractAgent):
     def __init__(self, config, containers, rl_config_dummy=None, startfresh_dummy=False, *args, **kwargs): #der dummy ist da damit man playnet & reinfnet austauschen kan
+        self.name = __file__[__file__.rfind("\\")+1:__file__.rfind(".")]
         super().__init__(config, containers, *args, **kwargs)
         self.ff_inputsize = 30
 
@@ -55,7 +56,7 @@ class DQN_SV_Agent(AbstractAgent):
         
         self.saver = tf.train.Saver(self.cnn.trainvars)
         self.session = tf.Session()
-        ckpt = tf.train.get_checkpoint_state(self.sv_conf.checkpoint_dir) 
+        ckpt = tf.train.get_checkpoint_state(self.folder(self.sv_conf.checkpoint_dir))
         assert ckpt and ckpt.model_checkpoint_path, "I need a supervisedly pre-trained net!"
         self.saver.restore(self.session, ckpt.model_checkpoint_path)
         print("network initialized")
@@ -66,5 +67,5 @@ class DQN_SV_Agent(AbstractAgent):
 if __name__ == '__main__':  
     import config
     conf = config.Config()
-    agent = DQN_SV_Agent(conf, None)
+    agent = Agent(conf, None)
     agent.svTrain()
