@@ -9,7 +9,6 @@ from collections import namedtuple
 from myprint import myprint as print
 
 flatten = lambda l: [item for sublist in l for item in sublist]
-MAXSPEED = 250
 DELAY_TO_CONSIDER = 100
 FOLDERNAME = "SavedLaps/"
 
@@ -317,16 +316,16 @@ class TPList(object):
 ###############################################################################
 ###############################################################################
 
-def inflate_speed(speed, numberneurons, asonehot):
-    speed = min(max(0,int(round(speed))), MAXSPEED)
+def inflate_speed(speed, numberneurons, asonehot, maxspeed):
+    speed = min(max(0,int(round(speed))), maxspeed)
     result = [0]*numberneurons
     if speed < 1:
         return result
-    maxone = min(max(0,floor((speed/MAXSPEED)*numberneurons)), numberneurons-1)
+    maxone = min(max(0,floor((speed/maxspeed)*numberneurons)), numberneurons-1)
     if asonehot:
         result[maxone] = 1
     else:
-        brokenspeed = round((speed - (maxone/numberneurons*MAXSPEED)) / (MAXSPEED/numberneurons), 2)
+        brokenspeed = round((speed - (maxone/numberneurons*maxspeed)) / (maxspeed/numberneurons), 2)
     
         for i in range(maxone):
             result[i] = 1

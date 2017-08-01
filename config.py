@@ -31,6 +31,7 @@ class Config(object):
     msperframe = 100 #50   #ACHTUNG!!! Dieser wert wird von unity überschrieben!!!!! #TODO: dass soll mit unity abgeglichen werden!
     use_cameras = True
     use_second_camera = True
+    MAXSPEED = 250
     
     batch_size = 32
     keep_prob = 0.8

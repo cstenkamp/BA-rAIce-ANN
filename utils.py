@@ -114,3 +114,20 @@ def variable_summary(var, what=""):
 #def pool(x, pool_size=[2,2], strides=2):
 #     return tf.layers.max_pooling2d(inputs=x, pool_size=pool_size, strides=strides)
     
+
+
+
+
+
+
+
+
+
+
+#https://stackoverflow.com/questions/5376837/how-can-i-do-an-if-run-from-ipython-test-in-python
+def run_from_ipython():
+    try:
+        __IPYTHON__
+        return True
+    except NameError:
+        return False

@@ -15,6 +15,7 @@ from myprint import myprint as print
 import read_supervised
 import infoscreen
 import dqn
+from plotter import plotter
 
 ###################################################################################################
 
@@ -137,7 +138,7 @@ class AbstractAgent(object):
         return read_supervised.discretize_all(throttle, brake, steer, self.sv_conf.steering_steps, self.sv_conf.INCLUDE_ACCPLUSBREAK)
 
     def inflate_speed(self, speed):
-        return read_supervised.inflate_speed(speed, self.sv_conf.speed_neurons, self.sv_conf.SPEED_AS_ONEHOT)
+        return read_supervised.inflate_speed(speed, self.sv_conf.speed_neurons, self.sv_conf.SPEED_AS_ONEHOT, self.sv_conf.MAXSPEED)
     
     def resetUnityAndServer(self):
         import server
@@ -168,11 +169,11 @@ class AbstractRLAgent(AbstractAgent):
         self.numLearnAfterInference = 0
         self.freezeInfReasons = []
         self.freezeLearnReasons = []
-        self.wallhitPunish = 15;
-        self.wrongDirPunish = 100;
+        self.wallhitPunish = 1;
+        self.wrongDirPunish = 10;
         self.episode_statevals = []
-    
-    
+        self.plotter = plotter(self.containers.show_plots, 100, "Evaluation "+self.name, True, ["average rewards", "average Q-vals", "progress", "laptime"], [1, self.sv_conf.MAXSPEED, 100, self.rl_conf.time_ends_episode])
+
     def addToMemory(self, gameState, pastState): 
         assert self.memory is not None, "It should be specified in server right afterwards"
         
@@ -313,8 +314,9 @@ class AbstractRLAgent(AbstractAgent):
 
     def calculateReward(self, vvec1_hist, vvec2_hist, otherinput_hist, action_hist):
         stay_on_street = abs(otherinput_hist[0].CenterDist)
-        stay_on_street = round(0 if stay_on_street < 5 else self.wallhitPunish if stay_on_street >= 10 else stay_on_street-5, 3)
-        return otherinput_hist[0].SpeedSteer.speedInStreetDir-stay_on_street
+        stay_on_street = round(0 if stay_on_street < 5 else self.wallhitPunish if stay_on_street >= 10 else stay_on_street/10, 3)
+        speed = otherinput_hist[0].SpeedSteer.speedInStreetDir / self.sv_conf.MAXSPEED
+        return speed - stay_on_street
 
 
     
@@ -366,16 +368,18 @@ class AbstractRLAgent(AbstractAgent):
 
 
     def print_episodeVals(self, mem_epi_slice, gameState, endReason):
-        avg_rewards = self.memory.average_rewards(mem_epi_slice)
-        avg_values = np.mean(np.array(self.episode_statevals))
+        avg_rewards = round(self.memory.average_rewards(mem_epi_slice),3)
+        avg_values = round(np.mean(np.array(self.episode_statevals)), 3)
         self.episode_statevals = []
         #other evaluation-values we need are time the agent took and percentage the agent made. However, becasue those values are not neccessarily
         #officially known to the agent (since agentstate != environmentstate), we need to take them from the environment-state
-        progress = gameState[2][0].ProgressVec.Progress if endReason != "lapdone" else 100
-        laptime = gameState[2][0].ProgressVec.Laptime
+        progress = round(gameState[2][0].ProgressVec.Progress if endReason != "lapdone" else 100, 2)
+        laptime = round(gameState[2][0].ProgressVec.Laptime,1)
         valid = gameState[2][0].ProgressVec.fValidLap
         print("Avg-r:",avg_rewards,"Avg-Q:",avg_values,"progress:",progress,"laptime:",laptime,"(valid)" if valid else "", level=8)
-                         
+        if self.containers.showscreen:
+                infoscreen.print("r:", avg_rewards, "Q:", avg_values, "p:", progress, "time:", laptime, "(v)" if valid else "", containers=self.containers, wname="Last Epsd")
+        self.plotter.update(avg_rewards, avg_values, progress, laptime)
                          
             
             

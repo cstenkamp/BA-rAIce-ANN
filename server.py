@@ -479,6 +479,7 @@ def showhelp():
 "-half_DQN" to run with a custom config, corresponding roughly to half the DQN-config in all respects
 "-nolearn" to store agent's results to the memory, but not perform Reinforcement learning (sets the random-action-chance to 0)
 "-noscreen" to turn off the screen showing Q-vals etc.
+"-noplot" to turn off the plots evaluating each episode
 "-startfresh" to use a RL-agent without and (supervised or reinforcement) pretraining
 "-nomemorykeep" to not save the memory for this run.
 "-help" shows this help and exits
@@ -511,7 +512,7 @@ def create_socket(port):
 
 
 
-def main(sv_conf, rl_conf, agentname, no_learn, show_screen, start_fresh, nomemorykeep):
+def main(sv_conf, rl_conf, agentname, no_learn, show_screen, show_plots, start_fresh, nomemorykeep):
   
     containers = Containers()
     containers.sv_conf = sv_conf
@@ -519,6 +520,7 @@ def main(sv_conf, rl_conf, agentname, no_learn, show_screen, start_fresh, nomemo
     containers.keep_memory = False if nomemorykeep else containers.rl_conf.keep_memory
     containers.no_learn = no_learn
     containers.start_fresh = start_fresh
+    containers.show_plots = show_plots
     
     containers.receiverportsocket = create_socket(TCP_RECEIVER_PORT)
     containers.senderportsocket = create_socket(TCP_SENDER_PORT)
@@ -631,4 +633,4 @@ if __name__ == '__main__':
         else:
             agentname = "dqn_rl_agent"
             
-    main(sv_conf, rl_conf, agentname, ("-nolearn" in sys.argv), not ("-noscreen" in sys.argv), ("-startfresh" in sys.argv), ("-nomemorykeep" in sys.argv))    
+    main(sv_conf, rl_conf, agentname, ("-nolearn" in sys.argv), not ("-noscreen" in sys.argv), not ("-noplot" in sys.argv), ("-startfresh" in sys.argv), ("-nomemorykeep" in sys.argv))    
