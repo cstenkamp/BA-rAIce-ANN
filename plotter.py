@@ -50,7 +50,7 @@ i = 0
 while i < ITERATIONS+10:
     plot.update(i/ITERATIONS, np.random.random())
     i+=1
-    
+     
     
 ############################### WORKING SCRIPT ################################
 #plt.ion() 
