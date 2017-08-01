@@ -13,6 +13,7 @@ import shutil
 import time
 current_milli_time = lambda: int(round(time.time() * 1000))
 import random
+import numpy as np
 #====own classes====
 from myprint import myprint as print
 
@@ -39,7 +40,7 @@ class Memory(object):
             corrupted = False
             if os.path.exists(self.memorypath+SAVENAME+'.pkl'):
                 try:
-                    if os.path.getsize(self.memorypath+'.pkl') > 1024 and (os.path.getsize(self.memorypath+SAVENAME+'.pkl') >= os.path.getsize(self.memorypath+'TMP.pkl')-10240):
+                    if os.path.getsize(self.memorypath+SAVENAME+'.pkl') > 1024 and (os.path.getsize(self.memorypath+SAVENAME+'.pkl') >= os.path.getsize(self.memorypath+SAVENAME+'TMP.pkl')-10240):
                         self.pload(self.memorypath+SAVENAME+'.pkl', containers, lock)
                         print("Loading existing memory with", self._size, "entries", level=10)
                     else:
@@ -53,6 +54,8 @@ class Memory(object):
                         shutil.copyfile(self.memorypath+SAVENAME+'TMP.pkl', self.memorypath+SAVENAME+'.pkl')
                         self.pload(self.memorypath+SAVENAME+'.pkl', containers, lock)
                         print("Loading Backup-Memory with", self._size, "entries", level=10)
+        
+        self.epistart = self._pointer
         
         
     def __len__(self):
@@ -124,7 +127,11 @@ class Memory(object):
             lastmemoryentry[4] = True
             self.append(lastmemoryentry)
             
+        prev_epistart = self.epistart
+        self.epistart = self._pointer
+        return slice(prev_epistart, self.epistart)
             
+        
     def punishLastAction(self, howmuch):
         if self._size < 2:
             return
@@ -134,7 +141,10 @@ class Memory(object):
             self.append(lastmemoryentry)     
     
     
-    
+    def average_rewards(self, fromto): #fromto is a slice, obtained endEpisode
+        tmp = self._buffer[fromto]
+        rewards = np.array(list(zip(*tmp))[2])
+        return np.mean(rewards)
     
     
     
@@ -162,7 +172,7 @@ class Memory(object):
 
 
     @staticmethod
-    def make_long_from_floats(acc, brk, steer):
+    def make_long_from_floats(acc, brk, steer): #das inefficientmemory muss die nicht komprimieren sonder kannn sie einfach als tuple  speichern.
         return acc, brk, steer
     
     @staticmethod

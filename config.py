@@ -71,6 +71,10 @@ class RL_Config(Config):
     initial_lr = 0.001
     #lr_decay = 1
     
+    wallhit_ends_episode = True #problem: wenn es das nicht tun würde, würde er beim lernen den Q-val des folgestates mitbeachten und denken "oh, gegen die Wand fahren ist voll gut"...
+    lapdone_ends_episode = True
+    time_ends_episode = 60 #sekunden oder False
+    
     startepsilon = 0.2
     epsilondecrease = 0.0001
     minepsilon = 0.005
@@ -88,7 +92,7 @@ class RL_Config(Config):
     saveMemoryAllMins = 45
     train_for = sys.maxsize-1
        
-    ForEveryInf, ComesALearn = 400, 10
+    ForEveryInf, ComesALearn = 4000, 10
     learnMode = "between" #"parallel", "between", "remote" (the latter is tobedone)
    
     #re-uses history_frame_nr, image_dims, steering_steps, speed_neurons, INCLUDE_ACCPLUSBREAK, SPEED_AS_ONEHOT

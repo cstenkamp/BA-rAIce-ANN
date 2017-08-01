@@ -251,13 +251,15 @@ class CNN(object): #learning on gpu and application on cpu: https://stackoverflo
             return len(conv_inputs.shape) <= 3 if conv_inputs is not None else len(other_inputs.shape) <= 2
         
         feed_dict = {}
-        self.stood_frames_ago = 0 if stands_inputs else self.stood_frames_ago + 1
-        if self.stood_frames_ago < 10:
-            stands_inputs = True
-        if is_inference(conv_inputs, other_inputs): 
+        if is_inference(conv_inputs, other_inputs):   
+            self.stood_frames_ago = 0 if stands_inputs else self.stood_frames_ago + 1
+            if self.stood_frames_ago < 10:
+                stands_inputs = True
             conv_inputs = np.expand_dims(conv_inputs, axis=0) #expand_dims weil hier quasi batchsize=1
             other_inputs= np.expand_dims(other_inputs, axis=0) 
             stands_inputs = np.expand_dims(stands_inputs, axis=0)
+        else:
+            stands_inputs = [stands_inputs]*other_inputs.shape[0]
         if self.agent.usesConv:
             feed_dict[self.conv_inputs] = conv_inputs
         if self.agent.ff_inputsize:

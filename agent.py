@@ -51,7 +51,7 @@ class AbstractAgent(object):
         assert self.sv_conf.use_cameras, "You disabled cameras in the config, which is impossible for this agent!"
         conv_inputs = np.concatenate([vvec1_hist, vvec2_hist]) if vvec2_hist is not None else vvec1_hist
         other_inputs = otherinput_hist[0].SpeedSteer.velocity
-        stands_inputs = otherinput_hist[0].SpeedSteer.velocity < 2
+        stands_inputs = otherinput_hist[0].SpeedSteer.velocity < 6
         return conv_inputs, other_inputs, stands_inputs
     
     def makeNetUsableOtherInputs(self, other_inputs): #normally, the otherinputs are stored as compact as possible. Networks may need to unpack that.
@@ -139,10 +139,10 @@ class AbstractAgent(object):
     def inflate_speed(self, speed):
         return read_supervised.inflate_speed(speed, self.sv_conf.speed_neurons, self.sv_conf.SPEED_AS_ONEHOT)
     
-    def resetUnity(self):
+    def resetUnityAndServer(self):
         import server
-        server.resetUnity(self.containers)
-        
+        server.resetUnityAndServer(self.containers)
+
     def folder(self, actualfolder):
         folder = self.sv_conf.superfolder()+self.name+"/"+actualfolder
         if not os.path.exists(folder):
@@ -170,6 +170,7 @@ class AbstractRLAgent(AbstractAgent):
         self.freezeLearnReasons = []
         self.wallhitPunish = 15;
         self.wrongDirPunish = 100;
+        self.episode_statevals = []
     
     
     def addToMemory(self, gameState, pastState): 
@@ -194,9 +195,15 @@ class AbstractRLAgent(AbstractAgent):
             
             print("adding to Memory:",actuAction, r, level=4) 
             
+            #values for evalation:
+            stateval = self.target_cnn.calculate_value(self.session, conv_inputs, self.makeNetUsableOtherInputs(other_inputs))[0]
+            self.episode_statevals.append(stateval)
+            
+            
+            
             if self.containers.showscreen:
                 conv_inputs, other_inputs, _ = self.getAgentState(*gameState)
-                infoscreen.print(actuAction, round(r,2), round(self.target_cnn.calculate_value(self.session, conv_inputs, self.makeNetUsableOtherInputs(other_inputs))[0],2), self.humantakingcontrolstring, containers= self.containers, wname="Last memory")
+                infoscreen.print(actuAction, round(r,2), round(stateval,2), self.humantakingcontrolstring, containers= self.containers, wname="Last memory")
                 if len(self.memory) % 20 == 0:
                     infoscreen.print(">"+str(len(self.memory)), containers= self.containers, wname="Memorysize")
       
@@ -348,10 +355,28 @@ class AbstractRLAgent(AbstractAgent):
 
 
 
-    def endEpisode(self):
-        #bei actions, nach denen resettet wurde, soll er den folgestate nicht mehr beachten (später gucken wenn reset=true dann setze Q_DECAY auf quasi 100%)
-        if self.containers.usememory:
-            self.memory.endEpisode()
+    def endEpisode(self, reason, gameState):  #reasons are: turnedaround, timeover, resetserver, wallhit, rounddone
+        self.resetUnityAndServer()
+        
+        
+        if self.containers.usememory: #bei actions, nach denen resettet wurde, soll er den folgestate nicht mehr beachten (später gucken wenn reset=true dann setze Q_DECAY auf quasi 100%)
+            episode = self.memory.endEpisode()
+            self.print_episodeVals(episode, gameState, reason)
+
+
+
+    def print_episodeVals(self, mem_epi_slice, gameState, endReason):
+        avg_rewards = self.memory.average_rewards(mem_epi_slice)
+        avg_values = np.mean(np.array(self.episode_statevals))
+        self.episode_statevals = []
+        #other evaluation-values we need are time the agent took and percentage the agent made. However, becasue those values are not neccessarily
+        #officially known to the agent (since agentstate != environmentstate), we need to take them from the environment-state
+        progress = gameState[2][0].ProgressVec.Progress if endReason != "lapdone" else 100
+        laptime = gameState[2][0].ProgressVec.Laptime
+        valid = gameState[2][0].ProgressVec.fValidLap
+        print("Avg-r:",avg_rewards,"Avg-Q:",avg_values,"progress:",progress,"laptime:",laptime,"(valid)" if valid else "", level=8)
+                         
+                         
             
             
     def punishLastAction(self, howmuch):

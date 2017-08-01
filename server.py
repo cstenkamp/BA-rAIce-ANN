@@ -154,7 +154,7 @@ class receiver_thread(threading.Thread):
                                     i.killme = True
                                     
                             print("PYTHON RECEIVES TIME:", STime, time.time()*1000, level=10)
-                            self.containers.inputval.update(visionvec, vvec2, allOneDs, STime, CTime)  #note that visionvec and vvec2 can both be None
+                            self.containers.inputval.update(visionvec, vvec2, allOneDs, STime, CTime)  #note that visionvec and vvec2 can both be None                                                           
                             self.containers.myAgent.runInference(self.containers.inputval.read(), self.containers.inputval.read(pastState=True))
                         
             except TimeoutError:
@@ -175,21 +175,28 @@ class receiver_thread(threading.Thread):
     
         if data[:11] == "resetServer":
             if self.containers.usememory:
-                self.containers.myAgent.endEpisode()
+                self.containers.myAgent.endEpisode("resetserver", self.containers.inputval.read())
             resetServer(self.containers, data[11:]) 
             specialcommand = True    
         if data[:7] == "wallhit":
             if self.containers.usememory:
                 self.containers.myAgent.punishLastAction(self.containers.myAgent.wallhitPunish)   #ist das doppelt gemoppelt damit, dass er eh das if punish > 10 beibehält?       
-                self.containers.myAgent.endEpisode()
-            resetServer(self.containers, self.containers.sv_conf.msperframe) 
-            specialcommand = True    
+                if self.containers.rl_conf.wallhit_ends_episode:
+                    self.containers.myAgent.endEpisode("wallhit", self.containers.inputval.read())
+            #resetServer(self.containers, self.containers.sv_conf.msperframe) 
+            specialcommand = True 
+        if data[:8] == "endround":
+            print("Round finished", level=6)
+            #roundwasvalid = data[8]==1 #benötige ich momentan noch nicht
+            if self.containers.usememory and self.containers.rl_conf.lapdone_ends_episode:
+                self.containers.myAgent.endEpisode("lapdone", self.containers.inputval.read())
+            specialcommand = True        
         return specialcommand
     
 
 ###############################################################################
 
-def resetUnity(containers, punish=0):
+def resetUnityAndServer(containers, punish=0):
     containers.outputval.send_via_senderthread("pleasereset", containers.inputval.CTimestamp, containers.inputval.STimestamp)
     resetServer(containers, containers.inputval.msperframe, punish)
     
@@ -273,7 +280,10 @@ class InputValContainer(object):
                 self.has_past_state = True
             #20.7.: deleted the "if is_new..." functionality, as I think its absolutely not helpful
             otherinputs = make_otherinputs(othervecs) #is now a namedtuple instead of an array
-            
+                                          
+            if hasattr(self, "rl_conf") and self.rl_conf.time_ends_episode and  otherinputs.ProgressVec.Laptime >= self.rl_conf.time_ends_episode:
+                self.containers.myAgent.endEpisode("timeover", self.read())
+                                          
             if self.config.use_cameras and self.agent.usesConv:
                 self._append_vvec_hist(visionvec, vvec2)
             self.otherinput_hist = self._append_other(otherinputs, self.otherinput_hist)
@@ -294,7 +304,8 @@ class InputValContainer(object):
                     if not self.otherinput_hist[0].SpeedSteer.rightDirection:
                         self.containers.wrongdirectiontime += self.containers.sv_conf.msperframe
                         if self.containers.wrongdirectiontime >= 2000: #bei 2 sekunden falsche richtung
-                            resetUnity(self.containers, punish=self.containers.myAgent.wrongDirPunish)
+                            #resetUnityAndServer(self.containers, punish=self.containers.myAgent.wrongDirPunish)
+                            self.containers.myAgent.endEpisode("turnedaround", self.read())
                     else:
                         self.containers.wrongdirectiontime = 0
             except IndexError:
@@ -462,11 +473,20 @@ class sender_thread(threading.Thread):
 
 
 
-
-
-
-
-
+def showhelp():
+    print("""Command-line arguments:
+"-DQN" to run with the DQN-config
+"-half_DQN" to run with a custom config, corresponding roughly to half the DQN-config in all respects
+"-nolearn" to store agent's results to the memory, but not perform Reinforcement learning (sets the random-action-chance to 0)
+"-noscreen" to turn off the screen showing Q-vals etc.
+"-startfresh" to use a RL-agent without and (supervised or reinforcement) pretraining
+"-nomemorykeep" to not save the memory for this run.
+"-help" shows this help and exits
+Concerning agents:
+Without any arguments, the agent defined in "dqn_rl_agent" is used
+With the "-svplay"-argument, the agent defined in "dqn_sv_agent" is used
+With the argument "--agent xyz", the agent defined in "xyz.py" is used""", level=999)
+    
 
 ###############################################################################
 ##################### ACTUAL STARTING OF THE STUFF#############################
@@ -583,6 +603,10 @@ def main(sv_conf, rl_conf, agentname, no_learn, show_screen, start_fresh, nomemo
 
     
 if __name__ == '__main__':  
+    if "-help" in sys.argv:
+        showhelp()
+        exit()   
+    
     sv_conf = config.Config() 
     
     if ("-DQN" in sys.argv):
