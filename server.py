@@ -510,7 +510,6 @@ def create_socket(port):
 
 
 def main(sv_conf, rl_conf, agentname, no_learn, show_screen, show_plots, start_fresh, nomemorykeep):
-  
     containers = Containers()
     containers.sv_conf = sv_conf
     containers.rl_conf = rl_conf   
