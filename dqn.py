@@ -142,23 +142,22 @@ class CNN(object): #learning on gpu and application on cpu: https://stackoverflo
         optimizer = optimizer_arg(self.learning_rate)
         
         if (optimizer_arg == tf.train.RMSPropOptimizer):
-            arguments = {"learning_rate": self.config.initial_lr}
+            kwargs = {"learning_rate": self.config.initial_lr}
             try:
-                arguments["decay"] = self.config.lr_decay
+                kwargs["decay"] = self.config.lr_decay
             except:
                 pass
             try: 
-                arguments["momentum"] = self.config.rms_momentum
+                kwargs["momentum"] = self.config.rms_momentum
             except:
                 pass
             try: 
-                arguments["epsilon"] = self.config.min_sq_grad
+                kwargs["epsilon"] = self.config.min_sq_grad
             except:
                 pass
-            optimizer = optimizer_arg(**arguments)
+            optimizer = optimizer_arg(**kwargs)
         #TODO: AUSSUCHEN können welchen optimizer, und meinen ausgesuchten verteidigen können
         #https://www.tensorflow.org/api_guides/python/train#optimizers
-        
         
         train_op = optimizer.minimize(loss, global_step=self.global_step)
         

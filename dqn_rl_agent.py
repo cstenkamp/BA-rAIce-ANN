@@ -150,6 +150,7 @@ class Agent(AbstractRLAgent):
                 self.freezeEverything("saveNet")
                 with self.graph.as_default():    
                     self.session.run([target.assign(online) for online, target in zip(get_variables(scope="onlinenet"), get_variables(scope="targetnet"))])
+                    self.session.run(self.target_cnn.global_step.assign(self.online_cnn.global_step))
                 if self.containers.showscreen:
                     infoscreen.print(time.strftime("%H:%M:%S", time.gmtime()), containers= self.containers, wname="Last Targetnet Copy")
                 self.unFreezeEverything("saveNet")
@@ -160,12 +161,14 @@ class Agent(AbstractRLAgent):
                         
                 
     def saveNet(self):
-        #self.freezeEverything("saveNet")
-        self.target_cnn.saveNumIters(self.session, self.numIterations)
+        self.freezeEverything("saveNet")
+        self.online_cnn.saveNumIters(self.session, self.numIterations)
         checkpoint_file = os.path.join(self.folder(self.rl_conf.checkpoint_dir), 'model.ckpt')
-        self.saver.save(self.session, checkpoint_file, global_step=self.learn_which.global_step.eval(session=self.session))       
+        self.saver.save(self.session, checkpoint_file, global_step=self.online_cnn.global_step)       
+        if self.rl_conf.save_memory_with_checkpoint:
+            self.memory.save_memory()
         print("saved", level=6)
-        #self.unFreezeEverything("saveNet")
+        self.unFreezeEverything("saveNet")
                 
                 
     #calculateReward ist in der AbstractRLAgent von der er erbt
@@ -200,7 +203,7 @@ class Agent(AbstractRLAgent):
             
         else:
             if not (ckpt and ckpt.model_checkpoint_path):
-                
+    
                 self.network(self.rl_conf, self, mode="sv_train")
                 varlist = dict(zip([v.name for v in tf.trainable_variables()], tf.trainable_variables()))
                 varlist = list(eraseneccessary(varlist, DONT_COPY_WEIGHTS).keys())
@@ -223,7 +226,7 @@ class Agent(AbstractRLAgent):
                 sv_ckpt = tf.train.get_checkpoint_state(self.folder(self.sv_conf.checkpoint_dir))
                 assert sv_ckpt and sv_ckpt.model_checkpoint_path, "I need at least a supervisedly pre-trained net!"
                 self.pretrainsaver.restore(self.session, sv_ckpt.model_checkpoint_path)
-                self.session.run([online.assign(target) for online, target in zip(get_variables(scope="onlinenet"), get_variables(scope="targetnet"))])
+                self.session.run([target.assign(online) for online, target in zip(get_variables(scope="onlinenet"), get_variables(scope="targetnet"))])
 
                 self.saver = tf.train.Saver(max_to_keep=1)
                 
@@ -234,10 +237,9 @@ class Agent(AbstractRLAgent):
                     self.online_cnn = self.network(self.rl_conf, self, mode="rl_train", rl_not_trainables=DONT_TRAIN)                                            
                 self.saver = tf.train.Saver(max_to_keep=1)
                 self.saver.restore(self.session, ckpt.model_checkpoint_path)
-                self.session.run([online.assign(target) for online, target in zip(get_variables(scope="onlinenet"), get_variables(scope="targetnet"))])
-                self.session.run(self.online_cnn.global_step.assign(self.target_cnn.global_step))
+                self.session.run([target.assign(online) for online, target in zip(get_variables(scope="onlinenet"), get_variables(scope="targetnet"))])
                 self.reinfNetSteps = self.online_cnn.global_step.eval(session=self.session)
-                self.numIterations = self.target_cnn.restoreNumIters(self.session)
+                self.numIterations = self.online_cnn.restoreNumIters(self.session)
         
         print("network initialized with %i reinfNetSteps already run." % self.reinfNetSteps)
         self.isinitialized = True

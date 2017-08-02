@@ -19,9 +19,6 @@ flatten = lambda l: [item for sublist in l for item in sublist]
 
 SHOW_IN_SUBPLOTS = True
 
-#title wird ersetzt agent-name
-
-
 class evaluator():
     def __init__(self, containers, agent, show_plot, save_xml, labels, maxvals): 
         self.save_xml = save_xml
@@ -40,8 +37,12 @@ class evaluator():
             self.xml_saver.add_episode(startMemNum, endMemNum, epiNum, endIt, reinfnetsteps, new_vals)
             self.xml_saver.save()
         
-        if self.show_plot:
-            self.plotter.update(*new_vals) 
+        try:
+            if self.show_plot:
+                self.plotter.update(*new_vals) 
+        except:
+            pass #manchmal klappt das updatennicht, ist aber egal, dann halt beim nächstem mal
+
 
     def add_episode(self, *args):
         t1 = threading.Thread(target=self._add_episode, args=(args))
@@ -72,17 +73,11 @@ class xml_saver():
     def save(self):
 #        tree = ET.ElementTree(self.root)
 #        tree.write(self.xmlfilename)
-        prettytree = self.prettify(self.root)
+        prettytree = self._prettify(self.root)
         prettytree = "\n".join([line for line in prettytree.split('\n') if line.strip() != ''])
         with open(self.xmlfilename, "w") as f:
             f.write(prettytree)
 
-    def prettify(self, elem):
-        """Return a pretty-printed XML string for the Element."""
-        rough_string = ET.tostring(elem, 'utf-8')
-        reparsed = minidom.parseString(rough_string)
-        return reparsed.toprettyxml(indent="  ")
-        
         
     def add_episode(self, startMemNum, endMemNum, epiNum, endIt, reinfnetsteps, new_vals):
         runResults = self._create_or_load_child(self.run, "runResults")
@@ -114,6 +109,11 @@ class xml_saver():
         return mother.find(childname) if mother.find(childname) is not None else ET.SubElement(mother, childname)
             
 
+    def _prettify(self, elem):
+        """Return a pretty-printed XML string for the Element."""
+        rough_string = ET.tostring(elem, 'utf-8')
+        reparsed = minidom.parseString(rough_string)
+        return reparsed.toprettyxml(indent="  ")
 
    
 ###############################################################################
@@ -188,7 +188,7 @@ class plotter():
 
 if __name__ == '__main__':  
     ITERATIONS = 100    
-    plot = plotter(True, ITERATIONS, "Thetitle", True, ["val1", "val2", "val3", "val4"], [1, 1, 1, 10])
+    plot = plotter("name", ["val1", "val2", "val3", "val4"], [1, 1, 1, 10])
     i = 0
     while i < ITERATIONS+10:
         plot.update(i/ITERATIONS, np.random.random(), 0.5, i/(ITERATIONS+11-i))

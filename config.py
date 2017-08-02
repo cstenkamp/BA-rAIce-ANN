@@ -79,22 +79,25 @@ class RL_Config(Config):
     time_ends_episode = 60 #sekunden oder False
     
     startepsilon = 0.2
-    epsilondecrease = 0.0001
+    finalepsilonframe = 100000  #I could use epsilondecrease = 0.0001 instead, however then every new run epsilon would reset to startepsilon (since it doesn't depend on numIterations then)
     minepsilon = 0.005
     batchsize = 32
     q_decay = 0.99
     checkpointall = 300 #RLsteps, not inferences!
-    copy_target_all = 20
+    copy_target_all = 200
+    
+    save_memory_with_checkpoint = True
+    save_memory_on_exit = False
+    save_memory_all_mins = False
     
     replaystartsize = 0
     memorysize = 30000
     use_constantbutbigmemory = False
     visionvecdtype = np.int8 #wäre es np.bool würde er den rand als street sehen!
     keep_memory = True
-    saveMemoryAllMins = 45
     train_for = sys.maxsize-1
        
-    ForEveryInf, ComesALearn = 200, 10
+    ForEveryInf, ComesALearn = 400, 100
     learnMode = "between" #"parallel", "between", "remote" (the latter is tobedone)
    
     #re-uses history_frame_nr, image_dims, steering_steps, speed_neurons, INCLUDE_ACCPLUSBREAK, SPEED_AS_ONEHOT

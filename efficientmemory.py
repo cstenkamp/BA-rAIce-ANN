@@ -161,8 +161,8 @@ class Memory(object):
             if self._size < self.capacity:
                 self._size += 1
         
-            if self.containers.keep_memory: 
-                if ((current_milli_time() - self.lastsavetime) / (1000*60)) > self.containers.rl_conf.saveMemoryAllMins: 
+            if self.containers.keep_memory and self.containers.rl_conf.save_memory_all_mins: 
+                if ((current_milli_time() - self.lastsavetime) / (1000*60)) > self.containers.rl_conf.save_memory_all_mins: 
                     self.save_memory()
     
     

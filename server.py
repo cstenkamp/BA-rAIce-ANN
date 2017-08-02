@@ -29,7 +29,6 @@ MININT = -sys.maxsize+1
 TCP_IP = 'localhost' #TODO check if it also works over internet, in the Cluster
 TCP_RECEIVER_PORT = 6435
 TCP_SENDER_PORT = 6436
-SAVE_MEMORY_ON_EXIT = True
 
 
 class MySocket:
@@ -151,7 +150,7 @@ class receiver_thread(threading.Thread):
                                 if int(i.STimestamp) < int(self.STimestamp):
                                     i.killme = True
                                     
-                            print("PYTHON RECEIVES TIME:", STime, time.time()*1000, level=10)
+                            print("PYTHON RECEIVES TIME:", STime, time.time()*1000, level=4)
                             self.containers.inputval.update(visionvec, vvec2, allOneDs, STime, CTime)  #note that visionvec and vvec2 can both be None                                                           
                             self.containers.myAgent.runInference(self.containers.inputval.read(), self.containers.inputval.read(pastState=True))
                         
@@ -585,7 +584,7 @@ def main(sv_conf, rl_conf, agentname, no_learn, show_screen, show_plots, start_f
     if containers.usememory and not no_learn and rl_conf.learnMode == "parallel":
         learnthread.join()
         
-    if SAVE_MEMORY_ON_EXIT and containers.usememory and containers.keep_memory:
+    if containers.rl_conf.save_memory_on_exit and containers.usememory and containers.keep_memory:
         containers.myAgent.memory.save_memory()
         
     time.sleep(0.1)
