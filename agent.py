@@ -372,13 +372,13 @@ class AbstractRLAgent(AbstractAgent):
         self.resetUnityAndServer()
         self.episodes += 1        
         
-        episode = self.memory.endEpisode() #bei actions, nach denen resettet wurde, soll er den folgestate nicht mehr beachten (später gucken wenn reset=true dann setze Q_DECAY auf quasi 100%)
-        self.print_episodeVals(episode, gameState, reason)
+        mem_epi_slice = self.memory.endEpisode() #bei actions, nach denen resettet wurde, soll er den folgestate nicht mehr beachten (später gucken wenn reset=true dann setze Q_DECAY auf quasi 100%)
+        self.print_episodeVals(mem_epi_slice, gameState, reason)
 
 
 
     def print_episodeVals(self, mem_epi_slice, gameState, endReason):
-        avg_rewards = round(self.memory.average_rewards(slice(*mem_epi_slice)),3)
+        avg_rewards = round(self.memory.average_rewards(mem_epi_slice[0], mem_epi_slice[1]),3)
         avg_values = round(np.mean(np.array(self.episode_statevals)), 3)
         self.episode_statevals = []
         #other evaluation-values we need are time the agent took and percentage the agent made. However, becasue those values are not neccessarily

@@ -141,8 +141,11 @@ class Memory(object):
             self.append(lastmemoryentry)     
     
     
-    def average_rewards(self, fromto): #fromto is a slice, obtained endEpisode
-        tmp = self._buffer[fromto]
+    def average_rewards(self, fromwhere, towhere):
+        if fromwhere < towhere:
+            tmp = self._buffer[fromwhere:towhere]
+        else:
+            tmp = self._buffer[fromwhere:]+self._buffer[:towhere]
         rewards = np.array(list(zip(*tmp))[2])
         return np.mean(rewards)
     
