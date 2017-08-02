@@ -28,8 +28,7 @@ ONLY_START = False
 class Agent(AbstractRLAgent):
     def __init__(self, sv_conf, containers, rl_conf, start_fresh, *args, **kwargs):
         self.name = __file__[__file__.rfind("\\")+1:__file__.rfind(".")]
-#        if containers.usememory: #dieser agent unterstützt das effiziente memory
-#            self.memory = Efficientmemory(rl_conf.memorysize, containers, self, rl_conf.history_frame_nr, rl_conf.use_constantbutbigmemory) 
+#        self.memory = Efficientmemory(rl_conf.memorysize, rl_conf, self, rl_conf.history_frame_nr, rl_conf.use_constantbutbigmemory) #dieser agent unterstützt das effiziente memory
         super().__init__(sv_conf, containers, rl_conf, *args, **kwargs)
         self.ff_inputsize = 30
         self.epsilon = self.rl_conf.startepsilon
@@ -179,6 +178,8 @@ class Agent(AbstractRLAgent):
             
 
     def initNetwork(self): 
+        super().initNetwork()
+        
         self.session = tf.Session(config=tf.ConfigProto(intra_op_parallelism_threads=2, allow_soft_placement=True))
         ckpt = tf.train.get_checkpoint_state(self.folder(self.rl_conf.checkpoint_dir))
         initializer = tf.random_uniform_initializer(-0.1, 0.1)
@@ -272,6 +273,7 @@ def print_trainables(session):
 ###############################################################################
 if __name__ == '__main__':  
     import config
-    conf = config.Config()
-    agent = Agent(conf, None)
+    sv_conf = config.Config()
+    rl_conf = config.RL_Config()
+    agent = Agent(sv_conf, None, rl_conf, True)
     agent.svTrain()

@@ -171,12 +171,12 @@ class receiver_thread(threading.Thread):
             data = data[data.find(")")+1:]
     
         if data[:11] == "resetServer":
-            if self.containers.usememory:
+            if hasattr(self.containers.myAgent, "memory"):
                 self.containers.myAgent.endEpisode("resetserver", self.containers.inputval.read())
             resetServer(self.containers, data[11:]) 
             specialcommand = True    
         if data[:7] == "wallhit":
-            if self.containers.usememory:
+            if hasattr(self.containers.myAgent, "memory"):
                 self.containers.myAgent.punishLastAction(self.containers.myAgent.wallhitPunish)   #ist das doppelt gemoppelt damit, dass er eh das if punish > 10 beibehält?       
                 if self.containers.rl_conf.wallhit_ends_episode:
                     self.containers.myAgent.endEpisode("wallhit", self.containers.inputval.read())
@@ -185,7 +185,7 @@ class receiver_thread(threading.Thread):
         if data[:8] == "endround":
             print("Round finished", level=6)
             #roundwasvalid = data[8]==1 #benötige ich momentan noch nicht
-            if self.containers.usememory and self.containers.rl_conf.lapdone_ends_episode:
+            if hasattr(self.containers.myAgent, "memory") and self.containers.rl_conf.lapdone_ends_episode:
                 self.containers.myAgent.endEpisode("lapdone", self.containers.inputval.read())
             specialcommand = True        
         return specialcommand
@@ -514,7 +514,6 @@ def main(sv_conf, rl_conf, agentname, no_learn, show_screen, show_plots, start_f
     containers = Containers()
     containers.sv_conf = sv_conf
     containers.rl_conf = rl_conf   
-    containers.keep_memory = False if nomemorykeep else containers.rl_conf.keep_memory
     containers.no_learn = no_learn
     containers.start_fresh = start_fresh
     containers.show_plots = show_plots
@@ -534,7 +533,8 @@ def main(sv_conf, rl_conf, agentname, no_learn, show_screen, show_plots, start_f
             
     agentclass = __import__(agentname).Agent
     containers.myAgent = agentclass(sv_conf, containers, rl_conf, start_fresh) 
-    containers.usememory = hasattr(containers.myAgent, "memory") #das sollte der agent eig selbst übernehmen
+    if hasattr(containers.myAgent, "memory"):
+        containers.myAgent.keep_memory = False if nomemorykeep else containers.rl_conf.keep_memory
     containers.myAgent.initNetwork()
     
                                                                           
@@ -555,7 +555,7 @@ def main(sv_conf, rl_conf, agentname, no_learn, show_screen, show_plots, start_f
     SenderConnecterThread.start()
 
     #THREAD 3 (learning)
-    if containers.usememory and not no_learn and rl_conf.learnMode == "parallel":
+    if hasattr(containers.myAgent, "memory") and not no_learn and rl_conf.learnMode == "parallel":
         dauerLearn = partial(containers.myAgent.dauerLearnANN, learnSteps=rl_conf.train_for)
         learnthread = threading.Thread(target=dauerLearn)
         learnthread.start()
@@ -581,10 +581,10 @@ def main(sv_conf, rl_conf, agentname, no_learn, show_screen, show_plots, start_f
         senderthread.join()
     ReceiverConnecterThread.join() #takes max. 1 second until socket timeouts
     SenderConnecterThread.join()
-    if containers.usememory and not no_learn and rl_conf.learnMode == "parallel":
+    if hasattr(containers.myAgent, "memory") and not no_learn and rl_conf.learnMode == "parallel":
         learnthread.join()
         
-    if containers.rl_conf.save_memory_on_exit and containers.usememory and containers.keep_memory:
+    if containers.rl_conf.save_memory_on_exit and hasattr(containers.myAgent, "memory") and containers.myAgent.keep_memory:
         containers.myAgent.memory.save_memory()
         
     time.sleep(0.1)

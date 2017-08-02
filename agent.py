@@ -72,7 +72,7 @@ class AbstractAgent(object):
         print("Another ANN Inference", level=3)
         
         
-    def initNetwork(self, start_fresh):
+    def initNetwork(self):
         raise NotImplementedError    
 
 
@@ -161,26 +161,31 @@ class AbstractRLAgent(AbstractAgent):
     def __init__(self, sv_conf, containers, rl_conf, *args, **kwargs):
         super().__init__(sv_conf, containers, *args, **kwargs)
         self.rl_conf = rl_conf
-        self.last_random_timestamp = 0
-        self.last_random_action = None
         self.repeat_random_action_for = 1000
         if not hasattr(self, "memory"): #einige agents haben bereits eine andere memory-implmentation, die sollste nicht überschreiben
-            self.memory = Memory(rl_conf.memorysize, containers, self)
-        self.reinfNetSteps = 0
-        self.numInferencesAfterLearn = 0
-        self.numLearnAfterInference = 0
+            self.memory = Memory(rl_conf.memorysize, rl_conf, self)
         self.freezeInfReasons = []
         self.freezeLearnReasons = [] 
         self.wallhitPunish = 1;
         self.wrongDirPunish = 10;
+
+        
+    def initNetwork(self):    
+        assert self.containers is not None, "if you init the net for a RL-run, the containers must not be None!"
         self.episode_statevals = [] 
         self.episodes = 0
+        self.reinfNetSteps = 0
+        self.numInferencesAfterLearn = 0
+        self.numLearnAfterInference = 0
+        self.last_random_timestamp = 0
+        self.last_random_action = None
         self.evaluator = evaluator(self.containers, self, self.containers.show_plots, self.containers.sv_conf.save_xml,      \
                                    ["average rewards", "average Q-vals",      "progress", "laptime"                       ], \
                                    [1,                 self.sv_conf.MAXSPEED, 100,         self.rl_conf.time_ends_episode ] )
-
+    
+        
     def addToMemory(self, gameState, pastState): 
-        assert self.memory is not None, "It should be specified in server right afterwards"
+        assert hasattr(self, "memory") and self.memory is not None, "I don't have a memory, that's fatal."
         
         if pastState[0] is not None: #was der Fall DIREKT nach reset oder nach start ist
             
@@ -363,11 +368,12 @@ class AbstractRLAgent(AbstractAgent):
 
 
     def endEpisode(self, reason, gameState):  #reasons are: turnedaround, timeover, resetserver, wallhit, rounddone
+        #TODO: die ersten 2 zeilen kann auch der abstractagent schon, dann muss ich im server nicht immer nach hasattr(memory) fragen!
         self.resetUnityAndServer()
         self.episodes += 1        
-        if self.containers.usememory: #bei actions, nach denen resettet wurde, soll er den folgestate nicht mehr beachten (später gucken wenn reset=true dann setze Q_DECAY auf quasi 100%)
-            episode = self.memory.endEpisode()
-            self.print_episodeVals(episode, gameState, reason)
+        
+        episode = self.memory.endEpisode() #bei actions, nach denen resettet wurde, soll er den folgestate nicht mehr beachten (später gucken wenn reset=true dann setze Q_DECAY auf quasi 100%)
+        self.print_episodeVals(episode, gameState, reason)
 
 
 
@@ -390,10 +396,9 @@ class AbstractRLAgent(AbstractAgent):
             
             
     def punishLastAction(self, howmuch):
-        if self.containers.usememory:
-            if self.containers.showscreen:
-                infoscreen.print(str(-abs(howmuch)), time.strftime("%H:%M:%S", time.gmtime()), containers=self.containers, wname="Last big punish")
-            self.memory.punishLastAction(howmuch)
+        if self.containers.showscreen:
+            infoscreen.print(str(-abs(howmuch)), time.strftime("%H:%M:%S", time.gmtime()), containers=self.containers, wname="Last big punish")
+        self.memory.punishLastAction(howmuch)
             
                 
     
