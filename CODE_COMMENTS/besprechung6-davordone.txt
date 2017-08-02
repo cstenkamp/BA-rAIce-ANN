@@ -1,0 +1,68 @@
+-------------------------------------------------------DONE---------------------------------------------------------------
+-----PYTHON-----
+-previous_visionvec & previous_visionvec gibts nicht mehr
+-brauche ich beim inputval-update die is_new? ich glaube nicht.
+-die funktionen convlayer und fclayer vom DQN wurden in ne externe klasse gepakt und um viele funktionen erweitert (unterstützen bspw ddpg's fan-in initializer, stride gibts nun (vorher nicht), batchnorm (wobei das buggy ist), weightdecay, pooling
+-Agents sind nun austauschbar. Ein Agent erbt von AbstractAgent, und falls er RL ist auch von AbstractRLAgent. Funktionen und Eigentschaften die semantisch zum Agent gehören bzw abhängig vom Agent sind werden nun im Agent festgelegt (weg von config). Agent has memory und model. Agent entscheided welches Memory und Model er nutzt (dqn_rl_agent kann efficientmemory, und hoffentlich können in Zukunf agents ddpg als model nutzen). Server erstellt agent (per parameter lässt sich bestimmen welchen). Agent entscheidet welche daten er nutzen möchten (useconf bspw). Inputvalcontainer speichert nun quasi den environments-state, bzw das maximale was ein agent sich als agenstate abgreifen kann. (differnezierung zwischen agentstate und environmenstate -> näher an RL-paradigmen!). Das maximale ist die stacksize mal jeweils: beiden kameras, otherinputs, und action. Action wird nachträglich auch noch in inputval geschrieben (korrigiert auch action bei humantakingcontrol btw). Ein Agent hat die funktion getAgentState, die als input den environment-state bekommt, und returned was der agent davon haben möchte. Diese ist abhängig/wird überschrieben vom Agent. Server speichert currentstate und paststate effizient (bei historyframes=4 muss er nur 5 frames speichern für currentstate und paststate). Config entscheided allerdings ob beide kameras genutzt werden (unabhängig vom agent). Server updated den input-vector nun nicht mehr nur wenn er neue ist, sondern ständig, und berechnet daher auch ständig den outputval. Inputval's read-methode lässt sich nun für currentstate und laststate callen,  und returned immer vvec1_hist, vvec2_hist, otherinput_hist, action_hist. Agent's getAgentState methode wird mit all diesen werten gecalled.
+-Das DQN kriegt jetzt nicht mehr explizit vision und speed, sondern kriegt conv_inputs und other_inputs, und jeder agent entscheided was für conv_inputs und was für other_inputs er dem net geben will, es frisst fast alles. Dafür mussten auch die speed-inputs geändert werden, da ich das aber für sinnvoll halte, kriegt der agent nun auch explizit "stand-inputs", bereitgestellt von getAgentstate, diese muss jetzt ihre definition von "auto steht" weitergeben. Wenn das auto vor nem frame kurz vorher stand, wird das auto jetzt auch für einige frames (1 sec) stehen bleiben
+-standard-agent (also abstractagent) nutzt als state visionvec*hframes & letzte velocity. Jeder Agent hat außerdem ne makeNetUsableAction-methode, denn jeder agent has a model/network, und da das auch ddpg sein kann, kann er nicht mehr immer dediscretizen, sondern das machen nur die dqn-agents
+-svTrain ist jetzt keine skript-methode von read_supervised mehr, sondern ne object-methode vom agent. Der Agent ruft jetzt nicht mehr beim erzeugen initNet auf, sondern erst vor dem RL-einsatz. Agent's svTrain nutzt jetzt einfach die TPList.read_batch von read_supervised, welche so angepasst wurde, dass sie der inputval.read-methode vom server entspricht (nur dass es hier batches sind)
+-Da die responsetime mit -nolearn so exorbitant viel schneller war, gibt es jetzt verschiedene lern-modi: lernparallel ist der alte wo der gleichzeitig inference und lernen macht (wobei er jetzt dazu gezwungen wird, falls er ne GPU hat, das lernen auf der GPU und die inference auf der CPU machen, auch wenn das das leider nicht schneller macht [WOBEI, NOCHMAL TESTEN!]). Learnbetween führt alle foreveryinf steps comesalearn learning-steps durch, was auf der GPU echt sofort geht.
+-die DQN-klasse ist nun realistischer als model-teil des agents. Sie spezifiziert weiter den computation graph, hat funktionen für fill_feed_dict und sachen berechnen, aber sonst nicht mehr. Sie wurde so verändert dass sie jede kombi aus conv_inputs und other_inputs frisst, und unterscheidet nun sinnvoll zwischen inference und learning. Das lernen des DQN läuft nun auf der GPU, die Inference weiterhin auf der CPU, auch bei learnbetween (kein speed-unterschied) (geht ja, da completely separate networks). Ein DQN-network hat dann entweder den modus inference, wo es wirklich nur inference macht, sv_train oder rl_train, letztere fälle unterscheiden sich an der loss-funktion. Settozero klappt top, wird aber nur im inference-modus benutzt. Die sv-fillfeeddict-methode nimmt nun einen state-batch als input, und konvertiert den mit dem agent-state (auf dem sie zugriff hat, bad) in die üblichen inputs&targets. Die Teile vom RL-learn-progress, die teile des models sein sollten, sind nun teil des models
+-DDPG angefangen, aber noch nicht genug
+-Agent's dauerlearnAnn wurde so angepasst, dass sie auch für learnbetween funktioniert. Agent's calculateReward ist nun so wie im DDPG-paper (dafür gibts neue vecs von unity), auch wenn das glaub ich nciht gut ist.
+-addToMemory wird nun vom server mit gamestate und paststate gecalled, und erzeugt selbst mit getAgentState davon den agentstate, und speichert das s,a,r,s2-tuple dann. Agent hat die Möglichkeit die action nicht als argmax zu speichern, sondern als die echte action, damit ein DQN-agent und sein ddpg-pendant (mit gleicher definition von agentstate) das gleiche memory nutzen können
+-Ein Agent entscheidet selbst ob er eine Form von efficientmemory unterstützt, und der standard-agent sollte efficientmemory untersützten, tut er aber MOMENTAN NICHT. Memory kann action als real-triple speichern.
+-agent freezed nun learning und inference separat, da er in speziellen fällen spezielles freezen muss.
+-agent bestimmt nun den pfad, in dem gespeichert wird, nicht mehr config. config sagt nur den super-ordner. In der Config sind jetzt nur noch die sachen die nicht sache des agents sind.
+-die learnANN des dqn_rl_agents sieht nun sinnvoller aus
+-es gibt einen DQN_novision_agent, der als agentstate KEINE visionvecs hat, sondern nur ein fc-network von speziellen other_inputs (like lookahead-vectors) hat. Der sucked aber, auch wenn er beim sv-trianing so 80% hat
+-die definition des namedtuple othervecs ist nun in read_supervised
+-die TP-list, die read_supervised nun returned, entspricht nun dem, was python via dem server von unity bekommt. die next_batch-funktion der TPList returned nun genauso wie der inputval ein [batch von] vvec1_hist, vvec2_hist, otherinput_hist, action_hist, welches der agent dann genauso liest wie den inputval.read (ABER noch nicht gleich wie memory-read! wenn das gleich ist wie memory-read, kann der agent quasi off-policy supervises-rl-lernen, dann kann er anhand der GETANEN action lernen!!!)
+-server auskommentiert
+-beim DQN sind die other_inputs jetzt zweitletztem statt im letztem layer
+-die reward-funktion ist nun einigermaßen normiert, sodass sie maximal ungefähr 1 ist
+-Evaluator done & bessere Episodendefinition. Agent beendet Episode bei wallhit, rundenende, zeitende (das sendet übrigens Unity alles explizit python). Beim Ende einer Episode wird nicht nur memory das flag terminal gesetzt, sondern auch infos über diese runde (avg reward, avg q-val, laptime & percent) gespeichert und geplottet. Ein Evaluator speichert das als xml-file (mit zusätzlichen infos über wann targetnetupdates waren etc), und ein plotter plottet es direkt live. Agent has evaluator.
+
+----UNITY----
+-Secondcamera funktioniert nun einwandfrei, wenn man sie ausschaltet verschiebt sich die andere (aber in sv_train wird mitrecorded wie weit), und beide kameras lassen sich an/ausschalten
+-im sv_train-modus wird nun nach jeder runde resettet, da das mehr nem richtigem RL-run entspricht (kein fliegender start)
+-special commands wie freeze und reset werden auch beim humantakingcontrol übernommen
+-Unity nutzt die von python gesendeten results nun nach einer fixen, fest gegebenen Zeit (optional)
+-das ende einer runde wird python mitgeteilt, damit er resetten kann
+-per sockets wird nun auch die letzte action, sowie speed-in-street-direction mitgeschickt, denn das ist ddpgs goal-function
+-load_infos lädt jetzt nicht mehr alle create_vecs_all neu, sondern JEDEN AUFRUF. das ist keinen deut langsamer, und auch nötig. Er lernt logischerweise eh nie gleichzeitig supervisedly und reinforcement, also gibts den fall von beiden calls innerhalb kurzer zeit in folge eh nicht mehr, und selbst wenn, wäre es schlecht das entsprechend zu machen, denn das result soll GENAU x sekunden alt sein (was es nun finally ist!) -> Unity sendet auch in definitiv-konstanter zeit
+-für alles in unity, außer dem berechnen der responsetime von python, wird nun die unity-zeit benutzt und das ist auch gut so.
+-es gibt eine schön-aufgeräumte loadandsendinfostopython, die parallel zum sendtopython existiert (letztere schickt nun in jedem fall sofort)
+-feedback und delta werden (überflüssigerweise) mit an python geschickt
+-FPS und python responsetime werden EIGENTLICH in unity geprintet, da aber da noch nen Unity-bug vorliegt (https://fogbugz.unity3d.com/default.asp?935432_h1bir10rkmbc658k), ist das momentan ausgeschlatet. Standard ist übrigens 10 msperframe.
+-die beiden minimap-scripts sind jetzt besser mit garbage-colleciotn undso.
+
+
+-------------------------------------------------------TODO---------------------------------------------------------------
+-Agent has model expliziter machen, die model-logik noch mehr von der agent-logik trennen 
+-LearnRemote (siehe unten)
+-containers so weit wie möglich los werden
+-ddpg, of course
+-efficientmemory für den rl_agent
+-learnparallel nochmal testen
+-prioritized replay & sv-train (einfach ne funktion haben, die anhand des states nen value berechnet (zunächst einfach nach strecken-percentage, EINFACH!)
+-das offpolicy-svtrain ermöglichen: Wenn memoryauslesen = read_supervised auslesen, dann kann man off-policy supervised-rl-learnen. momentan ist inputvalesen = read_supervised auslesen --> read_supervised als off-policy server (supervised als off-policy rl?)
+-die das read-action vom read_supervised muss dafür auch optional als argmax sein
+----
+-unity's interpolate last results-funktion noch machen
+-unity das auto doch als 2 filmen lassen
+-nutze ich bei sowohl DQN als auch DDPG tf.layers, oder bei beiden direktes tf?
+-macht es sinn dass die kernel_size.z < #historyframes ist? geht das? gibts das?
+-mit anderen größen rumprobieren, auch mal mit 3 oder 4 convlayers, auch mal mit weight-decay, batchnorm, ...!
+-mehrere agents ausprobieren: 
+	-Das Netzwerk dass die Action auch mit rein bekommt
+	-Nen Netzwerk dass die letzten Action 2 mal rein bekommt, und in nem separate Path die Wahrscheinlichkeit errechnet die Action überhaupt zu ändern 
+	-Die Mariokartnet - separate rl Trial for brraking (bei jedem dieser Netze) 
+	-Nen Netzwerk dass nicht die Action selbst berechnet, sondern nur die Änderung im Gegensatz zur vorherigen action 
+
+
+
+Logik hinter LearnRemote:
+Alex für nen interface für aws Fragen, sodass ich reinschreiben kann dass man das auch mit Mac und aws Instanz über Netzwerk machen kann...... 
+Diese aws remote dann ersetzt dann den learning thread. Anstelle von dem gibt es dann 2, Sockets jeweils an nem extra Port, für Sender und Receiver zum remote. Der Sender sendet dann minutlixh (wären dann 600) ein batch an neuen memory Einträgen die in ner bisschen angepassten memorylist ankommen, und der remote sendet dann wiederum alle x Iterationen alle traibable (und ein mal am Anfang alle inklusive untraunables) weights. Dafür im dqn.py loadfromweughts Methode. Vielleicht auch nur reinschreiben 
