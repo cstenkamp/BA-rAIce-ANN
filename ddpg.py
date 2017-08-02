@@ -9,7 +9,7 @@ import tensorflow as tf
 import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' #so that TF doesn't show its warnings
 import numpy as np
-from tensorflow.contrib.framework import get_variables
+from tensorflow.contrib.framework import get_variables #unterschied zu tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope='')?
 from collections import namedtuple
 #====own classes====
 import read_supervised

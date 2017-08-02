@@ -32,9 +32,9 @@ class AbstractAgent(object):
         self.usesConv = True
         self.conv_stacked = True
         self.ff_stacked = False
-        self.network = None
+        self.model = None
         self.graph = tf.Graph()
-        self.network = dqn.CNN
+        self.usesnetwork = dqn.CNN
         
     ##############functions that should be impemented##########
     def checkIfInference(self):
@@ -84,7 +84,7 @@ class AbstractAgent(object):
             initializer = tf.random_uniform_initializer(-0.1, 0.1) #bei variablescopes kann ich nen default-initializer für get_variables festlegen
                               
             with tf.variable_scope("model", reuse=None, initializer=initializer):
-                sv_model = self.network(self.sv_conf, self, mode="sv_train")
+                sv_model = self.usesnetwork(self.sv_conf, self, mode="sv_train")
               
             init = tf.global_variables_initializer()
             sv_model.trainvars["global_step"] = sv_model.global_step #TODO: try to remove this and see if it still works, cause it should
@@ -209,7 +209,6 @@ class AbstractRLAgent(AbstractAgent):
             #values for evalation:
             stateval = self.target_cnn.calculate_value(self.session, conv_inputs, self.makeNetUsableOtherInputs(other_inputs))[0]
             self.episode_statevals.append(stateval)
-            
             
             
             if self.containers.showscreen:
@@ -373,11 +372,11 @@ class AbstractRLAgent(AbstractAgent):
         self.episodes += 1        
         
         mem_epi_slice = self.memory.endEpisode() #bei actions, nach denen resettet wurde, soll er den folgestate nicht mehr beachten (später gucken wenn reset=true dann setze Q_DECAY auf quasi 100%)
-        self.print_episodeVals(mem_epi_slice, gameState, reason)
+        self.eval_episodeVals(mem_epi_slice, gameState, reason)
 
 
 
-    def print_episodeVals(self, mem_epi_slice, gameState, endReason):
+    def eval_episodeVals(self, mem_epi_slice, gameState, endReason):
         avg_rewards = round(self.memory.average_rewards(mem_epi_slice[0], mem_epi_slice[1]),3)
         avg_values = round(np.mean(np.array(self.episode_statevals)), 3)
         self.episode_statevals = []
@@ -390,7 +389,7 @@ class AbstractRLAgent(AbstractAgent):
         if self.containers.showscreen:
                 infoscreen.print("rw:", avg_rewards, "Q:", avg_values, "prg:", progress, "time:", laptime, "(v)" if valid else "", containers=self.containers, wname="Last Epsd")
         
-        self.evaluator.add_episode(mem_epi_slice[0], mem_epi_slice[1], self.episodes, self.numIterations, self.reinfNetSteps, [avg_rewards, avg_values, progress, laptime])
+        self.evaluator.add_episode([avg_rewards, avg_values, progress, laptime], nr=self.episodes, startMemoryEntry=mem_epi_slice[0], endMemoryEntry=mem_epi_slice[1], endIteration=self.numIterations, reinfNetSteps=self.reinfNetSteps, endEpsilon=self.epsilon)
         
                          
             

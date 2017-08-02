@@ -32,9 +32,9 @@ class evaluator():
         
 
             
-    def _add_episode(self, startMemNum, endMemNum, epiNum, endIt, reinfnetsteps, new_vals):
+    def _add_episode(self, new_vals, **kwargs):
         if self.save_xml:
-            self.xml_saver.add_episode(startMemNum, endMemNum, epiNum, endIt, reinfnetsteps, new_vals)
+            self.xml_saver.add_episode(new_vals, **kwargs)
             self.xml_saver.save()
         
         try:
@@ -44,8 +44,8 @@ class evaluator():
             pass #manchmal klappt das updatennicht, ist aber egal, dann halt beim nächstem mal
 
 
-    def add_episode(self, *args):
-        t1 = threading.Thread(target=self._add_episode, args=(args))
+    def add_episode(self, *args, **kwargs):
+        t1 = threading.Thread(target=self._add_episode, args=(args), kwargs=(kwargs))
         t1.start()
 
 
@@ -79,18 +79,18 @@ class xml_saver():
             f.write(prettytree)
 
         
-    def add_episode(self, startMemNum, endMemNum, epiNum, endIt, reinfnetsteps, new_vals):
+    def add_episode(self, new_vals, **kwargs):
         runResults = self._create_or_load_child(self.run, "runResults")
-        new_vals = [str(i) for i in new_vals]
-        new_vals = dict(zip(self.labels, new_vals))
-        currep = ET.SubElement(runResults, "Episode", nr=str(epiNum), startMemoryEntry=str(startMemNum), endMemoryEntry=str(endMemNum), endIteration=str(endIt), reifNetSteps=str(reinfnetsteps))
+        new_vals = dict(zip(self.labels, [str(i) for i in new_vals]))
+        kwargs = dict([a, str(x)] for a, x in kwargs.items())
+        currep = ET.SubElement(runResults, "Episode", kwargs)
         for key, val in list(new_vals.items()):
             ET.SubElement(currep, key).text = str(val)        
 
     def add_targetnetcopy(self, **kwargs):
         kwargs = dict([a, str(x)] for a, x in kwargs.items())
-        runResults = self._create_or_load_child(self.run, "targetnetcopys")
-        ET.SubElement(runResults, "targetnetcopys", **kwargs)           
+        targetnetcopys = self._create_or_load_child(self.run, "targetnetcopys")
+        ET.SubElement(targetnetcopys, "targetnetcopy", **kwargs)           
 
     ###############
 

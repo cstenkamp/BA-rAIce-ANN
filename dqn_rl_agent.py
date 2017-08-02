@@ -74,7 +74,7 @@ class Agent(AbstractRLAgent):
 
     def performNetwork(self, conv_inputs, inflated_other_inputs, stands_inputs):        
         super().performNetwork(conv_inputs, inflated_other_inputs, stands_inputs)
-        onehot, qvals = self.target_cnn.run_inference(self.session, conv_inputs, inflated_other_inputs, stands_inputs) #former is argmax, latter are individual qvals
+        onehot, qvals = self.target_model.run_inference(self.session, conv_inputs, inflated_other_inputs, stands_inputs) #former is argmax, latter are individual qvals
         throttle, brake, steer = self.dediscretize(onehot[0])
         result = "["+str(throttle)+", "+str(brake)+", "+str(steer)+"]"
         self.showqvals(qvals[0])
@@ -143,13 +143,13 @@ class Agent(AbstractRLAgent):
             self.saveNet()
             
             
-        if self.learn_which == self.online_cnn:
+        if self.learn_which == self.online_model:
             if self.reinfNetSteps % self.rl_conf.copy_target_all == 0:
                 self.lock.acquire()
                 self.freezeEverything("saveNet")
                 with self.graph.as_default():    
                     self.session.run([target.assign(online) for online, target in zip(get_variables(scope="onlinenet"), get_variables(scope="targetnet"))]) #TODO: wenns ewig lnicht funktioniert, das hier mal umdrehen
-                    self.session.run(self.target_cnn.global_step.assign(self.online_cnn.global_step)) 
+                    self.session.run(self.target_model.global_step.assign(self.online_model.global_step)) 
                 if self.containers.showscreen:
                     infoscreen.print(time.strftime("%H:%M:%S", time.gmtime()), containers= self.containers, wname="Last Targetnet Copy")
                 self.unFreezeEverything("saveNet")
@@ -161,9 +161,9 @@ class Agent(AbstractRLAgent):
                 
     def saveNet(self):
         self.freezeEverything("saveNet")
-        self.online_cnn.saveNumIters(self.session, self.numIterations)
+        self.online_model.saveNumIters(self.session, self.numIterations)
         checkpoint_file = os.path.join(self.folder(self.rl_conf.checkpoint_dir), 'model.ckpt')
-        self.saver.save(self.session, checkpoint_file, global_step=self.online_cnn.global_step)       
+        self.saver.save(self.session, checkpoint_file, global_step=self.online_model.global_step) #remember that this saver only handles the online-net  
         if self.rl_conf.save_memory_with_checkpoint:
             self.memory.save_memory()
         print("saved", level=6)
@@ -183,15 +183,16 @@ class Agent(AbstractRLAgent):
         self.session = tf.Session(config=tf.ConfigProto(intra_op_parallelism_threads=2, allow_soft_placement=True))
         ckpt = tf.train.get_checkpoint_state(self.folder(self.rl_conf.checkpoint_dir))
         initializer = tf.random_uniform_initializer(-0.1, 0.1)
+        self.numIterations = 0
         
         if self.start_fresh:
             with tf.variable_scope("targetnet", reuse=None, initializer=initializer):
-                self.target_cnn = self.network(self.rl_conf, self, mode="inference", rl_not_trainables=DONT_TRAIN)                
+                self.target_model = self.usesnetwork(self.rl_conf, self, mode="inference", rl_not_trainables=DONT_TRAIN)                
             with tf.variable_scope("onlinenet", reuse=None, initializer=initializer):
-                self.online_cnn = self.network(self.rl_conf, self, mode="rl_train", rl_not_trainables=DONT_TRAIN)                
+                self.online_model = self.usesnetwork(self.rl_conf, self, mode="rl_train", rl_not_trainables=DONT_TRAIN)                
             init = tf.global_variables_initializer()
             self.session.run(init)        
-            self.saver = tf.train.Saver(max_to_keep=1)
+            self.saver = tf.train.Saver(max_to_keep=1, var_list=get_variables("onlinenet"))
             
             self.session.run([target.assign(online) for online, target in zip(get_variables(scope="onlinenet"), get_variables(scope="targetnet"))])
             
@@ -205,15 +206,15 @@ class Agent(AbstractRLAgent):
         else:
             if not (ckpt and ckpt.model_checkpoint_path):
     
-                self.network(self.rl_conf, self, mode="sv_train")
+                self.usesnetwork(self.rl_conf, self, mode="sv_train")
                 varlist = dict(zip([v.name for v in tf.trainable_variables()], tf.trainable_variables()))
                 varlist = list(eraseneccessary(varlist, DONT_COPY_WEIGHTS).keys())
                 print(varlist)
                 
                 with tf.variable_scope("targetnet", reuse=None, initializer=initializer):
-                    self.target_cnn = self.network(self.rl_conf, self, mode="inference", rl_not_trainables=DONT_TRAIN)                
+                    self.target_model = self.usesnetwork(self.rl_conf, self, mode="inference", rl_not_trainables=DONT_TRAIN)                
                 with tf.variable_scope("onlinenet", reuse=None, initializer=initializer):
-                    self.online_cnn = self.network(self.rl_conf, self, mode="rl_train", rl_not_trainables=DONT_TRAIN)                
+                    self.online_model = self.usesnetwork(self.rl_conf, self, mode="rl_train", rl_not_trainables=DONT_TRAIN)                
                         
                 restorevars = {}
                 for i in tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope='targetnet'):
@@ -229,22 +230,22 @@ class Agent(AbstractRLAgent):
                 self.pretrainsaver.restore(self.session, sv_ckpt.model_checkpoint_path)
                 self.session.run([online.assign(target) for online, target in zip(get_variables(scope="onlinenet"), get_variables(scope="targetnet"))]) #muss so rum hier!
 
-                self.saver = tf.train.Saver(max_to_keep=1)
+                self.saver = tf.train.Saver(max_to_keep=1, var_list=get_variables("onlinenet"))
                 
             else:
                 with tf.variable_scope("targetnet", reuse=None, initializer=initializer):
-                    self.target_cnn = self.network(self.rl_conf, self, mode="inference", rl_not_trainables=DONT_TRAIN)
+                    self.target_model = self.usesnetwork(self.rl_conf, self, mode="inference", rl_not_trainables=DONT_TRAIN)
                 with tf.variable_scope("onlinenet", reuse=None, initializer=initializer):
-                    self.online_cnn = self.network(self.rl_conf, self, mode="rl_train", rl_not_trainables=DONT_TRAIN)                                            
-                self.saver = tf.train.Saver(max_to_keep=1)
+                    self.online_model = self.usesnetwork(self.rl_conf, self, mode="rl_train", rl_not_trainables=DONT_TRAIN)                                            
+                self.saver = tf.train.Saver(max_to_keep=1, var_list=get_variables("onlinenet"))
                 self.saver.restore(self.session, ckpt.model_checkpoint_path)
-                self.session.run([online.assign(target) for online, target in zip(get_variables(scope="onlinenet"), get_variables(scope="targetnet"))])
-                self.reinfNetSteps = self.online_cnn.global_step.eval(session=self.session)
-                self.numIterations = self.online_cnn.restoreNumIters(self.session)
+                self.session.run([target.assign(online) for online, target in zip(get_variables(scope="onlinenet"), get_variables(scope="targetnet"))])
+                self.reinfNetSteps = self.online_model.global_step.eval(session=self.session)
+                self.numIterations = self.online_model.restoreNumIters(self.session)
         
-        print("network initialized with %i reinfNetSteps already run." % self.reinfNetSteps)
+        print("network initialized with %i reinfNetSteps and %i Iterations already run." % (self.reinfNetSteps, self.numIterations))
         self.isinitialized = True
-        self.learn_which = self.online_cnn  
+        self.learn_which = self.online_model  
             
             
             

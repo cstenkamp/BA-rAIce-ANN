@@ -83,8 +83,8 @@ class RL_Config(Config):
     minepsilon = 0.005
     batchsize = 32
     q_decay = 0.99
-    checkpointall = 300 #RLsteps, not inferences!
-    copy_target_all = 200
+    checkpointall = 10 #RLsteps, not inferences!
+    copy_target_all = 10
     
     save_memory_with_checkpoint = True
     save_memory_on_exit = False
@@ -97,7 +97,7 @@ class RL_Config(Config):
     keep_memory = True
     train_for = sys.maxsize-1
        
-    ForEveryInf, ComesALearn = 400, 100
+    ForEveryInf, ComesALearn = 40, 10
     learnMode = "between" #"parallel", "between", "remote" (the latter is tobedone)
    
     #re-uses history_frame_nr, image_dims, steering_steps, speed_neurons, INCLUDE_ACCPLUSBREAK, SPEED_AS_ONEHOT

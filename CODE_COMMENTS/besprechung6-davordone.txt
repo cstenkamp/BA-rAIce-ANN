@@ -37,7 +37,18 @@
 -feedback und delta werden (überflüssigerweise) mit an python geschickt
 -FPS und python responsetime werden EIGENTLICH in unity geprintet, da aber da noch nen Unity-bug vorliegt (https://fogbugz.unity3d.com/default.asp?935432_h1bir10rkmbc658k), ist das momentan ausgeschlatet. Standard ist übrigens 10 msperframe.
 -die beiden minimap-scripts sind jetzt besser mit garbage-colleciotn undso.
-
+-Delta und Feedback vom Recorder mitsenden und mitaufzeichnen und beim sv-lernen aufzeichnen
+-CTime für CreationTime kam dazu, Time hießt STime für SendTime
+-Progress (P) enthält nun auch Laptime, #runden, fValidLap
+-see curb as off-option
+-"V" für visionvector wurde umbenannt in "V1", "V2" steht für den zweiten visionfec
+-unity nutzt exakt x sekunden nach empfangen von python ein result
+-alle vektoren die im Lernen mitgespeichert werden werden auch in der XML mitgespeichert
+-Ob mit oder ohne zweite cam im filename... UND auch ins XML beim supervised
+-Wheel Position Bug fixed
+-senden und laden doch wieder von der gleichen variable abhängig (get rid of make_vecs_all)
+-beim zeitabhängingen senden und laden stacked sich das jetzt nicht mehr wenn der mal zu langsam war, da er jetzt immer einfach die x mal den erlaubten time-delay draufrechnet
+-dass er nichts sendet wenn sich nciths verändert ist auch quatsch, da dann das inputval gedöns falsch ist
 
 -------------------------------------------------------TODO---------------------------------------------------------------
 -Agent has model expliziter machen, die model-logik noch mehr von der agent-logik trennen 
@@ -60,7 +71,7 @@
 	-Nen Netzwerk dass die letzten Action 2 mal rein bekommt, und in nem separate Path die Wahrscheinlichkeit errechnet die Action überhaupt zu ändern 
 	-Die Mariokartnet - separate rl Trial for brraking (bei jedem dieser Netze) 
 	-Nen Netzwerk dass nicht die Action selbst berechnet, sondern nur die Änderung im Gegensatz zur vorherigen action 
-
+-agents gegeneinander testen! blind vs sehend, dqn vs ddpg, recurrent (mit action drin) vs not, eine cam vs 2 cams, 
 
 
 Logik hinter LearnRemote:
