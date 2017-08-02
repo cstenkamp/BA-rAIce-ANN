@@ -179,7 +179,7 @@ class Agent(AbstractRLAgent):
 
     def initNetwork(self): 
         super().initNetwork()
-        
+         
         self.session = tf.Session(config=tf.ConfigProto(intra_op_parallelism_threads=2, allow_soft_placement=True))
         ckpt = tf.train.get_checkpoint_state(self.folder(self.rl_conf.checkpoint_dir))
         initializer = tf.random_uniform_initializer(-0.1, 0.1)
