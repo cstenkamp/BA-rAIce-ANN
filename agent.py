@@ -15,7 +15,8 @@ from myprint import myprint as print
 import read_supervised
 import infoscreen
 import dqn
-from plotter import plotter
+from evaluator import evaluator
+from inefficientmemory import Memory
 
 ###################################################################################################
 
@@ -163,16 +164,20 @@ class AbstractRLAgent(AbstractAgent):
         self.last_random_timestamp = 0
         self.last_random_action = None
         self.repeat_random_action_for = 1000
-        self.memory = None
+        if not hasattr(self, "memory"): #einige agents haben bereits eine andere memory-implmentation, die sollste nicht überschreiben
+            self.memory = Memory(rl_conf.memorysize, containers, self)
         self.reinfNetSteps = 0
         self.numInferencesAfterLearn = 0
         self.numLearnAfterInference = 0
         self.freezeInfReasons = []
-        self.freezeLearnReasons = []
+        self.freezeLearnReasons = [] 
         self.wallhitPunish = 1;
         self.wrongDirPunish = 10;
-        self.episode_statevals = []
-        self.plotter = plotter(self.containers.show_plots, 100, "Evaluation "+self.name, True, ["average rewards", "average Q-vals", "progress", "laptime"], [1, self.sv_conf.MAXSPEED, 100, self.rl_conf.time_ends_episode])
+        self.episode_statevals = [] 
+        self.episodes = 0
+        self.evaluator = evaluator(self.containers, self, self.containers.show_plots, self.containers.sv_conf.save_xml,      \
+                                   ["average rewards", "average Q-vals",      "progress", "laptime"                       ], \
+                                   [1,                 self.sv_conf.MAXSPEED, 100,         self.rl_conf.time_ends_episode ] )
 
     def addToMemory(self, gameState, pastState): 
         assert self.memory is not None, "It should be specified in server right afterwards"
@@ -359,8 +364,7 @@ class AbstractRLAgent(AbstractAgent):
 
     def endEpisode(self, reason, gameState):  #reasons are: turnedaround, timeover, resetserver, wallhit, rounddone
         self.resetUnityAndServer()
-        
-        
+        self.episodes += 1        
         if self.containers.usememory: #bei actions, nach denen resettet wurde, soll er den folgestate nicht mehr beachten (später gucken wenn reset=true dann setze Q_DECAY auf quasi 100%)
             episode = self.memory.endEpisode()
             self.print_episodeVals(episode, gameState, reason)
@@ -368,7 +372,7 @@ class AbstractRLAgent(AbstractAgent):
 
 
     def print_episodeVals(self, mem_epi_slice, gameState, endReason):
-        avg_rewards = round(self.memory.average_rewards(mem_epi_slice),3)
+        avg_rewards = round(self.memory.average_rewards(slice(*mem_epi_slice)),3)
         avg_values = round(np.mean(np.array(self.episode_statevals)), 3)
         self.episode_statevals = []
         #other evaluation-values we need are time the agent took and percentage the agent made. However, becasue those values are not neccessarily
@@ -378,8 +382,10 @@ class AbstractRLAgent(AbstractAgent):
         valid = gameState[2][0].ProgressVec.fValidLap
         print("Avg-r:",avg_rewards,"Avg-Q:",avg_values,"progress:",progress,"laptime:",laptime,"(valid)" if valid else "", level=8)
         if self.containers.showscreen:
-                infoscreen.print("r:", avg_rewards, "Q:", avg_values, "p:", progress, "time:", laptime, "(v)" if valid else "", containers=self.containers, wname="Last Epsd")
-        self.plotter.update(avg_rewards, avg_values, progress, laptime)
+                infoscreen.print("rw:", avg_rewards, "Q:", avg_values, "prg:", progress, "time:", laptime, "(v)" if valid else "", containers=self.containers, wname="Last Epsd")
+        
+        self.evaluator.add_episode(mem_epi_slice[0], mem_epi_slice[1], self.episodes, self.numIterations, self.reinfNetSteps, [avg_rewards, avg_values, progress, laptime])
+        
                          
             
             

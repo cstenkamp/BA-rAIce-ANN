@@ -15,6 +15,7 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 from agent import AbstractRLAgent
 from myprint import myprint as print
 import infoscreen
+from efficientmemory import Memory as Efficientmemory
 
 current_milli_time = lambda: int(round(time.time() * 1000))
 
@@ -27,6 +28,8 @@ ONLY_START = False
 class Agent(AbstractRLAgent):
     def __init__(self, sv_conf, containers, rl_conf, start_fresh, *args, **kwargs):
         self.name = __file__[__file__.rfind("\\")+1:__file__.rfind(".")]
+#        if containers.usememory: #dieser agent unterstützt das effiziente memory
+#            self.memory = Efficientmemory(rl_conf.memorysize, containers, self, rl_conf.history_frame_nr, rl_conf.use_constantbutbigmemory) 
         super().__init__(sv_conf, containers, rl_conf, *args, **kwargs)
         self.ff_inputsize = 30
         self.epsilon = self.rl_conf.startepsilon
@@ -142,16 +145,17 @@ class Agent(AbstractRLAgent):
             
             
         if self.learn_which == self.online_cnn:
-            self.lock.acquire()
             if self.reinfNetSteps % self.rl_conf.copy_target_all == 0:
+                self.lock.acquire()
                 self.freezeEverything("saveNet")
                 with self.graph.as_default():    
                     self.session.run([target.assign(online) for online, target in zip(get_variables(scope="onlinenet"), get_variables(scope="targetnet"))])
                 if self.containers.showscreen:
                     infoscreen.print(time.strftime("%H:%M:%S", time.gmtime()), containers= self.containers, wname="Last Targetnet Copy")
                 self.unFreezeEverything("saveNet")
-            self.lock.release()
+                self.lock.release()
         
+                self.evaluator.add_targetnetcopy(ReinfNetSteps=self.reinfNetSteps, MemNum=self.memory._pointer, Iterations=self.numIterations, Episode=self.episodes)
 
                         
                 

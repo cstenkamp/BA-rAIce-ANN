@@ -17,8 +17,6 @@ from read_supervised import empty_inputs, make_otherinputs
 import infoscreen
 import config
 from read_supervised import cutoutandreturnvectors
-from inefficientmemory import Memory as Precisememory
-from efficientmemory import Memory as Efficientmemory
 #die Agents werden untem imported, da sie abhängig von sys-commands sind
 
 
@@ -536,18 +534,11 @@ def main(sv_conf, rl_conf, agentname, no_learn, show_screen, show_plots, start_f
         rl_conf.startepsilon = 0 #or whatever random-value will be in 
             
     agentclass = __import__(agentname).Agent
-    agent = agentclass(sv_conf, containers, rl_conf, start_fresh) 
-    containers.usememory = hasattr(agent, "memory")
-    
-    containers.myAgent = agent
+    containers.myAgent = agentclass(sv_conf, containers, rl_conf, start_fresh) 
+    containers.usememory = hasattr(containers.myAgent, "memory") #das sollte der agent eig selbst übernehmen
     containers.myAgent.initNetwork()
+    
                                                                           
-    if containers.usememory:
-        if rl_conf.use_efficientmemory: #das soll noch anders, der agent soll jeweils sagen ob und welches efficientmemory er unterstützt
-            containers.myAgent.memory = Efficientmemory(rl_conf.memorysize, containers, rl_conf.history_frame_nr, rl_conf.use_constantbutbigmemory) 
-        else:
-            containers.myAgent.memory = Precisememory(rl_conf.memorysize, containers)
-
     containers.inputval = InputValContainer(sv_conf, rl_conf, containers, containers.myAgent)
     containers.outputval = OutputValContainer(containers)  
         

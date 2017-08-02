@@ -25,10 +25,11 @@ SAVENAME = "memory"
 
 #TODO: not sure how thread-safe this is.. https://stackoverflow.com/questions/13610654/how-to-make-built-in-containers-sets-dicts-lists-thread-safe
 class Memory(object):
-    def __init__(self, capacity, containers):
+    def __init__(self, capacity, containers, agent):
         self._lock = lock = threading.Lock()
         self.containers = containers
-        self.memorypath = self.containers.myAgent.folder(self.containers.rl_conf.memory_dir)
+        self.agent = agent
+        self.memorypath = self.agent.folder(self.containers.rl_conf.memory_dir)
         self.capacity = capacity
         self._buffer = [None]*capacity #deque(elemtype, capacity)
         self._pointer = 0
@@ -41,7 +42,7 @@ class Memory(object):
             if os.path.exists(self.memorypath+SAVENAME+'.pkl'):
                 try:
                     if os.path.getsize(self.memorypath+SAVENAME+'.pkl') > 1024 and (os.path.getsize(self.memorypath+SAVENAME+'.pkl') >= os.path.getsize(self.memorypath+SAVENAME+'TMP.pkl')-10240):
-                        self.pload(self.memorypath+SAVENAME+'.pkl', containers, lock)
+                        self.pload(self.memorypath+SAVENAME+'.pkl', containers, agent, lock)
                         print("Loading existing memory with", self._size, "entries", level=10)
                     else:
                         corrupted = True
@@ -52,7 +53,7 @@ class Memory(object):
                 if os.path.exists(self.memorypath+SAVENAME+'TMP.pkl'):
                     if os.path.getsize(self.memorypath+SAVENAME+'TMP.pkl') > 1024: 
                         shutil.copyfile(self.memorypath+SAVENAME+'TMP.pkl', self.memorypath+SAVENAME+'.pkl')
-                        self.pload(self.memorypath+SAVENAME+'.pkl', containers, lock)
+                        self.pload(self.memorypath+SAVENAME+'.pkl', containers, agent, lock)
                         print("Loading Backup-Memory with", self._size, "entries", level=10)
         
         self.epistart = self._pointer
@@ -81,14 +82,14 @@ class Memory(object):
     def save_memory(self):
         with self._lock:
             if self.containers.keep_memory: 
-                self.containers.myAgent.freezeEverything("saveMem")
+                self.agent.freezeEverything("saveMem")
                 self.psave(self.memorypath+SAVENAME+'TMP.pkl')
                 print("Saving Memory at",time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime()), level=6)
                 if os.path.exists(self.memorypath+SAVENAME+'TMP.pkl'):
                     if os.path.getsize(self.memorypath+SAVENAME+'TMP.pkl') > 1024: #only use it as memory if you weren't disturbed while writing
                         shutil.copyfile(self.memorypath+SAVENAME+'TMP.pkl', self.memorypath+SAVENAME+'.pkl')
                 self.lastsavetime = current_milli_time()
-                self.containers.myAgent.unFreezeEverything("saveMem")   
+                self.agent.unFreezeEverything("saveMem")   
            
             
     def __getitem__(self, index):
@@ -129,7 +130,7 @@ class Memory(object):
             
         prev_epistart = self.epistart
         self.epistart = self._pointer
-        return slice(prev_epistart, self.epistart)
+        return prev_epistart, self.epistart
             
         
     def punishLastAction(self, howmuch):
@@ -152,11 +153,12 @@ class Memory(object):
             
         
     #loads everything and then overwrites containers, locks, and lastsavetime, as those are pointers/relative to now.
-    def pload(self, filename, containers, lock):
+    def pload(self, filename, containers, agent, lock):
         with open(filename, 'rb') as f:
             tmp_dict = pickle.load(f)
         self.__dict__.update(tmp_dict) 
         self.containers = containers
+        self.agent = agent
         self._lock = lock
         self.lastsavetime = current_milli_time()
     
@@ -165,6 +167,7 @@ class Memory(object):
         odict = self.__dict__.copy() # copy the dict since we change it
         del odict['containers']  
         del odict['_lock']  
+        del odict['agent']
         with open(filename, 'wb') as f:
             pickle.dump(odict, f, pickle.HIGHEST_PROTOCOL)
 

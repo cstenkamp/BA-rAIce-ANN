@@ -13,6 +13,8 @@ class Config(object):
     LapFolderName = "SavedLaps/"
     log_dir = "SV_SummaryLogs/"  
     checkpoint_dir = "SV_Checkpoints/"
+    save_xml = True
+    xml_dir = "./"
     #wir haben super-über-ordner für RLLearn, checkpoint, summarylogdir & memory für jede kombi aus hframes, secondcam, mspersec
     
     history_frame_nr = 4 #incl. dem jetzigem!
@@ -86,14 +88,13 @@ class RL_Config(Config):
     
     replaystartsize = 0
     memorysize = 30000
-    use_efficientmemory = False
     use_constantbutbigmemory = False
     visionvecdtype = np.int8 #wäre es np.bool würde er den rand als street sehen!
     keep_memory = True
     saveMemoryAllMins = 45
     train_for = sys.maxsize-1
        
-    ForEveryInf, ComesALearn = 4000, 10
+    ForEveryInf, ComesALearn = 200, 10
     learnMode = "between" #"parallel", "between", "remote" (the latter is tobedone)
    
     #re-uses history_frame_nr, image_dims, steering_steps, speed_neurons, INCLUDE_ACCPLUSBREAK, SPEED_AS_ONEHOT
