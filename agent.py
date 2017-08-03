@@ -128,7 +128,7 @@ class AbstractAgent(object):
                 ev, loss, _ = sv_model.run_sv_eval(sess, self, stateBatch)
                 print("Result of evaluation:", level=8)
                 print("Loss: %.2f,  Correct inferences: %.2f%%" % (loss, ev*100), level=10)
-
+        return sv_model
     
     #################### Helper functions#######################
     def dediscretize(self, discrete):

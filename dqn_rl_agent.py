@@ -266,19 +266,12 @@ class Agent(AbstractRLAgent):
         
         qs, max_qs = network.rl_learn_forward(self.session, old_convs, old_other, new_convs, new_other)
         
-        max_qs = np.ones_like(max_qs)*999
+        consider_stateval = list(np.ones(len(resetafters))-np.array(resetafters, dtype=int))
         
-        resetafters = list(np.ones(len(resetafters))-np.array(resetafters, dtype=int))
-        #Bellman equation: Q(s,a) = r + y(max(Q(s',a')))
-        #qs[np.arange(BATCHSIZE), argmactions] += learning_rate*((rewards + Q_DECAY * max_qs * (not resetafters))-qs[np.arange(BATCHSIZE), argmactions]) #so wäre es wenn wir kein ANN nutzen würden!
-        #https://medium.com/emergent-future/simple-reinforcement-learning-with-tensorflow-part-0-q-learning-with-tables-and-neural-networks-d195264329d0
-        qs = np.zeros_like(qs)
-#        qs[np.arange(batchsize), argmactions] = 1 #rewards + self.rl_conf.q_decay * max_qs * (not resetafters) #wenn anschließend resettet wurde war es bspw ein wallhit und damit quasi ein final state
+        # wenn folgende Zeile da ist klappt es einigermassen, sonst nicht
+        # qs = np.zeros_like(qs)
         
-        qs[np.arange(batchsize), argmactions] = rewards + self.rl_conf.q_decay * max_qs * (not resetafters) #wenn anschließend resettet wurde war es bspw ein wallhit und damit quasi ein final state
-                     
-#        print(qs)   
-#        time.sleep(5)
+        qs[np.arange(batchsize), argmactions] = rewards + self.rl_conf.q_decay * max_qs * consider_stateval #wenn anschließend resettet wurde war es bspw ein wallhit und damit quasi ein final state
           
         network.rl_learn_step(self.session, old_convs, old_other, qs)
            
