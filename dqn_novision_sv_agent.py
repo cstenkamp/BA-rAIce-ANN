@@ -16,7 +16,7 @@ from myprint import myprint as print
 
 class Agent(AbstractAgent):
     def __init__(self, config, containers, rl_config_dummy=None, startfresh_dummy=False, *args, **kwargs): #der dummy ist da damit man playnet & reinfnet austauschen kan
-        self.name = __file__[__file__.rfind("\\")+1:__file__.rfind(".")]
+        self.name = __file__[__file__.rfind("/")+1:__file__.rfind(".")]
         super().__init__(config, containers, *args, **kwargs)
         self.ff_inputsize = 49
         self.usesConv = False

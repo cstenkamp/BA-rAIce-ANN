@@ -498,6 +498,7 @@ class Containers():
         self.myAgent = None
         self.wrongdirectiontime = 0
         self.freezeInf = self.freezeLearn = False
+        self.show_plots = False #delete this line
         
         
 def create_socket(port):
@@ -514,7 +515,6 @@ def main(sv_conf, rl_conf, agentname, no_learn, show_screen, show_plots, start_f
     containers.sv_conf = sv_conf
     containers.rl_conf = rl_conf   
     containers.no_learn = no_learn
-    containers.start_fresh = start_fresh
     containers.show_plots = show_plots
     
     containers.receiverportsocket = create_socket(TCP_RECEIVER_PORT)

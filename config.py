@@ -46,6 +46,7 @@ class Config(object):
     lrdecayafter = iterations//2  #//3 für 90, 120
     minimal_lr = 1e-6 #mit diesen settings kommt er auf 0.01 loss, 99.7% correct inferences
     checkpointall = 10
+    summaryall = False
     
     def has_gpu(self):
         from tensorflow.python.client import device_lib

@@ -10,7 +10,6 @@ from myprint import myprint as print
 
 flatten = lambda l: [item for sublist in l for item in sublist]
 DELAY_TO_CONSIDER = 100
-FOLDERNAME = "SavedLaps/"
 
 ###############################################################################
 ###############################################################################
@@ -433,25 +432,43 @@ def readTwoDArrayFromString(string):
     return np.array(tmpreturn)
 
 
+def create_QLearnInputs_from_SVStateBatch(presentStates, pastStates, agent):
+    presentStates = list(zip(*presentStates))
+    pastStates = list(zip(*pastStates))
+    
+    old_convs = np.array([agent.getAgentState(*i)[0] for i in pastStates])
+    old_other = np.array([agent.makeNetUsableOtherInputs(agent.getAgentState(*i)[1]) for i in pastStates])
+    oldAgentStates = (old_convs, old_other)
+    
+    new_convs = np.array([agent.getAgentState(*i)[0] for i in presentStates])
+    new_other = np.array([agent.makeNetUsableOtherInputs(agent.getAgentState(*i)[1]) for i in presentStates])
+    newAgentStates = (new_convs, new_other)
+    
+    ArgmActions = [np.argmax(agent.makeNetUsableAction(agent.getAction(*i))) for i in pastStates]
+    rewards = [agent.calculateReward(*i) for i in presentStates]
+    resetAfters = [False]*len(pastStates)
+    return oldAgentStates, newAgentStates, np.array(ArgmActions), np.array(rewards), np.array(resetAfters)
+
+
 ###############################################################################
 ###############################################################################
 
-    
+
 if __name__ == '__main__':    
     import config
-    config = config.Config()
-    import agent
-    agent = agent.AbstractAgent(config, None)
-    trackingpoints = TPList(FOLDERNAME, config.use_second_camera, config.msperframe, config.steering_steps, config.INCLUDE_ACCPLUSBREAK)
+    sv_conf = config.Config()
+    import dqn_rl_agent
+    from server import Containers
+    myAgent = dqn_rl_agent.Agent(sv_conf, Containers(), config.RL_Config(), True)
+    trackingpoints = TPList(sv_conf.LapFolderName, sv_conf.use_second_camera, sv_conf.msperframe, sv_conf.steering_steps, sv_conf.INCLUDE_ACCPLUSBREAK)
     print("Number of samples:",trackingpoints.numsamples)
     while trackingpoints.has_next(10):
-        presentState, pastState = trackingpoints.next_batch(config, agent, 10)
+        presentStates, pastStates = trackingpoints.next_batch(sv_conf, myAgent, 10)
     
-    vvec, vvec2, otherinputs, actions = presentState
-    print(vvec.shape)
-    print(vvec2.shape)
-    print(otherinputs.shape)
-    print(actions.shape)
+    create_QLearnInputs_from_SVStateBatch(presentStates, pastStates, myAgent)
     
-    #sooo jetzt hab ich hier eine liste an trackingpoints. was ich tun muss ist jetzt dem vectors per ANN die brake, steering, throttlevalues zuzuweisen.
-    
+       
+#    print(vvec.shape)
+#    print(vvec2.shape)
+#    print(len(otherinputs))
+#    print(actions.shape)  

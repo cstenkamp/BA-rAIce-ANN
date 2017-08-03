@@ -27,7 +27,7 @@ ONLY_START = False
 
 class Agent(AbstractRLAgent):
     def __init__(self, sv_conf, containers, rl_conf, start_fresh, *args, **kwargs):
-        self.name = __file__[__file__.rfind("\\")+1:__file__.rfind(".")]
+        self.name = "dqn_rl_agent" #__file__[__file__.rfind("\\")+1:__file__.rfind(".")]
 #        self.memory = Efficientmemory(rl_conf.memorysize, rl_conf, self, rl_conf.history_frame_nr, rl_conf.use_constantbutbigmemory) #dieser agent unterstützt das effiziente memory
         super().__init__(sv_conf, containers, rl_conf, *args, **kwargs)
         self.ff_inputsize = 30
@@ -102,46 +102,45 @@ class Agent(AbstractRLAgent):
             infoscreen.print(toprint, containers= self.containers, wname="Current Q Vals")
 
     #dauerlearnANN kommt aus der AbstractRLAgent
-                
-                
-    def learnANN(self):   
-        batch = self.memory.sample(self.rl_conf.batchsize)
-        
+            
+
+    def create_QLearnInputs_from_MemoryBatch(self, memoryBatch):
         if self.SAVE_ACTION_AS_ARGMAX: 
-            oldstates, argmactions, rewards, newstates, resetafters = zip(*batch)      
+            oldstates, argmactions, rewards, newstates, resetafters = zip(*memoryBatch)      
             actions = np.zeros([len(argmactions), ((4*self.rl_conf.steering_steps) if self.rl_conf.INCLUDE_ACCPLUSBREAK else (3*self.rl_conf.steering_steps))])
             for i in range(len(argmactions)):
                 actions[i][argmactions[i]] = 1
                 actualActions = [self.dediscretize(i) for i in actions]
         else:
-            oldstates, actualActions, rewards, newstates, resetafters = zip(*batch)      
+            oldstates, actualActions, rewards, newstates, resetafters = zip(*memoryBatch)      
             actualActions = [self.memory.make_floats_from_long(i) for i in actualActions]
             actions = [self.discretize(throttle, brake, steer) for throttle, brake, steer in actualActions]
             argmactions = [np.argmax(i) for i in actions]
-        #soooo, actions[x] = [0,0,1,0,0], argmactions[x] = 2, actualAcitions[x] = (1,0,0)
+        #soooo, actions[x] = [0,0,1,0,0], argmactions[x] = 2, actualActions[x] = (1,0,0)
         
         old_convs = np.array([i[0] for i in oldstates])
         old_other = np.array([self.makeNetUsableOtherInputs(i[1]) for i in oldstates])
         new_convs = np.array([i[0] for i in newstates])
         new_other = np.array([self.makeNetUsableOtherInputs(i[1]) for i in newstates])
-
-        qs, max_qs = self.learn_which.rl_learn_forward(self.session, old_convs, old_other, new_convs, new_other)
-  
-        #Bellman equation: Q(s,a) = r + y(max(Q(s',a')))
-        #qs[np.arange(BATCHSIZE), argmactions] += learning_rate*((rewards + Q_DECAY * max_qs * (not resetafters))-qs[np.arange(BATCHSIZE), argmactions]) #so wäre es wenn wir kein ANN nutzen würden!
-        #https://medium.com/emergent-future/simple-reinforcement-learning-with-tensorflow-part-0-q-learning-with-tables-and-neural-networks-d195264329d0
-        qs[np.arange(self.rl_conf.batchsize), argmactions] = rewards + self.rl_conf.q_decay * max_qs * (not resetafters) #wenn anschließend resettet wurde war es bspw ein wallhit und damit quasi ein final state
-                   
-        self.learn_which.rl_learn_step(self.session, old_convs, old_other, qs)
-           
+        
+        oldAgentStates = (old_convs, old_other)
+        newAgentStates = (new_convs, new_other)
+        return np.array(oldAgentStates), np.array(newAgentStates), np.array(argmactions), np.array(rewards), np.array(resetafters)
+        
+                
+    
+    def learnANN(self):   
+        batch = self.memory.sample(self.rl_conf.batchsize)
+        QLearnInputs = self.create_QLearnInputs_from_MemoryBatch(batch)
+        self.q_learn(self.learn_which, *QLearnInputs)
+        
         self.reinfNetSteps += 1
         print("ReinfLearnSteps:", self.reinfNetSteps, level=3)
         if self.containers.showscreen:
             infoscreen.print(self.reinfNetSteps, "Iterations: >"+str(self.numIterations), containers= self.containers, wname="ReinfLearnSteps")
                     
         if self.reinfNetSteps % self.rl_conf.checkpointall == 0 or self.numIterations >= self.rl_conf.train_for:
-            self.saveNet()
-            
+            self.saveNet()      
             
         if self.learn_which == self.online_model:
             if self.reinfNetSteps % self.rl_conf.copy_target_all == 0:
@@ -157,7 +156,27 @@ class Agent(AbstractRLAgent):
         
                 self.evaluator.add_targetnetcopy(ReinfNetSteps=self.reinfNetSteps, MemNum=self.memory._pointer, Iterations=self.numIterations, Episode=self.episodes)
 
-                        
+
+
+    #requires as input the AGENT-State and the AGENT-paststate: old_convs, old_other, new_convs, new_other
+    def q_learn(self, network, old_inputs, new_inputs, argmactions, rewards, resetafters):
+        
+        old_convs, old_other = old_inputs
+        new_convs, new_other = new_inputs
+        
+        qs, max_qs = network.rl_learn_forward(self.session, old_convs, old_other, new_convs, new_other)
+  
+        #Bellman equation: Q(s,a) = r + y(max(Q(s',a')))
+        #qs[np.arange(BATCHSIZE), argmactions] += learning_rate*((rewards + Q_DECAY * max_qs * (not resetafters))-qs[np.arange(BATCHSIZE), argmactions]) #so wäre es wenn wir kein ANN nutzen würden!
+        #https://medium.com/emergent-future/simple-reinforcement-learning-with-tensorflow-part-0-q-learning-with-tables-and-neural-networks-d195264329d0
+        qs[np.arange(self.rl_conf.batchsize), argmactions] = rewards + self.rl_conf.q_decay * max_qs * (not resetafters) #wenn anschließend resettet wurde war es bspw ein wallhit und damit quasi ein final state
+                   
+        self.learn_which.rl_learn_step(self.session, old_convs, old_other, qs)
+           
+
+                
+                
+                
                 
     def saveNet(self):
         self.freezeEverything("saveNet")
@@ -186,6 +205,7 @@ class Agent(AbstractRLAgent):
         self.numIterations = 0
         
         if self.start_fresh:
+            print("Initializing the network from scratch", level=9)
             with tf.variable_scope("targetnet", reuse=None, initializer=initializer):
                 self.target_model = self.usesnetwork(self.rl_conf, self, mode="inference", rl_not_trainables=DONT_TRAIN)                
             with tf.variable_scope("onlinenet", reuse=None, initializer=initializer):
@@ -205,7 +225,8 @@ class Agent(AbstractRLAgent):
             
         else:
             if not (ckpt and ckpt.model_checkpoint_path):
-    
+                
+                print("Initializing the network from supervised pre-training", level=9)
                 self.usesnetwork(self.rl_conf, self, mode="sv_train")
                 varlist = dict(zip([v.name for v in tf.trainable_variables()], tf.trainable_variables()))
                 varlist = list(eraseneccessary(varlist, DONT_COPY_WEIGHTS).keys())
@@ -222,6 +243,8 @@ class Agent(AbstractRLAgent):
                         if j in i.name:
                             restorevars[i.name.replace("targetnet/","").replace(":0","")] = i
                 
+                print(restorevars)
+                
                 init = tf.global_variables_initializer()
                 self.session.run(init)        
                 self.pretrainsaver = tf.train.Saver(restorevars)
@@ -233,6 +256,7 @@ class Agent(AbstractRLAgent):
                 self.saver = tf.train.Saver(max_to_keep=1, var_list=get_variables("onlinenet"))
                 
             else:
+                print("Initializing the network from the last RL-Save", level=9)
                 with tf.variable_scope("targetnet", reuse=None, initializer=initializer):
                     self.target_model = self.usesnetwork(self.rl_conf, self, mode="inference", rl_not_trainables=DONT_TRAIN)
                 with tf.variable_scope("onlinenet", reuse=None, initializer=initializer):
@@ -276,5 +300,33 @@ if __name__ == '__main__':
     import config
     sv_conf = config.Config()
     rl_conf = config.RL_Config()
-    agent = Agent(sv_conf, None, rl_conf, True)
-    agent.svTrain()
+    from server import Containers; containers = Containers(); containers.sv_conf = sv_conf; containers.rl_conf = rl_conf
+    
+    myAgent = Agent(sv_conf, containers, rl_conf, True)
+#    myAgent.svTrain()
+    
+
+    myAgent.initNetwork() #created online_model emptily, dank start_fresh
+    #jetzt ne inference q-value anschauen, dann versuchen nen bisschen off-policy rl zu lernen, dann wieder inference anschauen
+    
+    import read_supervised
+    trackingpoints = read_supervised.TPList(sv_conf.LapFolderName, sv_conf.use_second_camera, sv_conf.msperframe, sv_conf.steering_steps, sv_conf.INCLUDE_ACCPLUSBREAK)
+    
+    #evaluating it BEFORE
+    trackingpoints.reset_batch()
+    stateBatch, _ = trackingpoints.next_batch(sv_conf, myAgent, trackingpoints.numsamples)
+    ev, loss, _ = myAgent.online_model.run_sv_eval(myAgent.session, myAgent, stateBatch)                       
+    print("Loss: %.2f,  Correct inferences: %.2f%%" % (loss, ev*100), level=10)                      
+
+    #doing stuff
+    trackingpoints.reset_batch()
+    print("Number of samples:",trackingpoints.numsamples)
+    while trackingpoints.has_next(10):
+        QLearnInputs = read_supervised.create_QLearnInputs_from_SVStateBatch(*trackingpoints.next_batch(sv_conf, myAgent, 10), myAgent)
+        myAgent.q_learn(myAgent.online_model, *QLearnInputs)
+
+    #evaluating it AFTER
+    trackingpoints.reset_batch()
+    stateBatch, _ = trackingpoints.next_batch(sv_conf, myAgent, trackingpoints.numsamples)
+    ev, loss, _ = myAgent.online_model.run_sv_eval(myAgent.session, myAgent, stateBatch)                       
+    print("Loss: %.2f,  Correct inferences: %.2f%%" % (loss, ev*100), level=10)                      

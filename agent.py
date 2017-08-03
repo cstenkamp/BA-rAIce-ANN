@@ -10,6 +10,7 @@ import numpy as np
 import threading
 import tensorflow as tf
 import os
+from copy import deepcopy
 ####own classes###
 from myprint import myprint as print
 import read_supervised
@@ -81,55 +82,53 @@ class AbstractAgent(object):
             trackingpoints = read_supervised.TPList(self.sv_conf.LapFolderName, self.sv_conf.use_second_camera, self.sv_conf.msperframe, self.sv_conf.steering_steps, self.sv_conf.INCLUDE_ACCPLUSBREAK)
             print("Number of samples: %s | Tracking every %s ms with %s historyframes" % (trackingpoints.numsamples, str(self.sv_conf.msperframe), str(self.sv_conf.history_frame_nr)), level=10)
 
-            initializer = tf.random_uniform_initializer(-0.1, 0.1) #bei variablescopes kann ich nen default-initializer für get_variables festlegen
-                              
-            with tf.variable_scope("model", reuse=None, initializer=initializer):
+            with tf.variable_scope("model", reuse=None, initializer=tf.random_uniform_initializer(-0.1, 0.1)):
                 sv_model = self.usesnetwork(self.sv_conf, self, mode="sv_train")
-              
-            init = tf.global_variables_initializer()
-            sv_model.trainvars["global_step"] = sv_model.global_step #TODO: try to remove this and see if it still works, cause it should
-            saver = tf.train.Saver(sv_model.trainvars, max_to_keep=2)
-    
+            
+            saver = tf.train.Saver(sv_model.trainvars, max_to_keep=2) 
             with tf.Session(config=tf.ConfigProto(allow_soft_placement=True)) as sess:
                 summary_writer = tf.summary.FileWriter(self.folder(self.sv_conf.log_dir), sess.graph) #aus dem toy-example
                 
-                sess.run(init)
+                sess.run(tf.global_variables_initializer())
                 ckpt = tf.train.get_checkpoint_state(self.folder(self.sv_conf.checkpoint_dir))
                 if ckpt and ckpt.model_checkpoint_path:
                     saver.restore(sess, ckpt.model_checkpoint_path)
+                    sess.run(sv_model.sv_global_step.assign(int(os.path.basename(ckpt.model_checkpoint_path).split('-')[1]))) #I don't save the global_step as global_step, only in the number
                     stepsPerIt = trackingpoints.numsamples//self.sv_conf.batch_size
-                    already_run_iterations = sv_model.global_step.eval()//stepsPerIt
-                    sv_model.iterations = already_run_iterations
+                    already_run_iterations = sv_model.sv_global_step.eval()//stepsPerIt
+                    sv_model.sv_iterations = already_run_iterations
                     print("Restored checkpoint with",already_run_iterations,"Iterations run already", level=10) 
                 else:
                     already_run_iterations = 0
                     
                 num_iterations = self.sv_conf.iterations - already_run_iterations
                 print("Running for",num_iterations,"further iterations" if already_run_iterations>0 else "iterations", level=10)
-                for _ in range(num_iterations):
+                
+                for _ in range(num_iterations):     
+                    sv_model.sv_iterations += 1
                     start_time = time.time()
-    
-                    step = sv_model.global_step.eval() 
-                    train_loss = sv_model.run_sv_train_epoch(sess, trackingpoints, summary_writer)
                     
+                    trackingpoints.reset_batch()
+                    train_loss = 0
+                    for i in range(trackingpoints.num_batches(self.sv_conf.batch_size)):           
+                        stateBatch, _ = trackingpoints.next_batch(self.sv_conf, self, self.sv_conf.batch_size)
+                        train_loss += sv_model.run_sv_train_step(sess, self, stateBatch, summary_writer)
+                                        
                     savedpoint = ""
-                    if sv_model.iterations % self.sv_conf.checkpointall == 0 or sv_model.iterations == self.sv_conf.iterations:
+                    if sv_model.sv_iterations % self.sv_conf.checkpointall == 0 or sv_model.sv_iterations == self.sv_conf.iterations:
                         checkpoint_file = os.path.join(self.folder(self.sv_conf.checkpoint_dir), 'model.ckpt')
-                        saver.save(sess, checkpoint_file, global_step=step)       
+                        saver.save(sess, checkpoint_file, global_step=sv_model.sv_global_step)       
                         savedpoint = "(checkpoint saved)"
                     
-                    print('Iteration %3d (step %4d): loss = %.2f (%.3f sec)' % (sv_model.iterations, step+1, train_loss, time.time()-start_time), savedpoint, level=8)
+                    print('Iteration %3d (step %4d): loss = %.2f (%.3f sec)' % (sv_model.sv_iterations, sv_model.sv_global_step.eval(), train_loss, time.time()-start_time), savedpoint, level=8)
                     
                     
-                ev, loss, _ = sv_model.run_sv_eval(sess, trackingpoints)
+                trackingpoints.reset_batch()
+                stateBatch, _ = trackingpoints.next_batch(self.sv_conf, self, trackingpoints.numsamples)
+                ev, loss, _ = sv_model.run_sv_eval(sess, self, stateBatch)
                 print("Result of evaluation:", level=8)
                 print("Loss: %.2f,  Correct inferences: %.2f%%" % (loss, ev*100), level=10)
-    
-    #            dataset.reset_batch()
-    #            _, visionvec, _, _ = dataset.next_batch(config, 1)
-    #            visionvec = np.array(visionvec[0])
-    #            print(cnn.run_inference(sess,visionvec, self.stacksize))
- 
+
     
     #################### Helper functions#######################
     def dediscretize(self, discrete):
@@ -179,7 +178,7 @@ class AbstractRLAgent(AbstractAgent):
         self.numLearnAfterInference = 0
         self.last_random_timestamp = 0
         self.last_random_action = None
-        self.evaluator = evaluator(self.containers, self, self.containers.show_plots, self.containers.sv_conf.save_xml,      \
+        self.evaluator = evaluator(self.containers, self, self.containers.show_plots, self.sv_conf.save_xml,      \
                                    ["average rewards", "average Q-vals",      "progress", "laptime"                       ], \
                                    [1,                 self.sv_conf.MAXSPEED, 100,         self.rl_conf.time_ends_episode ] )
     
@@ -295,7 +294,9 @@ class AbstractRLAgent(AbstractAgent):
             self.saveNet()
             print("Stopping learning because I'm done after", self.numIterations, "inferences", level=10)
         
-        
+           
+    
+    
 
     def saveNet(self):
         raise NotImplementedError
