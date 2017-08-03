@@ -9,7 +9,6 @@ import numpy as np
 import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' #so that TF doesn't show its warnings
 import math
-from tensorflow.contrib.framework import get_variables
 #====own classes====
 from myprint import myprint as print
 from utils import convolutional_layer, fc_layer, variable_summary
@@ -49,27 +48,27 @@ class CNN(object): #learning on gpu and application on cpu: https://stackoverflo
         self.accuracy = self._evaluation(self.onehot, self.targets)  #TODO: DELETE THIS LINE!!!!
 
 
-#        if mode == "inference":
-#            device = "/gpu:0" if (config.has_gpu() and (hasattr(config, "learnMode") and config.learnMode == "between")) else "/cpu:0"
-#            with tf.device(device): #less overhead by not trying to switch to gpu
-#                self.conv_inputs, self.ff_inputs, self.targets, self.stands_inputs = self._set_placeholders(mode, final_neuron_num)
-#                self.q, self.onehot, self.q_max, self.action = self._inference(self.conv_inputs, self.ff_inputs, final_neuron_num, rl_not_trainables, False, self.stands_inputs) 
-#                self.accuracy = self._evaluation(self.onehot, self.targets)  #TODO: DELETE THIS LINE!!!!
-#        else:
-#            device = "/gpu:0" if config.has_gpu() else "/cpu:0"
-#            with tf.device(device):
-#                self.conv_inputs, self.ff_inputs, self.targets, self.stands_inputs = self._set_placeholders(mode, final_neuron_num)
-#                self.q, self.onehot, self.q_max, self.action = self._inference(self.conv_inputs, self.ff_inputs, final_neuron_num, rl_not_trainables, True)         
-#                if mode == "rl_train":
-#                    self.q_targets = tf.placeholder(tf.float32, shape=[None, final_neuron_num], name="q_targets")
-#                    self.loss = self._rl_loss_func(self.q, self.q_targets)
-#                    self.train_op = self._training(self.loss, config.initial_lr, self.global_step, optimizer_arg = tf.train.RMSPropOptimizer)     
-#                    self.accuracy = self._evaluation(self.onehot, self.targets)  #TODO: DELETE THIS LINE!!!!
-#                elif mode == "sv_train":
-#                    self.loss = self._loss_func(self.q, self.targets)
-#                    self.train_op = self._training(self.loss, config.initial_lr, self.sv_global_step, optimizer_arg = tf.train.AdamOptimizer) 
-#                    self.accuracy = self._evaluation(self.onehot, self.targets)    
-#        self.summary = tf.summary.merge_all() #für TensorBoard    
+        if mode == "inference":
+            device = "/gpu:0" if (config.has_gpu() and (hasattr(config, "learnMode") and config.learnMode == "between")) else "/cpu:0"
+            with tf.device(device): #less overhead by not trying to switch to gpu
+                self.conv_inputs, self.ff_inputs, self.targets, self.stands_inputs = self._set_placeholders(mode, final_neuron_num)
+                self.q, self.onehot, self.q_max, self.action = self._inference(self.conv_inputs, self.ff_inputs, final_neuron_num, rl_not_trainables, False, self.stands_inputs) 
+                self.accuracy = self._evaluation(self.onehot, self.targets)  #TODO: DELETE THIS LINE!!!!
+        else:
+            device = "/gpu:0" if config.has_gpu() else "/cpu:0"
+            with tf.device(device):
+                self.conv_inputs, self.ff_inputs, self.targets, self.stands_inputs = self._set_placeholders(mode, final_neuron_num)
+                self.q, self.onehot, self.q_max, self.action = self._inference(self.conv_inputs, self.ff_inputs, final_neuron_num, rl_not_trainables, True)         
+                if mode == "rl_train":
+                    self.q_targets = tf.placeholder(tf.float32, shape=[None, final_neuron_num], name="q_targets")
+                    self.loss = self._rl_loss_func(self.q, self.q_targets)
+                    self.train_op = self._training(self.loss, config.initial_lr, self.global_step, optimizer_arg = tf.train.RMSPropOptimizer)     
+                    self.accuracy = self._evaluation(self.onehot, self.targets)  #TODO: DELETE THIS LINE!!!!
+                elif mode == "sv_train":
+                    self.loss = self._loss_func(self.q, self.targets)
+                    self.train_op = self._training(self.loss, config.initial_lr, self.sv_global_step, optimizer_arg = tf.train.AdamOptimizer) 
+                    self.accuracy = self._evaluation(self.onehot, self.targets)    
+        self.summary = tf.summary.merge_all() #für TensorBoard    
         
     
     def _set_placeholders(self, mode, final_neuron_num):
