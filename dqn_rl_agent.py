@@ -41,7 +41,7 @@ class Agent(AbstractRLAgent):
     def runInference(self, gameState, pastState):
         if self.isinitialized and self.checkIfInference():
             self.preRunInference(gameState, pastState) #eg. adds to memory
-            conv_inputs, other_inputs, stands_inputs = self.getAgentState(*gameState)
+            conv_inputs, other_inputs, _ = self.getAgentState(*gameState)
                 
 #            ##############DELETETHISPART############## #to check how fast the pure socket connection, whithout ANN, is
 #            self.containers.outputval.send_via_senderthread("[1, 0, 0]", self.containers.inputval.CTimestamp, self.containers.inputval.STimestamp)
@@ -49,7 +49,7 @@ class Agent(AbstractRLAgent):
 #            ##############DELETETHISPART ENDE##############
             
             if self.canLearn() and np.random.random() > self.epsilon:
-                toUse, toSave = self.performNetwork(conv_inputs, self.makeNetUsableOtherInputs(other_inputs), stands_inputs)
+                toUse, toSave = self.performNetwork(conv_inputs, self.makeNetUsableOtherInputs(other_inputs))
             else:
                 toUse, toSave = self.randomAction(gameState[2][0].SpeedSteer.velocity, self.rl_conf)
             
@@ -72,9 +72,9 @@ class Agent(AbstractRLAgent):
     
 
 
-    def performNetwork(self, conv_inputs, inflated_other_inputs, stands_inputs):        
-        super().performNetwork(conv_inputs, inflated_other_inputs, stands_inputs)
-        onehot, qvals = self.target_model.run_inference(self.session, conv_inputs, inflated_other_inputs, stands_inputs) #former is argmax, latter are individual qvals
+    def performNetwork(self, conv_inputs, inflated_other_inputs):        
+        super().performNetwork(conv_inputs, inflated_other_inputs)
+        onehot, qvals = self.target_model.run_inference(self.session, conv_inputs, inflated_other_inputs) #former is argmax, latter are individual qvals
         throttle, brake, steer = self.dediscretize(onehot[0])
         result = "["+str(throttle)+", "+str(brake)+", "+str(steer)+"]"
         self.showqvals(qvals[0])
@@ -164,7 +164,6 @@ class Agent(AbstractRLAgent):
                 
     def saveNet(self):
 #        self.freezeEverything("saveNet") #TODO: diese auskommentierungen wieder weg!
-        self.online_model.saveNumIters(self.session, self.numIterations)
         checkpoint_file = os.path.join(self.folder(self.rl_conf.checkpoint_dir), 'model.ckpt')
         self.saver.save(self.session, checkpoint_file, global_step=self.online_model.global_step) #remember that this saver only handles the online-net  
 #        if self.rl_conf.save_memory_with_checkpoint:
@@ -191,60 +190,25 @@ class Agent(AbstractRLAgent):
         if self.start_fresh:
             print("Initializing the network from scratch", level=9)
             with tf.variable_scope("targetnet", reuse=None, initializer=initializer):
-                self.target_model = self.usesnetwork(self.rl_conf, self, mode="inference", rl_not_trainables=DONT_TRAIN)                
+                self.target_model = self.usesnetwork(self.rl_conf, self)                
             with tf.variable_scope("onlinenet", reuse=None, initializer=initializer):
-                self.online_model = self.usesnetwork(self.rl_conf, self, mode="rl_train", rl_not_trainables=DONT_TRAIN)                
+                self.online_model = self.usesnetwork(self.rl_conf, self)                
             init = tf.global_variables_initializer()
             self.session.run(init)        
             self.saver = tf.train.Saver(max_to_keep=1, var_list=get_variables("onlinenet"))
             
             self.session.run([target.assign(online) for online, target in zip(get_variables(scope="onlinenet"), get_variables(scope="targetnet"))])
             
-#                for i in tf.trainable_variables():
-#                    if i.name.startswith("learning"):
-#                        for j in tf.trainable_variables():
-#                            if (not(j.name.startswith("learning"))) and j.name[j.name.find("/"):] == i.name[i.name.find("/"):]:
-#                                #self.session.run(i.assign(j));
-#                                print(i.eval(session=self.session) == j.eval(session=self.session), level=10)
+#           
             
         else:
-            if not (ckpt and ckpt.model_checkpoint_path):
-                
-                print("Initializing the network from supervised pre-training", level=9)
-                self.usesnetwork(self.rl_conf, self, mode="sv_train")
-                varlist = dict(zip([v.name for v in tf.trainable_variables()], tf.trainable_variables()))
-                varlist = list(eraseneccessary(varlist, DONT_COPY_WEIGHTS).keys())
-                print(varlist)
-                
-                with tf.variable_scope("targetnet", reuse=None, initializer=initializer):
-                    self.target_model = self.usesnetwork(self.rl_conf, self, mode="inference", rl_not_trainables=DONT_TRAIN)                
-                with tf.variable_scope("onlinenet", reuse=None, initializer=initializer):
-                    self.online_model = self.usesnetwork(self.rl_conf, self, mode="rl_train", rl_not_trainables=DONT_TRAIN)                
-                        
-                restorevars = {}
-                for i in tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope='targetnet'):
-                    for j in varlist:
-                        if j in i.name:
-                            restorevars[i.name.replace("targetnet/","").replace(":0","")] = i
-                
-                print(restorevars)
-                
-                init = tf.global_variables_initializer()
-                self.session.run(init)        
-                self.pretrainsaver = tf.train.Saver(restorevars)
-                sv_ckpt = tf.train.get_checkpoint_state(self.folder(self.sv_conf.checkpoint_dir))
-                assert sv_ckpt and sv_ckpt.model_checkpoint_path, "I need at least a supervisedly pre-trained net!"
-                self.pretrainsaver.restore(self.session, sv_ckpt.model_checkpoint_path)
-                self.session.run([online.assign(target) for online, target in zip(get_variables(scope="onlinenet"), get_variables(scope="targetnet"))]) #muss so rum hier!
-
-                self.saver = tf.train.Saver(max_to_keep=1, var_list=get_variables("onlinenet"))
-                
-            else:
+            if ckpt and ckpt.model_checkpoint_path:
+             
                 print("Initializing the network from the last RL-Save", level=9)
                 with tf.variable_scope("targetnet", reuse=None, initializer=initializer):
-                    self.target_model = self.usesnetwork(self.rl_conf, self, mode="inference", rl_not_trainables=DONT_TRAIN)
+                    self.target_model = self.usesnetwork(self.rl_conf, self)
                 with tf.variable_scope("onlinenet", reuse=None, initializer=initializer):
-                    self.online_model = self.usesnetwork(self.rl_conf, self, mode="rl_train", rl_not_trainables=DONT_TRAIN)                                            
+                    self.online_model = self.usesnetwork(self.rl_conf, self)                                            
                 self.saver = tf.train.Saver(max_to_keep=1, var_list=get_variables("onlinenet"))
                 self.saver.restore(self.session, ckpt.model_checkpoint_path)
                 self.session.run([target.assign(online) for online, target in zip(get_variables(scope="onlinenet"), get_variables(scope="targetnet"))])
@@ -266,10 +230,10 @@ class Agent(AbstractRLAgent):
         
         qs, max_qs = network.rl_learn_forward(self.session, old_convs, old_other, new_convs, new_other)
         
-        consider_stateval = list(np.ones(len(resetafters))-np.array(resetafters, dtype=int))
+        consider_stateval = list(np.ones_like(resetafters)-np.array(resetafters, dtype=int))
         
         # wenn folgende Zeile da ist klappt es einigermassen, sonst nicht
-        # qs = np.zeros_like(qs)
+        qs = np.zeros_like(qs)
         
         qs[np.arange(batchsize), argmactions] = rewards + self.rl_conf.q_decay * max_qs * consider_stateval #wenn anschließend resettet wurde war es bspw ein wallhit und damit quasi ein final state
           

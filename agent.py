@@ -15,7 +15,7 @@ from copy import deepcopy
 from myprint import myprint as print
 import read_supervised
 import infoscreen
-import dqn
+from sharable import Model
 from evaluator import evaluator
 from inefficientmemory import Memory
 
@@ -35,7 +35,7 @@ class AbstractAgent(object):
         self.ff_stacked = False
         self.model = None
         self.graph = tf.Graph()
-        self.usesnetwork = dqn.CNN
+        self.usesnetwork = Model
         
     ##############functions that should be impemented##########
     def checkIfInference(self):
@@ -77,59 +77,6 @@ class AbstractAgent(object):
         raise NotImplementedError    
 
 
-    def svTrain(self):
-        with self.graph.as_default(): 
-            trackingpoints = read_supervised.TPList(self.sv_conf.LapFolderName, self.sv_conf.use_second_camera, self.sv_conf.msperframe, self.sv_conf.steering_steps, self.sv_conf.INCLUDE_ACCPLUSBREAK)
-            print("Number of samples: %s | Tracking every %s ms with %s historyframes" % (trackingpoints.numsamples, str(self.sv_conf.msperframe), str(self.sv_conf.history_frame_nr)), level=10)
-
-            with tf.variable_scope("model", reuse=None, initializer=tf.random_uniform_initializer(-0.1, 0.1)):
-                sv_model = self.usesnetwork(self.sv_conf, self, mode="sv_train")
-            
-            saver = tf.train.Saver(sv_model.trainvars, max_to_keep=2) 
-            with tf.Session(config=tf.ConfigProto(allow_soft_placement=True)) as sess:
-                summary_writer = tf.summary.FileWriter(self.folder(self.sv_conf.log_dir), sess.graph) #aus dem toy-example
-                
-                sess.run(tf.global_variables_initializer())
-                ckpt = tf.train.get_checkpoint_state(self.folder(self.sv_conf.checkpoint_dir))
-                if ckpt and ckpt.model_checkpoint_path:
-                    saver.restore(sess, ckpt.model_checkpoint_path)
-                    sess.run(sv_model.sv_global_step.assign(int(os.path.basename(ckpt.model_checkpoint_path).split('-')[1]))) #I don't save the global_step as global_step, only in the number
-                    stepsPerIt = trackingpoints.numsamples//self.sv_conf.batch_size
-                    already_run_iterations = sv_model.sv_global_step.eval()//stepsPerIt
-                    sv_model.sv_iterations = already_run_iterations
-                    print("Restored checkpoint with",already_run_iterations,"Iterations run already", level=10) 
-                else:
-                    already_run_iterations = 0
-                    
-                num_iterations = self.sv_conf.iterations - already_run_iterations
-                print("Running for",num_iterations,"further iterations" if already_run_iterations>0 else "iterations", level=10)
-                
-                for _ in range(num_iterations):     
-                    sv_model.sv_iterations += 1
-                    start_time = time.time()
-                    
-                    trackingpoints.reset_batch()
-                    train_loss = 0
-                    for i in range(trackingpoints.num_batches(self.sv_conf.batch_size)):           
-                        stateBatch, _ = trackingpoints.next_batch(self.sv_conf, self, self.sv_conf.batch_size)
-                        train_loss += sv_model.run_sv_train_step(sess, self, stateBatch, summary_writer)
-                                        
-                    savedpoint = ""
-                    if sv_model.sv_iterations % self.sv_conf.checkpointall == 0 or sv_model.sv_iterations == self.sv_conf.iterations:
-                        checkpoint_file = os.path.join(self.folder(self.sv_conf.checkpoint_dir), 'model.ckpt')
-                        saver.save(sess, checkpoint_file, global_step=sv_model.sv_global_step)       
-                        savedpoint = "(checkpoint saved)"
-                    
-                    print('Iteration %3d (step %4d): loss = %.2f (%.3f sec)' % (sv_model.sv_iterations, sv_model.sv_global_step.eval(), train_loss, time.time()-start_time), savedpoint, level=8)
-                    
-                    
-                trackingpoints.reset_batch()
-                stateBatch, _ = trackingpoints.next_batch(self.sv_conf, self, trackingpoints.numsamples)
-                ev, loss, _ = sv_model.run_sv_eval(sess, self, stateBatch)
-                print("Result of evaluation:", level=8)
-                print("Loss: %.2f,  Correct inferences: %.2f%%" % (loss, ev*100), level=10)
-        return sv_model
-    
     #################### Helper functions#######################
     def dediscretize(self, discrete):
         return read_supervised.dediscretize_all(discrete, self.sv_conf.steering_steps, self.sv_conf.INCLUDE_ACCPLUSBREAK)
@@ -307,21 +254,6 @@ class AbstractRLAgent(AbstractAgent):
 
 
         
-#    def calculateReward(self, inputval):
-#        progress_old = inputval.previous_otherinputs.ProgressVec.Progress
-#        progress_new = inputval.otherinputs.ProgressVec.Progress
-#        if progress_old > 90 and progress_new < 10:
-#            progress_new += 100
-#        progress = round(progress_new-progress_old,3)*200
-#        
-#        stay_on_street = abs(inputval.otherinputs.CenterDist)
-#        #wenn er >= 10 war und seitdem keine neue action kam, muss er >= 10 bleiben!
-#        
-#        stay_on_street = round(0 if stay_on_street < 5 else self.wallhitPunish if stay_on_street >= 10 else stay_on_street-5, 3)
-#        
-#        return progress-stay_on_street
-
-
     def calculateReward(self, vvec1_hist, vvec2_hist, otherinput_hist, action_hist):
         stay_on_street = abs(otherinput_hist[0].CenterDist)
         stay_on_street = round(0 if stay_on_street < 5 else self.wallhitPunish if stay_on_street >= 10 else stay_on_street/10, 3)

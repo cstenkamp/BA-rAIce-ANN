@@ -447,7 +447,7 @@ def create_QLearnInputs_from_SVStateBatch(presentStates, pastStates, agent):
     ArgmActions = [np.argmax(agent.makeNetUsableAction(agent.getAction(*i))) for i in pastStates]
     rewards = [agent.calculateReward(*i) for i in presentStates]
     resetAfters = [False]*len(pastStates)
-    return oldAgentStates, newAgentStates, np.array(ArgmActions), np.array(rewards), np.array(resetAfters)
+    return oldAgentStates, np.array(ArgmActions), np.array(rewards), newAgentStates, np.array(resetAfters) #wurde angepasst auf s,a,r,s2,t
 
 
 ###############################################################################

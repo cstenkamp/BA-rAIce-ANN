@@ -4,7 +4,7 @@ old_checkpoints
 **.pkl
 **.rar
 data*
-
+dqn/
 
 #-----------------------------------------DELPHI-FILES-----------------------------------------
 # Delphi compiler-generated binaries (safe to delete)
