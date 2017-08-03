@@ -36,26 +36,38 @@ class CNN(object): #learning on gpu and application on cpu: https://stackoverflo
         self.sv_global_step = tf.Variable(0, dtype=tf.int32, name='sv_global_step', trainable=False)
         self._prepareNumIters()
         self.global_step = tf.Variable(0, dtype=tf.int32, name='global_step', trainable=False) #https://github.com/tensorflow/tensorflow/blob/master/tensorflow/examples/tutorials/mnist/mnist.py 
-        if mode == "inference":
-            device = "/gpu:0" if (config.has_gpu() and (hasattr(config, "learnMode") and config.learnMode == "between")) else "/cpu:0"
-            with tf.device(device): #less overhead by not trying to switch to gpu
-                self.conv_inputs, self.ff_inputs, self.targets, self.stands_inputs = self._set_placeholders(mode, final_neuron_num)
-                self.q, self.onehot, self.q_max, self.action = self._inference(self.conv_inputs, self.ff_inputs, final_neuron_num, rl_not_trainables, False, self.stands_inputs) 
-                self.accuracy = self._evaluation(self.onehot, self.targets)  #TODO: DELETE THIS LINE!!!!
-        else:
-            device = "/gpu:0" if config.has_gpu() else "/cpu:0"
-            with tf.device(device):
-                self.conv_inputs, self.ff_inputs, self.targets, self.stands_inputs = self._set_placeholders(mode, final_neuron_num)
-                self.q, self.onehot, self.q_max, self.action = self._inference(self.conv_inputs, self.ff_inputs, final_neuron_num, rl_not_trainables, True)         
-                if mode == "rl_train":
-                    self.loss = self._rl_loss_func(self.q, self.targets)
-                    self.train_op = self._training(self.loss, config.initial_lr, self.global_step, optimizer_arg = tf.train.RMSPropOptimizer)     
-                    self.accuracy = self._evaluation(self.onehot, self.targets)  #TODO: DELETE THIS LINE!!!!
-                elif mode == "sv_train":
-                    self.loss = self._loss_func(self.q, self.targets)
-                    self.train_op = self._training(self.loss, config.initial_lr, self.sv_global_step, optimizer_arg = tf.train.AdamOptimizer) 
-                    self.accuracy = self._evaluation(self.onehot, self.targets)    
-        self.summary = tf.summary.merge_all() #für TensorBoard    
+            
+        ####
+        self.conv_inputs, self.ff_inputs, self.targets, self.stands_inputs = self._set_placeholders(mode, final_neuron_num)
+        self.q, self.onehot, self.q_max, self.action = self._inference(self.conv_inputs, self.ff_inputs, final_neuron_num, rl_not_trainables, True)   
+        self.q_targets = tf.placeholder(tf.float32, shape=[None, final_neuron_num], name="q_targets")
+        self.loss = tf.reduce_mean(tf.square(self.q_targets - self.q))
+        self.trainer = tf.train.AdamOptimizer(learning_rate=0.00001)
+        self.train_op = self.trainer.minimize(self.loss)
+        self.accuracy = self._evaluation(self.onehot, self.targets)  #TODO: DELETE THIS LINE!!!!
+
+
+#        if mode == "inference":
+#            device = "/gpu:0" if (config.has_gpu() and (hasattr(config, "learnMode") and config.learnMode == "between")) else "/cpu:0"
+#            with tf.device(device): #less overhead by not trying to switch to gpu
+#                self.conv_inputs, self.ff_inputs, self.targets, self.stands_inputs = self._set_placeholders(mode, final_neuron_num)
+#                self.q, self.onehot, self.q_max, self.action = self._inference(self.conv_inputs, self.ff_inputs, final_neuron_num, rl_not_trainables, False, self.stands_inputs) 
+#                self.accuracy = self._evaluation(self.onehot, self.targets)  #TODO: DELETE THIS LINE!!!!
+#        else:
+#            device = "/gpu:0" if config.has_gpu() else "/cpu:0"
+#            with tf.device(device):
+#                self.conv_inputs, self.ff_inputs, self.targets, self.stands_inputs = self._set_placeholders(mode, final_neuron_num)
+#                self.q, self.onehot, self.q_max, self.action = self._inference(self.conv_inputs, self.ff_inputs, final_neuron_num, rl_not_trainables, True)         
+#                if mode == "rl_train":
+#                    self.q_targets = tf.placeholder(tf.float32, shape=[None, final_neuron_num], name="q_targets")
+#                    self.loss = self._rl_loss_func(self.q, self.q_targets)
+#                    self.train_op = self._training(self.loss, config.initial_lr, self.global_step, optimizer_arg = tf.train.RMSPropOptimizer)     
+#                    self.accuracy = self._evaluation(self.onehot, self.targets)  #TODO: DELETE THIS LINE!!!!
+#                elif mode == "sv_train":
+#                    self.loss = self._loss_func(self.q, self.targets)
+#                    self.train_op = self._training(self.loss, config.initial_lr, self.sv_global_step, optimizer_arg = tf.train.AdamOptimizer) 
+#                    self.accuracy = self._evaluation(self.onehot, self.targets)    
+#        self.summary = tf.summary.merge_all() #für TensorBoard    
         
     
     def _set_placeholders(self, mode, final_neuron_num):
@@ -106,8 +118,8 @@ class CNN(object): #learning on gpu and application on cpu: https://stackoverflo
         fc1 = fc_layer(fc0, flat_size, final_neuron_num*20, "FC1", trainable("FC1"), False, for_training, False, tf.nn.relu, 1 if for_training else self.keep_prob, self.trainvars, variable_summary, initializer=ini)                 
         q = fc_layer(fc1, final_neuron_num*20, final_neuron_num, "FC2", trainable("FC2"), False, for_training, False, None, 1, self.trainvars, variable_summary, initializer=ini) 
 
-        if self.mode == "inference":
-            q = tf.cond(tf.reduce_sum(stands_inputs) > 0, lambda: settozero(q), lambda: q) #[10.3, 23.1, ...] #wenn du stehst, brauchste dich nicht mehr für die ohne gas zu interessieren
+#        if self.mode == "inference":
+#            q = tf.cond(tf.reduce_sum(stands_inputs) > 0, lambda: settozero(q), lambda: q) #[10.3, 23.1, ...] #wenn du stehst, brauchste dich nicht mehr für die ohne gas zu interessieren
         y_conv = tf.nn.softmax(q)                                                          #[ 0.1,  0.2, ...]
         onehot = tf.one_hot(tf.argmax(y_conv, dimension=1), depth=final_neuron_num)        #[   0,    1, ...]
         q_max = tf.reduce_max(q, axis=1)                                                   #23.1
@@ -138,27 +150,28 @@ class CNN(object): #learning on gpu and application on cpu: https://stackoverflo
         self.new_lr = tf.placeholder(tf.float32, shape=[]) #diese und die nächste zeile nur nötig falls man per extra-aufruf die lr verändern will, so wie ich das mache braucht man die nicht.
         self.lr_update = tf.assign(self.learning_rate, self.new_lr)        
 
-        if self.config.max_grad_norm > 0:
-            tvars = tf.trainable_variables()
-            grads, _ = tf.clip_by_global_norm(tf.gradients(loss, tvars), self.config.max_grad_norm)
-            
-        optimizer = optimizer_arg(self.learning_rate)
+#        if self.config.max_grad_norm > 0:
+#            tvars = tf.trainable_variables()
+#            grads, _ = tf.clip_by_global_norm(tf.gradients(loss, tvars), self.config.max_grad_norm)
+          
+        optimizer = optimizer_arg(0.000005)  
+        #optimizer = optimizer_arg(0.0000005) #klappt, though slow
         
-        if (optimizer_arg == tf.train.RMSPropOptimizer):
-            kwargs = {"learning_rate": self.config.initial_lr}
-            try:
-                kwargs["decay"] = self.config.lr_decay
-            except:
-                pass
-            try: 
-                kwargs["momentum"] = self.config.rms_momentum
-            except:
-                pass
-            try: 
-                kwargs["epsilon"] = self.config.min_sq_grad
-            except:
-                pass
-            optimizer = optimizer_arg(**kwargs)
+#        if (optimizer_arg == tf.train.RMSPropOptimizer):
+#            kwargs = {"learning_rate": self.config.initial_lr}
+#            try:
+#                kwargs["decay"] = self.config.lr_decay
+#            except:
+#                pass
+#            try: 
+#                kwargs["momentum"] = self.config.rms_momentum
+#            except:
+#                pass
+#            try: 
+#                kwargs["epsilon"] = self.config.min_sq_grad
+#            except:
+#                pass
+#            optimizer = optimizer_arg(**kwargs)
         #TODO: AUSSUCHEN können welchen optimizer, und meinen ausgesuchten verteidigen können
         #https://www.tensorflow.org/api_guides/python/train#optimizers
         
@@ -197,11 +210,11 @@ class CNN(object): #learning on gpu and application on cpu: https://stackoverflo
     
     def sv_fill_feed_dict(self, config, conv_inputs, other_inputs, targets, decay_lr = True, dropout = True): 
         feed_dict = {self.targets: targets}
-        feed_dict[self.keep_prob] = config.keep_prob if dropout else None
-        if decay_lr:
-            lr_decay = config.lr_decay ** max(self.sv_iterations-config.lrdecayafter, 0.0)
-            new_lr = max(config.initial_lr*lr_decay, config.minimal_lr)
-            feed_dict[self.learning_rate] = new_lr
+#        feed_dict[self.keep_prob] = config.keep_prob if dropout else None
+#        if decay_lr:
+#            lr_decay = config.lr_decay ** max(self.sv_iterations-config.lrdecayafter, 0.0)
+#            new_lr = max(config.initial_lr*lr_decay, config.minimal_lr)
+#            feed_dict[self.learning_rate] = new_lr
         if self.agent.usesConv:
             feed_dict[self.conv_inputs] = conv_inputs
         if self.agent.ff_inputsize:
@@ -227,9 +240,10 @@ class CNN(object): #learning on gpu and application on cpu: https://stackoverflo
         conv_inputs, other_inputs, _ = self.EnvStateBatch_to_AgentStateBatch(agent, stateBatch)
         targets = self.EnvStateBatch_to_AgentActionBatch(agent, stateBatch)
         feed_dict = self.sv_fill_feed_dict(self.config, conv_inputs, other_inputs, targets)        
-        accuracy, loss = session.run([self.accuracy, self.loss], feed_dict=feed_dict)
-        return accuracy, loss, len(stateBatch)
-            
+#        accuracy, loss = session.run([self.accuracy, self.loss], feed_dict=feed_dict)
+#        return accuracy, loss, len(stateBatch)
+        accuracy = session.run(self.accuracy, feed_dict=feed_dict)
+        return accuracy, accuracy, accuracy
            
     
 ##################### RL-stuff ################################################
@@ -279,7 +293,7 @@ class CNN(object): #learning on gpu and application on cpu: https://stackoverflo
 
     def rl_learn_step(self, session, conv_inputs, other_inputs, qs):
         feed_dict = self.rl_fill_feeddict(conv_inputs, other_inputs)
-        feed_dict[self.targets] = qs
+        feed_dict[self.q_targets] = qs
         session.run(self.train_op, feed_dict=feed_dict)    
     
     

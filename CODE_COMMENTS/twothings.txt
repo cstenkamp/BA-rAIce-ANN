@@ -1,0 +1,4 @@
+ZUM TWOTHINGS-BILD:
+[das war ein rl-net das mit -nolearn -nomemorykeep auf NUR sv-pretraineddata lief]
+wir sehen 2 dinge in dem graph: erstens high reward != weit gekommen
+und zweiten spiel ist immernoch indeterministisch (since epsilon=9)

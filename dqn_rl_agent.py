@@ -158,36 +158,19 @@ class Agent(AbstractRLAgent):
 
 
 
-    #requires as input the AGENT-State and the AGENT-paststate: old_convs, old_other, new_convs, new_other
-    def q_learn(self, network, old_inputs, new_inputs, argmactions, rewards, resetafters, batchsize):
-        
-        old_convs, old_other = old_inputs
-        new_convs, new_other = new_inputs
-        
-        qs, max_qs = network.rl_learn_forward(self.session, old_convs, old_other, new_convs, new_other)
-  
-        resetafters = list(np.ones(len(resetafters))-np.array(resetafters, dtype=int))
-        #Bellman equation: Q(s,a) = r + y(max(Q(s',a')))
-        #qs[np.arange(BATCHSIZE), argmactions] += learning_rate*((rewards + Q_DECAY * max_qs * (not resetafters))-qs[np.arange(BATCHSIZE), argmactions]) #so wäre es wenn wir kein ANN nutzen würden!
-        #https://medium.com/emergent-future/simple-reinforcement-learning-with-tensorflow-part-0-q-learning-with-tables-and-neural-networks-d195264329d0
-        qs[np.arange(batchsize), argmactions] = rewards + self.rl_conf.q_decay * max_qs * (not resetafters) #wenn anschließend resettet wurde war es bspw ein wallhit und damit quasi ein final state
-                   
-        self.learn_which.rl_learn_step(self.session, old_convs, old_other, qs)
-           
-
                 
                 
                 
                 
     def saveNet(self):
-        self.freezeEverything("saveNet")
+#        self.freezeEverything("saveNet") #TODO: diese auskommentierungen wieder weg!
         self.online_model.saveNumIters(self.session, self.numIterations)
         checkpoint_file = os.path.join(self.folder(self.rl_conf.checkpoint_dir), 'model.ckpt')
         self.saver.save(self.session, checkpoint_file, global_step=self.online_model.global_step) #remember that this saver only handles the online-net  
-        if self.rl_conf.save_memory_with_checkpoint:
-            self.memory.save_memory()
+#        if self.rl_conf.save_memory_with_checkpoint:
+#            self.memory.save_memory()
         print("saved", level=6)
-        self.unFreezeEverything("saveNet")
+#        self.unFreezeEverything("saveNet")
                 
                 
     #calculateReward ist in der AbstractRLAgent von der er erbt
@@ -202,7 +185,7 @@ class Agent(AbstractRLAgent):
          
         self.session = tf.Session(config=tf.ConfigProto(intra_op_parallelism_threads=2, allow_soft_placement=True))
         ckpt = tf.train.get_checkpoint_state(self.folder(self.rl_conf.checkpoint_dir))
-        initializer = tf.random_uniform_initializer(-0.1, 0.1)
+        initializer = tf.random_uniform_initializer(-0.1, 0)
         self.numIterations = 0
         
         if self.start_fresh:
@@ -274,6 +257,31 @@ class Agent(AbstractRLAgent):
             
             
             
+
+    #requires as input the AGENT-State and the AGENT-paststate: old_convs, old_other, new_convs, new_other
+    def q_learn(self, network, old_inputs, new_inputs, argmactions, rewards, resetafters, batchsize):
+        
+        old_convs, old_other = old_inputs
+        new_convs, new_other = new_inputs
+        
+        qs, max_qs = network.rl_learn_forward(self.session, old_convs, old_other, new_convs, new_other)
+        
+        max_qs = np.ones_like(max_qs)*999
+        
+        resetafters = list(np.ones(len(resetafters))-np.array(resetafters, dtype=int))
+        #Bellman equation: Q(s,a) = r + y(max(Q(s',a')))
+        #qs[np.arange(BATCHSIZE), argmactions] += learning_rate*((rewards + Q_DECAY * max_qs * (not resetafters))-qs[np.arange(BATCHSIZE), argmactions]) #so wäre es wenn wir kein ANN nutzen würden!
+        #https://medium.com/emergent-future/simple-reinforcement-learning-with-tensorflow-part-0-q-learning-with-tables-and-neural-networks-d195264329d0
+        qs = np.zeros_like(qs)
+#        qs[np.arange(batchsize), argmactions] = 1 #rewards + self.rl_conf.q_decay * max_qs * (not resetafters) #wenn anschließend resettet wurde war es bspw ein wallhit und damit quasi ein final state
+        
+        qs[np.arange(batchsize), argmactions] = rewards + self.rl_conf.q_decay * max_qs * (not resetafters) #wenn anschließend resettet wurde war es bspw ein wallhit und damit quasi ein final state
+                     
+#        print(qs)   
+#        time.sleep(5)
+          
+        network.rl_learn_step(self.session, old_convs, old_other, qs)
+           
             
 
 def eraseneccessary(fromwhat, erasewhat):
@@ -316,18 +324,46 @@ if __name__ == '__main__':
     #evaluating it BEFORE
     trackingpoints.reset_batch()
     stateBatch, _ = trackingpoints.next_batch(sv_conf, myAgent, trackingpoints.numsamples)
-    ev, loss, _ = myAgent.online_model.run_sv_eval(myAgent.session, myAgent, stateBatch)                       
-    print("Loss: %.2f,  Correct inferences: %.2f%%" % (loss, ev*100), level=10)                      
+    ev, _, _ = myAgent.online_model.run_sv_eval(myAgent.session, myAgent, stateBatch)                       
+    print("Correct inferences: %.2f%%" % (ev*100), level=10)                      
 
     #doing stuff
-    trackingpoints.reset_batch()
     print("Number of samples:",trackingpoints.numsamples)
-    while trackingpoints.has_next(10):
-        QLearnInputs = read_supervised.create_QLearnInputs_from_SVStateBatch(*trackingpoints.next_batch(sv_conf, myAgent, 10), myAgent)
-        myAgent.q_learn(myAgent.online_model, *QLearnInputs, 10)
+    for i in range(200):
+        trackingpoints.reset_batch()
+        while trackingpoints.has_next(32):
+            QLearnInputs = read_supervised.create_QLearnInputs_from_SVStateBatch(*trackingpoints.next_batch(sv_conf, myAgent, 32), myAgent)
+            myAgent.q_learn(myAgent.online_model, *QLearnInputs, 32)
+    
+        if (i+1) % 10 == 0:
+            myAgent.saveNet()
+            
+        #evaluating it AFTER
+        trackingpoints.reset_batch()
+        stateBatch, _ = trackingpoints.next_batch(sv_conf, myAgent, trackingpoints.numsamples)
+        ev, _, _ = myAgent.online_model.run_sv_eval(myAgent.session, myAgent, stateBatch)                       
+        print("Iteration: %i    Correct inferences: %.2f%%" % (i, ev*100), level=10)                  
 
-    #evaluating it AFTER
+
+
     trackingpoints.reset_batch()
-    stateBatch, _ = trackingpoints.next_batch(sv_conf, myAgent, trackingpoints.numsamples)
-    ev, loss, _ = myAgent.online_model.run_sv_eval(myAgent.session, myAgent, stateBatch)                       
-    print("Loss: %.2f,  Correct inferences: %.2f%%" % (loss, ev*100), level=10)                      
+    for i in range(10):
+        (conv_inputs, other_inputs), _, ArgmActions, _, _ = read_supervised.create_QLearnInputs_from_SVStateBatch(*trackingpoints.next_batch(sv_conf, myAgent, 1), myAgent)
+        
+        conv_inputs = np.squeeze(np.array(conv_inputs))
+        other_inputs = other_inputs[0]
+        
+        oh, q = myAgent.online_model.run_inference(myAgent.session, conv_inputs, other_inputs)
+        
+        print(np.argmax(np.array(oh[0])), "  ", ArgmActions[0])
+    
+        print(q)
+    
+    
+    
+    time.sleep(999)
+    
+    
+    
+    
+    
