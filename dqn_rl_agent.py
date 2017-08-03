@@ -132,7 +132,7 @@ class Agent(AbstractRLAgent):
     def learnANN(self):   
         batch = self.memory.sample(self.rl_conf.batchsize)
         QLearnInputs = self.create_QLearnInputs_from_MemoryBatch(batch)
-        self.q_learn(self.learn_which, *QLearnInputs)
+        self.q_learn(self.learn_which, *QLearnInputs, self.rl_conf.batchsize)
         
         self.reinfNetSteps += 1
         print("ReinfLearnSteps:", self.reinfNetSteps, level=3)
@@ -159,17 +159,18 @@ class Agent(AbstractRLAgent):
 
 
     #requires as input the AGENT-State and the AGENT-paststate: old_convs, old_other, new_convs, new_other
-    def q_learn(self, network, old_inputs, new_inputs, argmactions, rewards, resetafters):
+    def q_learn(self, network, old_inputs, new_inputs, argmactions, rewards, resetafters, batchsize):
         
         old_convs, old_other = old_inputs
         new_convs, new_other = new_inputs
         
         qs, max_qs = network.rl_learn_forward(self.session, old_convs, old_other, new_convs, new_other)
   
+        resetafters = list(np.ones(len(resetafters))-np.array(resetafters, dtype=int))
         #Bellman equation: Q(s,a) = r + y(max(Q(s',a')))
         #qs[np.arange(BATCHSIZE), argmactions] += learning_rate*((rewards + Q_DECAY * max_qs * (not resetafters))-qs[np.arange(BATCHSIZE), argmactions]) #so wäre es wenn wir kein ANN nutzen würden!
         #https://medium.com/emergent-future/simple-reinforcement-learning-with-tensorflow-part-0-q-learning-with-tables-and-neural-networks-d195264329d0
-        qs[np.arange(self.rl_conf.batchsize), argmactions] = rewards + self.rl_conf.q_decay * max_qs * (not resetafters) #wenn anschließend resettet wurde war es bspw ein wallhit und damit quasi ein final state
+        qs[np.arange(batchsize), argmactions] = rewards + self.rl_conf.q_decay * max_qs * (not resetafters) #wenn anschließend resettet wurde war es bspw ein wallhit und damit quasi ein final state
                    
         self.learn_which.rl_learn_step(self.session, old_convs, old_other, qs)
            
@@ -323,7 +324,7 @@ if __name__ == '__main__':
     print("Number of samples:",trackingpoints.numsamples)
     while trackingpoints.has_next(10):
         QLearnInputs = read_supervised.create_QLearnInputs_from_SVStateBatch(*trackingpoints.next_batch(sv_conf, myAgent, 10), myAgent)
-        myAgent.q_learn(myAgent.online_model, *QLearnInputs)
+        myAgent.q_learn(myAgent.online_model, *QLearnInputs, 10)
 
     #evaluating it AFTER
     trackingpoints.reset_batch()
