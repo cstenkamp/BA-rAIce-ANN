@@ -40,12 +40,12 @@ class Config(object):
     initscale = 0.1
     max_grad_norm = 10
     
-    iterations = 90     #90, 120
-    initial_lr = 0.005
-    lr_decay = 0.9
-    lrdecayafter = iterations//2  #//3 für 90, 120
-    minimal_lr = 1e-6 #mit diesen settings kommt er auf 0.01 loss, 99.7% correct inferences
-    checkpointall = 10
+    pretrain_iterations = 90     #90, 120
+    pretrain_initial_lr = 0.005
+    pretrain_lr_decay = 0.9
+    pretrain_lrdecayafter = pretrain_iterations//2  #//3 für 90, 120
+    pretrain_minimal_lr = 1e-6 #mit diesen settings kommt er auf 0.01 loss, 99.7% correct inferences
+    pretrain_checkpointall = 10
     summaryall = False
     
     def has_gpu(self):

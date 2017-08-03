@@ -24,23 +24,53 @@ from utils import convolutional_layer, fc_layer, variable_summary
 
 
 
-from gridworld import gameEnv
-
-
-env = gameEnv(partial=False,size=5)
 
 class DDDQN():
     
     def __init__(self, config, agent):  
-        NUM_ACTIONS = 21
-        h_size = 512
-
+        self.config = config
+        self.agent = agent
+        
+        self.pretrain_iter    = 0
+        self.pretrain_iter_tf = tf.Variable(tf.constant(self.pretrain_iter), dtype=tf.int32, name='pretrain_iter_tf', trainable=False)
+        self.step    = 0
+        self.step_tf = tf.Variable(tf.constant(self.step), dtype=tf.int32, name='step_tf', trainable=False)
+        self.num_actions = self.config.steering_steps*4 if self.config.INCLUDE_ACCPLUSBREAK else self.config.steering_steps*3
+        #TODO: die beiden gleich laden
+        
+        self.h_size = 512
+        
+        #THIS IS FORWARD STEP
         self.scalarInput =  tf.placeholder(shape=[None,10800],dtype=tf.float32)   #input der reinkommt ist jetzt 4-stacked 30*45 bilder
         self.imageIn = tf.reshape(self.scalarInput,shape=[-1,30,45,8])
-        self.conv1 = slim.conv2d(inputs=self.imageIn,num_outputs=32,kernel_size=[4,6],stride=[2,3],padding='VALID', biases_initializer=None)
-        self.conv2 = slim.conv2d(inputs=self.conv1,num_outputs=64,kernel_size=[4,4],stride=[2,2],padding='VALID', biases_initializer=None)
-        self.conv3 = slim.conv2d(inputs=self.conv2,num_outputs=64,kernel_size=[3,3],stride=[1,1],padding='VALID', biases_initializer=None)
-        self.conv4 = slim.conv2d(inputs=self.conv3,num_outputs=h_size,kernel_size=[4,4],stride=[1,1],padding='VALID', biases_initializer=None)
+        self.Qout, self.predict = self._inference(self.imageIn)
+        
+        #THIS IS SV_LEARN
+        self.Qout_SM = tf.nn.softmax(self.Qout)
+        self.targetA = tf.placeholder(shape=[None],dtype=tf.int32)
+        self.targetA_OH = tf.one_hot(self.targetA, self.num_actions, dtype=tf.float32)
+        self.sv_loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(labels=self.targetA_OH, logits=self.Qout))
+        self.sv_OP = self._pre_training(self.sv_loss, self.config.pretrain_initial_lr) 
+        
+        
+        #THIS IS DDDQN-LEARN
+        #Below we obtain the loss by taking the sum of squares difference between the target and prediction Q values.
+        self.targetQ = tf.placeholder(shape=[None],dtype=tf.float32)
+        #self.targetA = tf.placeholder(shape=[None],dtype=tf.int32)
+        #self.targetA_OH = tf.one_hot(self.targetA, self.num_actions, dtype=tf.float32)
+        self.compareQ = tf.reduce_sum(tf.multiply(self.Qout, self.targetA_OH), axis=1)
+        self.td_error = tf.square(self.targetQ - self.compareQ)
+        self.q_loss = tf.reduce_mean(self.td_error)
+        self.q_trainer = tf.train.AdamOptimizer(learning_rate=0.00005)
+        self.q_updateModel = self.q_trainer.minimize(self.q_loss)        
+        
+        
+        
+    def _inference(self, imageIn):
+        self.conv1 = slim.conv2d(inputs=imageIn,num_outputs=32,kernel_size=[4,6],stride=[2,3],padding='VALID', biases_initializer=None, normalizer_fn=slim.batch_norm)
+        self.conv2 = slim.conv2d(inputs=self.conv1,num_outputs=64,kernel_size=[4,4],stride=[2,2],padding='VALID', biases_initializer=None, normalizer_fn=slim.batch_norm)
+        self.conv3 = slim.conv2d(inputs=self.conv2,num_outputs=64,kernel_size=[3,3],stride=[1,1],padding='VALID', biases_initializer=None, normalizer_fn=slim.batch_norm)
+        self.conv4 = slim.conv2d(inputs=self.conv3,num_outputs=self.h_size,kernel_size=[4,4],stride=[1,1],padding='VALID', biases_initializer=None, normalizer_fn=slim.batch_norm)
         #original war (?, 20, 20, 32) - (?, 9, 9, 64) - (?, 7, 7, 64) - (?, 1, 1, 512) - (?, 256)
         #meins ist    (?, 14, 14, 32) - (?, 6, 6, 64) - (?, 4, 4, 64) - (?, 1, 1, 512) - (?, 256)
         
@@ -49,26 +79,35 @@ class DDDQN():
         self.streamA = slim.flatten(self.streamAC)
         self.streamV = slim.flatten(self.streamVC)
         xavier_init = tf.contrib.layers.xavier_initializer()
-        self.AW = tf.Variable(xavier_init([h_size//2,NUM_ACTIONS]))
-        self.VW = tf.Variable(xavier_init([h_size//2,1]))
-        self.Advantage = tf.matmul(self.streamA,self.AW)
-        self.Value = tf.matmul(self.streamV,self.VW)
+        self.AW = tf.Variable(xavier_init([self.h_size//2,self.num_actions]))
+        self.VW = tf.Variable(xavier_init([self.h_size//2,1]))
+        self.Advantage = slim.batch_norm(tf.matmul(self.streamA,self.AW))
+        self.Value = slim.batch_norm(tf.matmul(self.streamV,self.VW))
         
         #Then combine them together to get our final Q-values.
-        self.Qout = self.Value + tf.subtract(self.Advantage,tf.reduce_mean(self.Advantage,axis=1,keep_dims=True))
-        self.predict = tf.argmax(self.Qout,1)
+        Qout = self.Value + tf.subtract(self.Advantage,tf.reduce_mean(self.Advantage,axis=1,keep_dims=True))
+        predict = tf.argmax(Qout,1)
+        return Qout, predict
+    
+
+    def _pre_training(self, loss, init_lr):
+       self.pretrain_learningrate = tf.Variable(tf.constant(self.config.pretrain_initial_lr), name='pretrain_learningrate', trainable=False)
+       self.new_lr = tf.placeholder(tf.float32, shape=[])                      #diese und die nächste zeile nur nötig falls man per extra-aufruf die lr verändern will, 
+       self.pt_lr_update = tf.assign(self.pretrain_learningrate, self.new_lr)  #so wie ich das mache braucht man die nicht.
+       train_op = tf.train.AdamOptimizer(self.pretrain_learningrate).minimize(loss, global_step=self.pretrain_iter_tf)
+       return train_op
         
-        #Below we obtain the loss by taking the sum of squares difference between the target and prediction Q values.
-        self.targetQ = tf.placeholder(shape=[None],dtype=tf.float32)
-        self.actions = tf.placeholder(shape=[None],dtype=tf.int32)
-        self.actions_onehot = tf.one_hot(self.actions, NUM_ACTIONS, dtype=tf.float32)
         
-        self.Q = tf.reduce_sum(tf.multiply(self.Qout, self.actions_onehot), axis=1)
+    def sv_fill_feed_dict(self, inputs, targets, decay_lr = True): 
+        feed_dict = {}
+        if decay_lr:
+            lr_decay = self.config.pretrain_lr_decay ** max(self.pretrain_iter-self.config.pretrain_lrdecayafter, 0.0)
+            new_lr = max(self.config.pretrain_initial_lr*lr_decay, self.config.pretrain_minimal_lr)
+            feed_dict[self.new_lr] = new_lr #TODO: eig müsste er else nicht die opt durchführen die zu updaten
+        feed_dict[self.scalarInput] = inputs
+        feed_dict[self.targetA] = targets
+        return feed_dict       
         
-        self.td_error = tf.square(self.targetQ - self.Q)
-        self.loss = tf.reduce_mean(self.td_error)
-        self.trainer = tf.train.AdamOptimizer(learning_rate=0.0001)
-        self.updateModel = self.trainer.minimize(self.loss)
         
         
         
@@ -129,8 +168,8 @@ tau = 0.001
 
 tf.reset_default_graph()
 
-mainQN = DDDQN(None, None)
-targetQN = DDDQN(None, None)
+mainQN = DDDQN(rl_conf, myAgent)
+targetQN = DDDQN(rl_conf, myAgent)
 
 saver = tf.train.Saver()
 
@@ -146,11 +185,23 @@ with tf.Session() as sess:
         trainBatch = buffersample(trackingpoints.numsamples)
         predict = sess.run(targetQN.predict,feed_dict={targetQN.scalarInput:np.vstack(trainBatch[:,0])})
         print("Iteration",i,"Accuracy",round(np.mean(np.array(trainBatch[:,1] == predict, dtype=int))*100, 2),"%")
+
+        if i % 10 == 0:
+            print(sess.run(targetQN.Qout,feed_dict={targetQN.scalarInput:np.vstack(trainBatch[:,0])}))
         
+        targetQN.pretrain_iter += 1
         trackingpoints.reset_batch()
         while trackingpoints.has_next(BATCHSIZE):
             trainBatch = buffersample(BATCHSIZE)
     
+#            feed_dict = targetQN.sv_fill_feed_dict(np.vstack(trainBatch[:,0]), trainBatch[:,1])
+#            _, loss, _ = sess.run([targetQN.sv_OP, targetQN.sv_loss, targetQN.pt_lr_update], feed_dict=feed_dict)
+            #print(loss)
+        
+        #print("Learning rate:",sess.run(targetQN.pretrain_learningrate))
+         
+
+            
             #Below we perform the Double-DQN update to the target Q-values
             Q1 = sess.run(mainQN.predict,feed_dict={mainQN.scalarInput:np.vstack(trainBatch[:,3])})
             Q2 = sess.run(targetQN.Qout,feed_dict={targetQN.scalarInput:np.vstack(trainBatch[:,3])})
@@ -158,7 +209,7 @@ with tf.Session() as sess:
             doubleQ = Q2[range(BATCHSIZE),Q1]
             targetQ = trainBatch[:,2] + (y*doubleQ * end_multiplier)
             #Update the network with our target values.
-            _ = sess.run(mainQN.updateModel, feed_dict={mainQN.scalarInput:np.vstack(trainBatch[:,0]),mainQN.targetQ:targetQ, mainQN.actions:trainBatch[:,1]})
+            _ = sess.run(mainQN.q_updateModel, feed_dict={mainQN.scalarInput:np.vstack(trainBatch[:,0]),mainQN.targetQ:targetQ, mainQN.targetA:trainBatch[:,1]})
             
             updateTarget(targetOps,sess) #Update the target network toward the primary network.
     
@@ -173,120 +224,4 @@ exit()
         
         
         
-        
-#        
-#        
-#        
-#        
-#        
-#        
-#batch_size = 32 #How many experiences to use for each training step.
-#update_freq = 4 #How often to perform a training step.
-#y = .99 #Discount factor on the target Q-values
-#startE = 1 #Starting chance of random action
-#endE = 0.1 #Final chance of random action
-#annealing_steps = 10000. #How many steps of training to reduce startE to endE.
-#pre_train_steps = 10000 #How many steps of random actions before training begins.
-#num_episodes = 1000 #How many EPISODES of game environment to train network with.
-#max_epLength = 50 #The max allowed length of our episode.
-#load_model = False #Whether to load a saved model.
-#path = "./dqn" #The path to save our model to.
-#h_size = 512 #The size of the final convolutional layer before splitting it into Advantage and Value streams.
-#tau = 0.001 #Rate to update target network toward primary network
-#
-#
-#tf.reset_default_graph()
-#mainQN = DDDQN(None, None)
-#targetQN = DDDQN(None, None)
-#
-#
-#saver = tf.train.Saver()
-#
-#trainables = tf.trainable_variables()
-#
-#targetOps = updateTargetGraph(trainables,tau)
-#
-#
-##Set the rate of random action decrease. 
-#e = startE
-#stepDrop = (startE - endE)/annealing_steps
-#
-##create lists to contain total rewards and steps per episode
-#stepsList = []
-#rList = []
-#total_steps = 0
-#
-##Make a path for our model to be saved in.
-#if not os.path.exists(path):
-#    os.makedirs(path)
-#
-#with tf.Session() as sess:
-#    sess.run(tf.global_variables_initializer())
-#    alreadyrun = 0
-#    if load_model == True:
-#        ckpt = tf.train.get_checkpoint_state(path)
-#        saver.restore(sess,ckpt.model_checkpoint_path)
-#        alreadyrun = int(os.path.basename(ckpt.model_checkpoint_path).split('-')[1].split(".")[0])
-#        print('Loading Model...', alreadyrun)
-#    for episode in range(alreadyrun, num_episodes):
-#        episodeBuffer = experience_buffer()
-#        #Reset environment and get first new observation
-#        s = env.reset()
-#        s = processState(s)
-#        d = False
-#        rAll = 0
-#        stepInEpi = 0
-#        #The Q-Network
-#        while stepInEpi < max_epLength: #If the agent takes longer than max_epLength moves to reach either of the blocks, end the trial.
-#            stepInEpi+=1
-#            #Choose an action by greedily (with e chance of random action) from the Q-network
-#            if np.random.rand(1) < e or total_steps < pre_train_steps:
-#                a = np.random.randint(0,4)
-#            else:
-#                a = sess.run(mainQN.predict,feed_dict={mainQN.scalarInput:[s]})[0]
-#            s1,r,d = env.step(a)
-#            s1 = processState(s1)
-#            total_steps += 1
-#            episodeBuffer.add(np.reshape(np.array([s,a,r,s1,d]),[1,5])) #Save the experience to our episode buffer.
-#            
-#            if total_steps > pre_train_steps:
-#                if e > endE:
-#                    e -= stepDrop
-#                
-#                if total_steps % (update_freq) == 0:
-#                    trainBatch = myBuffer.sample(batch_size) #Get a random batch of experiences.
-#                    #Below we perform the Double-DQN update to the target Q-values
-#                    Q1 = sess.run(mainQN.predict,feed_dict={mainQN.scalarInput:np.vstack(trainBatch[:,3])})
-#                    Q2 = sess.run(targetQN.Qout,feed_dict={targetQN.scalarInput:np.vstack(trainBatch[:,3])})
-#                    end_multiplier = -(trainBatch[:,4] - 1)
-#                    doubleQ = Q2[range(batch_size),Q1]
-#                    targetQ = trainBatch[:,2] + (y*doubleQ * end_multiplier)
-#                    #Update the network with our target values.
-#                    _ = sess.run(mainQN.updateModel, \
-#                        feed_dict={mainQN.scalarInput:np.vstack(trainBatch[:,0]),mainQN.targetQ:targetQ, mainQN.actions:trainBatch[:,1]})
-#                    
-#                    updateTarget(targetOps,sess) #Update the target network toward the primary network.
-#            rAll += r
-#            s = s1
-#            
-#            if d == True:
-#
-#                break
-#        
-#        myBuffer.add(episodeBuffer.buffer) #rather extend
-#        stepsList.append(stepInEpi)
-#        rList.append(rAll)
-#        #Periodically save the model. 
-#        if episode % 1000 == 0:
-#            saver.save(sess,path+'/model-'+str(episode)+'.ckpt')
-#            print("Saved Model")
-#        if len(rList) % 10 == 0:
-#            print(total_steps,np.mean(rList[-10:]), e)
-#    saver.save(sess,path+'/model-'+str(episode)+'.ckpt')
-#print("Percent of succesful episodes: " + str(sum(rList)/num_episodes) + "%")
-#time.sleep(9999)
-#
-#
-#rMat = np.resize(np.array(rList),[len(rList)//100,100])
-#rMean = np.average(rMat,1)
-#plt.plot(rMean)
+    
