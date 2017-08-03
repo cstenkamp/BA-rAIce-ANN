@@ -456,14 +456,14 @@ def create_QLearnInputs_from_SVStateBatch(presentStates, pastStates, agent):
 
 if __name__ == '__main__':    
     import config
-    sv_conf = config.Config()
+    conf = config.Config()
     import dqn_rl_agent
     from server import Containers
-    myAgent = dqn_rl_agent.Agent(sv_conf, Containers(), config.RL_Config(), True)
-    trackingpoints = TPList(sv_conf.LapFolderName, sv_conf.use_second_camera, sv_conf.msperframe, sv_conf.steering_steps, sv_conf.INCLUDE_ACCPLUSBREAK)
+    myAgent = dqn_rl_agent.Agent(conf, Containers(), True)
+    trackingpoints = TPList(conf.LapFolderName, conf.use_second_camera, conf.msperframe, conf.steering_steps, conf.INCLUDE_ACCPLUSBREAK)
     print("Number of samples:",trackingpoints.numsamples)
     while trackingpoints.has_next(10):
-        presentStates, pastStates = trackingpoints.next_batch(sv_conf, myAgent, 10)
+        presentStates, pastStates = trackingpoints.next_batch(conf, myAgent, 10)
     
     create_QLearnInputs_from_SVStateBatch(presentStates, pastStates, myAgent)
     

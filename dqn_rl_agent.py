@@ -26,16 +26,16 @@ ONLY_START = False
 
 
 class Agent(AbstractRLAgent):
-    def __init__(self, sv_conf, containers, rl_conf, start_fresh, *args, **kwargs):
+    def __init__(self, conf, containers, start_fresh, *args, **kwargs):
         self.name = "dqn_rl_agent" #__file__[__file__.rfind("\\")+1:__file__.rfind(".")]
-#        self.memory = Efficientmemory(rl_conf.memorysize, rl_conf, self, rl_conf.history_frame_nr, rl_conf.use_constantbutbigmemory) #dieser agent unterstützt das effiziente memory
-        super().__init__(sv_conf, containers, rl_conf, *args, **kwargs)
+#        self.memory = Efficientmemory(conf.memorysize, conf, self, conf.history_frame_nr, conf.use_constantbutbigmemory) #dieser agent unterstützt das effiziente memory
+        super().__init__(conf, containers, *args, **kwargs)
         self.ff_inputsize = 30
-        self.epsilon = self.rl_conf.startepsilon
+        self.epsilon = self.conf.startepsilon
         self.start_fresh = start_fresh
         self.SAVE_ACTION_AS_ARGMAX = False #legacy und speicher-effizienter ists true, aber dann lässt sich das memory nicht als grundlage für ddpg
         if not start_fresh:
-            assert os.path.exists(self.folder(self.sv_conf.checkpoint_dir)), "I need a pre-trained model"
+            assert os.path.exists(self.folder(self.conf.pretrain_checkpoint_dir)), "I need a pre-trained model"
 
 
     def runInference(self, gameState, pastState):
@@ -51,13 +51,13 @@ class Agent(AbstractRLAgent):
             if self.canLearn() and np.random.random() > self.epsilon:
                 toUse, toSave = self.performNetwork(conv_inputs, self.makeNetUsableOtherInputs(other_inputs))
             else:
-                toUse, toSave = self.randomAction(gameState[2][0].SpeedSteer.velocity, self.rl_conf)
+                toUse, toSave = self.randomAction(gameState[2][0].SpeedSteer.velocity, self.conf)
             
-                if len(self.memory) >= self.rl_conf.replaystartsize:
+                if len(self.memory) >= self.conf.replaystartsize:
                     try:
-                        self.epsilon = min(round(max(self.rl_conf.startepsilon-((self.rl_conf.startepsilon-self.rl_conf.minepsilon)*((self.numIterations-self.rl_conf.replaystartsize)/self.rl_conf.finalepsilonframe)), self.rl_conf.minepsilon), 5), 1)
+                        self.epsilon = min(round(max(self.conf.startepsilon-((self.conf.startepsilon-self.conf.minepsilon)*((self.numIterations-self.conf.replaystartsize)/self.conf.finalepsilonframe)), self.conf.minepsilon), 5), 1)
                     except:
-                        self.epsilon = min(round(max(self.epsilon-self.rl_conf.epsilondecrease, self.rl_conf.minepsilon), 5), 1)
+                        self.epsilon = min(round(max(self.epsilon-self.conf.epsilondecrease, self.conf.minepsilon), 5), 1)
                     
                 if self.containers.showscreen:
                     infoscreen.print(self.epsilon, containers= self.containers, wname="Epsilon")
@@ -87,7 +87,7 @@ class Agent(AbstractRLAgent):
 
 
     def showqvals(self, qvals):
-        amount = self.rl_conf.steering_steps*4 if self.rl_conf.INCLUDE_ACCPLUSBREAK else self.rl_conf.steering_steps*3
+        amount = self.conf.steering_steps*4 if self.conf.INCLUDE_ACCPLUSBREAK else self.conf.steering_steps*3
         b = []
         for i in range(amount):
             a = [0]*amount
@@ -107,7 +107,7 @@ class Agent(AbstractRLAgent):
     def create_QLearnInputs_from_MemoryBatch(self, memoryBatch):
         if self.SAVE_ACTION_AS_ARGMAX: 
             oldstates, argmactions, rewards, newstates, resetafters = zip(*memoryBatch)      
-            actions = np.zeros([len(argmactions), ((4*self.rl_conf.steering_steps) if self.rl_conf.INCLUDE_ACCPLUSBREAK else (3*self.rl_conf.steering_steps))])
+            actions = np.zeros([len(argmactions), ((4*self.conf.steering_steps) if self.conf.INCLUDE_ACCPLUSBREAK else (3*self.conf.steering_steps))])
             for i in range(len(argmactions)):
                 actions[i][argmactions[i]] = 1
                 actualActions = [self.dediscretize(i) for i in actions]
@@ -130,20 +130,20 @@ class Agent(AbstractRLAgent):
                 
     
     def learnANN(self):   
-        batch = self.memory.sample(self.rl_conf.batchsize)
+        batch = self.memory.sample(self.conf.batchsize)
         QLearnInputs = self.create_QLearnInputs_from_MemoryBatch(batch)
-        self.q_learn(self.learn_which, *QLearnInputs, self.rl_conf.batchsize)
+        self.q_learn(self.learn_which, *QLearnInputs, self.conf.batchsize)
         
         self.reinfNetSteps += 1
         print("ReinfLearnSteps:", self.reinfNetSteps, level=3)
         if self.containers.showscreen:
             infoscreen.print(self.reinfNetSteps, "Iterations: >"+str(self.numIterations), containers= self.containers, wname="ReinfLearnSteps")
                     
-        if self.reinfNetSteps % self.rl_conf.checkpointall == 0 or self.numIterations >= self.rl_conf.train_for:
+        if self.reinfNetSteps % self.conf.checkpointall == 0 or self.numIterations >= self.conf.train_for:
             self.saveNet()      
             
         if self.learn_which == self.online_model:
-            if self.reinfNetSteps % self.rl_conf.copy_target_all == 0:
+            if self.reinfNetSteps % self.conf.copy_target_all == 0:
                 self.lock.acquire()
                 self.freezeEverything("saveNet")
                 with self.graph.as_default():    
@@ -164,9 +164,9 @@ class Agent(AbstractRLAgent):
                 
     def saveNet(self):
 #        self.freezeEverything("saveNet") #TODO: diese auskommentierungen wieder weg!
-        checkpoint_file = os.path.join(self.folder(self.rl_conf.checkpoint_dir), 'model.ckpt')
+        checkpoint_file = os.path.join(self.folder(self.conf.checkpoint_dir), 'model.ckpt')
         self.saver.save(self.session, checkpoint_file, global_step=self.online_model.global_step) #remember that this saver only handles the online-net  
-#        if self.rl_conf.save_memory_with_checkpoint:
+#        if self.conf.save_memory_with_checkpoint:
 #            self.memory.save_memory()
         print("saved", level=6)
 #        self.unFreezeEverything("saveNet")
@@ -183,16 +183,16 @@ class Agent(AbstractRLAgent):
         super().initNetwork()
          
         self.session = tf.Session(config=tf.ConfigProto(intra_op_parallelism_threads=2, allow_soft_placement=True))
-        ckpt = tf.train.get_checkpoint_state(self.folder(self.rl_conf.checkpoint_dir))
+        ckpt = tf.train.get_checkpoint_state(self.folder(self.conf.checkpoint_dir))
         initializer = tf.random_uniform_initializer(-0.1, 0)
         self.numIterations = 0
         
         if self.start_fresh:
             print("Initializing the network from scratch", level=9)
             with tf.variable_scope("targetnet", reuse=None, initializer=initializer):
-                self.target_model = self.usesnetwork(self.rl_conf, self)                
+                self.target_model = self.usesnetwork(self.conf, self)                
             with tf.variable_scope("onlinenet", reuse=None, initializer=initializer):
-                self.online_model = self.usesnetwork(self.rl_conf, self)                
+                self.online_model = self.usesnetwork(self.conf, self)                
             init = tf.global_variables_initializer()
             self.session.run(init)        
             self.saver = tf.train.Saver(max_to_keep=1, var_list=get_variables("onlinenet"))
@@ -206,9 +206,9 @@ class Agent(AbstractRLAgent):
              
                 print("Initializing the network from the last RL-Save", level=9)
                 with tf.variable_scope("targetnet", reuse=None, initializer=initializer):
-                    self.target_model = self.usesnetwork(self.rl_conf, self)
+                    self.target_model = self.usesnetwork(self.conf, self)
                 with tf.variable_scope("onlinenet", reuse=None, initializer=initializer):
-                    self.online_model = self.usesnetwork(self.rl_conf, self)                                            
+                    self.online_model = self.usesnetwork(self.conf, self)                                            
                 self.saver = tf.train.Saver(max_to_keep=1, var_list=get_variables("onlinenet"))
                 self.saver.restore(self.session, ckpt.model_checkpoint_path)
                 self.session.run([target.assign(online) for online, target in zip(get_variables(scope="onlinenet"), get_variables(scope="targetnet"))])
@@ -235,7 +235,7 @@ class Agent(AbstractRLAgent):
         # wenn folgende Zeile da ist klappt es einigermassen, sonst nicht
         qs = np.zeros_like(qs)
         
-        qs[np.arange(batchsize), argmactions] = rewards + self.rl_conf.q_decay * max_qs * consider_stateval #wenn anschließend resettet wurde war es bspw ein wallhit und damit quasi ein final state
+        qs[np.arange(batchsize), argmactions] = rewards + self.conf.q_decay * max_qs * consider_stateval #wenn anschließend resettet wurde war es bspw ein wallhit und damit quasi ein final state
           
         network.rl_learn_step(self.session, old_convs, old_other, qs)
            
@@ -264,11 +264,10 @@ def print_trainables(session):
 ###############################################################################
 if __name__ == '__main__':  
     import config
-    sv_conf = config.Config()
-    rl_conf = config.RL_Config()
-    from server import Containers; containers = Containers(); containers.sv_conf = sv_conf; containers.rl_conf = rl_conf
+    conf = config.config()
+    from server import Containers; containers = Containers(); containers.conf = conf; containers.conf = conf
     
-    myAgent = Agent(sv_conf, containers, rl_conf, True)
+    myAgent = Agent(conf, containers, True)
 #    myAgent.svTrain()
     
 
@@ -276,11 +275,11 @@ if __name__ == '__main__':
     #jetzt ne inference q-value anschauen, dann versuchen nen bisschen off-policy rl zu lernen, dann wieder inference anschauen
     
     import read_supervised
-    trackingpoints = read_supervised.TPList(sv_conf.LapFolderName, sv_conf.use_second_camera, sv_conf.msperframe, sv_conf.steering_steps, sv_conf.INCLUDE_ACCPLUSBREAK)
+    trackingpoints = read_supervised.TPList(conf.LapFolderName, conf.use_second_camera, conf.msperframe, conf.steering_steps, conf.INCLUDE_ACCPLUSBREAK)
     
     #evaluating it BEFORE
     trackingpoints.reset_batch()
-    stateBatch, _ = trackingpoints.next_batch(sv_conf, myAgent, trackingpoints.numsamples)
+    stateBatch, _ = trackingpoints.next_batch(conf, myAgent, trackingpoints.numsamples)
     ev, _, _ = myAgent.online_model.run_sv_eval(myAgent.session, myAgent, stateBatch)                       
     print("Correct inferences: %.2f%%" % (ev*100), level=10)                      
 
@@ -289,7 +288,7 @@ if __name__ == '__main__':
     for i in range(200):
         trackingpoints.reset_batch()
         while trackingpoints.has_next(32):
-            QLearnInputs = read_supervised.create_QLearnInputs_from_SVStateBatch(*trackingpoints.next_batch(sv_conf, myAgent, 32), myAgent)
+            QLearnInputs = read_supervised.create_QLearnInputs_from_SVStateBatch(*trackingpoints.next_batch(conf, myAgent, 32), myAgent)
             myAgent.q_learn(myAgent.online_model, *QLearnInputs, 32)
     
         if (i+1) % 10 == 0:
@@ -297,7 +296,7 @@ if __name__ == '__main__':
             
         #evaluating it AFTER
         trackingpoints.reset_batch()
-        stateBatch, _ = trackingpoints.next_batch(sv_conf, myAgent, trackingpoints.numsamples)
+        stateBatch, _ = trackingpoints.next_batch(conf, myAgent, trackingpoints.numsamples)
         ev, _, _ = myAgent.online_model.run_sv_eval(myAgent.session, myAgent, stateBatch)                       
         print("Iteration: %i    Correct inferences: %.2f%%" % (i, ev*100), level=10)                  
 
@@ -305,7 +304,7 @@ if __name__ == '__main__':
 
     trackingpoints.reset_batch()
     for i in range(10):
-        (conv_inputs, other_inputs), _, ArgmActions, _, _ = read_supervised.create_QLearnInputs_from_SVStateBatch(*trackingpoints.next_batch(sv_conf, myAgent, 1), myAgent)
+        (conv_inputs, other_inputs), _, ArgmActions, _, _ = read_supervised.create_QLearnInputs_from_SVStateBatch(*trackingpoints.next_batch(conf, myAgent, 1), myAgent)
         
         conv_inputs = np.squeeze(np.array(conv_inputs))
         other_inputs = other_inputs[0]

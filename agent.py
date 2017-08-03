@@ -22,12 +22,12 @@ from inefficientmemory import Memory
 ###################################################################################################
 
 class AbstractAgent(object):
-    def __init__(self, sv_conf, containers, *args, **kwargs):
+    def __init__(self, conf, containers, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.lock = threading.Lock()
         self.isinitialized = False
         self.containers = containers  
-        self.sv_conf = sv_conf
+        self.conf = conf
         self.numIterations = 0
         self.ff_inputsize = 0
         self.usesConv = True
@@ -39,7 +39,7 @@ class AbstractAgent(object):
         
     ##############functions that should be impemented##########
     def checkIfInference(self):
-        if self.containers.sv_conf.UPDATE_ONLY_IF_NEW and self.containers.inputval.alreadyread:
+        if self.containers.conf.UPDATE_ONLY_IF_NEW and self.containers.inputval.alreadyread:
             return False
         return True
         
@@ -51,7 +51,7 @@ class AbstractAgent(object):
     
     #creates the Agents state from the real state. this is the base version, other agents may overwrite it.
     def getAgentState(self, vvec1_hist, vvec2_hist, otherinput_hist, action_hist): 
-        assert self.sv_conf.use_cameras, "You disabled cameras in the config, which is impossible for this agent!"
+        assert self.conf.use_cameras, "You disabled cameras in the config, which is impossible for this agent!"
         conv_inputs = np.concatenate([vvec1_hist, vvec2_hist]) if vvec2_hist is not None else vvec1_hist
         other_inputs = otherinput_hist[0].SpeedSteer.velocity
         stands_inputs = otherinput_hist[0].SpeedSteer.velocity < 6
@@ -79,20 +79,20 @@ class AbstractAgent(object):
 
     #################### Helper functions#######################
     def dediscretize(self, discrete):
-        return read_supervised.dediscretize_all(discrete, self.sv_conf.steering_steps, self.sv_conf.INCLUDE_ACCPLUSBREAK)
+        return read_supervised.dediscretize_all(discrete, self.conf.steering_steps, self.conf.INCLUDE_ACCPLUSBREAK)
 
     def discretize(self, throttle, brake, steer):
-        return read_supervised.discretize_all(throttle, brake, steer, self.sv_conf.steering_steps, self.sv_conf.INCLUDE_ACCPLUSBREAK)
+        return read_supervised.discretize_all(throttle, brake, steer, self.conf.steering_steps, self.conf.INCLUDE_ACCPLUSBREAK)
 
     def inflate_speed(self, speed):
-        return read_supervised.inflate_speed(speed, self.sv_conf.speed_neurons, self.sv_conf.SPEED_AS_ONEHOT, self.sv_conf.MAXSPEED)
+        return read_supervised.inflate_speed(speed, self.conf.speed_neurons, self.conf.SPEED_AS_ONEHOT, self.conf.MAXSPEED)
     
     def resetUnityAndServer(self):
         import server
         server.resetUnityAndServer(self.containers)
 
     def folder(self, actualfolder):
-        folder = self.sv_conf.superfolder()+self.name+"/"+actualfolder
+        folder = self.conf.superfolder()+self.name+"/"+actualfolder
         if not os.path.exists(folder):
             os.makedirs(folder)   
         return folder
@@ -104,12 +104,11 @@ class AbstractAgent(object):
 
   
 class AbstractRLAgent(AbstractAgent):
-    def __init__(self, sv_conf, containers, rl_conf, *args, **kwargs):
-        super().__init__(sv_conf, containers, *args, **kwargs)
-        self.rl_conf = rl_conf
+    def __init__(self, conf, containers, *args, **kwargs):
+        super().__init__(conf, containers, *args, **kwargs)
         self.repeat_random_action_for = 1000
         if not hasattr(self, "memory"): #einige agents haben bereits eine andere memory-implmentation, die sollste nicht überschreiben
-            self.memory = Memory(rl_conf.memorysize, rl_conf, self)
+            self.memory = Memory(conf.memorysize, conf, self)
         self.freezeInfReasons = []
         self.freezeLearnReasons = [] 
         self.wallhitPunish = 1;
@@ -125,9 +124,9 @@ class AbstractRLAgent(AbstractAgent):
         self.numLearnAfterInference = 0
         self.last_random_timestamp = 0
         self.last_random_action = None
-        self.evaluator = evaluator(self.containers, self, self.containers.show_plots, self.sv_conf.save_xml,      \
+        self.evaluator = evaluator(self.containers, self, self.containers.show_plots, self.conf.save_xml,      \
                                    ["average rewards", "average Q-vals",      "progress", "laptime"                       ], \
-                                   [1,                 self.sv_conf.MAXSPEED, 100,         self.rl_conf.time_ends_episode ] )
+                                   [1,                 self.conf.MAXSPEED, 100,         self.conf.time_ends_episode ] )
     
         
     def addToMemory(self, gameState, pastState): 
@@ -146,7 +145,7 @@ class AbstractRLAgent(AbstractAgent):
                 actuAction = a                                                                                         
                 a = self.memory.make_long_from_floats(*a)
             else:
-                actuAction = self.dediscretize(a, self.rl_conf)
+                actuAction = self.dediscretize(a, self.conf)
             
             self.memory.append([s, a, r, s2, False])  
             
@@ -169,16 +168,16 @@ class AbstractRLAgent(AbstractAgent):
         if self.containers.freezeInf:
             return False
         #hier gehts darum die Inference zu freezen bis das learnen eingeholt hat. (falls update_frequency gesetzt)
-        if self.rl_conf.ForEveryInf and self.rl_conf.ComesALearn and self.canLearn() and self.rl_conf.learnMode == "parallel":
-            if self.numLearnAfterInference == self.rl_conf.ComesALearn and self.numInferencesAfterLearn == self.rl_conf.ForEveryInf:
+        if self.conf.ForEveryInf and self.conf.ComesALearn and self.canLearn() and self.conf.learnMode == "parallel":
+            if self.numLearnAfterInference == self.conf.ComesALearn and self.numInferencesAfterLearn == self.conf.ForEveryInf:
                 self.numLearnAfterInference = self.numInferencesAfterLearn = 0            
                 self.unFreezeLearn("updateFrequency")   
                 self.unFreezeInf("updateFrequency")
              #Alle ForEveryInf inferences sollst du warten, bis ComesALearn mal in der zwischenzeit gelernt wurde.
-            if self.numInferencesAfterLearn == self.rl_conf.ForEveryInf:
+            if self.numInferencesAfterLearn == self.conf.ForEveryInf:
                 #gucke ob er in der zwischenzeit ComesALearn mal gelernt hat, wenn nein, freeze Inference
                 self.unFreezeLearn("updateFrequency")      
-                if self.numLearnAfterInference < self.rl_conf.ComesALearn:
+                if self.numLearnAfterInference < self.conf.ComesALearn:
                     self.freezeInf("updateFrequency")
                     print("FREEZEINF", self.numLearnAfterInference, self.numInferencesAfterLearn, level=2)
                     return super().checkIfInference()
@@ -196,35 +195,35 @@ class AbstractRLAgent(AbstractAgent):
     def postRunInference(self, toUse, toSave):
         super().postRunInference(toUse, toSave)
         #ACHTUNG! self.containers.inputval.addResultAndBackup(toSave)  WURDE HIER ENTFERNT!
-        if self.containers.rl_conf.learnMode == "between":
+        if self.containers.conf.learnMode == "between":
             print("freezing python because after", self.numIterations, "iterations I need to learn (between)", level=2)
-            if self.numIterations % self.containers.rl_conf.ForEveryInf == 0:
+            if self.numIterations % self.containers.conf.ForEveryInf == 0:
                 self.freezeInf("LearningComes")
-                self.dauerLearnANN(self.containers.rl_conf.ComesALearn)
+                self.dauerLearnANN(self.containers.conf.ComesALearn)
                 self.unFreezeInf("LearningComes")
 
 
     def canLearn(self):
-        return len(self.memory) > self.rl_conf.batchsize+self.rl_conf.history_frame_nr+1 and \
-               len(self.memory) > self.rl_conf.replaystartsize and self.numIterations < self.rl_conf.train_for
+        return len(self.memory) > self.conf.batchsize+self.conf.history_frame_nr+1 and \
+               len(self.memory) > self.conf.replaystartsize and self.numIterations < self.conf.train_for
 
 
 
     def dauerLearnANN(self, learnSteps):
 
         i = 0
-        while self.containers.KeepRunning and self.numIterations <= self.rl_conf.train_for and i < learnSteps:
+        while self.containers.KeepRunning and self.numIterations <= self.conf.train_for and i < learnSteps:
             cando = True
             #hier gehts darum das learnen zu freezen bis die Inference eingeholt hat. (falls update_frequency gesetzt)
-            if self.rl_conf.ForEveryInf and self.rl_conf.ComesALearn and self.rl_conf.learnMode == "parallel":
-                if self.numLearnAfterInference == self.rl_conf.ComesALearn and self.numInferencesAfterLearn == self.rl_conf.ForEveryInf:
+            if self.conf.ForEveryInf and self.conf.ComesALearn and self.conf.learnMode == "parallel":
+                if self.numLearnAfterInference == self.conf.ComesALearn and self.numInferencesAfterLearn == self.conf.ForEveryInf:
                     self.numLearnAfterInference = self.numInferencesAfterLearn = 0
                     self.unFreezeLearn("updateFrequency")   
                     self.unFreezeInf("updateFrequency")
                 #Alle ComesALearn sollst du warten, bis ForEveryInf mal zwischenzeitlich Inference gemacht wurde
-                if self.numLearnAfterInference >= self.rl_conf.ComesALearn:
+                if self.numLearnAfterInference >= self.conf.ComesALearn:
                     self.unFreezeInf("updateFrequency") 
-                    if self.numInferencesAfterLearn < self.rl_conf.ForEveryInf and self.canLearn():
+                    if self.numInferencesAfterLearn < self.conf.ForEveryInf and self.canLearn():
                         self.freezeLearn("updateFrequency")
                         print("FREEZELEARN", self.numLearnAfterInference, self.numInferencesAfterLearn, level=2)
                         cando = False
@@ -232,12 +231,12 @@ class AbstractRLAgent(AbstractAgent):
                         self.numInferencesAfterLearn = 0
             if cando and not self.containers.freezeLearn and self.canLearn():
                 self.learnANN()
-                if self.rl_conf.ForEveryInf and self.rl_conf.ComesALearn and self.rl_conf.learnMode == "parallel":
+                if self.conf.ForEveryInf and self.conf.ComesALearn and self.conf.learnMode == "parallel":
                     self.numLearnAfterInference += 1
             i += 1
                                          
         self.unFreezeInf("updateFrequency")
-        if self.numIterations >= self.rl_conf.train_for: #if you exited because you're completely done
+        if self.numIterations >= self.conf.train_for: #if you exited because you're completely done
             self.saveNet()
             print("Stopping learning because I'm done after", self.numIterations, "inferences", level=10)
         
@@ -257,7 +256,7 @@ class AbstractRLAgent(AbstractAgent):
     def calculateReward(self, vvec1_hist, vvec2_hist, otherinput_hist, action_hist):
         stay_on_street = abs(otherinput_hist[0].CenterDist)
         stay_on_street = round(0 if stay_on_street < 5 else self.wallhitPunish if stay_on_street >= 10 else stay_on_street/10, 3)
-        speed = otherinput_hist[0].SpeedSteer.speedInStreetDir / self.sv_conf.MAXSPEED
+        speed = otherinput_hist[0].SpeedSteer.speedInStreetDir / self.conf.MAXSPEED
         return speed - stay_on_street
 
 
@@ -277,7 +276,7 @@ class AbstractRLAgent(AbstractAgent):
             
             #alternative 1a: steer = ((np.random.random()*2)-1)
             #alternative 1b: steer = min(max(np.random.normal(scale=0.5), 1), -1)
-            #für 1a und 1b:  steer = read_supervised.dediscretize_steer(read_supervised.discretize_steering(steer, self.rl_conf.steering_steps))
+            #für 1a und 1b:  steer = read_supervised.dediscretize_steer(read_supervised.discretize_steering(steer, self.conf.steering_steps))
             #alternative 2:
             tmp = [0]*config.steering_steps
             tmp[np.random.randint(config.steering_steps)] = 1

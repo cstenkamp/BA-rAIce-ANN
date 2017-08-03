@@ -9,109 +9,94 @@ import sys
 import os
 import numpy as np
 
-class Config(object):
+class Config():
+    #FOLDER STUFF
     LapFolderName = "SavedLaps/"
-    log_dir = "SV_SummaryLogs/"  
-    checkpoint_dir = "SV_Checkpoints/"
-    save_xml = True
+    pretrain_log_dir = "PT_SummaryLogs/"  
+    pretrain_checkpoint_dir = "PT_Checkpoints/"
+    log_dir = "RL_SummaryLogs/"  
+    checkpoint_dir = "RL_Checkpoints/"
+    memory_dir = "./" #will be a pickle-file    
     xml_dir = "./"
-    #wir haben super-über-ordner für RLLearn, checkpoint, summarylogdir & memory für jede kombi aus hframes, secondcam, mspersec
+    save_xml = True
+    #wir haben super-über-ordner für RLLearn, checkpoint, summarylogdir & memory für jede kombi aus hframes, secondcam, mspersec... und dann der agent-folder
     
-    history_frame_nr = 4 #incl. dem jetzigem!
-    speed_neurons = 30 #wenn null nutzt er sie nicht
-    SPEED_AS_ONEHOT = False
-    #for discretized algorithms
-    steering_steps = 7
-    INCLUDE_ACCPLUSBREAK = False
-    #for continuus algorithms
-    num_actions = 3
-    
-    UPDATE_ONLY_IF_NEW = False #sendet immer nach jedem update -> Wenn False sendet er wann immer er was kriegt
-    reset_if_wrongdirection = True
-    
-    image_dims = [30,45] 
-    msperframe = 100 #50   #ACHTUNG!!! Dieser wert wird von unity überschrieben!!!!! #TODO: dass soll mit unity abgeglichen werden!
-    use_cameras = True
-    use_second_camera = True
-    MAXSPEED = 250
-    
-    batch_size = 32
-    keep_prob = 0.8
-    initscale = 0.1
-    max_grad_norm = 10
-    
+    #PRETRAIN STUFF
+    pretrain_batch_size = 32
     pretrain_iterations = 90     #90, 120
     pretrain_initial_lr = 0.005
     pretrain_lr_decay = 0.9
     pretrain_lrdecayafter = pretrain_iterations//2  #//3 für 90, 120
     pretrain_minimal_lr = 1e-6 #mit diesen settings kommt er auf 0.01 loss, 99.7% correct inferences
     pretrain_checkpointall = 10
-    summaryall = False
+    pretrain_summaryall = False
+    pretrain_keep_prob = 0.8
+    pretrain_initscale = 0.1
+    
+    #REINF_LEARN STUFF
+    initial_lr = 0.001
+    batch_size = 32
+    startepsilon = 0.2
+    finalepsilonframe = 100000  #I could use epsilondecrease = 0.0001 instead, however then every new run epsilon would reset to startepsilon (since it doesn't depend on numIterations then)
+    minepsilon = 0.005
+    q_decay = 0.99
+    checkpointall = 10 #RLsteps, not inferences!
+    
+    #LEARN SETTINGS    
+    wallhit_ends_episode = True #problem: wenn es das nicht tun würde, würde er beim lernen den Q-val des folgestates mitbeachten und denken "oh, gegen die Wand fahren ist voll gut"...
+    lapdone_ends_episode = True
+    time_ends_episode = 60 #sekunden oder False
+    save_memory_with_checkpoint = True
+    save_memory_on_exit = False
+    save_memory_all_mins = False
+    replaystartsize = 0
+    memorysize = 30000
+    copy_target_all = 10
+    use_constantbutbigmemory = False
+    visionvecdtype = np.int8 #wäre es np.bool würde er den rand als street sehen!
+    train_for = sys.maxsize-1
+    keep_memory = True
+    ForEveryInf, ComesALearn = 40, 10
+    learnMode = "between" #"parallel", "between", "remote" (the latter is tobedone)
+
+    
+    #GAME SETTINGS
+    history_frame_nr = 4 #incl. dem jetzigem!
+    speed_neurons = 30 
+    SPEED_AS_ONEHOT = False    
+    image_dims = [30,45] 
+    msperframe = 100 #50   #ACHTUNG!!! Dieser wert wird von unity überschrieben!!!!! #TODO: dass soll mit unity abgeglichen werden!
+    use_cameras = True
+    use_second_camera = True
+    MAXSPEED = 250
+    #for discretized algorithms
+    steering_steps = 7
+    INCLUDE_ACCPLUSBREAK = False
+    #for continuus algorithms
+    num_actions = 3
+    
+    #DEBUG STUFF
+    UPDATE_ONLY_IF_NEW = False #sendet immer nach jedem update -> Wenn False sendet er wann immer er was kriegt
+    reset_if_wrongdirection = True
+
     
     def has_gpu(self):
         from tensorflow.python.client import device_lib
         return "gpu" in ",".join([x.name for x in device_lib.list_local_devices()])
     
-    def __init__(self):
-        assert not (self.use_second_camera and (self.history_frame_nr == 1)), "If you're using 2 cameras, you have to use historyframes!"
-        assert os.path.exists(self.LapFolderName), "No data to train on at all!"        
-
-
     def superfolder(self):
         numcams = "0cams_" if not self.use_cameras else ("2cams_" if self.use_second_camera else "1cam_")
         return "data/data_"+str(self.history_frame_nr)+"hframes_"+numcams+ str(self.msperframe) + "msperframe/"
 
-
-
-
-
-class RL_Config(Config):
-    log_dir = "RL_SummaryLogs/"  
-    checkpoint_dir = "RL_Checkpoints/"
-    memory_dir = "./" #will be a pickle-file
-     
-    keep_prob = 1
-    max_grad_norm = 10
-    initial_lr = 0.001
-    #lr_decay = 1
-    
-    wallhit_ends_episode = True #problem: wenn es das nicht tun würde, würde er beim lernen den Q-val des folgestates mitbeachten und denken "oh, gegen die Wand fahren ist voll gut"...
-    lapdone_ends_episode = True
-    time_ends_episode = 60 #sekunden oder False
-    
-    startepsilon = 0.2
-    finalepsilonframe = 100000  #I could use epsilondecrease = 0.0001 instead, however then every new run epsilon would reset to startepsilon (since it doesn't depend on numIterations then)
-    minepsilon = 0.005
-    batchsize = 32
-    q_decay = 0.99
-    checkpointall = 10 #RLsteps, not inferences!
-    copy_target_all = 10
-    
-    save_memory_with_checkpoint = True
-    save_memory_on_exit = False
-    save_memory_all_mins = False
-    
-    replaystartsize = 0
-    memorysize = 30000
-    use_constantbutbigmemory = False
-    visionvecdtype = np.int8 #wäre es np.bool würde er den rand als street sehen!
-    keep_memory = True
-    train_for = sys.maxsize-1
-       
-    ForEveryInf, ComesALearn = 40, 10
-    learnMode = "between" #"parallel", "between", "remote" (the latter is tobedone)
-   
-    #re-uses history_frame_nr, image_dims, steering_steps, speed_neurons, INCLUDE_ACCPLUSBREAK, SPEED_AS_ONEHOT
-    
-    def __init__(self):        
+    def __init__(self):
+        assert not (self.use_second_camera and (self.history_frame_nr == 1)), "If you're using 2 cameras, you have to use historyframes!"
+        assert os.path.exists(self.LapFolderName), "No data to train on at all!"        
         if self.learnMode == "parallel" and not self.has_gpu(): self.learnMode = "between"
-        if not self.use_cameras: self.use_efficientmemory = False #TODO: der agent entscheidet ob er efficientmemory unterstützt
-
 
 
 
     
-class DQN_Config(RL_Config):
+class DQN_Config(Config):
     batch_size = 32                 #minibatch size
     memorysize = 1000000            #replay memory size
     history_frame_nr = 4            #agent history length
@@ -138,7 +123,7 @@ class DQN_Config(RL_Config):
     
     
     
-class Half_DQN_Config(RL_Config):
+class Half_DQN_Config(Config):
     batch_size = 32                     #minibatch size
     memorysize = 100000                 #replay memory size
     history_frame_nr = 4                #agent history length

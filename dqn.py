@@ -9,6 +9,7 @@ import numpy as np
 import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' #so that TF doesn't show its warnings
 import math
+from tensorflow.contrib.framework import get_variables
 #====own classes====
 from myprint import myprint as print
 from utils import convolutional_layer, fc_layer, variable_summary
@@ -28,6 +29,7 @@ class CNN(object): #learning on gpu and application on cpu: https://stackoverflo
         self.mode = mode
         self.agent = agent
         final_neuron_num = self.config.steering_steps*4 if self.config.INCLUDE_ACCPLUSBREAK else self.config.steering_steps*3
+        
         self.conv_stacksize = (self.config.history_frame_nr*2 if self.config.use_second_camera else self.config.history_frame_nr) if self.agent.conv_stacked else 1
         self.ff_stacksize = self.config.history_frame_nr if self.agent.ff_stacked else 1
         self.stood_frames_ago = 0 #das wird benutzt damit er, wenn er einmal stand, sich merken kann ob erst kurz her ist (für settozero)
