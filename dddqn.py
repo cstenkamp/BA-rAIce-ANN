@@ -56,11 +56,10 @@ class DDDQN():
             self.Qout, self.predict = self._inference(self.conv_inputs)
             
             #THIS IS SV_LEARN
-            self.Qout_SM = tf.nn.softmax(self.Qout)
             self.targetA = tf.placeholder(shape=[None],dtype=tf.int32)
             self.targetA_OH = tf.one_hot(self.targetA, self.num_actions, dtype=tf.float32)
             self.sv_loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(labels=self.targetA_OH, logits=self.Qout))
-            self.sv_OP = self._pre_training(self.sv_loss, self.conf.pretrain_initial_lr) 
+            self.sv_OP = self._sv_training(self.sv_loss, self.conf.pretrain_initial_lr) 
             
             
             #THIS IS DDDQN-LEARN
@@ -72,8 +71,10 @@ class DDDQN():
             self.td_error = tf.square(self.targetQ - self.compareQ)
             self.q_loss = tf.reduce_mean(self.td_error)
             self.q_trainer = tf.train.AdamOptimizer(learning_rate=0.00005)
-            self.q_updateModel = self.q_trainer.minimize(self.q_loss)        
+            self.q_updateModel = self.q_trainer.minimize(self.q_loss, global_step=self.step_tf) #TODO: das kann auch pretrainstep sein!    
         
+        
+        self.trainables = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope=self.name)
         self.saver = tf.train.Saver(var_list=get_variables(name))
         
         
@@ -101,7 +102,7 @@ class DDDQN():
         return Qout, predict
     
 
-    def _pre_training(self, loss, init_lr):
+    def _sv_training(self, loss, init_lr):
        self.pretrain_learningrate = tf.Variable(tf.constant(self.conf.pretrain_initial_lr), name='pretrain_learningrate', trainable=False)
        self.new_lr = tf.placeholder(tf.float32, shape=[])                      #diese und die nächste zeile nur nötig falls man per extra-aufruf die lr verändern will, 
        self.pt_lr_update = tf.assign(self.pretrain_learningrate, self.new_lr)  #so wie ich das mache braucht man die nicht.
@@ -132,7 +133,7 @@ class DDDQN():
         
     def load(self, session, pretrain=False):
          folder = self.conf.pretrain_checkpoint_dir if pretrain else self.conf.checkpoint_dir
-         ckpt = tf.train.get_checkpoint_state(folder)
+         ckpt = tf.train.get_checkpoint_state(self.agent.folder(folder))
          if ckpt and ckpt.model_checkpoint_path:
              self.saver.restore(session, ckpt.model_checkpoint_path)
              print("loaded")
@@ -149,20 +150,21 @@ def processState(states):
 
             
     
-
-def updateTargetGraph(tfVars,tau):
-    total_vars = len(tfVars)
+    
+def updateTargetGraph(fromNet, toNet, tau):
+    toCopy = fromNet.trainables
+    toPast = toNet.trainables
     op_holder = []
-    for idx,var in enumerate(tfVars[0:total_vars//2]):
-        op_holder.append(tfVars[idx+total_vars//2].assign((var.value()*tau) + ((1-tau)*tfVars[idx+total_vars//2].value())))
+    for idx,var in enumerate(toCopy[:]):
+        op_holder.append(toPast[idx].assign((var.value()*tau) + ((1-tau)*toPast[idx].value())))
     return op_holder
 
 def updateTarget(op_holder,sess):
     for op in op_holder:
         sess.run(op)
-        
      
-   
+#ne die updateTarget auch anders rum machbar...
+#und ne hard-copy methode, die auch (!!) unbedingt vor dem ersten RL-learn-schritt gemacht wird (dann dabeischreiben welche geladen werden DARF)
         
         
         
@@ -203,10 +205,8 @@ mainQN = DDDQN(conf, myAgent, "onlineNet")
 targetQN = DDDQN(conf, myAgent, "targetNet")
 
 
+targetOps = updateTargetGraph(mainQN, targetQN, tau)
 
-trainables = tf.trainable_variables()
-
-targetOps = updateTargetGraph(trainables,tau)
 
 with tf.Session() as sess:
     sess.run(tf.global_variables_initializer())
@@ -220,25 +220,25 @@ with tf.Session() as sess:
         print("Iteration",i,"Accuracy",round(np.mean(np.array(trainBatch[:,1] == predict, dtype=int))*100, 2),"%")
 
         if i % 10 == 0:
-            print(sess.run(targetQN.Qout,feed_dict={targetQN.conv_inputs:np.vstack(trainBatch[:,0])}))
+            print(sess.run(targetQN.Qout,feed_dict={targetQN.conv_inputs:np.vstack(trainBatch[:3,0])}))
         
         targetQN.pretrain_episode += 1
         trackingpoints.reset_batch()
         while trackingpoints.has_next(BATCHSIZE):
             trainBatch = buffersample(BATCHSIZE)
-    
+
+####sv-learn-part            
         
 #            feed_dict = targetQN.sv_fill_feed_dict(np.vstack(trainBatch[:,0]), trainBatch[:,1])
 #            _, loss, _ = sess.run([targetQN.sv_OP, targetQN.sv_loss, targetQN.pt_lr_update], feed_dict=feed_dict)
-            #print(loss)
-        
-        if i % 10 == 0:
-            targetQN.save(sess, True)
-        #print("Learning rate:",sess.run(targetQN.pretrain_learningrate))
-         
-
-            
-            #Below we perform the Double-DQN update to the target Q-values
+##            print(loss)
+##            print("step", sess.run(targetQN.pretrain_step_tf))
+##        print("Learning rate:",sess.run(targetQN.pretrain_learningrate))
+#        if (i+1) % 10 == 0:
+#            targetQN.save(sess, True)    
+####sv-learn-part ende            
+####q-learn-part
+#            Below we perform the Double-DQN update to the target Q-values
             Q1 = sess.run(mainQN.predict,feed_dict={mainQN.conv_inputs:np.vstack(trainBatch[:,3])})
             Q2 = sess.run(targetQN.Qout,feed_dict={targetQN.conv_inputs:np.vstack(trainBatch[:,3])})
             end_multiplier = -(trainBatch[:,4] - 1)
@@ -246,8 +246,15 @@ with tf.Session() as sess:
             targetQ = trainBatch[:,2] + (y*doubleQ * end_multiplier)
             #Update the network with our target values.
             _ = sess.run(mainQN.q_updateModel, feed_dict={mainQN.conv_inputs:np.vstack(trainBatch[:,0]),mainQN.targetQ:targetQ, mainQN.targetA:trainBatch[:,1]})
-            
             updateTarget(targetOps,sess) #Update the target network toward the primary network.
+#            print("step", sess.run(mainQN.step_tf))            
+
+        if (i+1) % 10 == 0:
+            sess.run(targetQN.step_tf.assign(mainQN.step_tf))
+            targetQN.save(sess, False)
+         
+####q-learn-part ende
+
     
 
 

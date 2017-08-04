@@ -115,6 +115,8 @@ targetQN = Qnetwork(h_size)
 saver = tf.train.Saver()
 
 trainables = tf.trainable_variables()
+print(trainables == tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES))
+exit()
 
 targetOps = updateTargetGraph(trainables,tau)
 
