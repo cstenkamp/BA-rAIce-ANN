@@ -24,17 +24,27 @@ class Config():
     #PRETRAIN STUFF
     pretrain_batch_size = 32
     pretrain_iterations = 90     #90, 120
-    pretrain_initial_lr = 0.005
-    pretrain_lr_decay = 0.9
     pretrain_lrdecayafter = pretrain_iterations//2  #//3 für 90, 120
-    pretrain_minimal_lr = 1e-6 #mit diesen settings kommt er auf 0.01 loss, 99.7% correct inferences
     pretrain_checkpointall = 10
     pretrain_summaryall = False
     pretrain_keep_prob = 0.8
     pretrain_initscale = 0.1
     
+    pretrain_sv_initial_lr = 0.005
+    pretrain_sv_lr_decay = 0.9
+    pretrain_sv_minimal_lr = 1e-6 
+    
+    pretrain_q_initial_lr = 0.00005
+    pretrain_q_lr_decay = 0.999
+    pretrain_q_minimal_lr = 0.000001
+    
     #REINF_LEARN STUFF
-    initial_lr = 0.001
+    train_for = sys.maxsize-1
+    initial_lr = 0.00005
+    lr_decay = 0.999
+    lrdecayafter = train_for//2
+    minimal_lr = 0.000001
+    
     batch_size = 32
     startepsilon = 0.2
     finalepsilonframe = 100000  #I could use epsilondecrease = 0.0001 instead, however then every new run epsilon would reset to startepsilon (since it doesn't depend on numIterations then)
@@ -54,7 +64,6 @@ class Config():
     copy_target_all = 10
     use_constantbutbigmemory = False
     visionvecdtype = np.int8 #wäre es np.bool würde er den rand als street sehen!
-    train_for = sys.maxsize-1
     keep_memory = True
     ForEveryInf, ComesALearn = 40, 10
     learnMode = "between" #"parallel", "between", "remote" (the latter is tobedone)

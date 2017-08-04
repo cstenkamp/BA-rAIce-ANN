@@ -24,14 +24,15 @@ from utils import convolutional_layer, fc_layer, variable_summary
 
 
 
-
 class DDDQN():
     
     ############################BUILDING THE COMPUTATION GRAPH#################
-    def __init__(self, conf, agent, name, isInference=False):  
+    def __init__(self, conf, agent, name, isInference=False, isPretrain=False):  
         self.conf = conf
         self.agent = agent
-        self.name = name        
+        self.name = name  
+        self.isInference = isInference
+        self.isPretrain = isPretrain
         self.pretrain_episode = 0
         self.step = 0
         self.run_inferences = 0
@@ -50,16 +51,17 @@ class DDDQN():
             
             
             #THIS IS FORWARD STEP
-            self.conv_inputs = tf.placeholder(tf.float32, shape=[None, self.conf.image_dims[0], self.conf.image_dims[1], self.conv_stacksize], name="conv_inputs")  if self.agent.usesConv else None
-            self.ff_inputs = tf.placeholder(tf.float32, shape=[None, self.ff_stacksize*self.agent.ff_inputsize], name="ff_inputs") if self.agent.ff_inputsize else None
+            self.conv_inputs = tf.placeholder(tf.float32, shape=[None, self.conf.image_dims[0], self.conf.image_dims[1], self.conv_stacksize], name="conv_inputs")  
+            #self.ff_inputs = tf.placeholder(tf.float32, shape=[None, self.ff_stacksize*self.agent.ff_inputsize], name="ff_inputs") 
+            self.ff_inputs = tf.placeholder(tf.float32, shape=[None, 2], name="ff_inputs")            
             self.stands_inputs = tf.placeholder(tf.float32, shape=[None], name="standing_inputs") #necessary for settozero            
             self.Qout, self.predict = self._inference(self.conv_inputs)
             
-            #THIS IS SV_LEARN
+            #THIS IS SV_LEARN 
             self.targetA = tf.placeholder(shape=[None],dtype=tf.int32)
             self.targetA_OH = tf.one_hot(self.targetA, self.num_actions, dtype=tf.float32)
             self.sv_loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(labels=self.targetA_OH, logits=self.Qout))
-            self.sv_OP = self._sv_training(self.sv_loss, self.conf.pretrain_initial_lr) 
+            self.sv_OP = self._sv_training(self.sv_loss)  
             
             
             #THIS IS DDDQN-LEARN
@@ -70,14 +72,15 @@ class DDDQN():
             self.compareQ = tf.reduce_sum(tf.multiply(self.Qout, self.targetA_OH), axis=1) #der td_error von den actions über die wir nicht lernen wollen ist null
             self.td_error = tf.square(self.targetQ - self.compareQ) 
             self.q_loss = tf.reduce_mean(self.td_error)
-            self.q_trainer = tf.train.AdamOptimizer(learning_rate=0.00005)
-            self.q_updateModel = self.q_trainer.minimize(self.q_loss, global_step=self.step_tf) #TODO: das kann auch pretrainstep sein!    
+            self.q_OP = self._q_training(self.q_loss, isPretrain)
+            
         
         
         self.trainables = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope=self.name)
         self.saver = tf.train.Saver(var_list=get_variables(name))
         
-        
+
+            
     def _inference(self, imageIn):
         self.conv1 = slim.conv2d(inputs=imageIn,num_outputs=32,kernel_size=[4,6],stride=[2,3],padding='VALID', biases_initializer=None, normalizer_fn=slim.batch_norm)
         self.conv2 = slim.conv2d(inputs=self.conv1,num_outputs=64,kernel_size=[4,4],stride=[2,2],padding='VALID', biases_initializer=None, normalizer_fn=slim.batch_norm)
@@ -100,49 +103,125 @@ class DDDQN():
         Qout = self.Value + tf.subtract(self.Advantage,tf.reduce_mean(self.Advantage,axis=1,keep_dims=True))
         #Qmax = tf.reduce_max(Qout, axis=1) #not necessary anymore because we use Double-Q
         predict = tf.argmax(Qout,1)
+        
+        def settozero(q):
+            ZEROIS = 0
+            q = tf.squeeze(q) #die stands_inputs sind nur dann True wenn es nur um ein sample geht
+            if not self.conf.INCLUDE_ACCPLUSBREAK: #dann nimmste nur das argmax von den mittleren neurons (was die mit gas sind)
+                q = tf.slice(q,tf.shape(q)//3,tf.shape(q)//3)
+                q = tf.concat([tf.multiply(tf.ones(tf.shape(q)),ZEROIS), q, tf.multiply(tf.ones(tf.shape(q)), ZEROIS)], axis=0)
+            else:
+                q = tf.slice(q,tf.shape(q)//2,(tf.shape(q)//4)*3)
+                q = tf.concat([tf.multiply(tf.ones(tf.shape(q)*2), ZEROIS), q, tf.multiply(tf.ones(tf.shape(q)), ZEROIS)], axis=0)                   
+            q = tf.expand_dims(q, 0)            
+            return q        
+        
+        if self.isInference:
+            Qout = tf.cond(tf.reduce_sum(self.stands_inputs) > 0, lambda: settozero(Qout), lambda: Qout) #wenn du stehst, brauchste dich nicht mehr für die ohne gas zu interessieren
+            
         return Qout, predict 
     
 
-    def _sv_training(self, loss, init_lr):
-       self.pretrain_learningrate = tf.Variable(tf.constant(self.conf.pretrain_initial_lr), name='pretrain_learningrate', trainable=False)
-       self.new_lr = tf.placeholder(tf.float32, shape=[])                      #diese und die nächste zeile nur nötig falls man per extra-aufruf die lr verändern will, 
-       self.pt_lr_update = tf.assign(self.pretrain_learningrate, self.new_lr)  #so wie ich das mache braucht man die nicht.
-       train_op = tf.train.AdamOptimizer(self.pretrain_learningrate).minimize(loss, global_step=self.pretrain_step_tf)
-       return train_op
+    def _sv_training(self, loss): #svtrain is necessarily pretrain, but pretrain is not necessarily sv
+        init_lr = self.conf.pretrain_sv_initial_lr
+        self.sv_lr = tf.Variable(tf.constant(init_lr), trainable=False)
+        self.sv_new_lr = tf.placeholder(tf.float32, shape=[])                   
+        self.sv_lr_update = tf.assign(self.sv_lr, self.sv_new_lr)  
+        trainer = tf.train.AdamOptimizer(self.sv_lr)
+        train_op = trainer.minimize(loss, global_step=self.pretrain_step_tf)
+        return train_op
         
+        
+    def _q_training(self, loss, isPretrain):
+        if isPretrain:
+            init_lr = self.conf.pretrain_q_initial_lr
+            self.lr = tf.Variable(tf.constant(init_lr), trainable=False)
+            self.new_lr = tf.placeholder(tf.float32, shape=[]) 
+            self.lr_update = tf.assign(self.lr, self.new_lr)    
+            q_trainer = tf.train.AdamOptimizer(learning_rate=self.lr)
+            q_OP = q_trainer.minimize(loss, global_step=self.pretrain_step_tf) 
+        else:
+            init_lr = self.conf.initial_lr
+            self.lr = tf.Variable(tf.constant(init_lr), trainable=False)
+            self.new_lr = tf.placeholder(tf.float32, shape=[]) 
+            self.lr_update = tf.assign(self.lr, self.new_lr)    
+            q_trainer = tf.train.AdamOptimizer(learning_rate=self.lr)
+            q_OP = q_trainer.minimize(loss, global_step=self.step_tf) 
+        return q_OP
        
     ############################METHODS FOR RUNNING############################
-        
-    def sv_fill_feed_dict(self, inputs, targets, decay_lr = True): 
-        feed_dict = {}
-        if decay_lr:
-            lr_decay = self.conf.pretrain_lr_decay ** max(self.pretrain_episode-self.conf.pretrain_lrdecayafter, 0.0)
-            new_lr = max(self.conf.pretrain_initial_lr*lr_decay, self.conf.pretrain_minimal_lr)
-            feed_dict[self.new_lr] = new_lr #TODO: eig müsste er else nicht die opt durchführen die zu updaten
-        feed_dict[self.conv_inputs] = inputs
-        feed_dict[self.targetA] = targets
-        return feed_dict       
-        
 
-    def save(self, session, pretrain=False):
-        folder = self.conf.pretrain_checkpoint_dir if pretrain else self.conf.checkpoint_dir
+    def save(self, session):
+        folder = self.conf.pretrain_checkpoint_dir if self.isPretrain else self.conf.checkpoint_dir
         checkpoint_file = os.path.join(self.agent.folder(folder), 'model.ckpt')
-        #TODO: er sollte hier noch die numIters etc speichern
-        self.saver.save(session, checkpoint_file, global_step=self.pretrain_step_tf if pretrain else self.step_tf)
-        print("saved")
+        session.run(self.pretrain_episode_tf.assign(self.pretrain_episode))
+        session.run(self.run_inferences_tf.assign(self.run_inferences))
+        if self.isPretrain:
+            session.run(self.step_tf.assign(0))
+        else:
+            session.run(self.pretrain_step_tf.assign(self.pretrain_step))
+        self.saver.save(session, checkpoint_file, global_step=self.pretrain_step_tf if self.isPretrain else self.step_tf)
+        print("saved") 
         
         
-    def load(self, session, pretrain=False):
-         folder = self.conf.pretrain_checkpoint_dir if pretrain else self.conf.checkpoint_dir
+    def load(self, session, from_pretrain=False):
+         folder = self.conf.pretrain_checkpoint_dir if from_pretrain else self.conf.checkpoint_dir
          ckpt = tf.train.get_checkpoint_state(self.agent.folder(folder))
          if ckpt and ckpt.model_checkpoint_path:
              self.saver.restore(session, ckpt.model_checkpoint_path)
-             print("loaded")
+             print("loaded",("from pretrain" if from_pretrain else ""))
+             self.pretrain_step = self.pretrain_step_tf.eval(session)
+             self.pretrain_episode = self.pretrain_episode_tf.eval(session)
+             self.step = self.step_tf.eval(session)
+             self.run_inferences = self.run_inferences_tf.eval(session)
+             print("Pretrain-Step:",self.pretrain_step, "Pretrain-Episode:",self.pretrain_episode,"Main-Step:",self.step, "Run'n Iterations:", self.run_inferences)
          else:
              print("couldn't load")
         #TODO: er sollte hier noch die numIters etc laden
         
         
+    #carstands ist true iff (inference & carstands), in jedem anderem Fall false
+    def feed_dict(self, conv_inputs, ff_inputs, targetQ=None, targetA=None, carstands=False, decay_lr=False): #TODO: merge mit sv_fill_feed        
+
+        def is_inference(conv_inputs, other_inputs):
+            return (len(conv_inputs.shape) <= 3 if conv_inputs is not None else len(other_inputs.shape) <= 2) and self.isInference
+        
+        feed_dict = {}
+        if is_inference(conv_inputs, ff_inputs):   
+            self.stood_frames_ago = 0 if carstands else self.stood_frames_ago + 1
+            if self.stood_frames_ago < 10: #wenn du vor einigen frames stands, gib jetzt auch gas
+                carstands = True
+            conv_inputs = np.expand_dims(conv_inputs, axis=0) #expand_dims weil hier quasi batchsize=1
+            ff_inputs= np.expand_dims(ff_inputs, axis=0) 
+            stands_inputs = np.expand_dims([carstands], axis=0)
+        else:
+            stands_inputs = [False]*ff_inputs.shape[0]
+            if targetQ is not None: #targetQ und targetA werden nur beim RL-learn (#TODO: auch beim svlearn) verwendet, und dann ist ebennicht inference
+                feed_dict[self.targetQ] = targetQ
+            if targetA is not None:
+                feed_dict[self.targetA] = targetA
+        
+        if self.agent.usesConv:
+            feed_dict[self.conv_inputs] = conv_inputs
+        if self.agent.ff_inputsize:
+            feed_dict[self.ff_inputs] = ff_inputs 
+        if self.isInference:
+            feed_dict[self.stands_inputs] = stands_inputs #ist halt 0 wenn false, was richtig ist
+            
+        if decay_lr == "sv":
+            lr_decay = self.conf.pretrain_sv_lr_decay ** max(self.pretrain_episode-self.conf.pretrain_lrdecayafter, 0.0)
+            new_lr = max(self.conf.pretrain_sv_initial_lr*lr_decay, self.conf.pretrain_sv_minimal_lr)
+            feed_dict[self.sv_new_lr] = new_lr 
+        elif decay_lr == "q":
+            if self.isPretrain:
+                lr_decay = self.conf.pretrain_q_lr_decay ** max(self.pretrain_episode-self.conf.pretrain_lrdecayafter, 0.0)
+                new_lr = max(self.conf.pretrain_q_initial_lr*lr_decay, self.conf.pretrain_q_minimal_lr)
+                feed_dict[self.new_lr] = new_lr                 
+            else:
+                lr_decay = self.conf.lr_decay ** max(self.step-self.conf.lrdecayafter, 0.0)
+                new_lr = max(self.conf.initial_lr*lr_decay, self.conf.minimal_lr)
+                feed_dict[self.new_lr] = new_lr                 
+        return feed_dict
         
         
         
@@ -203,28 +282,31 @@ tau = 0.001
 
 tf.reset_default_graph()
 
-mainQN = DDDQN(conf, myAgent, "onlineNet")
-targetQN = DDDQN(conf, myAgent, "targetNet", isInference=True)
+onlineQN = DDDQN(conf, myAgent, "onlineNet", isPretrain=True)
+targetQN = DDDQN(conf, myAgent, "targetNet", isPretrain=True)
 
 
-smoothTargetNetUpdate = NetCopyOps(mainQN, targetQN, tau)
-hardOnlineNetUpdate = NetCopyOps(targetQN, mainQN)
+smoothTargetNetUpdate = NetCopyOps(onlineQN, targetQN, tau)
+hardOnlineNetUpdate = NetCopyOps(targetQN, onlineQN)
 
 with tf.Session() as sess:
     sess.run(tf.global_variables_initializer())
-#    targetQN.load(sess, False)
-#    runMultipleOps(hardOnlineNetUpdate, sess)
+    targetQN.load(sess, True)
+    sess.run(onlineQN.pretrain_step_tf.assign(targetQN.pretrain_step_tf))
+    runMultipleOps(hardOnlineNetUpdate, sess)
     #so muss das laden sein! targetQN wird geladen, und dann wird der inhalt nach onlineQN übertragen. Dann wird targetQN auch gespeichert.
     
-    for i in range(1000):
+    for i in range(11-targetQN.pretrain_episode):
         
         trackingpoints.reset_batch()
         trainBatch = buffersample(trackingpoints.numsamples)
-        predict = sess.run(targetQN.predict,feed_dict={targetQN.conv_inputs:np.vstack(trainBatch[:,0])})
-        print("Iteration",i,"Accuracy",round(np.mean(np.array(trainBatch[:,1] == predict, dtype=int))*100, 2),"%")
+        ff_inputs = np.vstack(np.vstack(trainBatch[:,0]).shape[0]*[[1,2]]) #TODO: get rid of.
+        predict = sess.run(targetQN.predict,feed_dict=targetQN.feed_dict(np.vstack(trainBatch[:,0]), ff_inputs))
+        print("Iteration",targetQN.pretrain_episode,"Accuracy",round(np.mean(np.array(trainBatch[:,1] == predict, dtype=int))*100, 2),"%")
 
         if i % 10 == 0:
-            print(sess.run(targetQN.Qout,feed_dict={targetQN.conv_inputs:np.vstack(trainBatch[:3,0])}))
+            ff_inputs = np.vstack(np.vstack(trainBatch[:3,0]).shape[0]*[[1,2]]) #TODO: get rid of.
+            print(sess.run(targetQN.Qout,feed_dict=targetQN.feed_dict(np.vstack(trainBatch[:3,0]), ff_inputs)))
         
         targetQN.pretrain_episode += 1
         trackingpoints.reset_batch()
@@ -232,30 +314,92 @@ with tf.Session() as sess:
             trainBatch = buffersample(BATCHSIZE)
 
 ####sv-learn-part            
-        
-#            feed_dict = targetQN.sv_fill_feed_dict(np.vstack(trainBatch[:,0]), trainBatch[:,1])
-#            _, loss, _ = sess.run([targetQN.sv_OP, targetQN.sv_loss, targetQN.pt_lr_update], feed_dict=feed_dict)
+#            ff_inputs = np.vstack(np.vstack(trainBatch[:,0]).shape[0]*[[1,2]]) #TODO: get rid of.
+#            _, loss, _ = sess.run([targetQN.sv_OP, targetQN.sv_loss, targetQN.sv_lr_update], feed_dict=targetQN.feed_dict(np.vstack(trainBatch[:,0]), ff_inputs, targetA=trainBatch[:,1], decay_lr="sv"))
 ##            print(loss)
 ##            print("step", sess.run(targetQN.pretrain_step_tf))
 ##        print("Learning rate:",sess.run(targetQN.pretrain_learningrate))
 #        if (i+1) % 10 == 0:
-#            targetQN.save(sess, True)    
+#            targetQN.save(sess)    
 ####sv-learn-part ende            
 ####q-learn-part
 #            Below we perform the Double-DQN update to the target Q-values
-            action = sess.run(mainQN.predict,feed_dict={mainQN.conv_inputs:np.vstack(trainBatch[:,3])})
-            folgeQ = sess.run(targetQN.Qout,feed_dict={targetQN.conv_inputs:np.vstack(trainBatch[:,3])}) #No argmax anymore, becuase DDQN: instead of taking the max over Q-values when computing the target-Q value for our training step, we use our primary network to chose an action, and our target network to generate the target Q-value for that action. 
+            ff_inputs = np.vstack(np.vstack(trainBatch[:,3]).shape[0]*[[1,2]]) #TODO: get rid of.
+            action = sess.run(onlineQN.predict,feed_dict=onlineQN.feed_dict(np.vstack(trainBatch[:,3]), ff_inputs)) #TODO: im text schreiben wie das bei non-doubleDQN anders wäre
+            folgeQ = sess.run(targetQN.Qout,feed_dict=targetQN.feed_dict(np.vstack(trainBatch[:,3]), ff_inputs)) #No argmax anymore, but instead the action-prediciton because DDQN: instead of taking the max over Q-values when computing the target-Q value for our training step, we use our primary network to chose an action, and our target network to generate the target Q-value for that action. 
             consider_stateval = -(trainBatch[:,4] - 1)
             doubleQ = folgeQ[range(BATCHSIZE),action]  
             targetQ = trainBatch[:,2] + (y*doubleQ * consider_stateval)
             #Update the network with our target values.
-            _ = sess.run(mainQN.q_updateModel, feed_dict={mainQN.conv_inputs:np.vstack(trainBatch[:,0]),mainQN.targetQ:targetQ, mainQN.targetA:trainBatch[:,1]})
+            ff_inputs = np.vstack(np.vstack(trainBatch[:,0]).shape[0]*[[1,2]]) #TODO: get rid of.
+            _ = sess.run(onlineQN.q_OP, feed_dict=onlineQN.feed_dict(np.vstack(trainBatch[:,0]), ff_inputs, targetQ=targetQ, targetA=trainBatch[:,1]))
             runMultipleOps(smoothTargetNetUpdate,sess) #Update the target network toward the primary network.
-#            print("step", sess.run(mainQN.step_tf))            
+#            print("step", sess.run(onlineQN.step_tf))            
+
+        if (i+1) % 5 == 0:
+            sess.run(targetQN.pretrain_step_tf.assign(onlineQN.pretrain_step_tf))
+            targetQN.save(sess)
+            #Ich lade und speicher das targetQN, das heißt alles was im onlineQN gecounted wird muss ich vorher übertragen
+         
+####q-learn-part ende
+
+
+    
+        
+        
+        
+        
+        
+    
+tf.reset_default_graph()
+
+onlineQN = DDDQN(conf, myAgent, "onlineNet", isPretrain=False)
+targetQN = DDDQN(conf, myAgent, "targetNet", isPretrain=False)
+
+
+smoothTargetNetUpdate = NetCopyOps(onlineQN, targetQN, tau)
+hardOnlineNetUpdate = NetCopyOps(targetQN, onlineQN)
+
+with tf.Session() as sess:
+    sess.run(tf.global_variables_initializer())
+    targetQN.load(sess, True)
+    runMultipleOps(hardOnlineNetUpdate, sess)
+    #so muss das laden sein! targetQN wird geladen, und dann wird der inhalt nach onlineQN übertragen. Dann wird targetQN auch gespeichert.
+    
+    for i in range(20):
+        
+        trackingpoints.reset_batch()
+        trainBatch = buffersample(trackingpoints.numsamples)
+        ff_inputs = np.vstack(np.vstack(trainBatch[:,0]).shape[0]*[[1,2]]) #TODO: get rid of.
+        predict = sess.run(targetQN.predict,feed_dict=targetQN.feed_dict(np.vstack(trainBatch[:,0]), ff_inputs))
+        print("Step",onlineQN.step_tf.eval(sess),"Accuracy",round(np.mean(np.array(trainBatch[:,1] == predict, dtype=int))*100, 2),"%")
+
+        if i % 10 == 0:
+            ff_inputs = np.vstack(np.vstack(trainBatch[:3,0]).shape[0]*[[1,2]]) #TODO: get rid of.
+            print(sess.run(targetQN.Qout,feed_dict=targetQN.feed_dict(np.vstack(trainBatch[:3,0]), ff_inputs)))
+        
+        trackingpoints.reset_batch()
+        while trackingpoints.has_next(BATCHSIZE):
+            trainBatch = buffersample(BATCHSIZE)
+
+       
+####q-learn-part
+#            Below we perform the Double-DQN update to the target Q-values
+            ff_inputs = np.vstack(np.vstack(trainBatch[:,3]).shape[0]*[[1,2]]) #TODO: get rid of.
+            action = sess.run(onlineQN.predict,feed_dict=onlineQN.feed_dict(np.vstack(trainBatch[:,3]), ff_inputs)) #TODO: im text schreiben wie das bei non-doubleDQN anders wäre
+            folgeQ = sess.run(targetQN.Qout,feed_dict=targetQN.feed_dict(np.vstack(trainBatch[:,3]), ff_inputs)) #No argmax anymore, but instead the action-prediciton because DDQN: instead of taking the max over Q-values when computing the target-Q value for our training step, we use our primary network to chose an action, and our target network to generate the target Q-value for that action. 
+            consider_stateval = -(trainBatch[:,4] - 1)
+            doubleQ = folgeQ[range(BATCHSIZE),action]  
+            targetQ = trainBatch[:,2] + (y*doubleQ * consider_stateval)
+            #Update the network with our target values.
+            ff_inputs = np.vstack(np.vstack(trainBatch[:,0]).shape[0]*[[1,2]]) #TODO: get rid of.
+            _ = sess.run(onlineQN.q_OP, feed_dict=onlineQN.feed_dict(np.vstack(trainBatch[:,0]), ff_inputs, targetQ=targetQ, targetA=trainBatch[:,1]))
+            runMultipleOps(smoothTargetNetUpdate,sess) #Update the target network toward the primary network.
+#            print("step", sess.run(onlineQN.step_tf))            
 
         if (i+1) % 10 == 0:
-            sess.run(targetQN.step_tf.assign(mainQN.step_tf))
-            targetQN.save(sess, False)
+            sess.run(targetQN.step_tf.assign(onlineQN.step_tf))
+            targetQN.save(sess)
             #Ich lade und speicher das targetQN, das heißt alles was im onlineQN gecounted wird muss ich vorher übertragen
          
 ####q-learn-part ende
@@ -263,12 +407,71 @@ with tf.Session() as sess:
 
 
 
-exit()        
-        
-        
-        
-        
-        
-        
-        
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+     
     
+tf.reset_default_graph()
+
+onlineQN = DDDQN(conf, myAgent, "onlineNet", isPretrain=False)
+targetQN = DDDQN(conf, myAgent, "targetNet", isPretrain=False)
+
+
+smoothTargetNetUpdate = NetCopyOps(onlineQN, targetQN, tau)
+hardOnlineNetUpdate = NetCopyOps(targetQN, onlineQN)
+
+with tf.Session() as sess:
+    sess.run(tf.global_variables_initializer())
+    targetQN.load(sess, False)
+    runMultipleOps(hardOnlineNetUpdate, sess)
+    #so muss das laden sein! targetQN wird geladen, und dann wird der inhalt nach onlineQN übertragen. Dann wird targetQN auch gespeichert.
+    
+    for i in range(1000):
+        
+        trackingpoints.reset_batch()
+        trainBatch = buffersample(trackingpoints.numsamples)
+        ff_inputs = np.vstack(np.vstack(trainBatch[:,0]).shape[0]*[[1,2]]) #TODO: get rid of.
+        predict = sess.run(targetQN.predict,feed_dict=targetQN.feed_dict(np.vstack(trainBatch[:,0]), ff_inputs))
+        print("Step",targetQN.step_tf.eval(sess),"Accuracy",round(np.mean(np.array(trainBatch[:,1] == predict, dtype=int))*100, 2),"%")
+
+        if i % 10 == 0:
+            ff_inputs = np.vstack(np.vstack(trainBatch[:3,0]).shape[0]*[[1,2]]) #TODO: get rid of.
+            print(sess.run(targetQN.Qout,feed_dict=targetQN.feed_dict(np.vstack(trainBatch[:3,0]), ff_inputs)))
+        
+        trackingpoints.reset_batch()
+        while trackingpoints.has_next(BATCHSIZE):
+            trainBatch = buffersample(BATCHSIZE)
+
+       
+####q-learn-part
+#            Below we perform the Double-DQN update to the target Q-values
+            ff_inputs = np.vstack(np.vstack(trainBatch[:,3]).shape[0]*[[1,2]]) #TODO: get rid of.
+            action = sess.run(onlineQN.predict,feed_dict=onlineQN.feed_dict(np.vstack(trainBatch[:,3]), ff_inputs)) #TODO: im text schreiben wie das bei non-doubleDQN anders wäre
+            folgeQ = sess.run(targetQN.Qout,feed_dict=targetQN.feed_dict(np.vstack(trainBatch[:,3]), ff_inputs)) #No argmax anymore, but instead the action-prediciton because DDQN: instead of taking the max over Q-values when computing the target-Q value for our training step, we use our primary network to chose an action, and our target network to generate the target Q-value for that action. 
+            consider_stateval = -(trainBatch[:,4] - 1)
+            doubleQ = folgeQ[range(BATCHSIZE),action]  
+            targetQ = trainBatch[:,2] + (y*doubleQ * consider_stateval)
+            #Update the network with our target values.
+            ff_inputs = np.vstack(np.vstack(trainBatch[:,0]).shape[0]*[[1,2]]) #TODO: get rid of.
+            _ = sess.run(onlineQN.q_OP, feed_dict=onlineQN.feed_dict(np.vstack(trainBatch[:,0]), ff_inputs, targetQ=targetQ, targetA=trainBatch[:,1]))
+            runMultipleOps(smoothTargetNetUpdate,sess) #Update the target network toward the primary network.
+#            print("step", sess.run(onlineQN.step_tf))            
+
+        if (i+1) % 10 == 0:
+            sess.run(targetQN.step_tf.assign(onlineQN.step_tf))
+            targetQN.save(sess)
+            #Ich lade und speicher das targetQN, das heißt alles was im onlineQN gecounted wird muss ich vorher übertragen
+         
+####q-learn-part ende
