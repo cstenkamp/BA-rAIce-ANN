@@ -90,15 +90,14 @@ class DuelDQN():
             conv2 = convolutional_layer(conv1, 32, [4,4], [2,2], 64, "Conv2", tf.nn.relu, True, True, True, False, False, {}, variable_summary, initializer=ini)                     #(?, 6, 6, 64)
             conv3 = convolutional_layer(conv2, 64, [3,3], [1,1], 64, "Conv3", tf.nn.relu, True, True, True, False, False, {}, variable_summary, initializer=ini)                     #(?, 4, 4, 64)
             conv4 = convolutional_layer(conv3, 64, [4,4], [1,1], self.h_size, "Conv4", tf.nn.relu, True, True, True, False, False, {}, variable_summary, initializer=ini)            #(?, 1, 1, 256)
-            conv4_flat = tf.reshape(conv4, [-1, self.h_size])
-            if ff_inputs is not None:
-                fc0 = tf.concat([conv4_flat, ff_inputs], 1)
-        else:    #fc_layer(input_tensor, input_size, output_size, name, is_trainable, batchnorm, is_training, weightdecay=False, act=None, keep_prob=1, trainvars=None, varSum=None, initializer=None)
-            fc0 = fc_layer(ff_inputs, self.ff_stacksize*self.agent.ff_inputsize, self.agent.ff_inputsize, "FC0", True, True, True, False, tf.nn.relu, 1, {}, variable_summary, initializer=ini)   
-        
-        fc1 = fc_layer(fc0, self.h_size + self.agent.ff_inputsize, self.h_size*2, "FC1", True, True, True, False, tf.nn.relu, 1, {}, variable_summary, initializer=ini)                 
+            conv4_flat = tf.reshape(conv4, [-1, self.h_size*2])
+#            if ff_inputs is not None:
+#                fc0 = tf.concat([conv4_flat, ff_inputs], 1)
+#        else:    #fc_layer(input_tensor, input_size, output_size, name, is_trainable, batchnorm, is_training, weightdecay=False, act=None, keep_prob=1, trainvars=None, varSum=None, initializer=None)
+#            fc0 = fc_layer(ff_inputs, self.ff_stacksize*self.agent.ff_inputsize, self.agent.ff_inputsize, "FC0", True, True, True, False, tf.nn.relu, 1, {}, variable_summary, initializer=ini)   
 #        
-        print(fc1.get_shape())
+#        fc1 = fc_layer(fc0, self.h_size + self.agent.ff_inputsize, self.h_size*2, "FC1", True, True, True, False, tf.nn.relu, 1, {}, variable_summary, initializer=ini)                 
+
 ###########mein kram ende###########        
 #        
 #        
@@ -110,9 +109,7 @@ class DuelDQN():
 #        #meins ist    (?, 14, 14, 32) - (?, 6, 6, 64) - (?, 4, 4, 64) - (?, 1, 1, 512) - (?, 256)
         
         #We take the output from the final convolutional layer and split it into separate advantage and value streams.
-        self.streamAC,self.streamVC = tf.split(fc1,2,3) #two splits, dimension 3
-        self.streamA = slim.flatten(self.streamAC)
-        self.streamV = slim.flatten(self.streamVC)
+        self.streamA,self.streamV = tf.split(conv4_flat,2,1) 
         xavier_init = tf.contrib.layers.xavier_initializer()
         self.AW = tf.Variable(xavier_init([self.h_size,self.num_actions]))
         self.VW = tf.Variable(xavier_init([self.h_size,1]))
@@ -313,7 +310,7 @@ class DDDQN_model():
     def getAccuracy(self, batch):
         oldstates, actions, rewards, newstates, terminals = batch
         predict = self.session.run(self.targetQN.predict,feed_dict=self.targetQN.feed_dict(oldstates[0], oldstates[1]))
-        return round(np.mean(np.array(batch[:,1] == predict, dtype=int))*100, 2)
+        return round(np.mean(np.array(actions == predict, dtype=int))*100, 2)
             
     
     def inference(self, batch):

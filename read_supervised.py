@@ -438,11 +438,11 @@ def create_QLearnInputs_from_SVStateBatch(presentStates, pastStates, agent):
     presentStates = list(zip(*presentStates))
     pastStates = list(zip(*pastStates))
     
-    old_convs = np.array([agent.getAgentState(*i)[0] for i in pastStates])
+    old_convs = np.rollaxis(np.array([agent.getAgentState(*i)[0] for i in pastStates]), 1, 4)
     old_other = np.array([agent.makeNetUsableOtherInputs(agent.getAgentState(*i)[1]) for i in pastStates])
     oldAgentStates = (old_convs, old_other)
     
-    new_convs = np.array([agent.getAgentState(*i)[0] for i in presentStates])
+    new_convs = np.rollaxis(np.array([agent.getAgentState(*i)[0] for i in presentStates]), 1, 4)
     new_other = np.array([agent.makeNetUsableOtherInputs(agent.getAgentState(*i)[1]) for i in presentStates])
     newAgentStates = (new_convs, new_other)
     
@@ -467,10 +467,11 @@ if __name__ == '__main__':
     while trackingpoints.has_next(10):
         presentStates, pastStates = trackingpoints.next_batch(conf, myAgent, 10)
     
-    create_QLearnInputs_from_SVStateBatch(presentStates, pastStates, myAgent)
+    vvec, vvec2, otherinputs, actions = presentStates  
+    print(vvec.shape)
+    print(vvec2.shape)
+    print(len(otherinputs))
+    print(actions.shape)  
     
-       
-#    print(vvec.shape)
-#    print(vvec2.shape)
-#    print(len(otherinputs))
-#    print(actions.shape)  
+    s, a, r, s2, t = create_QLearnInputs_from_SVStateBatch(presentStates, pastStates, myAgent)
+        
