@@ -5,8 +5,13 @@ Created on Thu Aug  3 15:38:25 2017
 @author: nivradmin
 """
 
-from __future__ import division
-
+#TODO: 
+# -die variable_summary(loss, "loss") etc fehlen für TensorBoard
+# -die Möglichkeit auf RMSProp mit den originalen DQN settings
+# -nicht doch CPU und GPU gleichzeitig inference und lernen?
+# -ist die eval von vorher komplett wieder hier?
+# -die calculate_value ist noch nicht da (und muss auch anders, da doubleDQN)
+#
 
 import random
 import tensorflow.contrib.slim as slim
@@ -80,43 +85,32 @@ class DuelDQN():
 
             
     def _inference(self, conv_inputs, ff_inputs, stands_inputs):
-        
+        assert(conv_inputs is not None or ff_inputs is not None)
         ini = tf.truncated_normal_initializer(stddev=1.0 / math.sqrt(float(self.conf.image_dims[0]*self.conf.image_dims[1])))
-##########mein kram###########            
+
         if conv_inputs is not None:
             rs_input = tf.reshape(conv_inputs, [-1, self.conf.image_dims[0], self.conf.image_dims[1], self.conv_stacksize]) #final dimension = number of color channels*number of stacked (history-)frames                  
             #convolutional_layer(input_tensor, input_channels, kernel_size, stride, output_channels, name, act, is_trainable, batchnorm, is_training, weightdecay=False, pool=True, trainvars=None, varSum=None, initializer=None)
             conv1 = convolutional_layer(rs_input, self.conv_stacksize, [4,6], [2,3], 32, "Conv1", tf.nn.relu, True, True, True, False, False, {}, variable_summary, initializer=ini) #(?, 14, 14, 32)
-            conv2 = convolutional_layer(conv1, 32, [4,4], [2,2], 64, "Conv2", tf.nn.relu, True, True, True, False, False, {}, variable_summary, initializer=ini)                     #(?, 6, 6, 64)
-            conv3 = convolutional_layer(conv2, 64, [3,3], [1,1], 64, "Conv3", tf.nn.relu, True, True, True, False, False, {}, variable_summary, initializer=ini)                     #(?, 4, 4, 64)
-            conv4 = convolutional_layer(conv3, 64, [4,4], [1,1], self.h_size, "Conv4", tf.nn.relu, True, True, True, False, False, {}, variable_summary, initializer=ini)            #(?, 1, 1, 256)
-            conv4_flat = tf.reshape(conv4, [-1, self.h_size*2])
-#            if ff_inputs is not None:
-#                fc0 = tf.concat([conv4_flat, ff_inputs], 1)
-#        else:    #fc_layer(input_tensor, input_size, output_size, name, is_trainable, batchnorm, is_training, weightdecay=False, act=None, keep_prob=1, trainvars=None, varSum=None, initializer=None)
-#            fc0 = fc_layer(ff_inputs, self.ff_stacksize*self.agent.ff_inputsize, self.agent.ff_inputsize, "FC0", True, True, True, False, tf.nn.relu, 1, {}, variable_summary, initializer=ini)   
-#        
-#        fc1 = fc_layer(fc0, self.h_size + self.agent.ff_inputsize, self.h_size*2, "FC1", True, True, True, False, tf.nn.relu, 1, {}, variable_summary, initializer=ini)                 
-
-###########mein kram ende###########        
-#        
-#        
-#        self.conv1 = slim.conv2d(inputs=imageIn,num_outputs=32,kernel_size=[4,6],stride=[2,3],padding='VALID', biases_initializer=None, normalizer_fn=slim.batch_norm)
-#        self.conv2 = slim.conv2d(inputs=self.conv1,num_outputs=64,kernel_size=[4,4],stride=[2,2],padding='VALID', biases_initializer=None, normalizer_fn=slim.batch_norm)
-#        self.conv3 = slim.conv2d(inputs=self.conv2,num_outputs=64,kernel_size=[3,3],stride=[1,1],padding='VALID', biases_initializer=None, normalizer_fn=slim.batch_norm)
-#        self.conv4 = slim.conv2d(inputs=self.conv3,num_outputs=self.h_size,kernel_size=[4,4],stride=[1,1],padding='VALID', biases_initializer=None, normalizer_fn=slim.batch_norm)
-#        #original war (?, 20, 20, 32) - (?, 9, 9, 64) - (?, 7, 7, 64) - (?, 1, 1, 512) - (?, 256)
-#        #meins ist    (?, 14, 14, 32) - (?, 6, 6, 64) - (?, 4, 4, 64) - (?, 1, 1, 512) - (?, 256)
+            conv2 = convolutional_layer(conv1, 32, [4,4], [2,2], 64, "Conv2", tf.nn.relu, True, True, True, False, False, {}, variable_summary, initializer=ini)                     #(?, 8, 8, 64)
+            conv3 = convolutional_layer(conv2, 64, [3,3], [2,2], 64, "Conv3", tf.nn.relu, True, True, True, False, True, {}, variable_summary, initializer=ini)                      #(?, 2, 2, 64)
+            conv4 = convolutional_layer(conv3, 64, [4,4], [2,2], self.h_size, "Conv4", tf.nn.relu, True, True, True, False, False, {}, variable_summary, initializer=ini)            #(?, 1, 1, 256)
+            conv4_flat = tf.reshape(conv4, [-1, self.h_size])
+            if ff_inputs is not None:
+                fc0 = tf.concat([conv4_flat, ff_inputs], 1)
+        else:    #fc_layer(input_tensor, input_size, output_size, name, is_trainable, batchnorm, is_training, weightdecay=False, act=None, keep_prob=1, trainvars=None, varSum=None, initializer=None)
+            fc0 = fc_layer(ff_inputs, self.ff_stacksize*self.agent.ff_inputsize, self.agent.ff_inputsize, "FC0", True, True, True, False, tf.nn.relu, 1, {}, variable_summary, initializer=ini)   
         
-        #We take the output from the final convolutional layer and split it into separate advantage and value streams.
-        self.streamA,self.streamV = tf.split(conv4_flat,2,1) 
+        fc1 = fc_layer(fc0, self.h_size + self.agent.ff_inputsize, self.h_size*2, "FC1", True, True, True, False, tf.nn.relu, 1, {}, variable_summary, initializer=ini)                 
+
+        #Dueling DQN: split into separate advantage and value stream
+        self.streamA,self.streamV = tf.split(fc1,2,1) 
         xavier_init = tf.contrib.layers.xavier_initializer()
         self.AW = tf.Variable(xavier_init([self.h_size,self.num_actions]))
         self.VW = tf.Variable(xavier_init([self.h_size,1]))
         self.Advantage = slim.batch_norm(tf.matmul(self.streamA,self.AW))
         self.Value = slim.batch_norm(tf.matmul(self.streamV,self.VW))
-        
-        #Then combine them together to get our final Q-values.
+  
         Qout = self.Value + tf.subtract(self.Advantage,tf.reduce_mean(self.Advantage,axis=1,keep_dims=True))
         #Qmax = tf.reduce_max(Qout, axis=1) #not necessary anymore because we use Double-Q
         predict = tf.argmax(Qout,1)
@@ -400,7 +394,7 @@ BATCHSIZE = 32
 tf.reset_default_graph()
 model = DDDQN_model(conf, myAgent, tf.Session(), isPretrain=False)
 model.initNet(load=False)
-for i in range(10):
+for i in range(100):
     trackingpoints.reset_batch()
     trainBatch = TPSample(trackingpoints.numsamples)
     print("Step",model.step(),"Accuracy",model.getAccuracy(trainBatch),"%") 
@@ -413,5 +407,22 @@ for i in range(10):
     if (i+1) % 5 == 0:
         model.save()
 
-     
+
         
+        
+#sind die noch richtig?        
+############################## helper functions ###############################
+
+#takes as input a batch of ENV-STATES, and returns batch of AGENT-STATES
+def EnvStateBatch_to_AgentStateBatch(self, agent, stateBatch):
+    presentStates = list(zip(*stateBatch))
+    conv_inputs, other_inputs, _ = list(zip(*[agent.getAgentState(*presentState) for presentState in presentStates]))
+    other_inputs = [agent.makeNetUsableOtherInputs(i) for i in other_inputs]
+    return conv_inputs, other_inputs, False
+    
+#takes as input batch of ENV-STATES, and return batch of AGENT-ACTIONS
+def EnvStateBatch_to_AgentActionBatch(self, agent, stateBatch):
+    presentStates = list(zip(*stateBatch))
+    targets = [agent.makeNetUsableAction(agent.getAction(*presentState)) for presentState in presentStates]
+    return targets
+               

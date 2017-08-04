@@ -15,7 +15,7 @@ from copy import deepcopy
 from myprint import myprint as print
 import read_supervised
 import infoscreen
-from sharable import Model
+from dddqn import DDDQN_model 
 from evaluator import evaluator
 from inefficientmemory import Memory
 
@@ -35,7 +35,7 @@ class AbstractAgent(object):
         self.ff_stacked = False
         self.model = None
         self.graph = tf.Graph()
-        self.usesnetwork = Model
+        self.usesnetwork = DDDQN_model
         
     ##############functions that should be impemented##########
     def checkIfInference(self):
