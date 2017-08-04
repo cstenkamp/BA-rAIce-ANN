@@ -431,6 +431,8 @@ def readTwoDArrayFromString(string):
                 print("I'm crying") #cry.
     return np.array(tmpreturn)
 
+    
+    
 
 def create_QLearnInputs_from_SVStateBatch(presentStates, pastStates, agent):
     presentStates = list(zip(*presentStates))

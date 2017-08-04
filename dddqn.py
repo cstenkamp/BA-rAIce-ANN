@@ -36,7 +36,7 @@ class DuelDQN():
         self.pretrain_episode = 0
         self.run_inferences = 0
         self.step = 0
-        self.h_size = 512
+        self.h_size = 256
         self.stood_frames_ago = 0 #das wird benutzt damit er, wenn er einmal stand, sich merken kann ob erst kurz her ist (für settozero)
         with tf.variable_scope(name, reuse=None):
             self.pretrain_episode_tf = tf.Variable(tf.constant(self.pretrain_episode), dtype=tf.int32, name='pretrain_episode_tf', trainable=False)
@@ -51,8 +51,7 @@ class DuelDQN():
             
             #THIS IS FORWARD STEP
             self.conv_inputs = tf.placeholder(tf.float32, shape=[None, self.conf.image_dims[0], self.conf.image_dims[1], self.conv_stacksize], name="conv_inputs")  if self.agent.usesConv else None
-            #self.ff_inputs = tf.placeholder(tf.float32, shape=[None, self.ff_stacksize*self.agent.ff_inputsize], name="ff_inputs")  if self.agent.ff_inputsize else None
-            self.ff_inputs = tf.placeholder(tf.float32, shape=[None, 2], name="ff_inputs")            
+            self.ff_inputs = tf.placeholder(tf.float32, shape=[None, self.ff_stacksize*self.agent.ff_inputsize], name="ff_inputs")  if self.agent.ff_inputsize else None
             self.stands_inputs = tf.placeholder(tf.float32, shape=[None], name="standing_inputs") #necessary for settozero            
             self.Qout, self.predict = self._inference(self.conv_inputs, self.ff_inputs, self.stands_inputs)
             
@@ -88,23 +87,18 @@ class DuelDQN():
             rs_input = tf.reshape(conv_inputs, [-1, self.conf.image_dims[0], self.conf.image_dims[1], self.conv_stacksize]) #final dimension = number of color channels*number of stacked (history-)frames                  
             #convolutional_layer(input_tensor, input_channels, kernel_size, stride, output_channels, name, act, is_trainable, batchnorm, is_training, weightdecay=False, pool=True, trainvars=None, varSum=None, initializer=None)
             conv1 = convolutional_layer(rs_input, self.conv_stacksize, [4,6], [2,3], 32, "Conv1", tf.nn.relu, True, True, True, False, False, {}, variable_summary, initializer=ini) #(?, 14, 14, 32)
-            conv2 = convolutional_layer(conv1, 32, [4,6], [4,4], 64, "Conv2", tf.nn.relu, True, True, True, False, False, {}, variable_summary, initializer=ini)                     #(?, 6, 6, 64)
-            conv3 = convolutional_layer(conv2, 64, [4,6], [3,3], 64, "Conv3", tf.nn.relu, True, True, True, False, False, {}, variable_summary, initializer=ini)                     #(?, 4, 4, 64)
-            self.conv4 = convolutional_layer(conv3, 64, [4,4], [2,3], self.h_size, "Conv4", tf.nn.relu, True, True, True, False, False, {}, variable_summary, initializer=ini)       #(?, 1, 1, 512)
-            
-            
-#            conv2 = convolutional_layer(conv1, 32, [5,5], 1, 64, "Conv2", tf.nn.relu, trainable("Conv2"), False, for_training, False, True, self.trainvars, variable_summary, initializer=ini)                
-#            conv2_flat =  tf.reshape(conv2, [-1, flat_size])    #x//4*y//4+speed_neurons
-#            if ff_inputs is not None:
-#                fc0 = tf.concat([conv2_flat, ff_inputs], 1) 
-#        else:
-#            fc0 = fc_layer(ff_inputs, self.ff_stacksize*self.agent.ff_inputsize, self.agent.ff_inputsize, "FC0", trainable("FC0"), False, for_training, False, tf.nn.relu, 1 if for_training else self.keep_prob, self.trainvars, variable_summary, initializer=ini)   
-#        flat_size += self.agent.ff_inputsize    
+            conv2 = convolutional_layer(conv1, 32, [4,4], [2,2], 64, "Conv2", tf.nn.relu, True, True, True, False, False, {}, variable_summary, initializer=ini)                     #(?, 6, 6, 64)
+            conv3 = convolutional_layer(conv2, 64, [3,3], [1,1], 64, "Conv3", tf.nn.relu, True, True, True, False, False, {}, variable_summary, initializer=ini)                     #(?, 4, 4, 64)
+            conv4 = convolutional_layer(conv3, 64, [4,4], [1,1], self.h_size, "Conv4", tf.nn.relu, True, True, True, False, False, {}, variable_summary, initializer=ini)            #(?, 1, 1, 256)
+            conv4_flat = tf.reshape(conv4, [-1, self.h_size])
+            if ff_inputs is not None:
+                fc0 = tf.concat([conv4_flat, ff_inputs], 1)
+        else:    #fc_layer(input_tensor, input_size, output_size, name, is_trainable, batchnorm, is_training, weightdecay=False, act=None, keep_prob=1, trainvars=None, varSum=None, initializer=None)
+            fc0 = fc_layer(ff_inputs, self.ff_stacksize*self.agent.ff_inputsize, self.agent.ff_inputsize, "FC0", True, True, True, False, tf.nn.relu, 1, {}, variable_summary, initializer=ini)   
+        
+        fc1 = fc_layer(fc0, self.h_size + self.agent.ff_inputsize, self.h_size*2, "FC1", True, True, True, False, tf.nn.relu, 1, {}, variable_summary, initializer=ini)                 
 #        
-#        #fc_layer(input_tensor, input_size, output_size, name, is_trainable, batchnorm, is_training, weightdecay=False, act=None, keep_prob=1, trainvars=None, varSum=None, initializer=None):
-#        fc1 = fc_layer(fc0, flat_size, final_neuron_num*20, "FC1", trainable("FC1"), False, for_training, False, tf.nn.relu, 1 if for_training else self.keep_prob, self.trainvars, variable_summary, initializer=ini)                 
-#        q = fc_layer(fc1, final_neuron_num*20, final_neuron_num, "FC2", trainable("FC2"), False, for_training, False, None, 1, self.trainvars, variable_summary, initializer=ini) 
-#        
+        print(fc1.get_shape())
 ###########mein kram ende###########        
 #        
 #        
@@ -116,12 +110,12 @@ class DuelDQN():
 #        #meins ist    (?, 14, 14, 32) - (?, 6, 6, 64) - (?, 4, 4, 64) - (?, 1, 1, 512) - (?, 256)
         
         #We take the output from the final convolutional layer and split it into separate advantage and value streams.
-        self.streamAC,self.streamVC = tf.split(self.conv4,2,3) #two splits, dimension 3
+        self.streamAC,self.streamVC = tf.split(fc1,2,3) #two splits, dimension 3
         self.streamA = slim.flatten(self.streamAC)
         self.streamV = slim.flatten(self.streamVC)
         xavier_init = tf.contrib.layers.xavier_initializer()
-        self.AW = tf.Variable(xavier_init([self.h_size//2,self.num_actions]))
-        self.VW = tf.Variable(xavier_init([self.h_size//2,1]))
+        self.AW = tf.Variable(xavier_init([self.h_size,self.num_actions]))
+        self.VW = tf.Variable(xavier_init([self.h_size,1]))
         self.Advantage = slim.batch_norm(tf.matmul(self.streamA,self.AW))
         self.Value = slim.batch_norm(tf.matmul(self.streamV,self.VW))
         
@@ -306,31 +300,6 @@ class DDDQN_model():
             self.session.run(self.targetQN.step_tf.assign(self.onlineQN.step_tf))
         self.targetQN.save(self.session)            
            
-    
-    def getAccuracy(self, batch):
-        ff_inputs = np.vstack(np.vstack(batch[:,0]).shape[0]*[[1,2]]) #TODO: get rid of.
-        predict = self.session.run(self.targetQN.predict,feed_dict=self.targetQN.feed_dict(np.vstack(batch[:,0]), ff_inputs))
-        return round(np.mean(np.array(batch[:,1] == predict, dtype=int))*100, 2)
-            
-    
-    def inference(self, batch):
-        assert not self.isPretrain, "Please reload this network as a non-pretrain-one!"
-        self.targetQN.run_inferences += 1
-        ff_inputs = np.vstack(np.vstack(batch[:,0]).shape[0]*[[1,2]]) #TODO: get rid of.
-        return self.session.run(self.targetQN.Qout,feed_dict=self.targetQN.feed_dict(np.vstack(batch[:,0]), ff_inputs))        
-        
-    
-    def sv_learn(self, batch, decay_lr = True):
-        assert self.isPretrain, "Supervised-Learning is only allowed as Pre-training!"
-        ff_inputs = np.vstack(np.vstack(batch[:,0]).shape[0]*[[1,2]]) #TODO: get rid of.
-        if decay_lr:
-            _, loss, _ = self.session.run([self.targetQN.sv_OP, self.targetQN.sv_loss, self.targetQN.sv_lr_update], feed_dict=self.targetQN.feed_dict(np.vstack(batch[:,0]), ff_inputs, targetA=batch[:,1], decay_lr="sv"))
-        else:
-            _, loss, _ = self.session.run([self.targetQN.sv_OP, self.targetQN.sv_loss], feed_dict=self.targetQN.feed_dict(np.vstack(batch[:,0]), ff_inputs, targetA=batch[:,1]))
-        self.lastTrained = self.targetQN
-        #print("Learning rate:",self.session.run(self.targetQN.sv_lr))
-        return loss
-    
     def pretrain_episode(self):
         return self.targetQN.pretrain_episode
     def inc_episode(self):
@@ -339,21 +308,46 @@ class DDDQN_model():
             self.onlineQN.pretrain_episode += 1
     def step(self):
         return self.onlineQN.step_tf.eval(self.session)
+        
+    
+    def getAccuracy(self, batch):
+        oldstates, actions, rewards, newstates, terminals = batch
+        predict = self.session.run(self.targetQN.predict,feed_dict=self.targetQN.feed_dict(oldstates[0], oldstates[1]))
+        return round(np.mean(np.array(batch[:,1] == predict, dtype=int))*100, 2)
+            
+    
+    def inference(self, batch):
+        assert not self.isPretrain, "Please reload this network as a non-pretrain-one!"
+        self.targetQN.run_inferences += 1
+        oldstates, actions, rewards, newstates, terminals = batch
+        return self.session.run(self.targetQN.Qout,feed_dict=self.targetQN.feed_dict(oldstates[0], oldstates[1]))        
+        
+    
+    def sv_learn(self, batch, decay_lr = True):
+        assert self.isPretrain, "Supervised-Learning is only allowed as Pre-training!"
+        oldstates, actions, rewards, newstates, terminals = batch
+        if decay_lr:
+            _, loss, _ = self.session.run([self.targetQN.sv_OP, self.targetQN.sv_loss, self.targetQN.sv_lr_update], feed_dict=self.targetQN.feed_dict(oldstates[0], oldstates[1], targetA=actions, decay_lr="sv"))
+        else:
+            _, loss, _ = self.session.run([self.targetQN.sv_OP, self.targetQN.sv_loss], feed_dict=self.targetQN.feed_dict(oldstates[0], oldstates[1], targetA=actions))
+        self.lastTrained = self.targetQN
+        #print("Learning rate:",self.session.run(self.targetQN.sv_lr))
+        return loss
+    
     
     #Below we perform the Double-DQN update to the target Q-values    
     def q_learn(self, batch, decay_lr = False):
-        ff_inputs = np.vstack(np.vstack(batch[:,3]).shape[0]*[[1,2]]) #TODO: get rid of.
-        action = self.session.run(self.onlineQN.predict,feed_dict=self.onlineQN.feed_dict(np.vstack(batch[:,3]), ff_inputs)) #TODO: im text schreiben wie das bei non-doubleDQN anders wäre
-        folgeQ = self.session.run(self.targetQN.Qout,feed_dict=self.targetQN.feed_dict(np.vstack(batch[:,3]), ff_inputs)) #No argmax anymore, but instead the action-prediciton because DDQN: instead of taking the max over Q-values when computing the target-Q value for our training step, we use our primary network to chose an action, and our target network to generate the target Q-value for that action. 
-        consider_stateval = -(batch[:,4] - 1)
-        doubleQ = folgeQ[range(batch.shape[0]),action]  
-        targetQ = batch[:,2] + (self.conf.q_decay*doubleQ * consider_stateval)
+        oldstates, actions, rewards, newstates, terminals = batch
+        action = self.session.run(self.onlineQN.predict,feed_dict=self.onlineQN.feed_dict(newstates[0], newstates[1])) #TODO: im text schreiben wie das bei non-doubleDQN anders wäre
+        folgeQ = self.session.run(self.targetQN.Qout,feed_dict=self.targetQN.feed_dict(newstates[0], newstates[1])) #No argmax anymore, but instead the action-prediciton because DDQN: instead of taking the max over Q-values when computing the target-Q value for our training step, we use our primary network to chose an action, and our target network to generate the target Q-value for that action. 
+        consider_stateval = -(terminals - 1)
+        doubleQ = folgeQ[range(len(terminals)),action]  
+        targetQ = rewards + (self.conf.q_decay*doubleQ * consider_stateval)
         #Update the network with our target values.
-        ff_inputs = np.vstack(np.vstack(batch[:,0]).shape[0]*[[1,2]]) #TODO: get rid of.
         if decay_lr:
-            _, _ = self.session.run([self.onlineQN.q_OP, self.onlineQN.lr_update], feed_dict=self.onlineQN.feed_dict(np.vstack(batch[:,0]), ff_inputs, targetQ=targetQ, targetA=batch[:,1], decay_lr="q"))
+            _, _ = self.session.run([self.onlineQN.q_OP, self.onlineQN.lr_update], feed_dict=self.onlineQN.feed_dict(oldstates[0], oldstates[1], targetQ=targetQ, targetA=actions, decay_lr="q"))
         else:
-            _ = self.session.run(self.onlineQN.q_OP, feed_dict=self.onlineQN.feed_dict(np.vstack(batch[:,0]), ff_inputs, targetQ=targetQ, targetA=batch[:,1]))
+            _ = self.session.run(self.onlineQN.q_OP, feed_dict=self.onlineQN.feed_dict(oldstates[0], oldstates[1], targetQ=targetQ, targetA=actions))
         self._runMultipleOps(self.smoothTargetNetUpdate, self.session) #Update the target network toward the primary network.
         if not self.isPretrain:
             self.onlineQN.step = self.onlineQN.step_tf.eval(self.session)
@@ -376,19 +370,12 @@ from server import Containers; containers = Containers(); containers.conf = conf
 import dqn_rl_agent
 myAgent = dqn_rl_agent.Agent(conf, containers, True)
 trackingpoints = read_supervised.TPList(conf.LapFolderName, conf.use_second_camera, conf.msperframe, conf.steering_steps, conf.INCLUDE_ACCPLUSBREAK)
-      
-trackingpoints.reset_batch()
-stateBatch, pastBatch = trackingpoints.next_batch(conf, myAgent, 1)        
-oldstates, _, actions, rewards, _ = read_supervised.create_QLearnInputs_from_SVStateBatch(stateBatch, pastBatch, myAgent)
-   
 
-def buffersample(batchsize):
-    oldstates, actions, rewards, newstates, terminals = read_supervised.create_QLearnInputs_from_SVStateBatch(*trackingpoints.next_batch(conf, myAgent, batchsize), myAgent)
-    oldstates = [processState(i) for i in oldstates[0]]
-    newstates = [processState(i) for i in newstates[0]]             
-    return np.swapaxes(np.array([oldstates, actions, rewards, newstates, terminals]), 0, 1)
 
-        
+def TPSample(batchsize):
+    return read_supervised.create_QLearnInputs_from_SVStateBatch(*trackingpoints.next_batch(conf, myAgent, batchsize), myAgent)
+    
+
 
 ###########################################################################################################
 
@@ -418,13 +405,13 @@ model = DDDQN_model(conf, myAgent, tf.Session(), isPretrain=False)
 model.initNet(load=False)
 for i in range(10):
     trackingpoints.reset_batch()
-    trainBatch = buffersample(trackingpoints.numsamples)
+    trainBatch = TPSample(trackingpoints.numsamples)
     print("Step",model.step(),"Accuracy",model.getAccuracy(trainBatch),"%") 
 #    if i % 10 == 0:
 #        print(model.inference(trainBatch[:3,:]))
     trackingpoints.reset_batch()
     while trackingpoints.has_next(BATCHSIZE):
-        trainBatch = buffersample(BATCHSIZE)
+        trainBatch = TPSample(BATCHSIZE)
         model.q_learn(trainBatch, True)    
     if (i+1) % 5 == 0:
         model.save()
