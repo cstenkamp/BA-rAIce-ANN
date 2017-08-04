@@ -43,7 +43,6 @@ class DuelDQN():
             self.pretrain_step_tf = tf.Variable(tf.constant(0), dtype=tf.int32, name='pretrain_step_tf', trainable=False) #diese ist hier nur zum backupen
             self.step_tf = tf.Variable(tf.constant(0), dtype=tf.int32, name='step_tf', trainable=False)
             self.run_inferences_tf = tf.Variable(tf.constant(self.run_inferences), dtype=tf.int32, name='run_inferences_tf', trainable=False) #diese ist hier nur zum backupen
-            #TODO: preparenumiters etc fehlt noch.
             
             self.num_actions = self.conf.steering_steps*4 if self.conf.INCLUDE_ACCPLUSBREAK else self.conf.steering_steps*3
             self.conv_stacksize = (self.conf.history_frame_nr*2 if self.conf.use_second_camera else self.conf.history_frame_nr) if self.agent.conv_stacked else 1
@@ -123,7 +122,6 @@ class DuelDQN():
     
 
     def _sv_training(self, loss): #svtrain is necessarily pretrain, but pretrain is not necessarily sv
-        assert self.isPretrain, "Supervised-Learning is only allowed as Pre-training!"
         init_lr = self.conf.pretrain_sv_initial_lr
         self.sv_lr = tf.Variable(tf.constant(init_lr), trainable=False)
         self.sv_new_lr = tf.placeholder(tf.float32, shape=[])                   
@@ -176,13 +174,14 @@ class DuelDQN():
              self.step = self.step_tf.eval(session)
              self.run_inferences = self.run_inferences_tf.eval(session)
              print("Pretrain-Step:",self.pretrain_step, "Pretrain-Episode:",self.pretrain_episode,"Main-Step:",self.step, "Run'n Iterations:", self.run_inferences)
+             return True
          else:
              print("couldn't load")
-        #TODO: er sollte hier noch die numIters etc laden
+             return False
         
         
     #carstands ist true iff (inference & carstands), in jedem anderem Fall false
-    def feed_dict(self, conv_inputs, ff_inputs, targetQ=None, targetA=None, carstands=False, decay_lr=False): #TODO: merge mit sv_fill_feed        
+    def feed_dict(self, conv_inputs, ff_inputs, targetQ=None, targetA=None, carstands=False, decay_lr=False):
 
         def is_inference(conv_inputs, other_inputs):
             return (len(conv_inputs.shape) <= 3 if conv_inputs is not None else len(other_inputs.shape) <= 2) and self.isInference
@@ -197,7 +196,7 @@ class DuelDQN():
             stands_inputs = np.expand_dims([carstands], axis=0)
         else:
             stands_inputs = [False]*ff_inputs.shape[0]
-            if targetQ is not None: #targetQ und targetA werden nur beim RL-learn (#TODO: auch beim svlearn) verwendet, und dann ist ebennicht inference
+            if targetQ is not None: #targetQ und targetA werden nur beim learning verwendet, und dann ist ebennicht inference
                 feed_dict[self.targetQ] = targetQ
             if targetA is not None:
                 feed_dict[self.targetA] = targetA
@@ -241,11 +240,11 @@ class DDDQN_model():
         self.onlineQN = DuelDQN(conf, agent, "onlineNet", isPretrain=isPretrain)
         self.targetQN = DuelDQN(conf, agent, "targetNet", isInference= True, isPretrain=isPretrain)
         
-        self.smoothTargetNetUpdate = self.NetCopyOps(self.onlineQN, self.targetQN, self.conf.target_update_tau)
-        self.hardOnlineNetUpdate = self.NetCopyOps(self.targetQN, self.onlineQN)
+        self.smoothTargetNetUpdate = self._netCopyOps(self.onlineQN, self.targetQN, self.conf.target_update_tau)
+        self.hardOnlineNetUpdate = self._netCopyOps(self.targetQN, self.onlineQN)
      
         
-    def NetCopyOps(self, fromNet, toNet, tau = 1):
+    def _netCopyOps(self, fromNet, toNet, tau = 1):
         toCopy = fromNet.trainables
         toPast = toNet.trainables
         op_holder = []
@@ -256,7 +255,7 @@ class DDDQN_model():
                 op_holder.append(toPast[idx].assign((var.value()*tau) + ((1-tau)*toPast[idx].value())))
         return op_holder
     
-    def runMultipleOps(self, op_holder,sess):
+    def _runMultipleOps(self, op_holder,sess):
         for op in op_holder:
             sess.run(op)        
         
@@ -266,10 +265,16 @@ class DDDQN_model():
         if load == "preTrain":
             self.targetQN.load(self.session, from_pretrain=True)     
             self.session.run(self.onlineQN.pretrain_step_tf.assign(self.targetQN.pretrain_step_tf))
-        elif load != False:
+        elif load == "noPreTrain":
             self.targetQN.load(self.session, from_pretrain=False)   
             self.session.run(self.onlineQN.step_tf.assign(self.targetQN.step_tf))
-        self.runMultipleOps(self.hardOnlineNetUpdate, self.session)
+        elif load != False: #versuche RLLearn, wenn das nicht geht pretrain
+            if self.targetQN.load(self.session, from_pretrain=False):
+                self.session.run(self.onlineQN.step_tf.assign(self.targetQN.step_tf))
+            else:
+                self.targetQN.load(self.session, from_pretrain=True)     
+                self.session.run(self.onlineQN.pretrain_step_tf.assign(self.targetQN.pretrain_step_tf))
+        self._runMultipleOps(self.hardOnlineNetUpdate, self.session)
         self.lastTrained = None
             
     def save(self):
@@ -286,17 +291,21 @@ class DDDQN_model():
             
     
     def inference(self, batch):
+        assert not self.isPretrain, "Please reload this network as a non-pretrain-one!"
+        self.targetQN.run_inferences += 1
         ff_inputs = np.vstack(np.vstack(batch[:,0]).shape[0]*[[1,2]]) #TODO: get rid of.
         return self.session.run(self.targetQN.Qout,feed_dict=self.targetQN.feed_dict(np.vstack(batch[:,0]), ff_inputs))        
         
     
     def sv_learn(self, batch, decay_lr = True):
+        assert self.isPretrain, "Supervised-Learning is only allowed as Pre-training!"
         ff_inputs = np.vstack(np.vstack(batch[:,0]).shape[0]*[[1,2]]) #TODO: get rid of.
         if decay_lr:
             _, loss, _ = self.session.run([self.targetQN.sv_OP, self.targetQN.sv_loss, self.targetQN.sv_lr_update], feed_dict=self.targetQN.feed_dict(np.vstack(batch[:,0]), ff_inputs, targetA=batch[:,1], decay_lr="sv"))
         else:
             _, loss, _ = self.session.run([self.targetQN.sv_OP, self.targetQN.sv_loss], feed_dict=self.targetQN.feed_dict(np.vstack(batch[:,0]), ff_inputs, targetA=batch[:,1]))
         self.lastTrained = self.targetQN
+        #print("Learning rate:",self.session.run(self.targetQN.sv_lr))
         return loss
     
     def pretrain_episode(self):
@@ -322,10 +331,11 @@ class DDDQN_model():
             _, _ = self.session.run([self.onlineQN.q_OP, self.onlineQN.lr_update], feed_dict=self.onlineQN.feed_dict(np.vstack(batch[:,0]), ff_inputs, targetQ=targetQ, targetA=batch[:,1], decay_lr="q"))
         else:
             _ = self.session.run(self.onlineQN.q_OP, feed_dict=self.onlineQN.feed_dict(np.vstack(batch[:,0]), ff_inputs, targetQ=targetQ, targetA=batch[:,1]))
-        self.runMultipleOps(self.smoothTargetNetUpdate, self.session) #Update the target network toward the primary network.
+        self._runMultipleOps(self.smoothTargetNetUpdate, self.session) #Update the target network toward the primary network.
         if not self.isPretrain:
             self.onlineQN.step = self.onlineQN.step_tf.eval(self.session)
         self.lastTrained = self.onlineQN
+        #print("Learning rate:",self.session.run(self.onlineQN.lr))
         return
         
 ###########################################################################################################
@@ -360,105 +370,41 @@ def buffersample(batchsize):
 ###########################################################################################################
 
 BATCHSIZE = 32   
-#
+
+##PRETRAINING:
 #tf.reset_default_graph()
-#
 #model = DDDQN_model(conf, myAgent, tf.Session(), isPretrain=True)
-#
 #model.initNet(load="preTrain")
-#
-#
 #for i in range(11-model.pretrain_episode()):
-#    
 #    trackingpoints.reset_batch()
 #    trainBatch = buffersample(trackingpoints.numsamples)
 #    print("Iteration",model.pretrain_episode(),"Accuracy",model.getAccuracy(trainBatch),"%")
-#
-#    if i % 10 == 0:
-#        print(model.inference(trainBatch[:3,:]))
-#    
 #    model.inc_episode()
-#    
 #    trackingpoints.reset_batch()
 #    while trackingpoints.has_next(BATCHSIZE):
 #        trainBatch = buffersample(BATCHSIZE)
-#
-#        #loss = model.sv_learn(trainBatch, True)
-#        #print("Learning rate:",model.session.run(model.targetQN.sv_lr)) #beim learningrate printen darauf aufpassen dass beim sv_learn targetQN.sv_lr und biem qlearn onlineQN.lr
-#        
+#        #model.sv_learn(trainBatch, True)
 #        model.q_learn(trainBatch, True)    
-#        #print("Learning rate:",model.session.run(model.onlineQN.lr))
-#
 #    if (i+1) % 5 == 0:
 #        model.save()
-#        
-#
-#        
-#        
-#        
-#tf.reset_default_graph()
-#        
-#        
-#
-#model = DDDQN_model(conf, myAgent, tf.Session(), isPretrain=False)
-#
-#model.initNet(load="preTrain")
-#
-#            
-#for i in range(10):
-#    
-#    trackingpoints.reset_batch()
-#    trainBatch = buffersample(trackingpoints.numsamples)
-#    print("Step",model.step(),"Accuracy",model.getAccuracy(trainBatch),"%") 
-#
-#    if i % 10 == 0:
-#        print(model.inference(trainBatch[:3,:]))
-#        
-#    trackingpoints.reset_batch()
-#    while trackingpoints.has_next(BATCHSIZE):
-#        trainBatch = buffersample(BATCHSIZE)
-#
-#        #loss = model.sv_learn(trainBatch, True)
-#        #print("Learning rate:",model.session.run(model.targetQN.sv_lr)) #beim learningrate printen darauf aufpassen dass beim sv_learn targetQN.sv_lr und biem qlearn onlineQN.lr
-#        
-#        model.q_learn(trainBatch, True)    
-#        #print("Learning rate:",model.session.run(model.onlineQN.lr))
-#
-#    if (i+1) % 5 == 0:
-#        model.save()
-
-
-
-
-
+        
+        
+        
 tf.reset_default_graph()
-
-
-     
-
 model = DDDQN_model(conf, myAgent, tf.Session(), isPretrain=False)
-
 model.initNet(load=True)
-
-            
-for i in range(100):
-    
+for i in range(10):
     trackingpoints.reset_batch()
     trainBatch = buffersample(trackingpoints.numsamples)
     print("Step",model.step(),"Accuracy",model.getAccuracy(trainBatch),"%") 
-
-    if i % 10 == 0:
-        print(model.inference(trainBatch[:3,:]))
-        
+#    if i % 10 == 0:
+#        print(model.inference(trainBatch[:3,:]))
     trackingpoints.reset_batch()
     while trackingpoints.has_next(BATCHSIZE):
         trainBatch = buffersample(BATCHSIZE)
-
-        #loss = model.sv_learn(trainBatch, True)
-        #print("Learning rate:",model.session.run(model.targetQN.sv_lr)) #beim learningrate printen darauf aufpassen dass beim sv_learn targetQN.sv_lr und biem qlearn onlineQN.lr
-        
         model.q_learn(trainBatch, True)    
-        #print("Learning rate:",model.session.run(model.onlineQN.lr))
-
     if (i+1) % 5 == 0:
         model.save()
+
+     
+        
