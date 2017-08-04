@@ -24,7 +24,7 @@ from utils import convolutional_layer, fc_layer, variable_summary
 
 
 
-class DDDQN():
+class DuelDQN():
     
     ############################BUILDING THE COMPUTATION GRAPH#################
     def __init__(self, conf, agent, name, isInference=False, isPretrain=False):  
@@ -211,7 +211,7 @@ class DDDQN():
         if decay_lr == "sv":
             lr_decay = self.conf.pretrain_sv_lr_decay ** max(self.pretrain_episode-self.conf.pretrain_lrdecayafter, 0.0)
             new_lr = max(self.conf.pretrain_sv_initial_lr*lr_decay, self.conf.pretrain_sv_minimal_lr)
-            feed_dict[self.sv_new_lr] = new_lr 
+            feed_dict[self.sv_new_lr] = new_lr
         elif decay_lr == "q":
             if self.isPretrain:
                 lr_decay = self.conf.pretrain_q_lr_decay ** max(self.pretrain_episode-self.conf.pretrain_lrdecayafter, 0.0)
@@ -220,35 +220,115 @@ class DDDQN():
             else:
                 lr_decay = self.conf.lr_decay ** max(self.step-self.conf.lrdecayafter, 0.0)
                 new_lr = max(self.conf.initial_lr*lr_decay, self.conf.minimal_lr)
-                feed_dict[self.new_lr] = new_lr                 
+                feed_dict[self.new_lr] = new_lr      
         return feed_dict
         
+    
+
+
         
+        
+        
+class DDDQN_model():
+    #this is the class for Double-Dueling-DQN, containing BOTH the online and the target DuelDQN-Network        
+        
+    def __init__(self, conf, agent, session, isPretrain=False):
+        self.conf = conf
+        self.agent = agent
+        self.session = session        
+        self.isPretrain = isPretrain
+        self.onlineQN = DuelDQN(conf, agent, "onlineNet", isPretrain=isPretrain)
+        self.targetQN = DuelDQN(conf, agent, "targetNet", isInference= True, isPretrain=isPretrain)
+        
+        self.smoothTargetNetUpdate = self.NetCopyOps(self.onlineQN, self.targetQN, self.conf.target_update_tau)
+        self.hardOnlineNetUpdate = self.NetCopyOps(self.targetQN, self.onlineQN)
+     
+        
+    def NetCopyOps(self, fromNet, toNet, tau = 1):
+        toCopy = fromNet.trainables
+        toPast = toNet.trainables
+        op_holder = []
+        for idx,var in enumerate(toCopy[:]):
+            if tau == 1:
+                op_holder.append(toPast[idx].assign(var.value()))
+            else:
+                op_holder.append(toPast[idx].assign((var.value()*tau) + ((1-tau)*toPast[idx].value())))
+        return op_holder
+    
+    def runMultipleOps(self, op_holder,sess):
+        for op in op_holder:
+            sess.run(op)        
+        
+            
+    def initNet(self, load=False):
+        self.session.run(tf.global_variables_initializer())
+        if load == "preTrain":
+            self.targetQN.load(self.session, from_pretrain=True)     
+            self.session.run(self.onlineQN.pretrain_step_tf.assign(self.targetQN.pretrain_step_tf))
+            self.runMultipleOps(self.hardOnlineNetUpdate, self.session)
+        elif load != False:
+            self.targetQN.load(self.session, from_pretrain=False)   
+        self.lastTrained = None
+            
+    def save(self):
+        if self.lastTrained == self.onlineQN:
+            self.session.run(self.targetQN.pretrain_step_tf.assign(self.onlineQN.pretrain_step_tf))
+            self.session.run(self.targetQN.step_tf.assign(self.onlineQN.step_tf))
+        self.targetQN.save(self.session)            
+           
+    
+    def getAccuracy(self, batch):
+        ff_inputs = np.vstack(np.vstack(batch[:,0]).shape[0]*[[1,2]]) #TODO: get rid of.
+        predict = self.session.run(self.targetQN.predict,feed_dict=self.targetQN.feed_dict(np.vstack(batch[:,0]), ff_inputs))
+        return round(np.mean(np.array(batch[:,1] == predict, dtype=int))*100, 2)
+            
+    
+    def inference(self, batch):
+        ff_inputs = np.vstack(np.vstack(batch[:,0]).shape[0]*[[1,2]]) #TODO: get rid of.
+        return self.session.run(self.targetQN.Qout,feed_dict=self.targetQN.feed_dict(np.vstack(batch[:,0]), ff_inputs))        
+        
+    
+    def sv_learn(self, batch, decay_lr = True):
+        ff_inputs = np.vstack(np.vstack(batch[:,0]).shape[0]*[[1,2]]) #TODO: get rid of.
+        if decay_lr:
+            _, loss, _ = self.session.run([self.targetQN.sv_OP, self.targetQN.sv_loss, self.targetQN.sv_lr_update], feed_dict=self.targetQN.feed_dict(np.vstack(batch[:,0]), ff_inputs, targetA=batch[:,1], decay_lr="sv"))
+        else:
+            _, loss, _ = self.session.run([self.targetQN.sv_OP, self.targetQN.sv_loss], feed_dict=self.targetQN.feed_dict(np.vstack(batch[:,0]), ff_inputs, targetA=batch[:,1]))
+        self.lastTrained = self.targetQN
+        return loss
+    
+    def pretrain_episode(self):
+        return self.targetQN.pretrain_episode
+    def inc_episode(self):
+        if self.isPretrain:
+            self.targetQN.pretrain_episode += 1
+            self.onlineQN.pretrain_episode += 1
+    
+    #Below we perform the Double-DQN update to the target Q-values    
+    def q_learn(self, batch, decay_lr = False):
+        ff_inputs = np.vstack(np.vstack(batch[:,3]).shape[0]*[[1,2]]) #TODO: get rid of.
+        action = self.session.run(self.onlineQN.predict,feed_dict=self.onlineQN.feed_dict(np.vstack(batch[:,3]), ff_inputs)) #TODO: im text schreiben wie das bei non-doubleDQN anders wäre
+        folgeQ = self.session.run(self.targetQN.Qout,feed_dict=self.targetQN.feed_dict(np.vstack(batch[:,3]), ff_inputs)) #No argmax anymore, but instead the action-prediciton because DDQN: instead of taking the max over Q-values when computing the target-Q value for our training step, we use our primary network to chose an action, and our target network to generate the target Q-value for that action. 
+        consider_stateval = -(batch[:,4] - 1)
+        doubleQ = folgeQ[range(batch.shape[0]),action]  
+        targetQ = batch[:,2] + (self.conf.q_decay*doubleQ * consider_stateval)
+        #Update the network with our target values.
+        ff_inputs = np.vstack(np.vstack(batch[:,0]).shape[0]*[[1,2]]) #TODO: get rid of.
+        if decay_lr:
+            _, _ = self.session.run([self.onlineQN.q_OP, self.onlineQN.lr_update], feed_dict=self.onlineQN.feed_dict(np.vstack(batch[:,0]), ff_inputs, targetQ=targetQ, targetA=batch[:,1], decay_lr="q"))
+        else:
+            _ = self.session.run(self.onlineQN.q_OP, feed_dict=self.onlineQN.feed_dict(np.vstack(batch[:,0]), ff_inputs, targetQ=targetQ, targetA=batch[:,1]))
+        self.runMultipleOps(self.smoothTargetNetUpdate, self.session) #Update the target network toward the primary network.
+        self.lastTrained = self.onlineQN
+        return
+        
+###########################################################################################################
+    
         
 def processState(states):
     return np.reshape(states,[-1,30,45,8])        
 
             
-
-def NetCopyOps(fromNet, toNet, tau = 1):
-    toCopy = fromNet.trainables
-    toPast = toNet.trainables
-    op_holder = []
-    for idx,var in enumerate(toCopy[:]):
-        if tau == 1:
-            op_holder.append(toPast[idx].assign(var.value()))
-        else:
-            op_holder.append(toPast[idx].assign((var.value()*tau) + ((1-tau)*toPast[idx].value())))
-    return op_holder
-
-    
-    
-def runMultipleOps(op_holder,sess):
-    for op in op_holder:
-        sess.run(op)
-        
-        
-        
         
 import config
 conf = config.Config()
@@ -269,92 +349,56 @@ def buffersample(batchsize):
     newstates = [processState(i) for i in newstates[0]]             
     return np.swapaxes(np.array([oldstates, actions, rewards, newstates, terminals]), 0, 1)
 
+        
 
-
-
-
-
-
+###########################################################################################################
 
 BATCHSIZE = 32   
-y = .99
-tau = 0.001 
 
 tf.reset_default_graph()
 
-onlineQN = DDDQN(conf, myAgent, "onlineNet", isPretrain=True)
-targetQN = DDDQN(conf, myAgent, "targetNet", isPretrain=True)
+model = DDDQN_model(conf, myAgent, tf.Session(), isPretrain=True)
+
+model.initNet(load="preTrain")
 
 
-smoothTargetNetUpdate = NetCopyOps(onlineQN, targetQN, tau)
-hardOnlineNetUpdate = NetCopyOps(targetQN, onlineQN)
-
-with tf.Session() as sess:
-    sess.run(tf.global_variables_initializer())
-    targetQN.load(sess, True)
-    sess.run(onlineQN.pretrain_step_tf.assign(targetQN.pretrain_step_tf))
-    runMultipleOps(hardOnlineNetUpdate, sess)
-    #so muss das laden sein! targetQN wird geladen, und dann wird der inhalt nach onlineQN übertragen. Dann wird targetQN auch gespeichert.
+for i in range(11-model.pretrain_episode()):
     
-    for i in range(11-targetQN.pretrain_episode):
+    trackingpoints.reset_batch()
+    trainBatch = buffersample(trackingpoints.numsamples)
+    print("Iteration",model.pretrain_episode(),"Accuracy",model.getAccuracy(trainBatch),"%") #Todo: also print step
+
+    if i % 10 == 0:
+        print(model.inference(trainBatch[:3,:]))
+    
+    model.inc_episode()
+    
+    trackingpoints.reset_batch()
+    while trackingpoints.has_next(BATCHSIZE):
+        trainBatch = buffersample(BATCHSIZE)
+
+        #loss = model.sv_learn(trainBatch, True)
+        #print("Learning rate:",model.session.run(model.targetQN.sv_lr)) #beim learningrate printen darauf aufpassen dass beim sv_learn targetQN.sv_lr und biem qlearn onlineQN.lr
         
-        trackingpoints.reset_batch()
-        trainBatch = buffersample(trackingpoints.numsamples)
-        ff_inputs = np.vstack(np.vstack(trainBatch[:,0]).shape[0]*[[1,2]]) #TODO: get rid of.
-        predict = sess.run(targetQN.predict,feed_dict=targetQN.feed_dict(np.vstack(trainBatch[:,0]), ff_inputs))
-        print("Iteration",targetQN.pretrain_episode,"Accuracy",round(np.mean(np.array(trainBatch[:,1] == predict, dtype=int))*100, 2),"%")
+        model.q_learn(trainBatch, True)    
+        #print("Learning rate:",model.session.run(model.onlineQN.lr))
 
-        if i % 10 == 0:
-            ff_inputs = np.vstack(np.vstack(trainBatch[:3,0]).shape[0]*[[1,2]]) #TODO: get rid of.
-            print(sess.run(targetQN.Qout,feed_dict=targetQN.feed_dict(np.vstack(trainBatch[:3,0]), ff_inputs)))
+    if (i+1) % 5 == 0:
+        model.save()
         
-        targetQN.pretrain_episode += 1
-        trackingpoints.reset_batch()
-        while trackingpoints.has_next(BATCHSIZE):
-            trainBatch = buffersample(BATCHSIZE)
-
-####sv-learn-part            
-#            ff_inputs = np.vstack(np.vstack(trainBatch[:,0]).shape[0]*[[1,2]]) #TODO: get rid of.
-#            _, loss, _ = sess.run([targetQN.sv_OP, targetQN.sv_loss, targetQN.sv_lr_update], feed_dict=targetQN.feed_dict(np.vstack(trainBatch[:,0]), ff_inputs, targetA=trainBatch[:,1], decay_lr="sv"))
-##            print(loss)
-##            print("step", sess.run(targetQN.pretrain_step_tf))
-##        print("Learning rate:",sess.run(targetQN.pretrain_learningrate))
-#        if (i+1) % 10 == 0:
-#            targetQN.save(sess)    
-####sv-learn-part ende            
-####q-learn-part
-#            Below we perform the Double-DQN update to the target Q-values
-            ff_inputs = np.vstack(np.vstack(trainBatch[:,3]).shape[0]*[[1,2]]) #TODO: get rid of.
-            action = sess.run(onlineQN.predict,feed_dict=onlineQN.feed_dict(np.vstack(trainBatch[:,3]), ff_inputs)) #TODO: im text schreiben wie das bei non-doubleDQN anders wäre
-            folgeQ = sess.run(targetQN.Qout,feed_dict=targetQN.feed_dict(np.vstack(trainBatch[:,3]), ff_inputs)) #No argmax anymore, but instead the action-prediciton because DDQN: instead of taking the max over Q-values when computing the target-Q value for our training step, we use our primary network to chose an action, and our target network to generate the target Q-value for that action. 
-            consider_stateval = -(trainBatch[:,4] - 1)
-            doubleQ = folgeQ[range(BATCHSIZE),action]  
-            targetQ = trainBatch[:,2] + (y*doubleQ * consider_stateval)
-            #Update the network with our target values.
-            ff_inputs = np.vstack(np.vstack(trainBatch[:,0]).shape[0]*[[1,2]]) #TODO: get rid of.
-            _ = sess.run(onlineQN.q_OP, feed_dict=onlineQN.feed_dict(np.vstack(trainBatch[:,0]), ff_inputs, targetQ=targetQ, targetA=trainBatch[:,1]))
-            runMultipleOps(smoothTargetNetUpdate,sess) #Update the target network toward the primary network.
-#            print("step", sess.run(onlineQN.step_tf))            
-
-        if (i+1) % 5 == 0:
-            sess.run(targetQN.pretrain_step_tf.assign(onlineQN.pretrain_step_tf))
-            targetQN.save(sess)
-            #Ich lade und speicher das targetQN, das heißt alles was im onlineQN gecounted wird muss ich vorher übertragen
-         
-####q-learn-part ende
 
 
     
         
         
-        
+exit()        
         
         
     
 tf.reset_default_graph()
 
-onlineQN = DDDQN(conf, myAgent, "onlineNet", isPretrain=False)
-targetQN = DDDQN(conf, myAgent, "targetNet", isPretrain=False)
+onlineQN = DuelDQN(conf, myAgent, "onlineNet", isPretrain=False)
+targetQN = DuelDQN(conf, myAgent, "targetNet", isPretrain=False)
 
 
 smoothTargetNetUpdate = NetCopyOps(onlineQN, targetQN, tau)
@@ -425,8 +469,8 @@ with tf.Session() as sess:
     
 tf.reset_default_graph()
 
-onlineQN = DDDQN(conf, myAgent, "onlineNet", isPretrain=False)
-targetQN = DDDQN(conf, myAgent, "targetNet", isPretrain=False)
+onlineQN = DuelDQN(conf, myAgent, "onlineNet", isPretrain=False)
+targetQN = DuelDQN(conf, myAgent, "targetNet", isPretrain=False)
 
 
 smoothTargetNetUpdate = NetCopyOps(onlineQN, targetQN, tau)

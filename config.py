@@ -41,10 +41,11 @@ class Config():
     #REINF_LEARN STUFF
     train_for = sys.maxsize-1
     initial_lr = 0.00005
-    lr_decay = 0.999
+    lr_decay = 0.9999 #hier gehs um steps, nicht mehr um episoden!
     lrdecayafter = train_for//2
     minimal_lr = 0.000001
     
+    target_update_tau = 0.001 
     batch_size = 32
     startepsilon = 0.2
     finalepsilonframe = 100000  #I could use epsilondecrease = 0.0001 instead, however then every new run epsilon would reset to startepsilon (since it doesn't depend on numIterations then)
