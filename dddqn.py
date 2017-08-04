@@ -28,7 +28,7 @@ from utils import convolutional_layer, fc_layer, variable_summary
 class DDDQN():
     
     ############################BUILDING THE COMPUTATION GRAPH#################
-    def __init__(self, conf, agent, name):  
+    def __init__(self, conf, agent, name, isInference=False):  
         self.conf = conf
         self.agent = agent
         self.name = name        
@@ -67,8 +67,8 @@ class DDDQN():
             self.targetQ = tf.placeholder(shape=[None],dtype=tf.float32)
             #self.targetA = tf.placeholder(shape=[None],dtype=tf.int32)
             #self.targetA_OH = tf.one_hot(self.targetA, self.num_actions, dtype=tf.float32)
-            self.compareQ = tf.reduce_sum(tf.multiply(self.Qout, self.targetA_OH), axis=1)
-            self.td_error = tf.square(self.targetQ - self.compareQ)
+            self.compareQ = tf.reduce_sum(tf.multiply(self.Qout, self.targetA_OH), axis=1) #der td_error von den actions über die wir nicht lernen wollen ist null
+            self.td_error = tf.square(self.targetQ - self.compareQ) 
             self.q_loss = tf.reduce_mean(self.td_error)
             self.q_trainer = tf.train.AdamOptimizer(learning_rate=0.00005)
             self.q_updateModel = self.q_trainer.minimize(self.q_loss, global_step=self.step_tf) #TODO: das kann auch pretrainstep sein!    
@@ -98,8 +98,9 @@ class DDDQN():
         
         #Then combine them together to get our final Q-values.
         Qout = self.Value + tf.subtract(self.Advantage,tf.reduce_mean(self.Advantage,axis=1,keep_dims=True))
+        #Qmax = tf.reduce_max(Qout, axis=1) #not necessary anymore because we use Double-Q
         predict = tf.argmax(Qout,1)
-        return Qout, predict
+        return Qout, predict 
     
 
     def _sv_training(self, loss, init_lr):
@@ -149,22 +150,23 @@ def processState(states):
     return np.reshape(states,[-1,30,45,8])        
 
             
-    
-    
-def updateTargetGraph(fromNet, toNet, tau):
+
+def NetCopyOps(fromNet, toNet, tau = 1):
     toCopy = fromNet.trainables
     toPast = toNet.trainables
     op_holder = []
     for idx,var in enumerate(toCopy[:]):
-        op_holder.append(toPast[idx].assign((var.value()*tau) + ((1-tau)*toPast[idx].value())))
+        if tau == 1:
+            op_holder.append(toPast[idx].assign(var.value()))
+        else:
+            op_holder.append(toPast[idx].assign((var.value()*tau) + ((1-tau)*toPast[idx].value())))
     return op_holder
 
-def updateTarget(op_holder,sess):
+    
+    
+def runMultipleOps(op_holder,sess):
     for op in op_holder:
         sess.run(op)
-     
-#ne die updateTarget auch anders rum machbar...
-#und ne hard-copy methode, die auch (!!) unbedingt vor dem ersten RL-learn-schritt gemacht wird (dann dabeischreiben welche geladen werden DARF)
         
         
         
@@ -202,15 +204,17 @@ tau = 0.001
 tf.reset_default_graph()
 
 mainQN = DDDQN(conf, myAgent, "onlineNet")
-targetQN = DDDQN(conf, myAgent, "targetNet")
+targetQN = DDDQN(conf, myAgent, "targetNet", isInference=True)
 
 
-targetOps = updateTargetGraph(mainQN, targetQN, tau)
-
+smoothTargetNetUpdate = NetCopyOps(mainQN, targetQN, tau)
+hardOnlineNetUpdate = NetCopyOps(targetQN, mainQN)
 
 with tf.Session() as sess:
     sess.run(tf.global_variables_initializer())
-    targetQN.load(sess, True)
+#    targetQN.load(sess, False)
+#    runMultipleOps(hardOnlineNetUpdate, sess)
+    #so muss das laden sein! targetQN wird geladen, und dann wird der inhalt nach onlineQN übertragen. Dann wird targetQN auch gespeichert.
     
     for i in range(1000):
         
@@ -239,23 +243,23 @@ with tf.Session() as sess:
 ####sv-learn-part ende            
 ####q-learn-part
 #            Below we perform the Double-DQN update to the target Q-values
-            Q1 = sess.run(mainQN.predict,feed_dict={mainQN.conv_inputs:np.vstack(trainBatch[:,3])})
-            Q2 = sess.run(targetQN.Qout,feed_dict={targetQN.conv_inputs:np.vstack(trainBatch[:,3])})
-            end_multiplier = -(trainBatch[:,4] - 1)
-            doubleQ = Q2[range(BATCHSIZE),Q1]
-            targetQ = trainBatch[:,2] + (y*doubleQ * end_multiplier)
+            action = sess.run(mainQN.predict,feed_dict={mainQN.conv_inputs:np.vstack(trainBatch[:,3])})
+            folgeQ = sess.run(targetQN.Qout,feed_dict={targetQN.conv_inputs:np.vstack(trainBatch[:,3])}) #No argmax anymore, becuase DDQN: instead of taking the max over Q-values when computing the target-Q value for our training step, we use our primary network to chose an action, and our target network to generate the target Q-value for that action. 
+            consider_stateval = -(trainBatch[:,4] - 1)
+            doubleQ = folgeQ[range(BATCHSIZE),action]  
+            targetQ = trainBatch[:,2] + (y*doubleQ * consider_stateval)
             #Update the network with our target values.
             _ = sess.run(mainQN.q_updateModel, feed_dict={mainQN.conv_inputs:np.vstack(trainBatch[:,0]),mainQN.targetQ:targetQ, mainQN.targetA:trainBatch[:,1]})
-            updateTarget(targetOps,sess) #Update the target network toward the primary network.
+            runMultipleOps(smoothTargetNetUpdate,sess) #Update the target network toward the primary network.
 #            print("step", sess.run(mainQN.step_tf))            
 
         if (i+1) % 10 == 0:
             sess.run(targetQN.step_tf.assign(mainQN.step_tf))
             targetQN.save(sess, False)
+            #Ich lade und speicher das targetQN, das heißt alles was im onlineQN gecounted wird muss ich vorher übertragen
          
 ####q-learn-part ende
 
-    
 
 
 

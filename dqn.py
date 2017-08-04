@@ -24,22 +24,22 @@ class CNN(object): #learning on gpu and application on cpu: https://stackoverflo
     #and inference in parallel, I can simply have the online-net in mode "rl_train", and the target-net in "inference"
     def __init__(self, config, agent, mode="sv_train", rl_not_trainables=[]):  #modes are "sv_train", "rl_train", "inference"
         #builds the computation graph, using the next few functions (this is basically the interface)
-        self.config = config
-        self.mode = mode
-        self.agent = agent
-        final_neuron_num = self.config.steering_steps*4 if self.config.INCLUDE_ACCPLUSBREAK else self.config.steering_steps*3
-        
-        self.conv_stacksize = (self.config.history_frame_nr*2 if self.config.use_second_camera else self.config.history_frame_nr) if self.agent.conv_stacked else 1
-        self.ff_stacksize = self.config.history_frame_nr if self.agent.ff_stacked else 1
-        self.stood_frames_ago = 0 #das wird benutzt damit er, wenn er einmal stand, sich merken kann ob erst kurz her ist (für settozero)
-
-        self.sv_iterations = 0
-        self.sv_global_step = tf.Variable(0, dtype=tf.int32, name='sv_global_step', trainable=False)
-        self._prepareNumIters()
-        self.global_step = tf.Variable(0, dtype=tf.int32, name='global_step', trainable=False) #https://github.com/tensorflow/tensorflow/blob/master/tensorflow/examples/tutorials/mnist/mnist.py 
+                            self.config = config
+                            self.mode = mode
+                            self.agent = agent
+                            final_neuron_num = self.config.steering_steps*4 if self.config.INCLUDE_ACCPLUSBREAK else self.config.steering_steps*3
+                            
+                            self.conv_stacksize = (self.config.history_frame_nr*2 if self.config.use_second_camera else self.config.history_frame_nr) if self.agent.conv_stacked else 1
+                            self.ff_stacksize = self.config.history_frame_nr if self.agent.ff_stacked else 1
+                            self.stood_frames_ago = 0 #das wird benutzt damit er, wenn er einmal stand, sich merken kann ob erst kurz her ist (für settozero)
+                    
+                            self.sv_iterations = 0
+                            self.sv_global_step = tf.Variable(0, dtype=tf.int32, name='sv_global_step', trainable=False)
+                            self._prepareNumIters()
+                            self.global_step = tf.Variable(0, dtype=tf.int32, name='global_step', trainable=False) #https://github.com/tensorflow/tensorflow/blob/master/tensorflow/examples/tutorials/mnist/mnist.py 
             
         ####
-        self.conv_inputs, self.ff_inputs, self.targets, self.stands_inputs = self._set_placeholders(mode, final_neuron_num)
+                            self.conv_inputs, self.ff_inputs, self.targets, self.stands_inputs = self._set_placeholders(mode, final_neuron_num)
         self.q, self.onehot, self.q_max, self.action = self._inference(self.conv_inputs, self.ff_inputs, final_neuron_num, rl_not_trainables, True)   
         self.q_targets = tf.placeholder(tf.float32, shape=[None, final_neuron_num], name="q_targets")
         self.loss = tf.reduce_mean(tf.square(self.q_targets - self.q))
