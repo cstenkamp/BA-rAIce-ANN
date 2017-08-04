@@ -24,8 +24,8 @@ def bias_variable(shape, name, is_trainable=True):
     #Since we're using ReLU neurons, it is also good practice to initialize them with a slightly positive initial bias to avoid "dead neurons"
     return tf.get_variable(name, shape, initializer=tf.constant_initializer(0.1), trainable=is_trainable)
 
-def conv2d(x, filter, stride):
-    return tf.nn.conv2d(x, filter, strides=[1, stride, stride, 1], padding='SAME') #https://www.tensorflow.org/api_docs/python/tf/nn/conv2d
+def conv2d(x, filter, stride1, stride2):
+    return tf.nn.conv2d(x, filter, strides=[1, stride1, stride2, 1], padding='SAME') #https://www.tensorflow.org/api_docs/python/tf/nn/conv2d
 
 def max_pool_2x2(x):
     return tf.nn.max_pool(x, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding='SAME')
@@ -44,11 +44,11 @@ def convolutional_layer(input_tensor, input_channels, kernel_size, stride, outpu
             varSum(trainvars["W_%s" % name])
             trainvars["b_%s" % name] = bias_variable([output_channels], "b_%s" % name, is_trainable=True)
             varSum(trainvars["b_%s" % name])
-            h_act = act(conv2d(input_tensor, trainvars["W_%s" % name], stride) + trainvars["b_%s" % name])
+            h_act = act(conv2d(input_tensor, trainvars["W_%s" % name], stride[0], stride[1]) + trainvars["b_%s" % name])
         else:
             W = weight_variable([kernel_size[0], kernel_size[1], input_channels, output_channels], "W_%s" % name, weightdecay, initializer=initializer, is_trainable=False)
             b = bias_variable([output_channels], "b_%s" % name, is_trainable=False)
-            h_act = act(conv2d(input_tensor, W, stride) + b)        
+            h_act = act(conv2d(input_tensor, W, stride[0], stride[1]) + b)        
         if pool:
             h_act = max_pool_2x2(h_act)
         if batchnorm:

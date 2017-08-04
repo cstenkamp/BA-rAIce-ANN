@@ -50,11 +50,11 @@ class DuelDQN():
             
             
             #THIS IS FORWARD STEP
-            self.conv_inputs = tf.placeholder(tf.float32, shape=[None, self.conf.image_dims[0], self.conf.image_dims[1], self.conv_stacksize], name="conv_inputs")  
-            #self.ff_inputs = tf.placeholder(tf.float32, shape=[None, self.ff_stacksize*self.agent.ff_inputsize], name="ff_inputs") 
+            self.conv_inputs = tf.placeholder(tf.float32, shape=[None, self.conf.image_dims[0], self.conf.image_dims[1], self.conv_stacksize], name="conv_inputs")  if self.agent.usesConv else None
+            #self.ff_inputs = tf.placeholder(tf.float32, shape=[None, self.ff_stacksize*self.agent.ff_inputsize], name="ff_inputs")  if self.agent.ff_inputsize else None
             self.ff_inputs = tf.placeholder(tf.float32, shape=[None, 2], name="ff_inputs")            
             self.stands_inputs = tf.placeholder(tf.float32, shape=[None], name="standing_inputs") #necessary for settozero            
-            self.Qout, self.predict = self._inference(self.conv_inputs)
+            self.Qout, self.predict = self._inference(self.conv_inputs, self.ff_inputs, self.stands_inputs)
             
             #THIS IS SV_LEARN 
             self.targetA = tf.placeholder(shape=[None],dtype=tf.int32)
@@ -63,7 +63,7 @@ class DuelDQN():
             self.sv_OP = self._sv_training(self.sv_loss)  
             
             
-            #THIS IS DDDQN-LEARN
+            #THIS IS DDQN-LEARN
             #Below we obtain the loss by taking the sum of squares difference between the target and prediction Q values.
             self.targetQ = tf.placeholder(shape=[None],dtype=tf.float32)
             #self.targetA = tf.placeholder(shape=[None],dtype=tf.int32)
@@ -80,13 +80,40 @@ class DuelDQN():
         
 
             
-    def _inference(self, imageIn):
-        self.conv1 = slim.conv2d(inputs=imageIn,num_outputs=32,kernel_size=[4,6],stride=[2,3],padding='VALID', biases_initializer=None, normalizer_fn=slim.batch_norm)
-        self.conv2 = slim.conv2d(inputs=self.conv1,num_outputs=64,kernel_size=[4,4],stride=[2,2],padding='VALID', biases_initializer=None, normalizer_fn=slim.batch_norm)
-        self.conv3 = slim.conv2d(inputs=self.conv2,num_outputs=64,kernel_size=[3,3],stride=[1,1],padding='VALID', biases_initializer=None, normalizer_fn=slim.batch_norm)
-        self.conv4 = slim.conv2d(inputs=self.conv3,num_outputs=self.h_size,kernel_size=[4,4],stride=[1,1],padding='VALID', biases_initializer=None, normalizer_fn=slim.batch_norm)
-        #original war (?, 20, 20, 32) - (?, 9, 9, 64) - (?, 7, 7, 64) - (?, 1, 1, 512) - (?, 256)
-        #meins ist    (?, 14, 14, 32) - (?, 6, 6, 64) - (?, 4, 4, 64) - (?, 1, 1, 512) - (?, 256)
+    def _inference(self, conv_inputs, ff_inputs, stands_inputs):
+        
+        ini = tf.truncated_normal_initializer(stddev=1.0 / math.sqrt(float(self.conf.image_dims[0]*self.conf.image_dims[1])))
+##########mein kram###########            
+        if conv_inputs is not None:
+            rs_input = tf.reshape(conv_inputs, [-1, self.conf.image_dims[0], self.conf.image_dims[1], self.conv_stacksize]) #final dimension = number of color channels*number of stacked (history-)frames                  
+            #convolutional_layer(input_tensor, input_channels, kernel_size, stride, output_channels, name, act, is_trainable, batchnorm, is_training, weightdecay=False, pool=True, trainvars=None, varSum=None, initializer=None)
+            conv1 = convolutional_layer(rs_input, self.conv_stacksize, [4,6], [2,3], 32, "Conv1", tf.nn.relu, True, True, True, False, False, {}, variable_summary, initializer=ini) #(?, 14, 14, 32)
+            conv2 = convolutional_layer(conv1, 32, [4,6], [4,4], 64, "Conv2", tf.nn.relu, True, True, True, False, False, {}, variable_summary, initializer=ini)                     #(?, 6, 6, 64)
+            conv3 = convolutional_layer(conv2, 64, [4,6], [3,3], 64, "Conv3", tf.nn.relu, True, True, True, False, False, {}, variable_summary, initializer=ini)                     #(?, 4, 4, 64)
+            self.conv4 = convolutional_layer(conv3, 64, [4,4], [2,3], self.h_size, "Conv4", tf.nn.relu, True, True, True, False, False, {}, variable_summary, initializer=ini)       #(?, 1, 1, 512)
+            
+            
+#            conv2 = convolutional_layer(conv1, 32, [5,5], 1, 64, "Conv2", tf.nn.relu, trainable("Conv2"), False, for_training, False, True, self.trainvars, variable_summary, initializer=ini)                
+#            conv2_flat =  tf.reshape(conv2, [-1, flat_size])    #x//4*y//4+speed_neurons
+#            if ff_inputs is not None:
+#                fc0 = tf.concat([conv2_flat, ff_inputs], 1) 
+#        else:
+#            fc0 = fc_layer(ff_inputs, self.ff_stacksize*self.agent.ff_inputsize, self.agent.ff_inputsize, "FC0", trainable("FC0"), False, for_training, False, tf.nn.relu, 1 if for_training else self.keep_prob, self.trainvars, variable_summary, initializer=ini)   
+#        flat_size += self.agent.ff_inputsize    
+#        
+#        #fc_layer(input_tensor, input_size, output_size, name, is_trainable, batchnorm, is_training, weightdecay=False, act=None, keep_prob=1, trainvars=None, varSum=None, initializer=None):
+#        fc1 = fc_layer(fc0, flat_size, final_neuron_num*20, "FC1", trainable("FC1"), False, for_training, False, tf.nn.relu, 1 if for_training else self.keep_prob, self.trainvars, variable_summary, initializer=ini)                 
+#        q = fc_layer(fc1, final_neuron_num*20, final_neuron_num, "FC2", trainable("FC2"), False, for_training, False, None, 1, self.trainvars, variable_summary, initializer=ini) 
+#        
+###########mein kram ende###########        
+#        
+#        
+#        self.conv1 = slim.conv2d(inputs=imageIn,num_outputs=32,kernel_size=[4,6],stride=[2,3],padding='VALID', biases_initializer=None, normalizer_fn=slim.batch_norm)
+#        self.conv2 = slim.conv2d(inputs=self.conv1,num_outputs=64,kernel_size=[4,4],stride=[2,2],padding='VALID', biases_initializer=None, normalizer_fn=slim.batch_norm)
+#        self.conv3 = slim.conv2d(inputs=self.conv2,num_outputs=64,kernel_size=[3,3],stride=[1,1],padding='VALID', biases_initializer=None, normalizer_fn=slim.batch_norm)
+#        self.conv4 = slim.conv2d(inputs=self.conv3,num_outputs=self.h_size,kernel_size=[4,4],stride=[1,1],padding='VALID', biases_initializer=None, normalizer_fn=slim.batch_norm)
+#        #original war (?, 20, 20, 32) - (?, 9, 9, 64) - (?, 7, 7, 64) - (?, 1, 1, 512) - (?, 256)
+#        #meins ist    (?, 14, 14, 32) - (?, 6, 6, 64) - (?, 4, 4, 64) - (?, 1, 1, 512) - (?, 256)
         
         #We take the output from the final convolutional layer and split it into separate advantage and value streams.
         self.streamAC,self.streamVC = tf.split(self.conv4,2,3) #two splits, dimension 3
@@ -155,10 +182,6 @@ class DuelDQN():
         checkpoint_file = os.path.join(self.agent.folder(folder), 'model.ckpt')
         session.run(self.pretrain_episode_tf.assign(self.pretrain_episode))
         session.run(self.run_inferences_tf.assign(self.run_inferences))
-        if self.isPretrain:
-            session.run(self.step_tf.assign(0))
-        else:
-            session.run(self.pretrain_step_tf.assign(self.pretrain_step))
         self.saver.save(session, checkpoint_file, global_step=self.pretrain_step_tf if self.isPretrain else self.step_tf)
         print("saved") 
         
@@ -176,7 +199,7 @@ class DuelDQN():
              print("Pretrain-Step:",self.pretrain_step, "Pretrain-Episode:",self.pretrain_episode,"Main-Step:",self.step, "Run'n Iterations:", self.run_inferences)
              return True
          else:
-             print("couldn't load")
+             print("couldn't load", ("from pretrain" if from_pretrain else ""))
              return False
         
         
@@ -392,7 +415,7 @@ BATCHSIZE = 32
         
 tf.reset_default_graph()
 model = DDDQN_model(conf, myAgent, tf.Session(), isPretrain=False)
-model.initNet(load=True)
+model.initNet(load=False)
 for i in range(10):
     trackingpoints.reset_batch()
     trainBatch = buffersample(trackingpoints.numsamples)

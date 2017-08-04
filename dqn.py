@@ -40,12 +40,12 @@ class CNN(object): #learning on gpu and application on cpu: https://stackoverflo
             
         ####
                             self.conv_inputs, self.ff_inputs, self.targets, self.stands_inputs = self._set_placeholders(mode, final_neuron_num)
-        self.q, self.onehot, self.q_max, self.action = self._inference(self.conv_inputs, self.ff_inputs, final_neuron_num, rl_not_trainables, True)   
-        self.q_targets = tf.placeholder(tf.float32, shape=[None, final_neuron_num], name="q_targets")
-        self.loss = tf.reduce_mean(tf.square(self.q_targets - self.q))
-        self.trainer = tf.train.AdamOptimizer(learning_rate=0.00001)
-        self.train_op = self.trainer.minimize(self.loss)
-        self.accuracy = self._evaluation(self.onehot, self.targets)  #TODO: DELETE THIS LINE!!!!
+                            self.q, self.onehot, self.q_max, self.action = self._inference(self.conv_inputs, self.ff_inputs, final_neuron_num, rl_not_trainables, True)   
+                            self.q_targets = tf.placeholder(tf.float32, shape=[None, final_neuron_num], name="q_targets")
+                            self.loss = tf.reduce_mean(tf.square(self.q_targets - self.q))
+                            self.trainer = tf.train.AdamOptimizer(learning_rate=0.00001)
+                            self.train_op = self.trainer.minimize(self.loss)
+                            self.accuracy = self._evaluation(self.onehot, self.targets)  #TODO: DELETE THIS LINE!!!!
 
 
         if mode == "inference":
