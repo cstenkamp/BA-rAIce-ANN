@@ -83,7 +83,7 @@ class Memory(object):
         if index >= self._size:
             return None
         
-        action = self._actions[index]
+        action = self.make_floats_from_long(self._actions[index])
         reward = self._rewards[index]
         speed = self._speeds[index]
         folgespeed = self._speeds[(index+1 % self.capacity)]
@@ -122,6 +122,7 @@ class Memory(object):
     def append(self,obj):
         with self._lock:
             oldstate, action, reward, newstate, fEnd = obj
+            action = self.make_long_from_floats(*action)
             oldspeed = oldstate[1]
             oldstate = oldstate[0]
             newspeed = newstate[1]

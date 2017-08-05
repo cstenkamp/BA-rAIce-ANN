@@ -66,7 +66,6 @@ class AbstractAgent(object):
         return action_hist[0] 
     
     def makeNetUsableAction(self, action):
-        #TODO: wenn du die action als 3 werte speichest, dann...
         return self.discretize(*action)
         
     def performNetwork(self, _, __, ___):
@@ -106,9 +105,9 @@ class AbstractAgent(object):
 class AbstractRLAgent(AbstractAgent):
     def __init__(self, conf, containers, *args, **kwargs):
         super().__init__(conf, containers, *args, **kwargs)
-        self.repeat_random_action_for = 1000
         if not hasattr(self, "memory"): #einige agents haben bereits eine andere memory-implmentation, die sollste nicht überschreiben
             self.memory = Memory(conf.memorysize, conf, self)
+        self.repeat_random_action_for = 1000
         self.freezeInfReasons = []
         self.freezeLearnReasons = [] 
         self.wallhitPunish = 1;
@@ -117,9 +116,9 @@ class AbstractRLAgent(AbstractAgent):
         
     def initNetwork(self):    
         assert self.containers is not None, "if you init the net for a RL-run, the containers must not be None!"
-        self.episode_statevals = [] 
-        self.episodes = 0
-        self.reinfNetSteps = 0
+        self.episode_statevals = []  #für evaluator
+        self.episodes = 0 #für evaluator
+        self.reinfNetSteps = 0 #für evaluator
         self.numInferencesAfterLearn = 0
         self.numLearnAfterInference = 0
         self.last_random_timestamp = 0
@@ -128,37 +127,31 @@ class AbstractRLAgent(AbstractAgent):
                                    ["average rewards", "average Q-vals",   "progress", "laptime"                    ], \
                                    [1,                 self.conf.MAXSPEED, 100,         self.conf.time_ends_episode ] )
     
-        
+    
+    #gamestate and paststate sind jeweils vvec1_hist, vvec2_hist, otherinputs_hist, action_hist
     def addToMemory(self, gameState, pastState): 
         assert hasattr(self, "memory") and self.memory is not None, "I don't have a memory, that's fatal."
         
-        if pastState[0] is not None: #was der Fall DIREKT nach reset oder nach start ist
+        if pastState: #was nicht der Fall DIREKT nach reset oder nach start ist (nur dann ist er False)
             
             past_conv_inputs, past_other_inputs, _ = self.getAgentState(*pastState)
             s  = (past_conv_inputs, past_other_inputs)
-            a  = self.getAction(*pastState)
+            a  = self.getAction(*pastState)  #das (throttle, brake, steer)-tuple. 
             r = self.calculateReward(*gameState)
             conv_inputs, other_inputs, _ = self.getAgentState(*gameState)
             s2 = (conv_inputs, other_inputs)
-        
-            if not self.SAVE_ACTION_AS_ARGMAX: #action ist entweder das argmax der final_neurons ODER das (throttle, brake, steer)-tuple
-                actuAction = a                                                                                         
-                a = self.memory.make_long_from_floats(*a)
-            else:
-                actuAction = self.dediscretize(a, self.conf)
+            markovtuple = (s,a,r,s2,False)            
             
-            self.memory.append([s, a, r, s2, False])  
+            self.memory.append(markovtuple)  
             
-            print("adding to Memory:",actuAction, r, level=4) 
+            print("adding to Memory:",a, r, level=4) 
             
             #values for evalation:
-            stateval = self.target_cnn.calculate_value(self.session, conv_inputs, self.makeNetUsableOtherInputs(other_inputs))[0]
+            stateval = self.model.statevalue(markovtuple) #TODO: gucken ob stateval richtig ist!
             self.episode_statevals.append(stateval)
             
-            
             if self.containers.showscreen:
-                conv_inputs, other_inputs, _ = self.getAgentState(*gameState)
-                infoscreen.print(actuAction, round(r,2), round(stateval,2), self.humantakingcontrolstring, containers= self.containers, wname="Last memory")
+                infoscreen.print(a, round(r,2), round(stateval,2), self.humantakingcontrolstring, containers= self.containers, wname="Last memory")
                 if len(self.memory) % 20 == 0:
                     infoscreen.print(">"+str(len(self.memory)), containers= self.containers, wname="Memorysize")
       
@@ -194,23 +187,23 @@ class AbstractRLAgent(AbstractAgent):
 
     def postRunInference(self, toUse, toSave):
         super().postRunInference(toUse, toSave)
-        #ACHTUNG! self.containers.inputval.addResultAndBackup(toSave)  WURDE HIER ENTFERNT!
-        if self.containers.conf.learnMode == "between":
-            print("freezing python because after", self.numIterations, "iterations I need to learn (between)", level=2)
-            if self.numIterations % self.containers.conf.ForEveryInf == 0:
+        if self.conf.learnMode == "between":
+            if self.numIterations % self.conf.ForEveryInf == 0:
+                print("freezing python because after", self.numIterations, "iterations I need to learn (between)", level=2)
                 self.freezeInf("LearningComes")
-                self.dauerLearnANN(self.containers.conf.ComesALearn)
+                self.dauerLearnANN(self.conf.ComesALearn)
                 self.unFreezeInf("LearningComes")
-
+                
+                
+    def runInference(self, *args, **kwargs):
+        raise NotImplementedError
 
     def canLearn(self):
         return len(self.memory) > self.conf.batchsize+self.conf.history_frame_nr+1 and \
                len(self.memory) > self.conf.replaystartsize and self.numIterations < self.conf.train_for
 
 
-
     def dauerLearnANN(self, learnSteps):
-
         i = 0
         while self.containers.KeepRunning and self.numIterations <= self.conf.train_for and i < learnSteps:
             cando = True
@@ -235,25 +228,30 @@ class AbstractRLAgent(AbstractAgent):
                     self.numLearnAfterInference += 1
             i += 1
                                          
-        self.unFreezeInf("updateFrequency")
+        self.unFreezeInf("updateFrequency") #kann hier ruhig sein, da es eh nur unfreezed falls es aufgrund von diesem grund gefreezed war.
         if self.numIterations >= self.conf.train_for: #if you exited because you're completely done
             self.saveNet()
             print("Stopping learning because I'm done after", self.numIterations, "inferences", level=10)
         
            
-    
-    
-
     def saveNet(self):
-        raise NotImplementedError
-                
+        self.freezeEverything("saveNet")
+        self.model.save()
+        if self.conf.save_memory_with_checkpoint:
+            self.memory.save_memory()
+        print("saved", level=6)
+        self.unFreezeEverything("saveNet")
+           
+        
+            
     def learnANN(self):
         raise NotImplementedError
 
 
 
         
-    def calculateReward(self, vvec1_hist, vvec2_hist, otherinput_hist, action_hist):
+    def calculateReward(self, *gameState):
+        vvec1_hist, vvec2_hist, otherinput_hist, action_hist = gameState
         stay_on_street = abs(otherinput_hist[0].CenterDist)
         stay_on_street = round(0 if stay_on_street < 5 else self.wallhitPunish if stay_on_street >= 10 else stay_on_street/10, 3)
         speed = otherinput_hist[0].SpeedSteer.speedInStreetDir / self.conf.MAXSPEED
@@ -261,25 +259,25 @@ class AbstractRLAgent(AbstractAgent):
 
 
     
-    def randomAction(self, speed, config):
+    def randomAction(self, speed):
         print("Random Action!", level=6)
         if current_milli_time() - self.last_random_timestamp > self.repeat_random_action_for:
             
-            action = np.random.randint(4) if config.INCLUDE_ACCPLUSBREAK else np.random.randint(3)
+            action = np.random.randint(4) if self.conf.INCLUDE_ACCPLUSBREAK else np.random.randint(3)
             if action == 0: brake, throttle = 0, 1
             if action == 1: brake, throttle = 0, 0
             if action == 2: brake, throttle = 1, 0
             if action == 3: brake, throttle = 1, 1
             
-            if speed < 1:
+            if speed < 6:
                 brake, throttle = 0, 1  #wenn er nicht fährt bringt stehen nix!
             
             #alternative 1a: steer = ((np.random.random()*2)-1)
             #alternative 1b: steer = min(max(np.random.normal(scale=0.5), 1), -1)
             #für 1a und 1b:  steer = read_supervised.dediscretize_steer(read_supervised.discretize_steering(steer, self.conf.steering_steps))
             #alternative 2:
-            tmp = [0]*config.steering_steps
-            tmp[np.random.randint(config.steering_steps)] = 1
+            tmp = [0]*self.conf.steering_steps
+            tmp[np.random.randint(self.conf.steering_steps)] = 1
             steer = read_supervised.dediscretize_steer(tmp)
             
             
@@ -290,11 +288,8 @@ class AbstractRLAgent(AbstractAgent):
             
         #throttle, brake, steer = 1, 0, 0
         result = "["+str(throttle)+", "+str(brake)+", "+str(steer)+"]"
-        
-        if self.SAVE_ACTION_AS_ARGMAX:
-            return result, self.discretize(throttle, brake, steer, config) #er returned immer toUse, toSave
-        else:
-            return result, (throttle, brake, steer)                        #er returned immer toUse, toSave     
+              
+        return result, (throttle, brake, steer)  #er returned immer toUse, toSave     
 
 
 
@@ -309,14 +304,15 @@ class AbstractRLAgent(AbstractAgent):
 
 
     def eval_episodeVals(self, mem_epi_slice, gameState, endReason):
+        vvec1_hist, vvec2_hist, otherinput_hist, action_hist = gameState
         avg_rewards = round(self.memory.average_rewards(mem_epi_slice[0], mem_epi_slice[1]),3)
         avg_values = round(np.mean(np.array(self.episode_statevals)), 3)
         self.episode_statevals = []
         #other evaluation-values we need are time the agent took and percentage the agent made. However, becasue those values are not neccessarily
         #officially known to the agent (since agentstate != environmentstate), we need to take them from the environment-state
-        progress = round(gameState[2][0].ProgressVec.Progress if endReason != "lapdone" else 100, 2)
-        laptime = round(gameState[2][0].ProgressVec.Laptime,1)
-        valid = gameState[2][0].ProgressVec.fValidLap
+        progress = round(otherinput_hist[0].ProgressVec.Progress if endReason != "lapdone" else 100, 2)
+        laptime = round(otherinput_hist[0].ProgressVec.Laptime,1)
+        valid = otherinput_hist[0].ProgressVec.fValidLap
         print("Avg-r:",avg_rewards,"Avg-Q:",avg_values,"progress:",progress,"laptime:",laptime,"(valid)" if valid else "", level=8)
         if self.containers.showscreen:
                 infoscreen.print("rw:", avg_rewards, "Q:", avg_values, "prg:", progress, "time:", laptime, "(v)" if valid else "", containers=self.containers, wname="Last Epsd")
@@ -331,8 +327,9 @@ class AbstractRLAgent(AbstractAgent):
             infoscreen.print(str(-abs(howmuch)), time.strftime("%H:%M:%S", time.gmtime()), containers=self.containers, wname="Last big punish")
         self.memory.punishLastAction(howmuch)
             
-                
-    
+        
+        
+        
     def freezeEverything(self, reason):
         self.freezeLearn(reason)
         self.freezeInf(reason)

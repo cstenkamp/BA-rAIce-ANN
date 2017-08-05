@@ -313,6 +313,10 @@ class DDDQN_model():
         oldstates, actions, rewards, newstates, terminals = batch
         return self.session.run(self.targetQN.Qout,feed_dict=self.targetQN.feed_dict(oldstates[0], oldstates[1]))        
         
+    def statevalue(self, batch):
+        oldstates, actions, rewards, newstates, terminals = batch
+        return self.session.run(tf.reduce_max(self.targetQN.Qout, axis=1), feed_dict=self.targetQN.feed_dict(newstates[0],newstates[1]))
+    
     
     def sv_learn(self, batch, decay_lr = True):
         assert self.isPretrain, "Supervised-Learning is only allowed as Pre-training!"
@@ -330,7 +334,7 @@ class DDDQN_model():
     def q_learn(self, batch, decay_lr = False):
         oldstates, actions, rewards, newstates, terminals = batch
         action = self.session.run(self.onlineQN.predict,feed_dict=self.onlineQN.feed_dict(newstates[0], newstates[1])) #TODO: im text schreiben wie das bei non-doubleDQN anders wäre
-        folgeQ = self.session.run(self.targetQN.Qout,feed_dict=self.targetQN.feed_dict(newstates[0], newstates[1])) #No argmax anymore, but instead the action-prediciton because DDQN: instead of taking the max over Q-values when computing the target-Q value for our training step, we use our primary network to chose an action, and our target network to generate the target Q-value for that action. 
+        folgeQ = self.session.run(self.targetQN.Qout,feed_dict=self.targetQN.feed_dict(newstates[0], newstates[1])) #No reduceMax anymore, but instead the action-prediciton because DDQN: instead of taking the max over Q-values when computing the target-Q value for our training step, we use our primary network to chose an action, and our target network to generate the target Q-value for that action. 
         consider_stateval = -(terminals - 1)
         doubleQ = folgeQ[range(len(terminals)),action]  
         targetQ = rewards + (self.conf.q_decay*doubleQ * consider_stateval)

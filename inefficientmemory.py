@@ -172,14 +172,3 @@ class Memory(object):
         del odict['agent']
         with open(filename, 'wb') as f:
             pickle.dump(odict, f, pickle.HIGHEST_PROTOCOL)
-
-
-
-
-    @staticmethod
-    def make_long_from_floats(acc, brk, steer): #das inefficientmemory muss die nicht komprimieren sonder kannn sie einfach als tuple  speichern.
-        return acc, brk, steer
-    
-    @staticmethod
-    def make_floats_from_long(content):
-        return content[0], content[1], content[2]

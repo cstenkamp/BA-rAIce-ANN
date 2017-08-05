@@ -19,10 +19,6 @@ from efficientmemory import Memory as Efficientmemory
 
 current_milli_time = lambda: int(round(time.time() * 1000))
 
-DONT_COPY_WEIGHTS = [] #["FC1", "FC2"]
-DONT_TRAIN = [] #["Conv1", "Conv2", "FC1"]# ["Conv1", "Conv2"]
-
-ONLY_START = False
 
 
 class Agent(AbstractRLAgent):
@@ -33,15 +29,14 @@ class Agent(AbstractRLAgent):
         self.ff_inputsize = 30
         self.epsilon = self.conf.startepsilon
         self.start_fresh = start_fresh
-        self.SAVE_ACTION_AS_ARGMAX = False #legacy und speicher-effizienter ists true, aber dann lässt sich das memory nicht als grundlage für ddpg
         if not start_fresh:
-            assert os.path.exists(self.folder(self.conf.pretrain_checkpoint_dir)), "I need a pre-trained model"
+            assert os.path.exists(self.folder(self.conf.pretrain_checkpoint_dir) or self.folder(self.conf.checkpoint_dir)), "I need any kind of pre-trained model"
 
 
     def runInference(self, gameState, pastState):
         if self.isinitialized and self.checkIfInference():
             self.preRunInference(gameState, pastState) #eg. adds to memory
-            conv_inputs, other_inputs, _ = self.getAgentState(*gameState)
+            conv_inputs, other_inputs, stands_inputs = self.getAgentState(*gameState)
                 
 #            ##############DELETETHISPART############## #to check how fast the pure socket connection, whithout ANN, is
 #            self.containers.outputval.send_via_senderthread("[1, 0, 0]", self.containers.inputval.CTimestamp, self.containers.inputval.STimestamp)
@@ -49,39 +44,35 @@ class Agent(AbstractRLAgent):
 #            ##############DELETETHISPART ENDE##############
             
             if self.canLearn() and np.random.random() > self.epsilon:
-                toUse, toSave = self.performNetwork(conv_inputs, self.makeNetUsableOtherInputs(other_inputs))
+                toUse, toSave = self.performNetwork(conv_inputs, self.makeNetUsableOtherInputs(other_inputs), stands_inputs)
             else:
-                toUse, toSave = self.randomAction(gameState[2][0].SpeedSteer.velocity, self.conf)
+                toUse, toSave = self.randomAction(gameState[2][0].SpeedSteer.velocity)
             
                 if len(self.memory) >= self.conf.replaystartsize:
                     try:
                         self.epsilon = min(round(max(self.conf.startepsilon-((self.conf.startepsilon-self.conf.minepsilon)*((self.numIterations-self.conf.replaystartsize)/self.conf.finalepsilonframe)), self.conf.minepsilon), 5), 1)
-                    except:
+                    except: #there are two different kinds of what can be stored in the config for the memory-decrease
                         self.epsilon = min(round(max(self.epsilon-self.conf.epsilondecrease, self.conf.minepsilon), 5), 1)
                     
                 if self.containers.showscreen:
-                    infoscreen.print(self.epsilon, containers= self.containers, wname="Epsilon")
-
+                    infoscreen.print(self.epsilon, containers=self.containers, wname="Epsilon")
 
             if self.containers.showscreen:
-                infoscreen.print(toUse, containers= self.containers, wname="Last command")
+                infoscreen.print(toUse, containers=self.containers, wname="Last command")
                 if self.numIterations % 100 == 0:
-                    infoscreen.print(self.reinfNetSteps, "Iterations: >"+str(self.numIterations), containers= self.containers, wname="ReinfLearnSteps")
+                    infoscreen.print(self.reinfNetSteps, "Iterations: >"+str(self.numIterations), containers=self.containers, wname="ReinfLearnSteps")
 
             self.postRunInference(toUse, toSave)
     
 
 
-    def performNetwork(self, conv_inputs, inflated_other_inputs):        
-        super().performNetwork(conv_inputs, inflated_other_inputs)
-        onehot, qvals = self.target_model.run_inference(self.session, conv_inputs, inflated_other_inputs) #former is argmax, latter are individual qvals
+    def performNetwork(self, conv_inputs, inflated_other_inputs, stands_inputs):        
+        super().performNetwork(conv_inputs, inflated_other_inputs, stands_inputs)
+        onehot, qvals = self.model.run_inference(self.session, conv_inputs, inflated_other_inputs) #former is argmax, latter are individual qvals
         throttle, brake, steer = self.dediscretize(onehot[0])
         result = "["+str(throttle)+", "+str(brake)+", "+str(steer)+"]"
         self.showqvals(qvals[0])
-        if self.SAVE_ACTION_AS_ARGMAX:
-            return result, np.argmax(onehot[0])     #er returned immer toUse, toSave
-        else:
-            return result, (throttle, brake, steer) #er returned immer toUse, toSave
+        return result, (throttle, brake, steer) #er returned immer toUse, toSave
 
 
 
@@ -162,14 +153,14 @@ class Agent(AbstractRLAgent):
                 
                 
                 
-    def saveNet(self):
-#        self.freezeEverything("saveNet") #TODO: diese auskommentierungen wieder weg!
-        checkpoint_file = os.path.join(self.folder(self.conf.checkpoint_dir), 'model.ckpt')
-        self.saver.save(self.session, checkpoint_file, global_step=self.online_model.global_step) #remember that this saver only handles the online-net  
-#        if self.conf.save_memory_with_checkpoint:
-#            self.memory.save_memory()
-        print("saved", level=6)
-#        self.unFreezeEverything("saveNet")
+#    def saveNet(self):
+##        self.freezeEverything("saveNet") #TODO: diese auskommentierungen wieder weg!
+#        checkpoint_file = os.path.join(self.folder(self.conf.checkpoint_dir), 'model.ckpt')
+#        self.saver.save(self.session, checkpoint_file, global_step=self.online_model.global_step) #remember that this saver only handles the online-net  
+##        if self.conf.save_memory_with_checkpoint:
+##            self.memory.save_memory()
+#        print("saved", level=6)
+##        self.unFreezeEverything("saveNet")
                 
                 
     #calculateReward ist in der AbstractRLAgent von der er erbt

@@ -351,7 +351,7 @@ class InputValContainer(object):
         if not pastState:
             self.alreadyread = True
         if pastState and not self.has_past_state:
-            return None, None, None, None
+            return False
         if self.config.use_cameras and self.agent.usesConv:
             return self._read_vvec_hist(pastState)[0], self._read_vvec_hist(pastState)[1], self._read_other(self.otherinput_hist,pastState), self._read_other(self.action_hist,pastState)
         else:

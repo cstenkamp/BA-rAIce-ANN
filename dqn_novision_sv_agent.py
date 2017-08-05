@@ -23,9 +23,10 @@ class Agent(AbstractAgent):
         self.ff_stacked = True
         
     #Override
-    def getAgentState(self, vvec1_hist, vvec2_hist, otherinput_hist, action_hist):  
+    def getAgentState(self, *gameState):  
+        vvec1_hist, vvec2_hist, otherinput_hist, action_hist = gameState
         other_inputs = np.ravel([i.returnRelevant() for i in otherinput_hist])
-        stands_inputs = otherinput_hist[0].SpeedSteer.velocity < 2
+        stands_inputs = otherinput_hist[0].SpeedSteer.velocity < 6
         return None, other_inputs, stands_inputs
     
     #Override
