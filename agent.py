@@ -39,7 +39,7 @@ class AbstractAgent(object):
         
     ##############functions that should be impemented##########
     def checkIfInference(self):
-        if self.containers.conf.UPDATE_ONLY_IF_NEW and self.containers.inputval.alreadyread:
+        if self.conf.UPDATE_ONLY_IF_NEW and self.containers.inputval.alreadyread:
             return False
         return True
         
@@ -125,7 +125,7 @@ class AbstractRLAgent(AbstractAgent):
         self.last_random_timestamp = 0
         self.last_random_action = None
         self.evaluator = evaluator(self.containers, self, self.containers.show_plots, self.conf.save_xml,      \
-                                   ["average rewards", "average Q-vals",      "progress", "laptime"                       ], \
+                                   ["average rewards", "average Q-vals",   "progress", "laptime"                    ], \
                                    [1,                 self.conf.MAXSPEED, 100,         self.conf.time_ends_episode ] )
     
         
