@@ -28,8 +28,8 @@ class Agent(AbstractAgent):
             self.lock.acquire()
             try:
                 self.isbusy = True 
-                toUse, toSave = self.performNetwork(conv_inputs, self.makeNetUsableOtherInputs(other_inputs), stands_inputs)
-                super().postRunInference(toUse, toSave)
+                toUse, toSave = self.performNetwork(conv_inputs, self.makeNetUsableOtherInputs(other_inputs), stands_inputs) #This now also needs makeInferenceUsable!!!
+                super().postRunInference(toUse, toSave) 
                 self.isbusy = False
             finally:
                 self.lock.release()

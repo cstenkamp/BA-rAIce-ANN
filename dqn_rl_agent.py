@@ -37,14 +37,14 @@ class Agent(AbstractRLAgent):
         if self.isinitialized and self.checkIfInference():
             self.preRunInference(gameState, pastState) #eg. adds to memory
             conv_inputs, other_inputs, stands_inputs = self.getAgentState(*gameState)
-                
+                            
 #            ##############DELETETHISPART############## #to check how fast the pure socket connection, whithout ANN, is
 #            self.containers.outputval.send_via_senderthread("[1, 0, 0]", self.containers.inputval.CTimestamp, self.containers.inputval.STimestamp)
 #            return
 #            ##############DELETETHISPART ENDE##############
             
             if self.canLearn() and np.random.random() > self.epsilon:
-                toUse, toSave = self.performNetwork(conv_inputs, self.makeNetUsableOtherInputs(other_inputs), stands_inputs)
+                toUse, toSave = self.performNetwork(self.makeInferenceUsable((conv_inputs, other_inputs, stands_inputs)))
             else:
                 toUse, toSave = self.randomAction(gameState[2][0].SpeedSteer.velocity)
             
@@ -101,7 +101,7 @@ class Agent(AbstractRLAgent):
     def create_QLearnInputs_from_MemoryBatch(self, memoryBatch):
         oldstates, actions, rewards, newstates, resetafters = zip(*memoryBatch)      
         #is already [[(c,f)],[a],[r],[(c,f)],[t]], however the actions are tuples, and we want argmax's... and netUsableOtherinputs
-        actions = np.array([np.argmax(self.discretize(throttle, brake, steer)) for throttle, brake, steer in actions])
+        actions = np.array([np.argmax(self.makeNetUsableAction(throttle, brake, steer)) for throttle, brake, steer in actions]) 
         oldstates = [(np.array(i[0]), np.array(self.makeNetUsableOtherInputs(i[1]))) for i in oldstates]
         newstates = [(np.array(i[0]), np.array(self.makeNetUsableOtherInputs(i[1]))) for i in newstates]#
         return oldstates, actions, np.array(rewards), newstates, np.array(resetafters)
@@ -130,7 +130,7 @@ class Agent(AbstractRLAgent):
     def initNetwork(self, isPretrain): 
         super().initNetwork()
         session = tf.Session(config=tf.ConfigProto(intra_op_parallelism_threads=2, allow_soft_placement=True))
-        self.model = DDDQN_model(conf, myAgent, session, isPretrain=isPretrain)
+        self.model = DDDQN_model(self.conf, self, session, isPretrain=isPretrain)
         self.model.initNet(load=(not self.start_fresh))
         self.numIterations = 0
         self.isinitialized = True
@@ -139,7 +139,7 @@ class Agent(AbstractRLAgent):
     
     def preTrain(self, dataset, iterations, supervised=False):
         print("Starting pretraining", level=10)
-        pretrain_batchsize = self.conf.batch_size
+        pretrain_batchsize = 32
         for i in range(iterations):
             start_time = time.time()
             dataset.reset_batch()

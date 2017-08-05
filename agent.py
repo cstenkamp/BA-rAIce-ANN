@@ -10,7 +10,6 @@ import numpy as np
 import threading
 import tensorflow as tf
 import os
-from copy import deepcopy
 ####own classes###
 from myprint import myprint as print
 import read_supervised
@@ -22,7 +21,7 @@ from inefficientmemory import Memory
 
 class AbstractAgent(object):
     def __init__(self, conf, containers, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+        super().__init__()
         self.lock = threading.Lock()
         self.isinitialized = False
         self.containers = containers  
@@ -66,6 +65,18 @@ class AbstractAgent(object):
     def makeNetUsableAction(self, action):
         return self.discretize(*action)
         
+    #state is either (s,a,r,s2,False) or only s. what needs to be done is make everything an array, and make action & otherinputs netusable
+    def makeInferenceUsable(self, state):
+        try:
+            s, a, r, s2, t = state  
+            s = (np.rollaxis(s[0], 0, 3), self.makeNetUsableOtherInputs(s[1]))
+            a = self.makeNetUsableAction(a)
+            s2 = (np.rollaxis(s2[0], 0, 3), self.makeNetUsableOtherInputs(s2[1]))
+            return ([s], [a], [r], [s2], [t])
+        except ValueError: #too many values to unpack
+            return [(np.rollaxis(state[0], 0, 3), self.makeNetUsableOtherInputs(state[1]))] 
+        
+    
     def performNetwork(self, *args):
         print("Another ANN Inference", level=3)
         
@@ -152,7 +163,7 @@ class AbstractRLAgent(AbstractAgent):
             print("adding to Memory:",a, r, level=4) 
             
             #values for evalation:
-            stateval = self.model.statevalue(markovtuple) #TODO: gucken ob stateval richtig ist!
+            stateval = self.model.statevalue(self.makeInferenceUsable(s))[0] #TODO: gucken ob stateval richtig ist!
             self.episode_statevals.append(stateval)
             
             if self.containers.showscreen:
@@ -204,7 +215,7 @@ class AbstractRLAgent(AbstractAgent):
         raise NotImplementedError
 
     def canLearn(self):
-        return len(self.memory) > self.conf.batchsize+self.conf.history_frame_nr+1 and \
+        return len(self.memory) > self.conf.batch_size+self.conf.history_frame_nr+1 and \
                len(self.memory) > self.conf.replaystartsize and self.numIterations < self.conf.train_for
 
 

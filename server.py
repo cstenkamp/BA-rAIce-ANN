@@ -531,7 +531,7 @@ def main(conf, agentname, no_learn, show_screen, show_plots, start_fresh, nomemo
     containers.myAgent = agentclass(conf, containers, start_fresh, show_plots=show_plots) 
     if hasattr(containers.myAgent, "memory") and nomemorykeep:
         containers.myAgent.keep_memory = False 
-    containers.myAgent.initNetwork()
+    containers.myAgent.initNetwork(isPretrain=False)
     
                                                                           
     containers.inputval = InputValContainer(conf, containers, containers.myAgent)
@@ -601,7 +601,7 @@ if __name__ == '__main__':
     elif ("-half_DQN" in sys.argv):
         conf = config.Half_DQN_Config()
     else:
-        conf = config.RL_Config()
+        conf = config.Config()
             
 
     if "--agent" in sys.argv:

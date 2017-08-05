@@ -13,10 +13,7 @@ Created on Thu Aug  3 15:38:25 2017
 # -die calculate_value ist noch nicht da (und muss auch anders, da doubleDQN)
 #
 
-import random
 import tensorflow.contrib.slim as slim
-import matplotlib.pyplot as plt 
-import time
 from tensorflow.contrib.framework import get_variables
 import tensorflow as tf
 import numpy as np
@@ -194,14 +191,17 @@ class DuelDQN():
         conv_inputs = [inputs[i][0] for i in range(len(inputs))]
         ff_inputs   = [inputs[i][1] for i in range(len(inputs))]
         
+        print(conv_inputs[0])
+        print(ff_inputs[0])
+        
         feed_dict = {}
         if len(inputs) == 1 and self.isInference:   
             self.stood_frames_ago = 0 if carstands else self.stood_frames_ago + 1
             if self.stood_frames_ago < 10: #wenn du vor einigen frames stands, gib jetzt auch gas
                 carstands = True
-            conv_inputs = np.expand_dims(conv_inputs, axis=0) #expand_dims weil hier quasi batchsize=1
-            ff_inputs= np.expand_dims(ff_inputs, axis=0) 
-            stands_inputs = np.expand_dims([carstands], axis=0)
+#            conv_inputs = np.expand_dims(conv_inputs, axis=0) #expand_dims weil hier quasi batchsize=1
+#            ff_inputs= np.expand_dims(ff_inputs, axis=0) 
+            stands_inputs = [carstands]
         else:
             stands_inputs = [False]*len(inputs)
             if targetQ is not None: #targetQ und targetA werden nur beim learning verwendet, und dann ist ebennicht inference
@@ -317,6 +317,7 @@ class DDDQN_model():
     def statevalue(self, statesBatch):
         return self.session.run(tf.reduce_max(self.targetQN.Qout, axis=1), feed_dict=self.targetQN.feed_dict(statesBatch))
     
+    
     #expects a whole s,a,r,s,t - tuple, needs however only s & a
     def sv_learn(self, batch, decay_lr = True):
         assert self.isPretrain, "Supervised-Learning is only allowed as Pre-training!"
@@ -374,7 +375,7 @@ class DDDQN_model():
 
 def TPSample(conf, agent, batchsize):
     return read_supervised.create_QLearnInputs_from_PTStateBatch(*trackingpoints.next_batch(conf, agent, batchsize), agent)
-    #returns [[s],[a],[r],[s2],[t]], so to only get the actions it's result[0], to only get the first three actions it's result[1][:3]
+    #returns [[s],[a],[r],[s2],[t]], so to only get the actions it's result[1], to only get the first three actions it's result[1][:3]
     #to get the first three of each it's result[:][:3], however pay attention that every state s and s2 = (conv, ff, stands). 
     #so to get the ff's of the first three items it is [result[0][:3][i][1] for i in range(3)]
 
