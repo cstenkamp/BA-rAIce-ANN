@@ -110,8 +110,7 @@ class ReceiverListenerThread(threading.Thread):
             try:
                 (client, addr) = self.containers.receiverportsocket.sock.accept()
                 clt = MySocket(client)
-                ct = receiver_thread(clt)
-                ct.containers = self.containers
+                ct = receiver_thread(clt, self.containers)
                 ct.start()
                 self.containers.receiverthreads.append(ct)
             except socket.timeout:
@@ -123,10 +122,11 @@ class ReceiverListenerThread(threading.Thread):
 # If unity disconnects, it stops. If any instance of this finds receiver_threads with older data, it will deem the thread deprecated 
 # and kill it. The receiver_thread updates the global inputval (which is certainly only one!), containing the race-info, as soon as it gets new info.
 class receiver_thread(threading.Thread):
-    def __init__(self, clientsocket):
+    def __init__(self, clientsocket, containers):
         threading.Thread.__init__(self)
         self.clientsocket = clientsocket
-        self.containers = None
+        self.containers = containers
+        self.containers.UnityConnected = True
         self.killme = False
         self.CTimestamp, self.STimestamp = MININT, MININT
         
@@ -178,14 +178,14 @@ class receiver_thread(threading.Thread):
         if data[:7] == "wallhit":
             if hasattr(self.containers.myAgent, "memory"):
                 self.containers.myAgent.punishLastAction(self.containers.myAgent.wallhitPunish)   #ist das doppelt gemoppelt damit, dass er eh das if punish > 10 beibehält?       
-                if self.containers.rl_conf.wallhit_ends_episode:
+                if self.containers.conf.wallhit_ends_episode:
                     self.containers.myAgent.endEpisode("wallhit", self.containers.inputval.read())
-            #resetServer(self.containers, self.containers.sv_conf.msperframe) 
+            #resetServer(self.containers, self.containers.conf.msperframe) 
             specialcommand = True 
         if data[:8] == "endround":
             print("Round finished", level=6)
             #roundwasvalid = data[8]==1 #benötige ich momentan noch nicht
-            if hasattr(self.containers.myAgent, "memory") and self.containers.rl_conf.lapdone_ends_episode:
+            if hasattr(self.containers.myAgent, "memory") and self.containers.conf.lapdone_ends_episode:
                 self.containers.myAgent.endEpisode("lapdone", self.containers.inputval.read())
             specialcommand = True        
         return specialcommand
@@ -214,24 +214,23 @@ def resetServer(containers, mspersec, punish=0):
 #for example visionvecs of the last 4 frames plus speed of the last frame.
 class InputValContainer(object):   
         
-    def __init__(self, config, rl_conf, containers, agent):
+    def __init__(self, conf, containers, agent):
         self.lock = threading.Lock()
-        self.config = config
-        self.rl_conf = rl_conf
+        self.conf = conf
         self.containers = containers
         self.agent = agent
-        if self.config.use_cameras and self.agent.usesConv:
-            if self.config.use_second_camera:
-                self.vvec_hist = np.zeros([(config.history_frame_nr+1)*2, config.image_dims[0], config.image_dims[1]], dtype=rl_conf.visionvecdtype) #+1 weil das past timestep da immer bei ist
+        if self.conf.use_cameras and self.agent.usesConv:
+            if self.conf.use_second_camera:
+                self.vvec_hist = np.zeros([(conf.history_frame_nr+1)*2, conf.image_dims[0], conf.image_dims[1]], dtype=conf.visionvecdtype) #+1 weil das past timestep da immer bei ist
             else:
-                self.vvec_hist = np.zeros([(config.history_frame_nr+1), config.image_dims[0], config.image_dims[1]], dtype=rl_conf.visionvecdtype) 
+                self.vvec_hist = np.zeros([(conf.history_frame_nr+1), conf.image_dims[0], conf.image_dims[1]], dtype=conf.visionvecdtype) 
         else:
             self.vvec_hist = None
-        self.action_hist = [None]*(self.config.history_frame_nr+1)
-        self.otherinput_hist = [empty_inputs()]*(self.config.history_frame_nr+1) #defined at the top, is a namedtuple #again +1 because of past timestep
+        self.action_hist = [None]*(self.conf.history_frame_nr+1)
+        self.otherinput_hist = [empty_inputs()]*(self.conf.history_frame_nr+1) #defined at the top, is a namedtuple #again +1 because of past timestep
         self.CTimestamp, self.STimestamp = MININT, MININT
         self.alreadyread = True
-        self.msperframe = config.msperframe
+        self.msperframe = conf.msperframe
         self.hit_a_wall = False
         self.just_reset = True
         self.has_past_state = False
@@ -240,11 +239,11 @@ class InputValContainer(object):
     def _read_vvec_hist(self, readPast=False):
         if self.vvec_hist == None: 
             return None
-        hframes = self.config.history_frame_nr 
-        if hframes == 1 and self.config.use_second_camera:
+        hframes = self.conf.history_frame_nr 
+        if hframes == 1 and self.conf.use_second_camera:
             return ("error", "error")
                 
-        if self.config.use_second_camera:
+        if self.conf.use_second_camera:
             return (self.vvec_hist[1:hframes+1], self.vvec_hist[hframes+2:hframes*2+2]) if readPast else (self.vvec_hist[:hframes], self.vvec_hist[hframes+1:hframes*2+1])
         else:
             return (self.vvec_hist[1:hframes+1], None) if readPast else (self.vvec_hist[:hframes], None)
@@ -252,10 +251,10 @@ class InputValContainer(object):
     #in der vvechist steht das älteste hinten: a = [4,3,2,1,0] -> [5] + a[:-1] -> [5,4,3,2,1]   (wobei die current vvec_hist [5,4,3,2] ist und die past [4,3,2,1])
     #wenn wir beide kameras nutzen ist es [4.1, 3.1, 2.1, 1.1, 0.1, 4.2, 3.2, 2.2, 1.2, 0.2]           
     def _append_vvec_hist(self, cam1, cam2):
-        hframes = self.config.history_frame_nr 
-        visionvec = np.expand_dims(np.array(cam1, dtype=self.containers.rl_conf.visionvecdtype), axis=0)
-        vvec2 = np.expand_dims(np.array(cam2, dtype=self.containers.rl_conf.visionvecdtype), axis=0)
-        if self.config.use_second_camera:  
+        hframes = self.conf.history_frame_nr 
+        visionvec = np.expand_dims(np.array(cam1, dtype=self.containers.conf.visionvecdtype), axis=0)
+        vvec2 = np.expand_dims(np.array(cam2, dtype=self.containers.conf.visionvecdtype), axis=0)
+        if self.conf.use_second_camera:  
             self.vvec_hist = np.concatenate((visionvec, self.vvec_hist[:hframes+1-1], vvec2, self.vvec_hist[hframes+1:-1]))
         else:
             self.vvec_hist = np.concatenate((visionvec, self.vvec_hist[:hframes+1-1]))
@@ -265,7 +264,7 @@ class InputValContainer(object):
         return original
 
     def _read_other(self, what, readPast=False):
-        hframes = self.config.history_frame_nr
+        hframes = self.conf.history_frame_nr
         return what[1:hframes+1] if readPast else what[:hframes]
 
     
@@ -278,10 +277,10 @@ class InputValContainer(object):
             #20.7.: deleted the "if is_new..." functionality, as I think its absolutely not helpful
             otherinputs = make_otherinputs(othervecs) #is now a namedtuple instead of an array
                                           
-            if hasattr(self, "rl_conf") and self.rl_conf.time_ends_episode and  otherinputs.ProgressVec.Laptime >= self.rl_conf.time_ends_episode:
+            if hasattr(self.containers.myAgent, "memory") and self.conf.time_ends_episode and  otherinputs.ProgressVec.Laptime >= self.conf.time_ends_episode:
                 self.containers.myAgent.endEpisode("timeover", self.read())
                                           
-            if self.config.use_cameras and self.agent.usesConv:
+            if self.conf.use_cameras and self.agent.usesConv:
                 self._append_vvec_hist(visionvec, vvec2)
             self.otherinput_hist = self._append_other(otherinputs, self.otherinput_hist)
             self.containers.myAgent.humantakingcontrolstring = "(H)" if (self.action_hist[0] != tuple(otherinputs.Action)) else ""
@@ -297,9 +296,9 @@ class InputValContainer(object):
                 self.otherinput_hist[0] = self.otherinput_hist[0]._replace(CenterDist = 10)
                 
             try:
-                if self.config.reset_if_wrongdirection:
+                if self.conf.reset_if_wrongdirection:
                     if not self.otherinput_hist[0].SpeedSteer.rightDirection:
-                        self.containers.wrongdirectiontime += self.containers.sv_conf.msperframe
+                        self.containers.wrongdirectiontime += self.containers.conf.msperframe
                         if self.containers.wrongdirectiontime >= 2000: #bei 2 sekunden falsche richtung
                             #resetUnityAndServer(self.containers, punish=self.containers.myAgent.wrongDirPunish)
                             self.containers.myAgent.endEpisode("turnedaround", self.read())
@@ -325,20 +324,20 @@ class InputValContainer(object):
         if not nolock: 
             self.lock.acquire()
         try:      
-            config = self.config
-            if self.config.use_cameras and self.agent.usesConv:
-                if self.config.use_second_camera:
-                    self.vvec_hist = np.zeros([(config.history_frame_nr+1)*2, config.image_dims[0], config.image_dims[1]], dtype=rl_conf.visionvecdtype) #+1 weil das past timestep da immer bei ist
+            conf = self.conf
+            if self.conf.use_cameras and self.agent.usesConv:
+                if self.conf.use_second_camera:
+                    self.vvec_hist = np.zeros([(conf.history_frame_nr+1)*2, conf.image_dims[0], conf.image_dims[1]], dtype=conf.visionvecdtype) #+1 weil das past timestep da immer bei ist
                 else:
-                    self.vvec_hist = np.zeros([(config.history_frame_nr+1), config.image_dims[0], config.image_dims[1]], dtype=rl_conf.visionvecdtype) 
+                    self.vvec_hist = np.zeros([(conf.history_frame_nr+1), conf.image_dims[0], conf.image_dims[1]], dtype=conf.visionvecdtype) 
             else:
                 self.vvec_hist = None
-            self.action_hist = [None]*(self.config.history_frame_nr+1)
-            self.otherinput_hist = [empty_inputs()]*(self.config.history_frame_nr+1) #defined at the top, is a namedtuple #again +1 because of past timestep
+            self.action_hist = [None]*(self.conf.history_frame_nr+1)
+            self.otherinput_hist = [empty_inputs()]*(self.conf.history_frame_nr+1) #defined at the top, is a namedtuple #again +1 because of past timestep
             self.CTimestamp, self.STimestamp = MININT, MININT
             self.alreadyread = True
             self.msperframe = interval #da Unity im diesen Wert immer bei spielstart schickt, wird msperframe immer richtig sein            
-            assert int(self.msperframe) == int(self.config.msperframe)
+            assert int(self.msperframe) == int(self.conf.msperframe)
             self.hit_a_wall = False
             self.just_reset = True
             self.has_past_state = False
@@ -352,7 +351,7 @@ class InputValContainer(object):
             self.alreadyread = True
         if pastState and not self.has_past_state:
             return False
-        if self.config.use_cameras and self.agent.usesConv:
+        if self.conf.use_cameras and self.agent.usesConv:
             return self._read_vvec_hist(pastState)[0], self._read_vvec_hist(pastState)[1], self._read_other(self.otherinput_hist,pastState), self._read_other(self.action_hist,pastState)
         else:
             return None, None, self._read_other(self.otherinput_hist,pastState), self._read_other(self.action_hist,pastState)
@@ -437,8 +436,7 @@ class SenderListenerThread(threading.Thread):
             try:
                 (client, addr) = self.containers.senderportsocket.sock.accept()
                 clt = MySocket(client)
-                ct = sender_thread(clt)
-                ct.containers = self.containers
+                ct = sender_thread(clt, self.containers)
                 self.containers.senderthreads.append(ct)
                 ct.start()
             except socket.timeout:
@@ -448,10 +446,11 @@ class SenderListenerThread(threading.Thread):
 
 
 class sender_thread(threading.Thread):
-    def __init__(self, clientsocket):
+    def __init__(self, clientsocket, containers):
         threading.Thread.__init__(self)
         self.clientsocket = clientsocket
-        self.containers = None
+        self.containers = containers
+        self.containers.UnityConnected = True
         
     def run(self):
         print("Starting sender_thread")
@@ -498,7 +497,7 @@ class Containers():
         self.myAgent = None
         self.wrongdirectiontime = 0
         self.freezeInf = self.freezeLearn = False
-        self.show_plots = False #delete this line
+        self.UnityConnected = False
         
         
 def create_socket(port):
@@ -510,12 +509,10 @@ def create_socket(port):
 
 
 
-def main(sv_conf, rl_conf, agentname, no_learn, show_screen, show_plots, start_fresh, nomemorykeep):
+def main(conf, agentname, no_learn, show_screen, show_plots, start_fresh, nomemorykeep):
     containers = Containers()
-    containers.sv_conf = sv_conf
-    containers.rl_conf = rl_conf   
+    containers.conf = conf
     containers.no_learn = no_learn
-    containers.show_plots = show_plots
     
     containers.receiverportsocket = create_socket(TCP_RECEIVER_PORT)
     containers.senderportsocket = create_socket(TCP_SENDER_PORT)
@@ -526,18 +523,18 @@ def main(sv_conf, rl_conf, agentname, no_learn, show_screen, show_plots, start_f
         containers.showscreen = False
     
     if no_learn:
-        rl_conf.learnMode = ""
-        rl_conf.minepsilon = 0
-        rl_conf.startepsilon = 0 #or whatever random-value will be in 
+        conf.learnMode = ""
+        conf.minepsilon = 0
+        conf.startepsilon = 0 #or whatever random-value will be in 
             
     agentclass = __import__(agentname).Agent
-    containers.myAgent = agentclass(sv_conf, containers, rl_conf, start_fresh) 
-    if hasattr(containers.myAgent, "memory"):
-        containers.myAgent.keep_memory = False if nomemorykeep else containers.rl_conf.keep_memory
+    containers.myAgent = agentclass(conf, containers, start_fresh, show_plots=show_plots) 
+    if hasattr(containers.myAgent, "memory") and nomemorykeep:
+        containers.myAgent.keep_memory = False 
     containers.myAgent.initNetwork()
     
                                                                           
-    containers.inputval = InputValContainer(sv_conf, rl_conf, containers, containers.myAgent)
+    containers.inputval = InputValContainer(conf, containers, containers.myAgent)
     containers.outputval = OutputValContainer(containers)  
         
         
@@ -554,8 +551,8 @@ def main(sv_conf, rl_conf, agentname, no_learn, show_screen, show_plots, start_f
     SenderConnecterThread.start()
 
     #THREAD 3 (learning)
-    if hasattr(containers.myAgent, "memory") and not no_learn and rl_conf.learnMode == "parallel":
-        dauerLearn = partial(containers.myAgent.dauerLearnANN, learnSteps=rl_conf.train_for)
+    if hasattr(containers.myAgent, "memory") and not no_learn and conf.learnMode == "parallel":
+        dauerLearn = partial(containers.myAgent.dauerLearnANN, learnSteps=conf.train_for)
         learnthread = threading.Thread(target=dauerLearn)
         learnthread.start()
 
@@ -580,10 +577,11 @@ def main(sv_conf, rl_conf, agentname, no_learn, show_screen, show_plots, start_f
         senderthread.join()
     ReceiverConnecterThread.join() #takes max. 1 second until socket timeouts
     SenderConnecterThread.join()
-    if hasattr(containers.myAgent, "memory") and not no_learn and rl_conf.learnMode == "parallel":
+    containers.UnityConnected = False
+    if hasattr(containers.myAgent, "memory") and not no_learn and conf.learnMode == "parallel":
         learnthread.join()
         
-    if containers.rl_conf.save_memory_on_exit and hasattr(containers.myAgent, "memory") and containers.myAgent.keep_memory:
+    if containers.conf.save_memory_on_exit and hasattr(containers.myAgent, "memory") and containers.myAgent.keep_memory:
         containers.myAgent.memory.save_memory()
         
     time.sleep(0.1)
@@ -597,15 +595,13 @@ if __name__ == '__main__':
     if "-help" in sys.argv:
         showhelp()
         exit()   
-    
-    sv_conf = config.Config() 
-    
+        
     if ("-DQN" in sys.argv):
-        rl_conf = config.DQN_Config()
+        conf = config.DQN_Config()
     elif ("-half_DQN" in sys.argv):
-        rl_conf = config.Half_DQN_Config()
+        conf = config.Half_DQN_Config()
     else:
-        rl_conf = config.RL_Config()
+        conf = config.RL_Config()
             
 
     if "--agent" in sys.argv:
@@ -622,4 +618,4 @@ if __name__ == '__main__':
         else:
             agentname = "dqn_rl_agent"
             
-    main(sv_conf, rl_conf, agentname, ("-nolearn" in sys.argv), not ("-noscreen" in sys.argv), not ("-noplot" in sys.argv), ("-startfresh" in sys.argv), ("-nomemorykeep" in sys.argv))    
+    main(conf, agentname, ("-nolearn" in sys.argv), not ("-noscreen" in sys.argv), not ("-noplot" in sys.argv), ("-startfresh" in sys.argv), ("-nomemorykeep" in sys.argv))    

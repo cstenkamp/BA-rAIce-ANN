@@ -23,11 +23,11 @@ Network = namedtuple('Network', ['outputs', 'vars', 'ops', 'losses'])
 class DDPG(object):
     
     ######methods for BUILDING the computation graph######
-    def __init__(self, config, is_training=True):
+    def __init__(self, conf, is_training=True):
         #builds the computation graph, using the next few functions (this is basically the interface)
-        self.config = config
+        self.conf = conf
         self.iterations = 0
-        self.stacksize = self.config.history_frame_nr*2 if self.config.use_second_camera else self.config.history_frame_nr
+        self.stacksize = self.conf.history_frame_nr*2 if self.conf.use_second_camera else self.conf.history_frame_nr
         
         self.prepareNumIters()
         
@@ -88,8 +88,8 @@ class DDPG(object):
     def make_critic(self, inputs, actions, name='online', reuse=False, batchnorm=True, is_training=True):  
         self.trainvars = {}
         with tf.variable_scope(name, reuse=reuse) as scope:
-            flat_size = math.ceil(math.ceil(self.config.image_dims[0]/4)*math.ceil(self.config.image_dims[1]/4)/(2*2)*64) #die /2*2 wegen stride=2
-            rs_input = tf.reshape(inputs, [-1, self.config.image_dims[0], self.config.image_dims[1], self.stacksize])
+            flat_size = math.ceil(math.ceil(self.conf.image_dims[0]/4)*math.ceil(self.conf.image_dims[1]/4)/(2*2)*64) #die /2*2 wegen stride=2
+            rs_input = tf.reshape(inputs, [-1, self.conf.image_dims[0], self.conf.image_dims[1], self.stacksize])
             self.keep_prob = tf.Variable(tf.constant(1.0), trainable=False) #wenn nicht gefeedet ist sie standardmäßig 1    
             #convolutional_layer(input_tensor, input_channels, kernel_size, stride, output_channels, name, act, is_trainable, batchnorm, is_training, weightdecay=False, pool=True, trainvars=None, varSum=None, initializer=None): #trainvars is call-by-reference-array, varSum is a function
             conv1 = convolutional_layer(rs_input, self.stacksize, [5,5], 2, 32, "Conv1", tf.nn.relu, True, batchnorm, is_training, 0.01, False, self.trainvars, variable_summary, "fanin") #reduces to x//2*y//2
@@ -98,9 +98,9 @@ class DDPG(object):
             #fc_layer(input_tensor, input_size, output_size, name, is_trainable, batchnorm, is_training, weightdecay=False, act=None, keep_prob=1, trainvars=None, varSum=None, initializer=None):
             fc1 = fc_layer(conv2_flat, flat_size, 200, "FC1", True, True, is_training, 0.01, tf.nn.relu, 1, self.trainvars, variable_summary, "fanin")
             fc1 = tf.concat([fc1, actions], 1) 
-            if self.config.speed_neurons:
+            if self.conf.speed_neurons:
                 fc1 = tf.concat([fc1, spinputs], 1)             
-            fc2 = fc_layer(fc1, 200+self.config.num_actions+self.config.speed_neurons, 200, "FC2", True, batchnorm, is_training, 0.01, tf.nn.relu, 1, self.trainvars, variable_summary, "fanin")
+            fc2 = fc_layer(fc1, 200+self.conf.num_actions+self.conf.speed_neurons, 200, "FC2", True, batchnorm, is_training, 0.01, tf.nn.relu, 1, self.trainvars, variable_summary, "fanin")
             q = fc_layer(fc2, 200, 1, "Final", True, batchnorm, is_training, 0.01, tf.nn.relu, 1, self.trainvars, variable_summary, tf.random_uniform_initializer(-0.0003, 0.0003))
             ops = scope.get_collection(tf.GraphKeys.UPDATE_OPS)
             losses = scope.get_collection(tf.GraphKeys.REGULARIZATION_LOSSES)
@@ -112,8 +112,8 @@ class DDPG(object):
         """Build an actor network mu, the policy function approximator."""
         self.trainvars = {}
         with tf.variable_scope(name, reuse=reuse) as scope:
-            flat_size = math.ceil(math.ceil(self.config.image_dims[0]/4)*math.ceil(self.config.image_dims[1]/4)/(2*2)*64) #die /2*2 wegen stride=2
-            rs_input = tf.reshape(inputs, [-1, self.config.image_dims[0], self.config.image_dims[1], self.stacksize])
+            flat_size = math.ceil(math.ceil(self.conf.image_dims[0]/4)*math.ceil(self.conf.image_dims[1]/4)/(2*2)*64) #die /2*2 wegen stride=2
+            rs_input = tf.reshape(inputs, [-1, self.conf.image_dims[0], self.conf.image_dims[1], self.stacksize])
             self.keep_prob = tf.Variable(tf.constant(1.0), trainable=False) #wenn nicht gefeedet ist sie standardmäßig 1    
             #convolutional_layer(input_tensor, input_channels, kernel_size, stride, output_channels, name, act, is_trainable, batchnorm, is_training, weightdecay=False, pool=True, trainvars=None, varSum=None, initializer=None): #trainvars is call-by-reference-array, varSum is a function
             conv1 = convolutional_layer(rs_input, self.stacksize, [5,5], 2, 32, "Conv1", tf.nn.relu, True, batchnorm, is_training, 0.01, False, self.trainvars, variable_summary, "fanin") #reduces to x//2*y//2
@@ -121,10 +121,10 @@ class DDPG(object):
             conv2_flat =  tf.reshape(conv2, [-1, flat_size])
             #fc_layer(input_tensor, input_size, output_size, name, is_trainable, batchnorm, is_training, weightdecay=False, act=None, keep_prob=1, trainvars=None, varSum=None, initializer=None):
             fc1 = fc_layer(conv2_flat, flat_size, 200, "FC1", True, True, is_training, 0.01, tf.nn.relu, 1, self.trainvars, variable_summary, "fanin")
-            if self.config.speed_neurons:
+            if self.conf.speed_neurons:
                 fc1 = tf.concat([fc1, spinputs], 1)             
-            fc2 = fc_layer(fc1, 200+self.config.speed_neurons, 200, "FC2", True, batchnorm, is_training, 0.01, tf.nn.relu, 1, self.trainvars, variable_summary, "fanin")
-            fc3 = fc_layer(fc2, 200, self.config.num_actions, "Final", True, batchnorm, is_training, 0.01, tf.nn.tanh, 1, self.trainvars, variable_summary, tf.random_uniform_initializer(-0.0003, 0.0003))
+            fc2 = fc_layer(fc1, 200+self.conf.speed_neurons, 200, "FC2", True, batchnorm, is_training, 0.01, tf.nn.relu, 1, self.trainvars, variable_summary, "fanin")
+            fc3 = fc_layer(fc2, 200, self.conf.num_actions, "Final", True, batchnorm, is_training, 0.01, tf.nn.tanh, 1, self.trainvars, variable_summary, tf.random_uniform_initializer(-0.0003, 0.0003))
             scaled = self.scale(fc3, bounds_in=(-1, 1), bounds_out=bounds) #TODO: das muss noch komplett anders, zumal speed & brake 0..1 ist und steer -1..1
             ops = scope.get_collection(tf.GraphKeys.UPDATE_OPS)
             losses = scope.get_collection(tf.GraphKeys.REGULARIZATION_LOSSES)
@@ -190,10 +190,10 @@ class DDPG(object):
 
 
     def set_placeholders(self, is_training, final_neuron_num):
-        if self.config.history_frame_nr == 1:
-            inputs = tf.placeholder(tf.float32, shape=[None, self.config.image_dims[0], self.config.image_dims[1]], name="inputs")  #first dim is none since inference has another batchsize than training
+        if self.conf.history_frame_nr == 1:
+            inputs = tf.placeholder(tf.float32, shape=[None, self.conf.image_dims[0], self.conf.image_dims[1]], name="inputs")  #first dim is none since inference has another batchsize than training
         else:
-            inputs = tf.placeholder(tf.float32, shape=[None, self.stacksize, self.config.image_dims[0], self.config.image_dims[1]], name="inputs")  #first dim is none since inference has another batchsize than training
+            inputs = tf.placeholder(tf.float32, shape=[None, self.stacksize, self.conf.image_dims[0], self.conf.image_dims[1]], name="inputs")  #first dim is none since inference has another batchsize than training
             
             
         return inputs, targets, speeds
@@ -233,14 +233,14 @@ class DDPG(object):
 #        
 #    
 #    
-#    def train_fill_feed_dict(self, config, dataset, batchsize = 0, decay_lr = True):
-#        batchsize = config.batch_size if batchsize == 0 else batchsize
-#        _, visionvec, targets, speeds = dataset.next_batch(config, batchsize)
+#    def train_fill_feed_dict(self, conf, dataset, batchsize = 0, decay_lr = True):
+#        batchsize = conf.batch_size if batchsize == 0 else batchsize
+#        _, visionvec, targets, speeds = dataset.next_batch(conf, batchsize)
 #        if decay_lr:
-#            lr_decay = config.lr_decay ** max(self.iterations-config.lrdecayafter, 0.0)
-#            new_lr = max(config.initial_lr*lr_decay, config.minimal_lr)
-#        feed_dict = {self.inputs: visionvec, self.targets: targets, self.keep_prob: config.keep_prob, self.learning_rate: new_lr}
-#        if config.speed_neurons:
+#            lr_decay = conf.lr_decay ** max(self.iterations-conf.lrdecayafter, 0.0)
+#            new_lr = max(conf.initial_lr*lr_decay, conf.minimal_lr)
+#        feed_dict = {self.inputs: visionvec, self.targets: targets, self.keep_prob: conf.keep_prob, self.learning_rate: new_lr}
+#        if conf.speed_neurons:
 #            feed_dict[self.speed_input] = speeds
 #        return feed_dict            
 #
@@ -256,7 +256,7 @@ class DDPG(object):
 #    
 #    def run_eval(self, session, dataset):            
 #        dataset.reset_batch()
-#        feed_dict = self.train_fill_feed_dict(self.config, dataset, dataset.numsamples) #would be terribly slow if we learned, but luckily we only evaluate. should be fine.
+#        feed_dict = self.train_fill_feed_dict(self.conf, dataset, dataset.numsamples) #would be terribly slow if we learned, but luckily we only evaluate. should be fine.
 #        accuracy, loss = session.run([self.accuracy, self.loss], feed_dict=feed_dict)
 #        return accuracy, loss, dataset.numsamples
 #            
@@ -274,8 +274,8 @@ class DDPG(object):
 #        with tf.device("/cpu:0"):
 #            visionvec = np.expand_dims(visionvec, axis=0)
 #            feed_dict = {self.inputs: visionvec}  
-#            if self.config.speed_neurons:
-#                speed_disc = read_supervised.inflate_speed(otherinputs.SpeedSteer.velocity, self.config.speed_neurons, self.config.SPEED_AS_ONEHOT)
+#            if self.conf.speed_neurons:
+#                speed_disc = read_supervised.inflate_speed(otherinputs.SpeedSteer.velocity, self.conf.speed_neurons, self.conf.SPEED_AS_ONEHOT)
 #                feed_dict[self.speed_input] = np.expand_dims(speed_disc, axis=0)
 #            
 #            return True, session.run([self.argmax, self.q], feed_dict=feed_dict)
@@ -286,15 +286,15 @@ class DDPG(object):
 #        with tf.device("/cpu:0"):
 #            visionvec = np.expand_dims(visionvec, axis=0)
 #            feed_dict = {self.inputs: visionvec}  
-#            if self.config.speed_neurons:
-#               speed_disc = read_supervised.inflate_speed(speed, self.config.speed_neurons, self.config.SPEED_AS_ONEHOT)
+#            if self.conf.speed_neurons:
+#               speed_disc = read_supervised.inflate_speed(speed, self.conf.speed_neurons, self.conf.SPEED_AS_ONEHOT)
 #               feed_dict[self.speed_input] = np.expand_dims(speed_disc, axis=0)
 #            
 #            return session.run(self.q_max, feed_dict=feed_dict)
 #            
 #        
 #       
-#def run_svtraining(config, dataset):
+#def run_svtraining(conf, dataset):
 #  
 # 
 #

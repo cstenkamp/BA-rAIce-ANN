@@ -264,7 +264,7 @@ class TPList(object):
     #TODO: sample according to information gain, what DQN didn't do yet.
     #TODO: uhm, das st jezt simples ziehen mit zurücklegen, every time... ne richtige next_batch funktion, bei der jedes mal vorkommt wäre sinnvoller, oder?
     #TODO: splitting into training and validation set??    
-    def next_batch(self, config, agent, batch_size):
+    def next_batch(self, conf, agent, batch_size):
         if self.batchindex + batch_size > self.numsamples:
             raise IndexError("No more batches left")
             
@@ -279,8 +279,8 @@ class TPList(object):
         
         for indexindex in range(self.batchindex,self.batchindex+batch_size):
             
-            vvec1_hist, vvec2_hist, otherinput_hist, action_hist = self._read(config, agent, batch_size, self.randomindices[indexindex])
-            past_vvec1_hist, past_vvec2_hist, past_otherinput_hist, past_action_hist = self._read(config, agent, batch_size, self.randomindices[indexindex], readPast = True)
+            vvec1_hist, vvec2_hist, otherinput_hist, action_hist = self._read(conf, agent, batch_size, self.randomindices[indexindex])
+            past_vvec1_hist, past_vvec2_hist, past_otherinput_hist, past_action_hist = self._read(conf, agent, batch_size, self.randomindices[indexindex], readPast = True)
             
             vvec_batch.append(vvec1_hist)
             past_vvec_batch.append(past_vvec1_hist)
@@ -296,16 +296,16 @@ class TPList(object):
                (np.array(past_vvec_batch), np.array(past_vvec2_batch), past_otherinputs_batch, np.array(past_actions_batch))
 
     
-    def _read(self, config, agent, batch_size, index, readPast = False):
+    def _read(self, conf, agent, batch_size, index, readPast = False):
             vh = [] if agent.usesConv else None
-            v2h = [] if agent.usesConv and config.use_second_camera else None
+            v2h = [] if agent.usesConv and conf.use_second_camera else None
             oih = []
             ah = []
-            for j in range(config.history_frame_nr-1,-1,-1):
+            for j in range(conf.history_frame_nr-1,-1,-1):
                 index = (index-j-1) % len(self.all_trackingpoints) if readPast else (index-j) % len(self.all_trackingpoints)
                 if agent.usesConv:
                     vh.append(self.all_trackingpoints[index].visionvec)
-                    if config.use_second_camera:
+                    if conf.use_second_camera:
                         v2h.append(self.all_trackingpoints[index].vvec2)
                 oih.append(self.all_trackingpoints[index].otherinputs)
                 ah.append((self.all_trackingpoints[index].throttlePedalValue, self.all_trackingpoints[index].brakePedalValue, self.all_trackingpoints[index].steeringValue))
@@ -434,7 +434,7 @@ def readTwoDArrayFromString(string):
     
     
 #returns [[s],[a],[r],[s2],[t]], where however every state s = (conf, ff)
-def create_QLearnInputs_from_SVStateBatch(presentStates, pastStates, agent):
+def create_QLearnInputs_from_PTStateBatch(presentStates, pastStates, agent):
     presentStates = list(zip(*presentStates))
     pastStates = list(zip(*pastStates))
     
@@ -450,6 +450,7 @@ def create_QLearnInputs_from_SVStateBatch(presentStates, pastStates, agent):
     rewards = [agent.calculateReward(*i) for i in presentStates]
     resetAfters = [False]*len(pastStates)
     return oldAgentStates, np.array(ArgmActions), np.array(rewards), newAgentStates, np.array(resetAfters) #wurde angepasst auf s,a,r,s2,t
+
 
 
 ###############################################################################
@@ -473,5 +474,5 @@ if __name__ == '__main__':
     print(len(otherinputs))
     print(actions.shape)  
     
-    s, a, r, s2, t = create_QLearnInputs_from_SVStateBatch(presentStates, pastStates, myAgent)
+    s, a, r, s2, t = create_QLearnInputs_from_PTStateBatch(presentStates, pastStates, myAgent)
         

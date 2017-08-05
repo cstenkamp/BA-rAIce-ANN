@@ -24,11 +24,11 @@ SAVENAME = "Ememory"
 
 #TODO: not sure how thread-safe this is.. https://stackoverflow.com/questions/13610654/how-to-make-built-in-containers-sets-dicts-lists-thread-safe
 class Memory(object):
-    def __init__(self, capacity, rl_conf, agent, state_stacksize, constantmemorysize):
+    def __init__(self, capacity, conf, agent, state_stacksize, constantmemorysize):
         self._lock = lock = threading.Lock()
-        self.rl_conf = rl_conf
+        self.conf = conf
         self.agent = agent
-        self.memorypath = self.agent.folder(self.rl_conf.memory_dir)
+        self.memorypath = self.agent.folder(self.conf.memory_dir)
         self.capacity = capacity
         self._state_stacksize = state_stacksize
         self._pointer = 0
@@ -37,12 +37,12 @@ class Memory(object):
         self._size = 0
         
         if constantmemorysize: #sollte effizienter sein
-            self._visionvecs = np.zeros((capacity+state_stacksize, self.rl_conf.image_dims[0], self.rl_conf.image_dims[1]), dtype=self.rl_conf.visionvecdtype)
-            if self.rl_conf.use_second_camera:
-                self._visionvecs2 = np.zeros((capacity+state_stacksize, self.rl_conf.image_dims[0], self.rl_conf.image_dims[1]), dtype=self.rl_conf.visionvecdtype)
+            self._visionvecs = np.zeros((capacity+state_stacksize, self.conf.image_dims[0], self.conf.image_dims[1]), dtype=self.conf.visionvecdtype)
+            if self.conf.use_second_camera:
+                self._visionvecs2 = np.zeros((capacity+state_stacksize, self.conf.image_dims[0], self.conf.image_dims[1]), dtype=self.conf.visionvecdtype)
         else:
             self._visionvecs = [None]*(capacity+state_stacksize)
-            if self.rl_conf.use_second_camera:
+            if self.conf.use_second_camera:
                 self._visionvecs2 = [None]*(capacity+state_stacksize)
         self._speeds = np.zeros(capacity+1, dtype=np.float) #da das state-speed von n+1 gleich dem folgestate-speed von n ist, muss er nur 1 mal doppelt abspeichern
         self._actions = np.zeros(capacity, dtype=np.uint32) #if I stored only the argmax, it could be np.int8
@@ -55,7 +55,7 @@ class Memory(object):
         if os.path.exists(self.memorypath):
             try:
                 if os.path.getsize(self.memorypath+SAVENAME+'.pkl') > 1024 and (os.path.getsize(self.memorypath+SAVENAME+'.pkl') >= os.path.getsize(self.memorypath+SAVENAME+'TMP.pkl')-10240):
-                    self.pload(self.memorypath+SAVENAME+'.pkl', rl_conf, agent, lock)
+                    self.pload(self.memorypath+SAVENAME+'.pkl', conf, agent, lock)
                     print("Loading existing memory with", self._size, "entries", level=10)
                 else:
                     corrupted = True
@@ -66,7 +66,7 @@ class Memory(object):
             if os.path.exists(self.memorypath+SAVENAME+'TMP.pkl'):
                 if os.path.getsize(self.memorypath+SAVENAME+'TMP.pkl') > 1024: 
                     shutil.copyfile(self.memorypath+SAVENAME+'TMP.pkl', self.memorypath+SAVENAME+'.pkl')
-                    self.pload(self.memorypath+SAVENAME+'.pkl', rl_conf, agent, lock)
+                    self.pload(self.memorypath+SAVENAME+'.pkl', conf, agent, lock)
                     print("Loading Backup-Memory with", self._size, "entries", level=10)
         
         
@@ -90,7 +90,7 @@ class Memory(object):
         fEnd = self._fEnds[index]
         state = list(reversed(self._visionvecs[index:index+4]))
         folgestate = list(reversed(self._visionvecs[index+1:index+5]))
-        if self.rl_conf.use_second_camera:
+        if self.conf.use_second_camera:
             state2 = list(reversed(self._visionvecs2[index:index+4]))
             folgestate2 = list(reversed(self._visionvecs2[index+1:index+5]))
                 
@@ -100,15 +100,15 @@ class Memory(object):
                 iter1 = True
                 for i in range(j, self._state_stacksize):
                     state[i] = np.zeros(state[i].shape)
-                    if self.rl_conf.use_second_camera:
+                    if self.conf.use_second_camera:
                         state2[i] = np.zeros(state2[i].shape)
                     if not iter1: 
                         folgestate[i] = np.zeros(folgestate[i].shape)
-                        if self.rl_conf.use_second_camera:
+                        if self.conf.use_second_camera:
                             folgestate2[i] = np.zeros(folgestate2[i].shape)
                     iter1 = False
             
-        if self.rl_conf.use_second_camera:    
+        if self.conf.use_second_camera:    
             state = np.concatenate([state, state2])
             folgestate = np.concatenate([folgestate, folgestate2])
 
@@ -127,28 +127,28 @@ class Memory(object):
             oldstate = oldstate[0]
             newspeed = newstate[1]
             newstate = newstate[0]
-            if self.rl_conf.use_second_camera:   
+            if self.conf.use_second_camera:   
                 oldstat2 = oldstate[oldstate.shape[0]//2:,:,:]
                 oldstate = oldstate[:oldstate.shape[0]//2,:,:]
                 newstat2 = newstate[newstate.shape[0]//2:,:,:]
                 newstate = newstate[:newstate.shape[0]//2,:,:]
             
             if self._pointer == 0:
-                self._visionvecs[0:self._state_stacksize] = np.array(list(reversed(oldstate)), dtype=self.rl_conf.visionvecdtype)
-                self._visionvecs[self._state_stacksize] = np.array(newstate[0], dtype=self.rl_conf.visionvecdtype)
-                if self.rl_conf.use_second_camera:   
-                    self._visionvecs2[0:self._state_stacksize] = np.array(list(reversed(oldstat2)), dtype=self.rl_conf.visionvecdtype)
-                    self._visionvecs2[self._state_stacksize] = np.array(newstat2[0], dtype=self.rl_conf.visionvecdtype)
+                self._visionvecs[0:self._state_stacksize] = np.array(list(reversed(oldstate)), dtype=self.conf.visionvecdtype)
+                self._visionvecs[self._state_stacksize] = np.array(newstate[0], dtype=self.conf.visionvecdtype)
+                if self.conf.use_second_camera:   
+                    self._visionvecs2[0:self._state_stacksize] = np.array(list(reversed(oldstat2)), dtype=self.conf.visionvecdtype)
+                    self._visionvecs2[self._state_stacksize] = np.array(newstat2[0], dtype=self.conf.visionvecdtype)
                 self._speeds[0] = oldspeed
             else:
-                self._visionvecs[self._pointer+self._state_stacksize] = np.array(newstate[0], dtype=self.rl_conf.visionvecdtype)
-                if self.rl_conf.use_second_camera:   
-                    self._visionvecs2[self._pointer+self._state_stacksize] = np.array(newstat2[0], dtype=self.rl_conf.visionvecdtype)
+                self._visionvecs[self._pointer+self._state_stacksize] = np.array(newstate[0], dtype=self.conf.visionvecdtype)
+                if self.conf.use_second_camera:   
+                    self._visionvecs2[self._pointer+self._state_stacksize] = np.array(newstat2[0], dtype=self.conf.visionvecdtype)
             
             if self._fEnds[(self._pointer-1 % self.capacity)]:                                          #if he resettet last the last frame, Q-learning doesn't look at its s' anyway...
-                self._visionvecs[(self._pointer+self._state_stacksize-1 % self.capacity)] = np.array(oldstate[0], dtype=self.rl_conf.visionvecdtype) #but we need it this time, because we skipped exactly one frame ("if oldstate is not None" in agents addtomemory)
-                if self.rl_conf.use_second_camera:   
-                    self._visionvecs2[(self._pointer+self._state_stacksize-1 % self.capacity)] = np.array(oldstat2[0], dtype=self.rl_conf.visionvecdtype)  
+                self._visionvecs[(self._pointer+self._state_stacksize-1 % self.capacity)] = np.array(oldstate[0], dtype=self.conf.visionvecdtype) #but we need it this time, because we skipped exactly one frame ("if oldstate is not None" in agents addtomemory)
+                if self.conf.use_second_camera:   
+                    self._visionvecs2[(self._pointer+self._state_stacksize-1 % self.capacity)] = np.array(oldstat2[0], dtype=self.conf.visionvecdtype)  
                 self._speeds[self._pointer] = oldspeed                 
                 
             self._speeds[self._pointer+1] = newspeed
@@ -162,8 +162,8 @@ class Memory(object):
             if self._size < self.capacity:
                 self._size += 1
         
-            if self.agent.keep_memory and self.rl_conf.save_memory_all_mins: 
-                if ((current_milli_time() - self.lastsavetime) / (1000*60)) > self.rl_conf.save_memory_all_mins: 
+            if self.agent.keep_memory and self.conf.save_memory_all_mins: 
+                if ((current_milli_time() - self.lastsavetime) / (1000*60)) > self.conf.save_memory_all_mins: 
                     self.save_memory()
     
     
@@ -182,7 +182,7 @@ class Memory(object):
            
             
             
-    def sample(self, n): #gesamplet wird nur sobald len(self.memory) > self.rl_config.batchsize+self.rl_config.history_frame_nr+1
+    def sample(self, n): #gesamplet wird nur sobald len(self.memory) > self.conf.batchsize+self.conf.history_frame_nr+1
         with self._lock:
             assert self._size > self._state_stacksize, "you can't even sample a single value!"
             if self._appendcount <= self.capacity:
@@ -227,12 +227,12 @@ class Memory(object):
    
 
  
-    #loads everything and then overwrites rl_conf, locks, and lastsavetime, as those are pointers/relative to now.
-    def pload(self, filename, rl_conf, agent, lock):
+    #loads everything and then overwrites conf, locks, and lastsavetime, as those are pointers/relative to now.
+    def pload(self, filename, conf, agent, lock):
         with open(filename, 'rb') as f:
             tmp_dict = pickle.load(f)
         self.__dict__.update(tmp_dict) 
-        self.rl_conf = rl_conf
+        self.conf = conf
         self.agent = agent
         self._lock = lock
         self.lastsavetime = current_milli_time()
@@ -240,7 +240,7 @@ class Memory(object):
     
     def psave(self, filename):
         odict = self.__dict__.copy() # copy the dict since we change it
-        del odict['rl_conf']  
+        del odict['conf']  
         del odict['agent']
         del odict['_lock']  
         with open(filename, 'wb') as f:

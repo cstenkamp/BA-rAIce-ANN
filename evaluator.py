@@ -49,10 +49,10 @@ class evaluator():
         t1.start()
 
 
-    def add_targetnetcopy(self, **kwargs):
-        if self.save_xml:
-            self.xml_saver.add_targetnetcopy(**kwargs)
-            self.xml_saver.save()      
+#    def add_targetnetcopy(self, **kwargs):
+#        if self.save_xml:
+#            self.xml_saver.add_targetnetcopy(**kwargs)
+#            self.xml_saver.save()      
 
 
 
@@ -65,7 +65,7 @@ class xml_saver():
         self.containers = containers
         self.agent = agent
         self.agentname = agent.name
-        self.xmlfilename = agent.folder(self.containers.sv_conf.xml_dir)+self.agentname+"_eval.xml"
+        self.xmlfilename = agent.folder(agent.conf.xml_dir)+self.agentname+"_eval.xml"
         self.labels = [i.replace(" ","_",) for i in labels]
         self.episode = 0    
         self.root, self.run = self._create_or_load_xml(self.xmlfilename, self.agent)
@@ -87,10 +87,10 @@ class xml_saver():
         for key, val in list(new_vals.items()):
             ET.SubElement(currep, key).text = str(val)        
 
-    def add_targetnetcopy(self, **kwargs):
-        kwargs = dict([a, str(x)] for a, x in kwargs.items())
-        targetnetcopys = self._create_or_load_child(self.run, "targetnetcopys")
-        ET.SubElement(targetnetcopys, "targetnetcopy", **kwargs)           
+#    def add_targetnetcopy(self, **kwargs):
+#        kwargs = dict([a, str(x)] for a, x in kwargs.items())
+#        targetnetcopys = self._create_or_load_child(self.run, "targetnetcopys")
+#        ET.SubElement(targetnetcopys, "targetnetcopy", **kwargs)           
 
     ###############
 

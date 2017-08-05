@@ -14,9 +14,9 @@ from myprint import myprint as print
 
 
 class Agent(AbstractAgent):
-    def __init__(self, config, containers, rl_config_dummy=None, startfresh_dummy=False, *args, **kwargs): #der dummy ist da damit man playnet & reinfnet austauschen kan
+    def __init__(self, conf, containers, startfresh_dummy=False, *args, **kwargs): #der dummy ist da damit man playnet & reinfnet austauschen kan
         self.name = "dqn_rl_agent" #weil das der selbe ist, nur halt dass hier das lernen nicht rein-implementiert ist
-        super().__init__(config, containers, *args, **kwargs)
+        super().__init__(conf, containers, *args, **kwargs)
         self.ff_inputsize = 30
 
 
@@ -49,13 +49,13 @@ class Agent(AbstractAgent):
         initializer = tf.random_uniform_initializer(-0.1, 0.1)
                                            
         with tf.variable_scope("model", reuse=None, initializer=initializer): 
-            self.model = self.usesnetwork(self.sv_conf, self, mode="inference")
+            self.model = self.usesnetwork(self.conf, self, mode="inference")
         
         print(self.model.trainvars)
         
         self.saver = tf.train.Saver(self.model.trainvars)
         self.session = tf.Session()
-        ckpt = tf.train.get_checkpoint_state(self.folder(self.sv_conf.checkpoint_dir))
+        ckpt = tf.train.get_checkpoint_state(self.folder(self.conf.checkpoint_dir))
         assert ckpt and ckpt.model_checkpoint_path, "I need a supervisedly pre-trained net!"
         self.saver.restore(self.session, ckpt.model_checkpoint_path)
         print("network initialized")
@@ -64,7 +64,7 @@ class Agent(AbstractAgent):
             
 ###############################################################################
 if __name__ == '__main__':  
-    import config
-    conf = config.Config()
-    agent = Agent(conf, None)
-    agent.svTrain()
+#    import config
+#    conf = config.Config()
+#    agent = Agent(conf, None)
+#    agent.svTrain()

@@ -49,8 +49,6 @@ def showScreen(containers):
     epsilon.pack(fill=X)
     lastpunish = ThreadSafeConsole(root, width=1, height=1)
     lastpunish.pack(fill=X)
-    lasttargetcopy = ThreadSafeConsole(root, width=1, height=1)
-    lasttargetcopy.pack(fill=X)
     reinflearnsteps = ThreadSafeConsole(root, width=1, height=1)
     reinflearnsteps.pack(fill=X)
     lastepisode = ThreadSafeConsole(root, width=1, height=1)
@@ -63,5 +61,5 @@ def showScreen(containers):
 
     containers.showscreen = True
     containers.screenwidgets = {"Last command": lastcommand, "Memorysize": memorysize, "Last memory": lastmemory, "Epsilon": epsilon, "Last big punish": lastpunish, \
-                                "Last Targetnet Copy": lasttargetcopy, "ReinfLearnSteps": reinflearnsteps, "Current Q Vals": currentqvals, "Last Epsd": lastepisode}
+                                "ReinfLearnSteps": reinflearnsteps, "Current Q Vals": currentqvals, "Last Epsd": lastepisode}
     return root

@@ -168,7 +168,7 @@ class DuelDQN():
         session.run(self.pretrain_episode_tf.assign(self.pretrain_episode))
         session.run(self.run_inferences_tf.assign(self.run_inferences))
         self.saver.save(session, checkpoint_file, global_step=self.pretrain_step_tf if self.isPretrain else self.step_tf)
-        print("saved") 
+        print("Saved Model.", level=6) 
         
         
     def load(self, session, from_pretrain=False):
@@ -176,15 +176,15 @@ class DuelDQN():
          ckpt = tf.train.get_checkpoint_state(self.agent.folder(folder))
          if ckpt and ckpt.model_checkpoint_path:
              self.saver.restore(session, ckpt.model_checkpoint_path)
-             print("loaded",("from pretrain" if from_pretrain else ""))
+             print("Loaded",("from pretrain" if from_pretrain else "from RL-train"), level=10)
              self.pretrain_step = self.pretrain_step_tf.eval(session)
              self.pretrain_episode = self.pretrain_episode_tf.eval(session)
              self.step = self.step_tf.eval(session)
              self.run_inferences = self.run_inferences_tf.eval(session)
-             print("Pretrain-Step:",self.pretrain_step, "Pretrain-Episode:",self.pretrain_episode,"Main-Step:",self.step, "Run'n Iterations:", self.run_inferences)
+             print("Pretrain-Step:",self.pretrain_step, "Pretrain-Episode:",self.pretrain_episode,"Main-Step:",self.step, "Run'n Iterations:", self.run_inferences, level=10)
              return True
          else:
-             print("couldn't load", ("from pretrain" if from_pretrain else ""))
+             print("Couldn't load", ("from pretrain" if from_pretrain else "from RL-train"), level=10)
              return False
         
         
@@ -358,23 +358,22 @@ class DDDQN_model():
 ############################## helper functions ###############################
 
 #takes as input a batch of ENV-STATES, and returns batch of AGENT-STATES
-def EnvStateBatch_to_AgentStateBatch(self, agent, stateBatch):
-    presentStates = list(zip(*stateBatch))
-    conv_inputs, other_inputs, _ = list(zip(*[agent.getAgentState(*presentState) for presentState in presentStates]))
-    other_inputs = [agent.makeNetUsableOtherInputs(i) for i in other_inputs]
-    return conv_inputs, other_inputs, False
-    
-#takes as input batch of ENV-STATES, and return batch of AGENT-ACTIONS
-def EnvStateBatch_to_AgentActionBatch(self, agent, stateBatch):
-    presentStates = list(zip(*stateBatch))
-    targets = [agent.makeNetUsableAction(agent.getAction(*presentState)) for presentState in presentStates]
-    return targets
-                      
-def processState(states):
-    return np.reshape(states,[-1,30,45,8])        
+#def EnvStateBatch_to_AgentStateBatch(self, agent, stateBatch):
+#    presentStates = list(zip(*stateBatch))
+#    conv_inputs, other_inputs, _ = list(zip(*[agent.getAgentState(*presentState) for presentState in presentStates]))
+#    other_inputs = [agent.makeNetUsableOtherInputs(i) for i in other_inputs]
+#    return conv_inputs, other_inputs, False
+#    
+##takes as input batch of ENV-STATES, and return batch of AGENT-ACTIONS
+#def EnvStateBatch_to_AgentActionBatch(self, agent, stateBatch):
+#    presentStates = list(zip(*stateBatch))
+#    targets = [agent.makeNetUsableAction(agent.getAction(*presentState)) for presentState in presentStates]
+#    return targets
+#                      
 
-def TPSample(batchsize):
-    return read_supervised.create_QLearnInputs_from_SVStateBatch(*trackingpoints.next_batch(conf, myAgent, batchsize), myAgent)
+
+def TPSample(conf, agent, batchsize):
+    return read_supervised.create_QLearnInputs_from_PTStateBatch(*trackingpoints.next_batch(conf, agent, batchsize), agent)
     #returns [[s],[a],[r],[s2],[t]], so to only get the actions it's result[0], to only get the first three actions it's result[1][:3]
     #to get the first three of each it's result[:][:3], however pay attention that every state s and s2 = (conv, ff, stands). 
     #so to get the ff's of the first three items it is [result[0][:3][i][1] for i in range(3)]
@@ -383,18 +382,16 @@ def TPSample(batchsize):
 ###########################################################################################################
 ###########################################################################################################
 
-if __name__ == '__main__':             
-            
+if __name__ == '__main__':       
     import config
     conf = config.Config()
     import read_supervised
-    from server import Containers; containers = Containers(); containers.conf = conf
+    from server import Containers; containers = Containers()
     import dqn_rl_agent
     myAgent = dqn_rl_agent.Agent(conf, containers, True)
     trackingpoints = read_supervised.TPList(conf.LapFolderName, conf.use_second_camera, conf.msperframe, conf.steering_steps, conf.INCLUDE_ACCPLUSBREAK)
     
     BATCHSIZE = 32   
-
 
     #PRETRAINING:
 #    tf.reset_default_graph()
@@ -402,31 +399,31 @@ if __name__ == '__main__':
 #    model.initNet(load="preTrain")
 #    for i in range(11-model.pretrain_episode()):
 #        trackingpoints.reset_batch()
-#        trainBatch = TPSample(trackingpoints.numsamples)
+#        trainBatch = TPSample(conf, myAgent, trackingpoints.numsamples)
 #        print("Iteration",model.pretrain_episode(),"Accuracy",model.getAccuracy(trainBatch),"%")
 #        model.inc_episode()
 #        trackingpoints.reset_batch()
 #        while trackingpoints.has_next(BATCHSIZE):
-#            trainBatch = TPSample(BATCHSIZE)
+#            trainBatch = TPSample(conf, myAgent, BATCHSIZE)
 #            #model.sv_learn(trainBatch, True)
 #            model.q_learn(trainBatch, True)    
 #        if (i+1) % 5 == 0:
 #            model.save()
+           
             
-            
-            
-    tf.reset_default_graph()
-    model = DDDQN_model(conf, myAgent, tf.Session(), isPretrain=False)
-    model.initNet(load=False)
-    for i in range(100):
-        trackingpoints.reset_batch()
-        trainBatch = TPSample(trackingpoints.numsamples)
-        print("Step",model.step(),"Accuracy",model.getAccuracy(trainBatch),"%") 
-        if i % 10 == 0:
-            print(model.inference(trainBatch[0][:2])) #die ersten 2 states
-        trackingpoints.reset_batch()
-        while trackingpoints.has_next(BATCHSIZE):
-            trainBatch = TPSample(BATCHSIZE)
-            model.q_learn(trainBatch, True)    
-        if (i+1) % 5 == 0:
-            model.save()
+#   #Fake real training
+#    tf.reset_default_graph()
+#    model = DDDQN_model(conf, myAgent, tf.Session(), isPretrain=False)
+#    model.initNet(load=False)
+#    for i in range(100):
+#        trackingpoints.reset_batch()
+#        trainBatch = TPSample(conf, myAgent, trackingpoints.numsamples)
+#        print("Step",model.step(),"Accuracy",model.getAccuracy(trainBatch),"%") 
+#        if i % 10 == 0:
+#            print(model.inference(trainBatch[0][:2])) #die ersten 2 states
+#        trackingpoints.reset_batch()
+#        while trackingpoints.has_next(BATCHSIZE):
+#            trainBatch = TPSample(conf, myAgent, BATCHSIZE)
+#            model.q_learn(trainBatch, True)    
+#        if (i+1) % 5 == 0:
+#            model.save()

@@ -25,11 +25,11 @@ SAVENAME = "memory"
 
 #TODO: not sure how thread-safe this is.. https://stackoverflow.com/questions/13610654/how-to-make-built-in-containers-sets-dicts-lists-thread-safe
 class Memory(object):
-    def __init__(self, capacity, rl_conf, agent):
+    def __init__(self, capacity, conf, agent):
         self._lock = lock = threading.Lock()
-        self.rl_conf = rl_conf
+        self.conf = conf
         self.agent = agent
-        self.memorypath = self.agent.folder(self.rl_conf.memory_dir)
+        self.memorypath = self.agent.folder(self.conf.memory_dir)
         self.capacity = capacity
         self._buffer = [None]*capacity #deque(elemtype, capacity)
         self._pointer = 0
@@ -41,7 +41,7 @@ class Memory(object):
         if os.path.exists(self.memorypath+SAVENAME+'.pkl'):
             try:
                 if os.path.getsize(self.memorypath+SAVENAME+'.pkl') > 1024 and (os.path.getsize(self.memorypath+SAVENAME+'.pkl') >= os.path.getsize(self.memorypath+SAVENAME+'TMP.pkl')-10240):
-                    self.pload(self.memorypath+SAVENAME+'.pkl', rl_conf, agent, lock)
+                    self.pload(self.memorypath+SAVENAME+'.pkl', conf, agent, lock)
                     print("Loading existing memory with", self._size, "entries", level=10)
                 else:
                     corrupted = True
@@ -52,7 +52,7 @@ class Memory(object):
             if os.path.exists(self.memorypath+SAVENAME+'TMP.pkl'):
                 if os.path.getsize(self.memorypath+SAVENAME+'TMP.pkl') > 1024: 
                     shutil.copyfile(self.memorypath+SAVENAME+'TMP.pkl', self.memorypath+SAVENAME+'.pkl')
-                    self.pload(self.memorypath+SAVENAME+'.pkl', rl_conf, agent, lock)
+                    self.pload(self.memorypath+SAVENAME+'.pkl', conf, agent, lock)
                     print("Loading Backup-Memory with", self._size, "entries", level=10)
         
         self.epistart = self._pointer
@@ -73,8 +73,8 @@ class Memory(object):
             if self._size < self.capacity:
                 self._size += 1
             
-            if self.agent.keep_memory and self.rl_conf.save_memory_all_mins: 
-                if ((current_milli_time() - self.lastsavetime) / (1000*60)) > self.rl_conf.save_memory_all_mins: #previously: if self._appendcount % self.rl_conf.savememoryall == 0:
+            if self.agent.keep_memory and self.conf.save_memory_all_mins: 
+                if ((current_milli_time() - self.lastsavetime) / (1000*60)) > self.conf.save_memory_all_mins: #previously: if self._appendcount % self.conf.savememoryall == 0:
                     self.save_memory()
     
     
@@ -155,12 +155,12 @@ class Memory(object):
     
             
         
-    #loads everything and then overwrites rl_conf, locks, and lastsavetime, as those are pointers/relative to now.
-    def pload(self, filename, rl_conf, agent, lock):
+    #loads everything and then overwrites conf, locks, and lastsavetime, as those are pointers/relative to now.
+    def pload(self, filename, conf, agent, lock):
         with open(filename, 'rb') as f:
             tmp_dict = pickle.load(f)
         self.__dict__.update(tmp_dict) 
-        self.rl_conf = rl_conf
+        self.conf = conf
         self.agent = agent
         self._lock = lock
         self.lastsavetime = current_milli_time()
@@ -168,7 +168,7 @@ class Memory(object):
     
     def psave(self, filename):
         odict = self.__dict__.copy() # copy the dict since we change it
-        del odict['rl_conf']  
+        del odict['conf']  
         del odict['_lock']  
         del odict['agent']
         with open(filename, 'wb') as f:

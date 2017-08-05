@@ -62,7 +62,6 @@ class Config():
     save_memory_all_mins = False
     replaystartsize = 0
     memorysize = 30000
-    copy_target_all = 10
     use_constantbutbigmemory = False
     visionvecdtype = np.int8 #wäre es np.bool würde er den rand als street sehen!
     keep_memory = True

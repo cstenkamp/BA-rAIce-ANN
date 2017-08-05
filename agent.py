@@ -15,7 +15,6 @@ from copy import deepcopy
 from myprint import myprint as print
 import read_supervised
 import infoscreen
-from dddqn import DDDQN_model 
 from evaluator import evaluator
 from inefficientmemory import Memory
 
@@ -35,7 +34,6 @@ class AbstractAgent(object):
         self.ff_stacked = False
         self.model = None
         self.graph = tf.Graph()
-        self.usesnetwork = DDDQN_model
         
     ##############functions that should be impemented##########
     def checkIfInference(self):
@@ -91,8 +89,9 @@ class AbstractAgent(object):
         return read_supervised.inflate_speed(speed, self.conf.speed_neurons, self.conf.SPEED_AS_ONEHOT, self.conf.MAXSPEED)
     
     def resetUnityAndServer(self):
-        import server
-        server.resetUnityAndServer(self.containers)
+        if self.containers.UnityConnected:
+            import server
+            server.resetUnityAndServer(self.containers)
 
     def folder(self, actualfolder):
         folder = self.conf.superfolder()+self.name+"/"+actualfolder
@@ -116,6 +115,8 @@ class AbstractRLAgent(AbstractAgent):
         self.freezeLearnReasons = [] 
         self.wallhitPunish = 1;
         self.wrongDirPunish = 10;
+        self.show_plots = kwargs["show_plots"] if "show_plots" in kwargs else False
+        self.keep_memory = self.conf.keep_memory #wird im server möglicherweise überschrieben
 
         
     def initNetwork(self):    
@@ -127,7 +128,7 @@ class AbstractRLAgent(AbstractAgent):
         self.numLearnAfterInference = 0
         self.last_random_timestamp = 0
         self.last_random_action = None
-        self.evaluator = evaluator(self.containers, self, self.containers.show_plots, self.conf.save_xml,      \
+        self.evaluator = evaluator(self.containers, self, self.show_plots, self.conf.save_xml,      \
                                    ["average rewards", "average Q-vals",   "progress", "laptime"                    ], \
                                    [1,                 self.conf.MAXSPEED, 100,         self.conf.time_ends_episode ] )
     
@@ -241,9 +242,8 @@ class AbstractRLAgent(AbstractAgent):
     def saveNet(self):
         self.freezeEverything("saveNet")
         self.model.save()
-        if self.conf.save_memory_with_checkpoint:
+        if self.conf.save_memory_with_checkpoint and not self.model.isPretrain:
             self.memory.save_memory()
-        print("saved", level=6)
         self.unFreezeEverything("saveNet")
            
         
@@ -298,6 +298,7 @@ class AbstractRLAgent(AbstractAgent):
 
 
     def endEpisode(self, reason, gameState):  #reasons are: turnedaround, timeover, resetserver, wallhit, rounddone
+        assert hasattr(self, "memory")
         #TODO: die ersten 2 zeilen kann auch der abstractagent schon, dann muss ich im server nicht immer nach hasattr(memory) fragen!
         self.resetUnityAndServer()
         self.episodes += 1        
@@ -327,6 +328,7 @@ class AbstractRLAgent(AbstractAgent):
             
             
     def punishLastAction(self, howmuch):
+        assert hasattr(self, "memory")
         if self.containers.showscreen:
             infoscreen.print(str(-abs(howmuch)), time.strftime("%H:%M:%S", time.gmtime()), containers=self.containers, wname="Last big punish")
         self.memory.punishLastAction(howmuch)
@@ -344,15 +346,16 @@ class AbstractRLAgent(AbstractAgent):
             self.freezeLearnReasons.append(reason)
 
     def freezeInf(self, reason):
-        if not reason in self.freezeInfReasons:
-            print("freezing Unity because",reason, level=10)
-            self.containers.freezeInf = True
-            self.freezeInfReasons.append(reason)
-            self.containers.outputval.send_via_senderthread("pleaseFreeze", self.containers.inputval.CTimestamp, self.containers.inputval.STimestamp)        
-            try:
-                self.containers.outputval.freezeUnity()
-            except:
-                pass
+        if self.containers.UnityConnected:
+            if not reason in self.freezeInfReasons:
+                print("freezing Unity because",reason, level=10)
+                self.containers.freezeInf = True
+                self.freezeInfReasons.append(reason)
+                self.containers.outputval.send_via_senderthread("pleaseFreeze", self.containers.inputval.CTimestamp, self.containers.inputval.STimestamp)        
+                try:
+                    self.containers.outputval.freezeUnity()
+                except:
+                    pass
         
                 
     def unFreezeEverything(self, reason):
@@ -368,17 +371,18 @@ class AbstractRLAgent(AbstractAgent):
             pass #you have nothing to do if it wasnt in there anyway.         
 
     def unFreezeInf(self, reason):
-        try:
-            del self.freezeInfReasons[self.freezeInfReasons.index(reason)] 
-            if len(self.freezeInfReasons) == 0:
-                self.containers.freezeInf = False
-                try: #TODO: stattdessen ne variable unity_connected ahben!
-                    print("unfreezing Unity because",reason, level=10)
-                    self.containers.outputval.unFreezeUnity()
-                except:
-                    pass
-        except ValueError:
-            pass #you have nothing to do if it wasnt in there anyway.                      
+        if self.containers.UnityConnected:
+            try:
+                del self.freezeInfReasons[self.freezeInfReasons.index(reason)] 
+                if len(self.freezeInfReasons) == 0:
+                    self.containers.freezeInf = False
+                    try: #TODO: stattdessen ne variable unity_connected ahben!
+                        print("unfreezing Unity because",reason, level=10)
+                        self.containers.outputval.unFreezeUnity()
+                    except:
+                        pass
+            except ValueError:
+                pass #you have nothing to do if it wasnt in there anyway.                      
 
 
 
