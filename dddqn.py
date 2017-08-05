@@ -191,9 +191,6 @@ class DuelDQN():
         conv_inputs = [inputs[i][0] for i in range(len(inputs))]
         ff_inputs   = [inputs[i][1] for i in range(len(inputs))]
         
-        print(conv_inputs[0])
-        print(ff_inputs[0])
-        
         feed_dict = {}
         if len(inputs) == 1 and self.isInference:   
             self.stood_frames_ago = 0 if carstands else self.stood_frames_ago + 1
@@ -310,7 +307,7 @@ class DDDQN_model():
     def inference(self, statesBatch):
         assert not self.isPretrain, "Please reload this network as a non-pretrain-one!"
         self.targetQN.run_inferences += 1
-        carstands = statesBatch[0][2] if len(statesBatch) == 1 and len(statesBatch[0] > 2) else False
+        carstands = statesBatch[0][2] if len(statesBatch) == 1 and len(statesBatch[0]) > 2 else False
         return self.session.run([self.targetQN.predict, self.targetQN.Qout], feed_dict=self.targetQN.feed_dict(statesBatch, carstands = carstands))
         
     #expects only a state (and no stands_inputs)

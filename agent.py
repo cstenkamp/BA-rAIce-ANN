@@ -87,7 +87,7 @@ class AbstractAgent(object):
 
     #################### Helper functions#######################
     def dediscretize(self, discrete):
-        if not isinstance(discrete, (list, tuple)) and type(discrete).__module__ != np.__name__:
+        if not hasattr(discrete, "__len__"):  #lists, tuples and np arrays have lens, scalars (including numpy scalars) don't.
             val = [0]*(self.conf.steering_steps*4 if self.conf.INCLUDE_ACCPLUSBREAK else self.conf.steering_steps*3)
             val[discrete] = 1
             discrete = val

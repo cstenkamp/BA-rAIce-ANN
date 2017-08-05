@@ -182,7 +182,7 @@ class Memory(object):
            
             
             
-    def sample(self, n): #gesamplet wird nur sobald len(self.memory) > self.conf.batchsize+self.conf.history_frame_nr+1
+    def sample(self, n): #gesamplet wird nur sobald len(self.memory) > self.conf.batch_size+self.conf.history_frame_nr+1
         with self._lock:
             assert self._size > self._state_stacksize, "you can't even sample a single value!"
             if self._appendcount <= self.capacity:

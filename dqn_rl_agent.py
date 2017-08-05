@@ -43,7 +43,7 @@ class Agent(AbstractRLAgent):
 #            return
 #            ##############DELETETHISPART ENDE##############
             
-            if self.canLearn() and np.random.random() > self.epsilon:
+            if self.canLearn() and np.random.random() > self.epsilon or True:
                 toUse, toSave = self.performNetwork(self.makeInferenceUsable((conv_inputs, other_inputs, stands_inputs)))
             else:
                 toUse, toSave = self.randomAction(gameState[2][0].SpeedSteer.velocity)
@@ -66,7 +66,7 @@ class Agent(AbstractRLAgent):
     
 
 
-    def performNetwork(self, *state):        
+    def performNetwork(self, state):        
         super().performNetwork(state)
         action, qvals = self.model.inference(state) #former is argmax, latter are individual qvals
         throttle, brake, steer = self.dediscretize(action[0])
@@ -101,7 +101,7 @@ class Agent(AbstractRLAgent):
     def create_QLearnInputs_from_MemoryBatch(self, memoryBatch):
         oldstates, actions, rewards, newstates, resetafters = zip(*memoryBatch)      
         #is already [[(c,f)],[a],[r],[(c,f)],[t]], however the actions are tuples, and we want argmax's... and netUsableOtherinputs
-        actions = np.array([np.argmax(self.makeNetUsableAction(throttle, brake, steer)) for throttle, brake, steer in actions]) 
+        actions = np.array([np.argmax(self.makeNetUsableAction((throttle, brake, steer))) for throttle, brake, steer in actions]) 
         oldstates = [(np.array(i[0]), np.array(self.makeNetUsableOtherInputs(i[1]))) for i in oldstates]
         newstates = [(np.array(i[0]), np.array(self.makeNetUsableOtherInputs(i[1]))) for i in newstates]#
         return oldstates, actions, np.array(rewards), newstates, np.array(resetafters)
@@ -109,7 +109,7 @@ class Agent(AbstractRLAgent):
                 
     
     def learnANN(self):   
-        QLearnInputs = self.create_QLearnInputs_from_MemoryBatch(self.memory.sample(self.conf.batchsize))
+        QLearnInputs = self.create_QLearnInputs_from_MemoryBatch(self.memory.sample(self.conf.batch_size))
         self.model.q_learn(QLearnInputs, False)
         
         self.reinfNetSteps += 1

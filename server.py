@@ -237,8 +237,8 @@ class InputValContainer(object):
         
         
     def _read_vvec_hist(self, readPast=False):
-        if self.vvec_hist == None: 
-            return None
+#        if self.vvec_hist == None: 
+#            return None
         hframes = self.conf.history_frame_nr 
         if hframes == 1 and self.conf.use_second_camera:
             return ("error", "error")
