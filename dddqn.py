@@ -188,14 +188,14 @@ class DuelDQN():
              return False
         
         
-    #carstands ist true iff (inference & carstands), in jedem anderem Fall false
-    def feed_dict(self, conv_inputs, ff_inputs, targetQ=None, targetA=None, carstands=False, decay_lr=False):
+    #carstands ist true iff (single inference & carstands), in jedem anderem Fall false
+    def feed_dict(self, inputs, targetQ=None, targetA=None, carstands = False, decay_lr=False):
 
-        def is_inference(conv_inputs, other_inputs):
-            return (len(conv_inputs.shape) <= 3 if conv_inputs is not None else len(other_inputs.shape) <= 2) and self.isInference
+        conv_inputs = [inputs[i][0] for i in range(len(inputs))]
+        ff_inputs   = [inputs[i][1] for i in range(len(inputs))]
         
         feed_dict = {}
-        if is_inference(conv_inputs, ff_inputs):   
+        if len(inputs) == 1 and self.isInference:   
             self.stood_frames_ago = 0 if carstands else self.stood_frames_ago + 1
             if self.stood_frames_ago < 10: #wenn du vor einigen frames stands, gib jetzt auch gas
                 carstands = True
@@ -203,7 +203,7 @@ class DuelDQN():
             ff_inputs= np.expand_dims(ff_inputs, axis=0) 
             stands_inputs = np.expand_dims([carstands], axis=0)
         else:
-            stands_inputs = [False]*ff_inputs.shape[0]
+            stands_inputs = [False]*len(inputs)
             if targetQ is not None: #targetQ und targetA werden nur beim learning verwendet, und dann ist ebennicht inference
                 feed_dict[self.targetQ] = targetQ
             if targetA is not None:
@@ -300,49 +300,49 @@ class DDDQN_model():
     def step(self):
         return self.onlineQN.step_tf.eval(self.session)
         
-    
+    #expects a whole s,a,r,s,t - tuple, needs however only s & a
     def getAccuracy(self, batch):
-        oldstates, actions, rewards, newstates, terminals = batch
-        predict = self.session.run(self.targetQN.predict,feed_dict=self.targetQN.feed_dict(oldstates[0], oldstates[1]))
+        oldstates, actions, _, _, _ = batch
+        predict = self.session.run(self.targetQN.predict,feed_dict=self.targetQN.feed_dict(oldstates))
         return round(np.mean(np.array(actions == predict, dtype=int))*100, 2)
             
-    
-    def inference(self, batch):
+    #expects only a state (with stands_inputs)
+    def inference(self, statesBatch):
         assert not self.isPretrain, "Please reload this network as a non-pretrain-one!"
         self.targetQN.run_inferences += 1
-        oldstates, actions, rewards, newstates, terminals = batch
-        return self.session.run(self.targetQN.Qout,feed_dict=self.targetQN.feed_dict(oldstates[0], oldstates[1]))        
+        carstands = statesBatch[0][2] if len(statesBatch) == 1 and len(statesBatch[0] > 2) else False
+        return self.session.run([self.targetQN.predict, self.targetQN.Qout], feed_dict=self.targetQN.feed_dict(statesBatch, carstands = carstands))
         
-    def statevalue(self, batch):
-        oldstates, actions, rewards, newstates, terminals = batch
-        return self.session.run(tf.reduce_max(self.targetQN.Qout, axis=1), feed_dict=self.targetQN.feed_dict(newstates[0],newstates[1]))
+    #expects only a state (and no stands_inputs)
+    def statevalue(self, statesBatch):
+        return self.session.run(tf.reduce_max(self.targetQN.Qout, axis=1), feed_dict=self.targetQN.feed_dict(statesBatch))
     
-    
+    #expects a whole s,a,r,s,t - tuple, needs however only s & a
     def sv_learn(self, batch, decay_lr = True):
         assert self.isPretrain, "Supervised-Learning is only allowed as Pre-training!"
-        oldstates, actions, rewards, newstates, terminals = batch
+        oldstates, actions, _, _, _ = batch
         if decay_lr:
-            _, loss, _ = self.session.run([self.targetQN.sv_OP, self.targetQN.sv_loss, self.targetQN.sv_lr_update], feed_dict=self.targetQN.feed_dict(oldstates[0], oldstates[1], targetA=actions, decay_lr="sv"))
+            _, loss, _ = self.session.run([self.targetQN.sv_OP, self.targetQN.sv_loss, self.targetQN.sv_lr_update], feed_dict=self.targetQN.feed_dict(oldstates, targetA=actions, decay_lr="sv"))
         else:
-            _, loss, _ = self.session.run([self.targetQN.sv_OP, self.targetQN.sv_loss], feed_dict=self.targetQN.feed_dict(oldstates[0], oldstates[1], targetA=actions))
+            _, loss, _ = self.session.run([self.targetQN.sv_OP, self.targetQN.sv_loss], feed_dict=self.targetQN.feed_dict(oldstates, targetA=actions))
         self.lastTrained = self.targetQN
         #print("Learning rate:",self.session.run(self.targetQN.sv_lr))
         return loss
     
     
-    #Below we perform the Double-DQN update to the target Q-values    
+    #expects a whole s,a,r,s,t - tuple  
     def q_learn(self, batch, decay_lr = False):
         oldstates, actions, rewards, newstates, terminals = batch
-        action = self.session.run(self.onlineQN.predict,feed_dict=self.onlineQN.feed_dict(newstates[0], newstates[1])) #TODO: im text schreiben wie das bei non-doubleDQN anders wäre
-        folgeQ = self.session.run(self.targetQN.Qout,feed_dict=self.targetQN.feed_dict(newstates[0], newstates[1])) #No reduceMax anymore, but instead the action-prediciton because DDQN: instead of taking the max over Q-values when computing the target-Q value for our training step, we use our primary network to chose an action, and our target network to generate the target Q-value for that action. 
+        action = self.session.run(self.onlineQN.predict,feed_dict=self.onlineQN.feed_dict(newstates)) #TODO: im text schreiben wie das bei non-doubleDQN anders wäre
+        folgeQ = self.session.run(self.targetQN.Qout,feed_dict=self.targetQN.feed_dict(newstates)) #No reduceMax anymore, but instead the action-prediciton because DDQN: instead of taking the max over Q-values when computing the target-Q value for our training step, we use our primary network to chose an action, and our target network to generate the target Q-value for that action. 
         consider_stateval = -(terminals - 1)
         doubleQ = folgeQ[range(len(terminals)),action]  
         targetQ = rewards + (self.conf.q_decay*doubleQ * consider_stateval)
         #Update the network with our target values.
         if decay_lr:
-            _, _ = self.session.run([self.onlineQN.q_OP, self.onlineQN.lr_update], feed_dict=self.onlineQN.feed_dict(oldstates[0], oldstates[1], targetQ=targetQ, targetA=actions, decay_lr="q"))
+            _, _ = self.session.run([self.onlineQN.q_OP, self.onlineQN.lr_update], feed_dict=self.onlineQN.feed_dict(oldstates, targetQ=targetQ, targetA=actions, decay_lr="q"))
         else:
-            _ = self.session.run(self.onlineQN.q_OP, feed_dict=self.onlineQN.feed_dict(oldstates[0], oldstates[1], targetQ=targetQ, targetA=actions))
+            _ = self.session.run(self.onlineQN.q_OP, feed_dict=self.onlineQN.feed_dict(oldstates, targetQ=targetQ, targetA=actions))
         self._runMultipleOps(self.smoothTargetNetUpdate, self.session) #Update the target network toward the primary network.
         if not self.isPretrain:
             self.onlineQN.step = self.onlineQN.step_tf.eval(self.session)
@@ -351,69 +351,9 @@ class DDDQN_model():
         return
         
 ###########################################################################################################
-    
-        
-def processState(states):
-    return np.reshape(states,[-1,30,45,8])        
-
-            
-        
-import config
-conf = config.Config()
-import read_supervised
-from server import Containers; containers = Containers(); containers.conf = conf
-import dqn_rl_agent
-myAgent = dqn_rl_agent.Agent(conf, containers, True)
-trackingpoints = read_supervised.TPList(conf.LapFolderName, conf.use_second_camera, conf.msperframe, conf.steering_steps, conf.INCLUDE_ACCPLUSBREAK)
-
-
-def TPSample(batchsize):
-    return read_supervised.create_QLearnInputs_from_SVStateBatch(*trackingpoints.next_batch(conf, myAgent, batchsize), myAgent)
-    
-
-
 ###########################################################################################################
-
-BATCHSIZE = 32   
-
-##PRETRAINING:
-#tf.reset_default_graph()
-#model = DDDQN_model(conf, myAgent, tf.Session(), isPretrain=True)
-#model.initNet(load="preTrain")
-#for i in range(11-model.pretrain_episode()):
-#    trackingpoints.reset_batch()
-#    trainBatch = buffersample(trackingpoints.numsamples)
-#    print("Iteration",model.pretrain_episode(),"Accuracy",model.getAccuracy(trainBatch),"%")
-#    model.inc_episode()
-#    trackingpoints.reset_batch()
-#    while trackingpoints.has_next(BATCHSIZE):
-#        trainBatch = buffersample(BATCHSIZE)
-#        #model.sv_learn(trainBatch, True)
-#        model.q_learn(trainBatch, True)    
-#    if (i+1) % 5 == 0:
-#        model.save()
-        
-        
-        
-tf.reset_default_graph()
-model = DDDQN_model(conf, myAgent, tf.Session(), isPretrain=False)
-model.initNet(load=False)
-for i in range(100):
-    trackingpoints.reset_batch()
-    trainBatch = TPSample(trackingpoints.numsamples)
-    print("Step",model.step(),"Accuracy",model.getAccuracy(trainBatch),"%") 
-#    if i % 10 == 0:
-#        print(model.inference(trainBatch[:3,:]))
-    trackingpoints.reset_batch()
-    while trackingpoints.has_next(BATCHSIZE):
-        trainBatch = TPSample(BATCHSIZE)
-        model.q_learn(trainBatch, True)    
-    if (i+1) % 5 == 0:
-        model.save()
-
-
-        
-        
+###########################################################################################################
+    
 #sind die noch richtig?        
 ############################## helper functions ###############################
 
@@ -429,4 +369,64 @@ def EnvStateBatch_to_AgentActionBatch(self, agent, stateBatch):
     presentStates = list(zip(*stateBatch))
     targets = [agent.makeNetUsableAction(agent.getAction(*presentState)) for presentState in presentStates]
     return targets
-               
+                      
+def processState(states):
+    return np.reshape(states,[-1,30,45,8])        
+
+def TPSample(batchsize):
+    return read_supervised.create_QLearnInputs_from_SVStateBatch(*trackingpoints.next_batch(conf, myAgent, batchsize), myAgent)
+    #returns [[s],[a],[r],[s2],[t]], so to only get the actions it's result[0], to only get the first three actions it's result[1][:3]
+    #to get the first three of each it's result[:][:3], however pay attention that every state s and s2 = (conv, ff, stands). 
+    #so to get the ff's of the first three items it is [result[0][:3][i][1] for i in range(3)]
+
+###########################################################################################################
+###########################################################################################################
+###########################################################################################################
+
+if __name__ == '__main__':             
+            
+    import config
+    conf = config.Config()
+    import read_supervised
+    from server import Containers; containers = Containers(); containers.conf = conf
+    import dqn_rl_agent
+    myAgent = dqn_rl_agent.Agent(conf, containers, True)
+    trackingpoints = read_supervised.TPList(conf.LapFolderName, conf.use_second_camera, conf.msperframe, conf.steering_steps, conf.INCLUDE_ACCPLUSBREAK)
+    
+    BATCHSIZE = 32   
+
+
+    #PRETRAINING:
+#    tf.reset_default_graph()
+#    model = DDDQN_model(conf, myAgent, tf.Session(), isPretrain=True)
+#    model.initNet(load="preTrain")
+#    for i in range(11-model.pretrain_episode()):
+#        trackingpoints.reset_batch()
+#        trainBatch = TPSample(trackingpoints.numsamples)
+#        print("Iteration",model.pretrain_episode(),"Accuracy",model.getAccuracy(trainBatch),"%")
+#        model.inc_episode()
+#        trackingpoints.reset_batch()
+#        while trackingpoints.has_next(BATCHSIZE):
+#            trainBatch = TPSample(BATCHSIZE)
+#            #model.sv_learn(trainBatch, True)
+#            model.q_learn(trainBatch, True)    
+#        if (i+1) % 5 == 0:
+#            model.save()
+            
+            
+            
+    tf.reset_default_graph()
+    model = DDDQN_model(conf, myAgent, tf.Session(), isPretrain=False)
+    model.initNet(load=False)
+    for i in range(100):
+        trackingpoints.reset_batch()
+        trainBatch = TPSample(trackingpoints.numsamples)
+        print("Step",model.step(),"Accuracy",model.getAccuracy(trainBatch),"%") 
+        if i % 10 == 0:
+            print(model.inference(trainBatch[0][:2])) #die ersten 2 states
+        trackingpoints.reset_batch()
+        while trackingpoints.has_next(BATCHSIZE):
+            trainBatch = TPSample(BATCHSIZE)
+            model.q_learn(trainBatch, True)    
+        if (i+1) % 5 == 0:
+            model.save()

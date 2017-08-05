@@ -99,6 +99,7 @@ class Memory(object):
     def sample(self, n):
         with self._lock:
             return random.sample(self._buffer[:self._size], n) 
+            #returns [[s,a,r,s2,t],[s,a,r,s2,t],[s,a,r,s2,t],...]
 #            samples = np.random.permutation(self._size-4)[:n]
 #            batch = [self._buffer[i] for i in samples]  
 #            return batch                   

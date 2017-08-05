@@ -433,18 +433,18 @@ def readTwoDArrayFromString(string):
 
     
     
-
+#returns [[s],[a],[r],[s2],[t]], where however every state s = (conf, ff)
 def create_QLearnInputs_from_SVStateBatch(presentStates, pastStates, agent):
     presentStates = list(zip(*presentStates))
     pastStates = list(zip(*pastStates))
     
     old_convs = np.rollaxis(np.array([agent.getAgentState(*i)[0] for i in pastStates]), 1, 4)
     old_other = np.array([agent.makeNetUsableOtherInputs(agent.getAgentState(*i)[1]) for i in pastStates])
-    oldAgentStates = (old_convs, old_other)
+    oldAgentStates = list(zip(old_convs, old_other))
     
     new_convs = np.rollaxis(np.array([agent.getAgentState(*i)[0] for i in presentStates]), 1, 4)
     new_other = np.array([agent.makeNetUsableOtherInputs(agent.getAgentState(*i)[1]) for i in presentStates])
-    newAgentStates = (new_convs, new_other)
+    newAgentStates = list(zip(new_convs, new_other))
     
     ArgmActions = [np.argmax(agent.makeNetUsableAction(agent.getAction(*i))) for i in pastStates]
     rewards = [agent.calculateReward(*i) for i in presentStates]

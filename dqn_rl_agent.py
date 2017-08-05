@@ -66,10 +66,10 @@ class Agent(AbstractRLAgent):
     
 
 
-    def performNetwork(self, conv_inputs, inflated_other_inputs, stands_inputs):        
-        super().performNetwork(conv_inputs, inflated_other_inputs, stands_inputs)
-        onehot, qvals = self.model.run_inference(self.session, conv_inputs, inflated_other_inputs) #former is argmax, latter are individual qvals
-        throttle, brake, steer = self.dediscretize(onehot[0])
+    def performNetwork(self, *state):        
+        super().performNetwork(state)
+        action, qvals = self.model.inference(state) #former is argmax, latter are individual qvals
+        throttle, brake, steer = self.dediscretize(action[0])
         result = "["+str(throttle)+", "+str(brake)+", "+str(steer)+"]"
         self.showqvals(qvals[0])
         return result, (throttle, brake, steer) #er returned immer toUse, toSave
@@ -94,7 +94,8 @@ class Agent(AbstractRLAgent):
 
     #dauerlearnANN kommt aus der AbstractRLAgent
             
-
+    #memoryBatch is [[s,a,r,s2,t],[s,a,r,s2,t],[s,a,r,s2,t],...], what we want as Q-Learn-Input is [[s],[a],[r],[s2],[t]] 
+    #.. to be more precise: [[(c,f),a,r,(c,f),t],[(c,f),a,r,(c,f),t],...]  and [([c],[f],[s]),[a],[r],([c],[f],[s]),[t]]
     def create_QLearnInputs_from_MemoryBatch(self, memoryBatch):
         if self.SAVE_ACTION_AS_ARGMAX: 
             oldstates, argmactions, rewards, newstates, resetafters = zip(*memoryBatch)      
@@ -108,6 +109,11 @@ class Agent(AbstractRLAgent):
             actions = [self.discretize(throttle, brake, steer) for throttle, brake, steer in actualActions]
             argmactions = [np.argmax(i) for i in actions]
         #soooo, actions[x] = [0,0,1,0,0], argmactions[x] = 2, actualActions[x] = (1,0,0)
+        
+        
+        oldstates, actions, rewards, newstates, resetafters = zip(*memoryBatch)      
+        #problem: oldstates and newstates ist aktuell immernoch [(c,f),(c,f),(c,f)]
+        
         
         old_convs = np.array([i[0] for i in oldstates])
         old_other = np.array([self.makeNetUsableOtherInputs(i[1]) for i in oldstates])

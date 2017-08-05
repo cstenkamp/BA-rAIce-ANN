@@ -68,7 +68,7 @@ class AbstractAgent(object):
     def makeNetUsableAction(self, action):
         return self.discretize(*action)
         
-    def performNetwork(self, _, __, ___):
+    def performNetwork(self, *args):
         print("Another ANN Inference", level=3)
         
         
@@ -78,6 +78,10 @@ class AbstractAgent(object):
 
     #################### Helper functions#######################
     def dediscretize(self, discrete):
+        if not isinstance(discrete, (list, tuple)) and type(discrete).__module__ != np.__name__:
+            val = [0]*(self.conf.steering_steps*4 if self.conf.INCLUDE_ACCPLUSBREAK else self.conf.steering_steps*3)
+            val[discrete] = 1
+            discrete = val
         return read_supervised.dediscretize_all(discrete, self.conf.steering_steps, self.conf.INCLUDE_ACCPLUSBREAK)
 
     def discretize(self, throttle, brake, steer):
@@ -128,7 +132,7 @@ class AbstractRLAgent(AbstractAgent):
                                    [1,                 self.conf.MAXSPEED, 100,         self.conf.time_ends_episode ] )
     
     
-    #gamestate and paststate sind jeweils vvec1_hist, vvec2_hist, otherinputs_hist, action_hist
+    #gamestate and paststate sind jeweils vvec1_hist, vvec2_hist, otherinputs_hist, action_hist #TODO: nicht mit gamestate und paststate, direkt mit agentstate!
     def addToMemory(self, gameState, pastState): 
         assert hasattr(self, "memory") and self.memory is not None, "I don't have a memory, that's fatal."
         
