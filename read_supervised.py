@@ -432,7 +432,8 @@ def readTwoDArrayFromString(string):
     return np.array(tmpreturn)
 
     
-    
+
+
 #returns [[s],[a],[r],[s2],[t]], where however every state s = (conf, ff)
 def create_QLearnInputs_from_PTStateBatch(presentStates, pastStates, agent):
     presentStates = list(zip(*presentStates))
@@ -446,11 +447,13 @@ def create_QLearnInputs_from_PTStateBatch(presentStates, pastStates, agent):
     new_other = np.array([agent.makeNetUsableOtherInputs(agent.getAgentState(*i)[1]) for i in presentStates])
     newAgentStates = list(zip(new_convs, new_other))
     
-    ArgmActions = [np.argmax(agent.makeNetUsableAction(agent.getAction(*i))) for i in pastStates]
+#    ArgmActions = [np.argmax(agent.makeNetUsableAction(agent.getAction(*i))) for i in pastStates]
+    actions = [agent.getAction(*i) for i in pastStates]
+
     rewards = [agent.calculateReward(*i) for i in presentStates]
     resetAfters = [False]*len(pastStates)
-    return oldAgentStates, np.array(ArgmActions), np.array(rewards), newAgentStates, np.array(resetAfters) #wurde angepasst auf s,a,r,s2,t
-
+    return oldAgentStates, np.array(actions), np.array(rewards), newAgentStates, np.array(resetAfters) #wurde angepasst auf s,a,r,s2,t
+                                #eigentlich argmactions
 
 
 ###############################################################################
@@ -475,4 +478,6 @@ if __name__ == '__main__':
     print(actions.shape)  
     
     s, a, r, s2, t = create_QLearnInputs_from_PTStateBatch(presentStates, pastStates, myAgent)
+    
+    print(a)
         

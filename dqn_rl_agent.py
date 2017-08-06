@@ -128,10 +128,10 @@ class Agent(AbstractRLAgent):
 
     def initNetwork(self, isPretrain): 
         super().initNetwork()
-        session = tf.Session(config=tf.ConfigProto(intra_op_parallelism_threads=2, allow_soft_placement=True))
-        self.model = DDDQN_model(self.conf, self, session, isPretrain=isPretrain)
-        self.model.initNet(load=(not self.start_fresh))
-        self.isinitialized = True
+#        session = tf.Session(config=tf.ConfigProto(intra_op_parallelism_threads=2, allow_soft_placement=True))
+#        self.model = DDDQN_model(self.conf, self, session, isPretrain=isPretrain)
+#        self.model.initNet(load=(not self.start_fresh))
+#        self.isinitialized = True
             
         
     

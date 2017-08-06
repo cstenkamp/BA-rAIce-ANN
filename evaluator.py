@@ -20,7 +20,7 @@ flatten = lambda l: [item for sublist in l for item in sublist]
 SHOW_IN_SUBPLOTS = True
 
 class evaluator():
-    def __init__(self, containers, agent, show_plot, save_xml, labels, maxvals): 
+    def __init__(self, containers, agent, show_plot, save_xml, labels, val_bounds): 
         self.save_xml = save_xml
         self.show_plot = show_plot
         
@@ -28,7 +28,7 @@ class evaluator():
             self.xml_saver = xml_saver(containers, agent, labels)
             
         if self.show_plot:
-            self.plotter = plotter(agent.name, labels, maxvals)
+            self.plotter = plotter(agent.name, labels, val_bounds)
         
 
             
@@ -123,21 +123,34 @@ class xml_saver():
        
         
 class plotter(): 
-    def __init__(self, agentname, labels, maxvals):
+    def __init__(self, agentname, labels, val_bounds):
         self.title = "Evaluation "+agentname
         self.labels = labels
         self.all_vals = [None]*len(labels) #is a list of lists [[],[],[]]
         self.episode = 0        
         plt.ion() 
+        
+        maxvals = [0]*len(val_bounds)
+        minvals = [0]*len(val_bounds)
+        for i in range(len(val_bounds)):
+            if hasattr(val_bounds[i], "__len__"):
+                minvals[i] = val_bounds[i][0]
+                maxvals[i] = val_bounds[i][1]
+            else:
+                maxvals[i] = val_bounds[i]
+        
+                
         if not SHOW_IN_SUBPLOTS:
             self.figs, self.ax = plt.subplots(1,1)
             self.maxval = max(maxvals)
+            self.minval = min(minvals)
         else:
             x = ceil(sqrt(len(labels)))
             y = ceil(len(labels)/x)
             self.figs, self.ax = plt.subplots(x,y)
             self.ax = flatten(self.ax)
             self.maxvals = maxvals
+            self.minvals = minvals
         self.num_epis = 100
         self.colors = ['C%i'%i for i in range(len(labels))] 
 
@@ -162,7 +175,7 @@ class plotter():
                 [i.cla() for i in self.ax]   
                 for i in range(len(self.all_vals)):
                     self.ax[i].plot(range(self.episode), self.all_vals[i], self.colors[i])
-                    self.ax[i].axis([0, self.num_epis, 0, self.maxvals[i]])
+                    self.ax[i].axis([0, self.num_epis, self.minvals[i], self.maxvals[i]])
                     self.ax[i].set_xlabel("Epoch")
                     self.ax[i].xaxis.set_label_coords(0.5, 0.125)
                     self.ax[i].set_ylabel(self.labels[i])
@@ -171,7 +184,7 @@ class plotter():
                 self.ax.cla()
                 for i in range(len(self.all_vals)):
                     self.ax.plot(range(self.episode), self.all_vals[i], self.colors[i], label=self.labels[i])
-                self.ax.axis([0, self.num_epis, 0, self.maxval])
+                self.ax.axis([0, self.num_epis, self.minval, self.maxval])
                 self.ax.legend()
                 plt.xlabel('Epoch')
                 

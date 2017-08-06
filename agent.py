@@ -115,8 +115,8 @@ class AbstractAgent(object):
 class AbstractRLAgent(AbstractAgent):
     def __init__(self, conf, containers, *args, **kwargs):
         super().__init__(conf, containers, *args, **kwargs)
-        if not hasattr(self, "memory"): #einige agents haben bereits eine andere memory-implmentation, die sollste nicht überschreiben
-            self.memory = Memory(conf.memorysize, conf, self)
+#        if not hasattr(self, "memory"): #einige agents haben bereits eine andere memory-implmentation, die sollste nicht überschreiben
+#            self.memory = Memory(conf.memorysize, conf, self)
         self.repeat_random_action_for = 1000
         self.freezeInfReasons = []
         self.freezeLearnReasons = [] 
@@ -135,8 +135,8 @@ class AbstractRLAgent(AbstractAgent):
         self.last_random_timestamp = 0
         self.last_random_action = None
         self.evaluator = evaluator(self.containers, self, self.show_plots, self.conf.save_xml,      \
-                                   ["average rewards", "average Q-vals",   "progress", "laptime"                    ], \
-                                   [1,                 self.conf.MAXSPEED, 100,         self.conf.time_ends_episode ] )
+                                   ["average rewards", "average Q-vals", "progress", "laptime"                    ], \
+                                   [(-0.5,2),          50,               100,         self.conf.time_ends_episode ] )
     
     
     #gamestate and paststate sind jeweils vvec1_hist, vvec2_hist, otherinputs_hist, action_hist #TODO: nicht mit gamestate und paststate, direkt mit agentstate!
@@ -198,7 +198,7 @@ class AbstractRLAgent(AbstractAgent):
     def postRunInference(self, toUse, toSave):
         super().postRunInference(toUse, toSave)
         if self.conf.learnMode == "between":
-            if self.model.run_inferences() % self.conf.ForEveryInf == 0:
+            if self.model.run_inferences() % self.conf.ForEveryInf == 0 and self.canLearn():
                 print("freezing python because after", self.model.run_inferences(), "iterations I need to learn (between)", level=2)
                 self.freezeInf("LearningComes")
                 self.dauerLearnANN(self.conf.ComesALearn)
@@ -259,12 +259,27 @@ class AbstractRLAgent(AbstractAgent):
 
 
         
+#    def calculateReward(self, *gameState):
+#        vvec1_hist, vvec2_hist, otherinput_hist, action_hist = gameState
+#        stay_on_street = abs(otherinput_hist[0].CenterDist)
+#        stay_on_street = round(0 if stay_on_street < 5 else self.wallhitPunish if stay_on_street >= 10 else stay_on_street/10, 3)
+#        speed = otherinput_hist[0].SpeedSteer.speedInStreetDir / self.conf.MAXSPEED
+#        return speed - stay_on_street
+
+
+
+
     def calculateReward(self, *gameState):
         vvec1_hist, vvec2_hist, otherinput_hist, action_hist = gameState
+        progress_old = otherinput_hist[3].ProgressVec.Progress
+        progress_new = otherinput_hist[0].ProgressVec.Progress
+        if progress_old > 90 and progress_new < 10:
+            progress_new += 100
+        progress = round(progress_new-progress_old,3)
         stay_on_street = abs(otherinput_hist[0].CenterDist)
-        stay_on_street = round(0 if stay_on_street < 5 else self.wallhitPunish if stay_on_street >= 10 else stay_on_street/10, 3)
-        speed = otherinput_hist[0].SpeedSteer.speedInStreetDir / self.conf.MAXSPEED
-        return speed - stay_on_street
+        stay_on_street = round(0 if stay_on_street < 5 else self.wallhitPunish if stay_on_street >= 10 else stay_on_street/20, 3)
+        return progress-stay_on_street
+
 
 
     

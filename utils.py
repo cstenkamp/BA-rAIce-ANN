@@ -63,7 +63,7 @@ def fc_layer(input_tensor, input_size, output_size, name, is_trainable, batchnor
         if initializer == None:
             initializer = tf.truncated_normal_initializer(stddev=1.0)
         elif initializer == "fanin": #http://deeplearning.net/tutorial/lenet.html: fan-in is the number of inputs to a hidden unit
-            initializer = tf.random_uniform_initializer(1/np.sqrt(float(input_size)), 1/np.sqrt(float(input_size)))
+            initializer = tf.random_uniform_initializer(-1/np.sqrt(float(input_size)), 1/np.sqrt(float(input_size)))
             
         if is_trainable:
             trainvars["W_%s" % name] = weight_variable([input_size, output_size], "W_%s" % name, weightdecay, is_trainable=True, initializer=initializer)

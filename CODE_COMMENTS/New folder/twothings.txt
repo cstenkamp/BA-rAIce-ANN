@@ -1,4 +1,4 @@
 ZUM TWOTHINGS-BILD:
-[das war ein rl-net das mit -nolearn -nomemorykeep auf NUR sv-pretraineddata lief]
+[das war ein rl-net das mit -nolearn -nomemorykeep auf NUR sv-pretraineddata lief mit der DDPG-goal-function]
 wir sehen 2 dinge in dem graph: erstens high reward != weit gekommen
 und zweiten spiel ist immernoch indeterministisch (since epsilon=9)
