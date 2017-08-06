@@ -43,14 +43,14 @@ class Agent(AbstractRLAgent):
 #            return
 #            ##############DELETETHISPART ENDE##############
             
-            if self.canLearn() and np.random.random() > self.epsilon or True:
+            if self.canLearn() and np.random.random() > self.epsilon:
                 toUse, toSave = self.performNetwork(self.makeInferenceUsable((conv_inputs, other_inputs, stands_inputs)))
             else:
                 toUse, toSave = self.randomAction(gameState[2][0].SpeedSteer.velocity)
             
                 if len(self.memory) >= self.conf.replaystartsize:
                     try:
-                        self.epsilon = min(round(max(self.conf.startepsilon-((self.conf.startepsilon-self.conf.minepsilon)*((self.numIterations-self.conf.replaystartsize)/self.conf.finalepsilonframe)), self.conf.minepsilon), 5), 1)
+                        self.epsilon = min(round(max(self.conf.startepsilon-((self.conf.startepsilon-self.conf.minepsilon)*((self.model.run_inferences()-self.conf.replaystartsize)/self.conf.finalepsilonframe)), self.conf.minepsilon), 5), 1)
                     except: #there are two different kinds of what can be stored in the config for the memory-decrease
                         self.epsilon = min(round(max(self.epsilon-self.conf.epsilondecrease, self.conf.minepsilon), 5), 1)
                     
@@ -59,8 +59,8 @@ class Agent(AbstractRLAgent):
 
             if self.containers.showscreen:
                 infoscreen.print(toUse, containers=self.containers, wname="Last command")
-                if self.numIterations % 100 == 0:
-                    infoscreen.print(self.reinfNetSteps, "Iterations: >"+str(self.numIterations), containers=self.containers, wname="ReinfLearnSteps")
+                if self.model.run_inferences() % 100 == 0:
+                    infoscreen.print(self.model.step(), "Iterations: >"+str(self.model.run_inferences()), containers=self.containers, wname="ReinfLearnSteps")
 
             self.postRunInference(toUse, toSave)
     
@@ -102,8 +102,8 @@ class Agent(AbstractRLAgent):
         oldstates, actions, rewards, newstates, resetafters = zip(*memoryBatch)      
         #is already [[(c,f)],[a],[r],[(c,f)],[t]], however the actions are tuples, and we want argmax's... and netUsableOtherinputs
         actions = np.array([np.argmax(self.makeNetUsableAction((throttle, brake, steer))) for throttle, brake, steer in actions]) 
-        oldstates = [(np.array(i[0]), np.array(self.makeNetUsableOtherInputs(i[1]))) for i in oldstates]
-        newstates = [(np.array(i[0]), np.array(self.makeNetUsableOtherInputs(i[1]))) for i in newstates]#
+        oldstates = [(np.rollaxis(np.array(i[0]), 0, 3), np.array(self.makeNetUsableOtherInputs(i[1]))) for i in oldstates]
+        newstates = [(np.rollaxis(np.array(i[0]), 0, 3), np.array(self.makeNetUsableOtherInputs(i[1]))) for i in newstates]#
         return oldstates, actions, np.array(rewards), newstates, np.array(resetafters)
         
                 
@@ -112,12 +112,11 @@ class Agent(AbstractRLAgent):
         QLearnInputs = self.create_QLearnInputs_from_MemoryBatch(self.memory.sample(self.conf.batch_size))
         self.model.q_learn(QLearnInputs, False)
         
-        self.reinfNetSteps += 1
-        print("ReinfLearnSteps:", self.reinfNetSteps, level=3)
+        print("ReinfLearnSteps:", self.model.step(), level=3)
         if self.containers.showscreen:
-            infoscreen.print(self.reinfNetSteps, "Iterations: >"+str(self.numIterations), containers= self.containers, wname="ReinfLearnSteps")
+            infoscreen.print(self.model.step(), "Iterations: >"+str(self.model.run_inferences()), containers= self.containers, wname="ReinfLearnSteps")
                     
-        if self.reinfNetSteps % self.conf.checkpointall == 0 or self.numIterations >= self.conf.train_for:
+        if self.model.step() > 0 and self.model.step() % self.conf.checkpointall == 0 or self.model.run_inferences() >= self.conf.train_for:
             self.saveNet()      
                             
                 
@@ -132,7 +131,6 @@ class Agent(AbstractRLAgent):
         session = tf.Session(config=tf.ConfigProto(intra_op_parallelism_threads=2, allow_soft_placement=True))
         self.model = DDDQN_model(self.conf, self, session, isPretrain=isPretrain)
         self.model.initNet(load=(not self.start_fresh))
-        self.numIterations = 0
         self.isinitialized = True
             
         

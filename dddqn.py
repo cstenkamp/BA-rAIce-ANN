@@ -55,7 +55,7 @@ class DuelDQN():
             self.conv_inputs = tf.placeholder(tf.float32, shape=[None, self.conf.image_dims[0], self.conf.image_dims[1], self.conv_stacksize], name="conv_inputs")  if self.agent.usesConv else None
             self.ff_inputs = tf.placeholder(tf.float32, shape=[None, self.ff_stacksize*self.agent.ff_inputsize], name="ff_inputs")  if self.agent.ff_inputsize else None
             self.stands_inputs = tf.placeholder(tf.float32, shape=[None], name="standing_inputs") #necessary for settozero            
-            self.Qout, self.predict = self._inference(self.conv_inputs, self.ff_inputs, self.stands_inputs)
+            self.Qout, self.Qmax, self.predict = self._inference(self.conv_inputs, self.ff_inputs, self.stands_inputs)
             
             #THIS IS SV_LEARN 
             self.targetA = tf.placeholder(shape=[None],dtype=tf.int32)
@@ -109,7 +109,7 @@ class DuelDQN():
         self.Value = slim.batch_norm(tf.matmul(self.streamV,self.VW))
   
         Qout = self.Value + tf.subtract(self.Advantage,tf.reduce_mean(self.Advantage,axis=1,keep_dims=True))
-        #Qmax = tf.reduce_max(Qout, axis=1) #not necessary anymore because we use Double-Q
+        Qmax = tf.reduce_max(Qout, axis=1) #not necessary anymore because we use Double-Q, only used for the stateval for the evaluator
         predict = tf.argmax(Qout,1)
         
         def settozero(q):
@@ -127,7 +127,7 @@ class DuelDQN():
         if self.isInference:
             Qout = tf.cond(tf.reduce_sum(self.stands_inputs) > 0, lambda: settozero(Qout), lambda: Qout) #wenn du stehst, brauchste dich nicht mehr für die ohne gas zu interessieren
             
-        return Qout, predict 
+        return Qout, Qmax, predict 
     
 
     def _sv_training(self, loss): #svtrain is necessarily pretrain, but pretrain is not necessarily sv
@@ -295,7 +295,10 @@ class DDDQN_model():
             self.targetQN.pretrain_episode += 1
             self.onlineQN.pretrain_episode += 1
     def step(self):
-        return self.onlineQN.step_tf.eval(self.session)
+        return self.onlineQN.step #wird bei jedem qlearn-step ge-evalt
+    def run_inferences(self):
+        return self.targetQN.run_inferences #wird bei jeder inference increased
+        
         
     #expects a whole s,a,r,s,t - tuple, needs however only s & a
     def getAccuracy(self, batch):
@@ -312,7 +315,7 @@ class DDDQN_model():
         
     #expects only a state (and no stands_inputs)
     def statevalue(self, statesBatch):
-        return self.session.run(tf.reduce_max(self.targetQN.Qout, axis=1), feed_dict=self.targetQN.feed_dict(statesBatch))
+        return self.session.run(self.targetQN.Qmax, feed_dict=self.targetQN.feed_dict(statesBatch))
     
     
     #expects a whole s,a,r,s,t - tuple, needs however only s & a

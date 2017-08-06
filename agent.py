@@ -26,7 +26,6 @@ class AbstractAgent(object):
         self.isinitialized = False
         self.containers = containers  
         self.conf = conf
-        self.numIterations = 0
         self.ff_inputsize = 0
         self.usesConv = True
         self.conv_stacked = True
@@ -39,10 +38,7 @@ class AbstractAgent(object):
         if self.conf.UPDATE_ONLY_IF_NEW and self.containers.inputval.alreadyread:
             return False
         return True
-        
-    def preRunInference(self):       
-        self.numIterations += 1
-    
+            
     def postRunInference(self, toUse, toSave): #toUse will already be a prepared string, toSave will be raw.
         self.containers.outputval.update(toUse, toSave, self.containers.inputval.CTimestamp, self.containers.inputval.STimestamp)  
     
@@ -133,8 +129,7 @@ class AbstractRLAgent(AbstractAgent):
     def initNetwork(self):    
         assert self.containers is not None, "if you init the net for a RL-run, the containers must not be None!"
         self.episode_statevals = []  #für evaluator
-        self.episodes = 0 #für evaluator
-        self.reinfNetSteps = 0 #für evaluator
+        self.episodes = 0 #für evaluator, wird bei jedem neustart auf null gesetzt aber das ist ok dafür
         self.numInferencesAfterLearn = 0
         self.numLearnAfterInference = 0
         self.last_random_timestamp = 0
@@ -156,7 +151,7 @@ class AbstractRLAgent(AbstractAgent):
             r = self.calculateReward(*gameState)
             conv_inputs, other_inputs, _ = self.getAgentState(*gameState)
             s2 = (conv_inputs, other_inputs)
-            markovtuple = (s,a,r,s2,False)            
+            markovtuple = [s,a,r,s2,False]           
             
             self.memory.append(markovtuple)  
             
@@ -198,14 +193,13 @@ class AbstractRLAgent(AbstractAgent):
 
     def preRunInference(self, gameState, pastState):
         self.addToMemory(gameState, pastState)
-        super().preRunInference()
         
 
     def postRunInference(self, toUse, toSave):
         super().postRunInference(toUse, toSave)
         if self.conf.learnMode == "between":
-            if self.numIterations % self.conf.ForEveryInf == 0:
-                print("freezing python because after", self.numIterations, "iterations I need to learn (between)", level=2)
+            if self.model.run_inferences() % self.conf.ForEveryInf == 0:
+                print("freezing python because after", self.model.run_inferences(), "iterations I need to learn (between)", level=2)
                 self.freezeInf("LearningComes")
                 self.dauerLearnANN(self.conf.ComesALearn)
                 self.unFreezeInf("LearningComes")
@@ -216,12 +210,12 @@ class AbstractRLAgent(AbstractAgent):
 
     def canLearn(self):
         return len(self.memory) > self.conf.batch_size+self.conf.history_frame_nr+1 and \
-               len(self.memory) > self.conf.replaystartsize and self.numIterations < self.conf.train_for
+               len(self.memory) > self.conf.replaystartsize and self.model.run_inferences() < self.conf.train_for
 
 
     def dauerLearnANN(self, learnSteps):
         i = 0
-        while self.containers.KeepRunning and self.numIterations <= self.conf.train_for and i < learnSteps:
+        while self.containers.KeepRunning and self.model.run_inferences() <= self.conf.train_for and i < learnSteps:
             cando = True
             #hier gehts darum das learnen zu freezen bis die Inference eingeholt hat. (falls update_frequency gesetzt)
             if self.conf.ForEveryInf and self.conf.ComesALearn and self.conf.learnMode == "parallel":
@@ -245,9 +239,9 @@ class AbstractRLAgent(AbstractAgent):
             i += 1
                                          
         self.unFreezeInf("updateFrequency") #kann hier ruhig sein, da es eh nur unfreezed falls es aufgrund von diesem grund gefreezed war.
-        if self.numIterations >= self.conf.train_for: #if you exited because you're completely done
+        if self.model.run_inferences() >= self.conf.train_for: #if you exited because you're completely done
             self.saveNet()
-            print("Stopping learning because I'm done after", self.numIterations, "inferences", level=10)
+            print("Stopping learning because I'm done after", self.model.run_inferences(), "inferences", level=10)
         
            
     def saveNet(self):
@@ -333,7 +327,7 @@ class AbstractRLAgent(AbstractAgent):
         if self.containers.showscreen:
                 infoscreen.print("rw:", avg_rewards, "Q:", avg_values, "prg:", progress, "time:", laptime, "(v)" if valid else "", containers=self.containers, wname="Last Epsd")
         
-        self.evaluator.add_episode([avg_rewards, avg_values, progress, laptime], nr=self.episodes, startMemoryEntry=mem_epi_slice[0], endMemoryEntry=mem_epi_slice[1], endIteration=self.numIterations, reinfNetSteps=self.reinfNetSteps, endEpsilon=self.epsilon)
+        self.evaluator.add_episode([avg_rewards, avg_values, progress, laptime], nr=self.episodes, startMemoryEntry=mem_epi_slice[0], endMemoryEntry=mem_epi_slice[1], endIteration=self.model.run_inferences(), reinfNetSteps=self.model.step(), endEpsilon=self.epsilon)
         
                          
             

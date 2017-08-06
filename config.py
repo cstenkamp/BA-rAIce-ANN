@@ -51,7 +51,7 @@ class Config():
     finalepsilonframe = 100000  #I could use epsilondecrease = 0.0001 instead, however then every new run epsilon would reset to startepsilon (since it doesn't depend on numIterations then)
     minepsilon = 0.005
     q_decay = 0.99
-    checkpointall = 10 #RLsteps, not inferences!
+    checkpointall = 1000 #RLsteps, not inferences!
     
     #LEARN SETTINGS    
     wallhit_ends_episode = True #problem: wenn es das nicht tun würde, würde er beim lernen den Q-val des folgestates mitbeachten und denken "oh, gegen die Wand fahren ist voll gut"...
@@ -65,7 +65,7 @@ class Config():
     use_constantbutbigmemory = False
     visionvecdtype = np.int8 #wäre es np.bool würde er den rand als street sehen!
     keep_memory = True
-    ForEveryInf, ComesALearn = 40, 10
+    ForEveryInf, ComesALearn = 400, 100
     learnMode = "between" #"parallel", "between", "remote" (the latter is tobedone)
 
     
