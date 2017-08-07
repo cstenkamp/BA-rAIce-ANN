@@ -204,13 +204,10 @@ class Critic(object):
         
 class DDPG_model():
     
-    def __init__(self, conf, agent, session, state_dim, action_dim, action_bound):
+    def __init__(self, conf, agent, session):
         self.conf = conf
         self.agent = agent
         self.session = session
-        self.s_dim = state_dim
-        self.a_dim = action_dim
-        self.action_bound = action_bound
         self.initNet()
         
         
@@ -225,6 +222,8 @@ class DDPG_model():
         
     
         
+    #actor predicts action. critic predicts q-value of action. That is compared to the actual q-value of action. (TD-Error)
+    #online-actor predicts new actions. actor uses critic's gradients to train, too.
     def train_step(self, batch):
         oldstates, actions, rewards, terminals, newstates = batch
 
@@ -244,13 +243,13 @@ class DDPG_model():
         return np.amax(target_Q)
         
     def inference(self, oldstates):
-        return self.actor.predict(oldstates, "target")
+        return self.actor.predict(oldstates, "online") #ist halt schneller wenn online.
         
 
-def train(sess, env, model):
-    
-    
-
+        
+        
+        
+def train(sess, env, model, s_dim, a_dim):
     # Initialize replay memory
     replay_buffer = ReplayBuffer(BUFFER_SIZE, RANDOM_SEED)
 
@@ -268,12 +267,11 @@ def train(sess, env, model):
 
             # Added exploration noise
             
-            a = model.actor.predict(np.reshape(s, (1, 3))) + (1. / (1. + i))
+            a = model.inference(np.reshape(s, (1, 3))) + (1. / (1. + i))
             
             s2, r, terminal, info = env.step(a[0])
 
-            replay_buffer.add(np.reshape(s, (model.s_dim,)), np.reshape(a, (model.a_dim,)), r,
-                              terminal, np.reshape(s2, (model.s_dim,)))
+            replay_buffer.add(np.reshape(s, (s_dim,)), np.reshape(a, (a_dim,)), r, terminal, np.reshape(s2, (s_dim,)))
 
             # Keep adding experience to the memory until
             # there are at least minibatch size samples
@@ -282,18 +280,13 @@ def train(sess, env, model):
                 
                     
                 ep_ave_max_q += model.train_step(batch)
-                    
-                # Calculate targets
-              
+                
 
             s = s2
             ep_reward += r
 
             if terminal:
-
-
                 print('| Reward: %.2i' % int(ep_reward), " | Episode", i, '| Qmax: %.4f' % (ep_ave_max_q / float(j)))
-
                 break
 
 
@@ -323,7 +316,7 @@ def main(_):
         # Ensure action bound is symmetric
         assert (env.action_space.high == -env.action_space.low)
 
-        model = DDPG_model(conf, myAgent, tf.Session(), state_dim, action_dim, action_bound)
+        model = DDPG_model(conf, myAgent, tf.Session())
 
        
         
@@ -334,7 +327,7 @@ def main(_):
             else:
                 env = wrappers.Monitor(env, MONITOR_DIR, force=True)
 
-        train(sess, env, model)
+        train(sess, env, model, state_dim, action_dim)
 
         if GYM_MONITOR_EN:
             env.monitor.close()
