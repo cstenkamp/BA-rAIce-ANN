@@ -83,6 +83,9 @@ class Config():
     INCLUDE_ACCPLUSBREAK = False
     #for continuus algorithms
     num_actions = 3
+    action_bounds = [(0, 1), (0, 1), (-1, 1)]
+    actor_lr = 0.0001
+    critic_lr = 0.001
     
     #DEBUG STUFF
     UPDATE_ONLY_IF_NEW = False #sendet immer nach jedem update -> Wenn False sendet er wann immer er was kriegt

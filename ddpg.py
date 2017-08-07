@@ -277,12 +277,13 @@ def TPSample(conf, agent, batchsize):
     
 
 if __name__ == '__main__':       
+    tf.reset_default_graph()
     import config
     conf = config.Config()
     conf.target_update_tau = 1e-3
     conf.num_actions = 1
     import read_supervised
-    from server import Containers; 
+    from server import Containers
     import dqn_rl_agent
     myAgent = dqn_rl_agent.Agent(conf, Containers(), True)
     trackingpoints = read_supervised.TPList(conf.LapFolderName, conf.use_second_camera, conf.msperframe, conf.steering_steps, conf.INCLUDE_ACCPLUSBREAK)

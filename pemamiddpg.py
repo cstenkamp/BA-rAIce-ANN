@@ -62,60 +62,61 @@ def _netCopyOps(fromNet, toNet, tau = 1):
         else:
             op_holder.append(toPast[idx].assign((var.value()*tau) + ((1-tau)*toPast[idx].value())))
     return op_holder
-
-    
-def _runMultipleOps(op_holder,sess):
-    for op in op_holder:
-        sess.run(op)      
-        
-        
-        
+       
         
         
         
 class actorNet():
-     def __init__(self, conf, agent, s_dim, a_dim, action_bound, outerscope="actor", name="online", reuse=False):       
+     def __init__(self, conf, agent, outerscope="actor", name="online"):       
+        tanh_min_bounds,tanh_max_bounds = np.array([-1]), np.array([1])
+        min_bounds, max_bounds = np.array(list(zip(*conf.action_bounds))) 
         self.name = name
+        self.conf = conf
+        self.agent = agent
+        num_actions = conf.num_actions
+        conv_stacksize = (self.conf.history_frame_nr*2 if self.conf.use_second_camera else self.conf.history_frame_nr) if self.agent.conv_stacked else 1        
+        
+        s_dim = 3 #DELETEME
+
         with tf.variable_scope(name):
             self.inputs = tflearn.input_data(shape=[None, s_dim])
             net = tflearn.fully_connected(self.inputs, 400, activation='relu')
             net = tflearn.fully_connected(net, 300, activation='relu')
             # Final layer weights are init to Uniform[-3e-3, 3e-3]
             w_init = tflearn.initializations.uniform(minval=-0.003, maxval=0.003)
-            self.out = tflearn.fully_connected(net, a_dim, activation='tanh', weights_init=w_init)
+            self.outs = tflearn.fully_connected(net, num_actions, activation='tanh', weights_init=w_init)
             # Scale output to -action_bound to action_bound
-            self.scaled_out = tf.multiply(self.out, action_bound)
+            self.scaled_out = (((self.outs - tanh_min_bounds)/ (tanh_max_bounds - tanh_min_bounds)) * (max_bounds - min_bounds) + min_bounds) #broadcasts the bound arrays
             
+
         self.trainables = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope=outerscope+"/"+self.name)
+        self.ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS, scope=outerscope+"/"+self.name)      
         
         
         
         
         
 class Actor(object):
-    def __init__(self, session, state_dim, action_dim, action_bound, learning_rate, tau):
+    def __init__(self, conf, agent, session):
+        self.conf = conf
+        self.agent = agent
+        self.session = session
+        
         with tf.variable_scope("actor"):
+            
+            self.online = actorNet(conf, agent)
+            self.target = actorNet(conf, agent, name="target")
         
-            self.session = session
-            self.s_dim = state_dim
-            self.a_dim = action_dim
-            self.action_bound = action_bound
-            self.learning_rate = learning_rate
-            self.tau = tau
-    
-            self.online = actorNet(None, None, self.s_dim, self.a_dim, self.action_bound)
-            self.target = actorNet(None, None, self.s_dim, self.a_dim, self.action_bound, name="target")
-        
-            self.smoothTargetUpdate = _netCopyOps(self.online, self.target, self.tau)
+            self.smoothTargetUpdate = _netCopyOps(self.online, self.target, self.conf.target_update_tau)
     
             # This gradient will be provided by the critic network
-            self.action_gradient = tf.placeholder(tf.float32, [None, self.a_dim], name="actiongradient")
+            self.action_gradient = tf.placeholder(tf.float32, [None, self.conf.num_actions], name="actiongradient")
     
             # Combine the gradients here
             self.actor_gradients = tf.gradients(self.online.scaled_out, self.online.trainables, -self.action_gradient)
     
             # Optimization Op
-            self.optimize = tf.train.AdamOptimizer(self.learning_rate).apply_gradients(zip(self.actor_gradients, self.online.trainables))
+            self.optimize = tf.train.AdamOptimizer(self.conf.actor_lr).apply_gradients(zip(self.actor_gradients, self.online.trainables))
     
 
 
@@ -135,19 +136,28 @@ class Actor(object):
         
         
 class criticNet():
-     def __init__(self, conf, agent, s_dim, a_dim, action_bound=None, outerscope="critic", name="online", reuse=False):       
-        self.name = name
+     def __init__(self, conf, agent, outerscope="critic", name="online"):       
+        self.conf = conf
+        self.agent = agent
+        self.name = name  
+        num_actions = conf.num_actions
+        conv_stacksize = (self.conf.history_frame_nr*2 if self.conf.use_second_camera else self.conf.history_frame_nr) if self.agent.conv_stacked else 1
+        
+        #deleteme
+        s_dim = 3
+
         with tf.variable_scope(name):
-            self.inputs = tflearn.input_data(shape=[None, s_dim])
-            self.action = tflearn.input_data(shape=[None, a_dim])
-            net = tflearn.fully_connected(self.inputs, 400, activation='relu')
+            self.conv_inputs = tflearn.input_data(shape=[None, s_dim])
+            self.actions = tflearn.input_data(shape=[None, num_actions])
+            net = tflearn.fully_connected(self.conv_inputs, 400, activation='relu')
             t1 = tflearn.fully_connected(net, 300)
-            t2 = tflearn.fully_connected(self.action, 300)
-            net = tflearn.activation(tf.matmul(net, t1.W) + tf.matmul(self.action, t2.W) + t2.b, activation='relu')
+            t2 = tflearn.fully_connected(self.actions, 300)
+            net = tflearn.activation(tf.matmul(net, t1.W) + tf.matmul(self.actions, t2.W) + t2.b, activation='relu')
             w_init = tflearn.initializations.uniform(minval=-0.003, maxval=0.003)
             self.Q = tflearn.fully_connected(net, 1, weights_init=w_init)
             
         self.trainables = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope=outerscope+"/"+self.name)
+        self.ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS, scope=outerscope+"/"+self.name)      
         
        
         
@@ -156,37 +166,35 @@ class criticNet():
         
 
 class Critic(object):
-    def __init__(self, session, state_dim, action_dim, learning_rate, tau):
+    def __init__(self, conf, agent, session):
+        self.conf = conf
+        self.agent = agent
+        self.session = session
         
         with tf.variable_scope("critic"):
-            self.session = session
-            self.s_dim = state_dim
-            self.a_dim = action_dim
-            self.learning_rate = learning_rate
-            self.tau = tau
-                    
-            self.online = criticNet(None, None, self.s_dim, self.a_dim)
-            self.target = criticNet(None, None, self.s_dim, self.a_dim, name="target")
+            
+            self.online = criticNet(conf, agent)
+            self.target = criticNet(conf, agent, name="target")
                 
-            self.smoothTargetUpdate = _netCopyOps(self.online, self.target, self.tau)
+            self.smoothTargetUpdate = _netCopyOps(self.online, self.target, self.conf.target_update_tau)
     
             self.target_Q = tf.placeholder(tf.float32, [None, 1], name="target_Q")
     
             self.loss = tf.losses.mean_squared_error(self.target_Q, self.online.Q)
-            self.optimize = tf.train.AdamOptimizer(self.learning_rate).minimize(self.loss)
+            self.optimize = tf.train.AdamOptimizer(self.conf.critic_lr).minimize(self.loss)
     
-            self.action_grads = tf.gradients(self.online.Q, self.online.action)
+            self.action_grads = tf.gradients(self.online.Q, self.online.actions)
 
 
     def train(self, inputs, action, target_Q):
-        return self.session.run([self.online.Q, self.optimize, self.loss], feed_dict={self.online.inputs: inputs,self.online.action: action,self.target_Q: target_Q})
+        return self.session.run([self.online.Q, self.optimize, self.loss], feed_dict={self.online.conv_inputs: inputs,self.online.actions: action,self.target_Q: target_Q})
 
     def predict(self, inputs, action, which="online"):
         net = self.online if which == "online" else self.target
-        return self.session.run(net.Q, feed_dict={net.inputs: inputs, net.action: action})
+        return self.session.run(net.Q, feed_dict={net.conv_inputs: inputs, net.actions: action})
 
     def action_gradients(self, inputs, actions):
-        return self.session.run(self.action_grads, feed_dict={self.online.inputs: inputs,self.online.action: actions})
+        return self.session.run(self.action_grads, feed_dict={self.online.conv_inputs: inputs,self.online.actions: actions})
 
     def update_target_network(self):
         self.session.run(self.smoothTargetUpdate)
@@ -208,18 +216,17 @@ class DDPG_model():
         
     def initNet(self):
         
-        self.actor = Actor(self.session, self.s_dim, self.a_dim, self.action_bound, ACTOR_LEARNING_RATE, TAU)
-        self.critic = Critic(self.session, self.s_dim, self.a_dim, CRITIC_LEARNING_RATE, TAU)     
-        
+        self.actor = Actor(self.conf, self.agent, self.session)
+        self.critic = Critic(self.conf, self.agent, self.session)     
         
         self.session.run(tf.global_variables_initializer())
-        _runMultipleOps(_netCopyOps(self.actor.target, self.actor.online), self.session)
-        _runMultipleOps(_netCopyOps(self.critic.target, self.critic.online), self.session)        
+        self.session.run(_netCopyOps(self.actor.target, self.actor.online))
+        self.session.run(_netCopyOps(self.critic.target, self.critic.online))      
         
     
         
     def train_step(self, batch):
-        oldstates, actions, rewards, newstates, terminals = batch
+        oldstates, actions, rewards, terminals, newstates = batch
 
         #Training the critic...
         target_q = self.critic.predict(newstates, self.actor.predict(newstates, "target"), "target")
@@ -231,11 +238,13 @@ class DDPG_model():
         grads = self.critic.action_gradients(oldstates, a_outs)
         self.actor.train(oldstates, grads[0])
 
-        
         self.actor.update_target_network()
         self.critic.update_target_network()
         
         return np.amax(target_Q)
+        
+    def inference(self, oldstates):
+        return self.actor.predict(oldstates, "target")
         
 
 def train(sess, env, model):
@@ -258,8 +267,9 @@ def train(sess, env, model):
                 env.render()
 
             # Added exploration noise
+            
             a = model.actor.predict(np.reshape(s, (1, 3))) + (1. / (1. + i))
-
+            
             s2, r, terminal, info = env.step(a[0])
 
             replay_buffer.add(np.reshape(s, (model.s_dim,)), np.reshape(a, (model.a_dim,)), r,
@@ -288,7 +298,18 @@ def train(sess, env, model):
 
 
 def main(_):
+    import config
+    conf = config.Config()
+    conf.target_update_tau = 1e-3
+    conf.num_actions = 1    
+    conf.action_bounds = [(-2, 2)]
+    import read_supervised
+    from server import Containers
+    import dqn_rl_agent
+    myAgent = dqn_rl_agent.Agent(conf, Containers(), True)
+    
     tf.reset_default_graph()
+    
     with tf.Session() as sess:
 
         env = gym.make(ENV_NAME)
@@ -302,7 +323,7 @@ def main(_):
         # Ensure action bound is symmetric
         assert (env.action_space.high == -env.action_space.low)
 
-        model = DDPG_model(None, None, tf.Session(), state_dim, action_dim, action_bound)
+        model = DDPG_model(conf, myAgent, tf.Session(), state_dim, action_dim, action_bound)
 
        
         
