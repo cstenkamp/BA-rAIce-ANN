@@ -10,7 +10,10 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' #so that TF doesn't show its warnings
 import numpy as np
 from tensorflow.contrib.framework import get_variables 
 import math
+import time
 from utils import convolutional_layer, fc_layer, variable_summary
+import tflearn
+
 
 #bases heavily on http://pemami4911.github.io/blog/2016/08/21/ddpg-rl.html
 
@@ -24,7 +27,7 @@ class criticNet() :
             self.agent = agent
             self.name = name  
             self.num_actions = conf.num_actions
-            self.h_size = 256
+            self.h_size = 100
             self.conv_stacksize = (self.conf.history_frame_nr*2 if self.conf.use_second_camera else self.conf.history_frame_nr) if self.agent.conv_stacked else 1
             
             self.conv_inputs = tf.placeholder(tf.float32, shape=[None, self.conf.image_dims[0], self.conf.image_dims[1], self.conv_stacksize], name="conv_inputs")  
@@ -37,9 +40,10 @@ class criticNet() :
             conv3 = convolutional_layer(conv2, 64, [3,3], [2,2], 64, "Conv3", tf.nn.relu, True, True, True, False, True, {}, variable_summary, initializer="fanin")                      #(?, 2, 2, 64)
             conv4 = convolutional_layer(conv3, 64, [4,4], [2,2], self.h_size, "Conv4", tf.nn.relu, True, True, True, False, False, {}, variable_summary, initializer="fanin")            #(?, 1, 1, 256)
             conv4_flat = tf.reshape(conv4, [-1, self.h_size])
-            fc1 = fc_layer(conv4_flat, self.h_size, 97, "FC1", True, True, True, False, tf.nn.relu, 1, {}, variable_summary, initializer="fanin")                 
+            fc1 = fc_layer(conv4_flat, self.h_size, 100, "FC1", True, True, True, False, tf.nn.relu, 1, {}, variable_summary, initializer="fanin")                 
             fc1 = tf.concat([fc1, self.actions], 1) 
-            self.Q = fc_layer(fc1, 100, 1, "FC2", True, True, True, False, tf.nn.relu, 1, {}, variable_summary, initializer="fanin")                 
+            fc2 = fc_layer(fc1, 103, 50, "FC2", True, True, True, False, tf.nn.relu, 1, {}, variable_summary, initializer="fanin")                 
+            self.Q = fc_layer(fc2, 50, 1, "FC3", True, False, True, False, tf.identity, 1, {}, variable_summary, initializer=tf.random_uniform_initializer(-3e-4, 3e-4))                 
         
             self.ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS, scope=outerscope+"/"+self.name)      
             self.trainables = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope=outerscope+"/"+self.name)
@@ -57,7 +61,7 @@ class actorNet():
             self.agent = agent
             self.name = name  
             self.num_actions = conf.num_actions
-            self.h_size = 256
+            self.h_size = 100
             self.action_bound = bounds #TODO: muss noch anders für brake & accelearation 
             self.conv_stacksize = (self.conf.history_frame_nr*2 if self.conf.use_second_camera else self.conf.history_frame_nr) if self.agent.conv_stacked else 1
             
@@ -72,7 +76,7 @@ class actorNet():
             conv4_flat = tf.reshape(conv4, [-1, self.h_size])
             fc1 = fc_layer(conv4_flat, self.h_size, 100, "FC1", True, True, True, False, tf.nn.relu, 1, {}, variable_summary, initializer="fanin")                 
             self.fc2 = fc_layer(fc1, 100, 3, "FC2", True, False, True, False, tf.nn.tanh, 1, {}, variable_summary, initializer="fanin")                  #kein batchnorm im letzten layer sonst ist tanh größer 1!
-            self.scaled = (((self.fc2 - tanh_min_bounds)/ (tanh_max_bounds - tanh_min_bounds)) * (max_bounds - min_bounds) + min_bounds) #broadcasts the action_bound array
+            self.scaled = (((self.fc2 - tanh_min_bounds)/ (tanh_max_bounds - tanh_min_bounds)) * (max_bounds - min_bounds) + min_bounds) #broadcasts the bound arrays
 
 
         self.ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS, scope=outerscope+"/"+self.name)      
@@ -110,7 +114,7 @@ class actor():
             self.conf = conf
             self.agent = agent
             self.session = session
-            self.learning_rate = 0.0001
+            self.learning_rate = 0.0001 #0.0001
             bounds = [(0, 1), (0, 1), (-1, 1)]
             
             self.online = actorNet(conf, agent, bounds)
@@ -162,7 +166,8 @@ class critic():
             self.loss = tf.reduce_mean(tf.square(self.predicted_q_value - self.online.Q))
             self.optimize = tf.train.AdamOptimizer(self.learning_rate).minimize(self.loss)    
             
-            self.action_grads = tf.gradients(self.online.Q, self.online.actions)
+            self.action_grads = tf.gradients(self.online.Q, self.online.actions) #letztere sind ja placeholders, kommend vom actor
+            self.action_grads = tf.stop_gradient(self.action_grads)
 
     def make_inputs(self, inputs):
         conv_inputs = [inputs[i][0] for i in range(len(inputs))]
@@ -224,23 +229,32 @@ class DDPG_model():
         human = np.array([np.argmax(myAgent.discretize(*i)) for i in actions])
         return np.mean(np.array(human == result, dtype=int))
         
+    def eval_TDError(self, batch):
+        oldstates, actions, rewards, newstates, terminals = batch
+        target_q = self.critic.predict(newstates, self.actor.predict(newstates))
+        cumrewards = [rewards[i] if terminals[i] else rewards[i]+self.conf.q_decay*target_q[i] for i in range(len(rewards))]
+        predicted_q_value =  self.critic.predict(oldstates, actions)
+        return(np.mean(abs(np.array(cumrewards)-predicted_q_value)))
+        
         
 ##########################################################################################
 
 
 def TPSample(conf, agent, batchsize):
     return read_supervised.create_QLearnInputs_from_PTStateBatch(*trackingpoints.next_batch(conf, agent, batchsize), agent)
-
+#    tmp[1] = [i[2] for i in tmp[1]]
+#    return tmp 
+    
 
 if __name__ == '__main__':       
     import config
     conf = config.Config()
+    conf.target_update_tau = 1
     import read_supervised
     from server import Containers; 
     import dqn_rl_agent
     myAgent = dqn_rl_agent.Agent(conf, Containers(), True)
     trackingpoints = read_supervised.TPList(conf.LapFolderName, conf.use_second_camera, conf.msperframe, conf.steering_steps, conf.INCLUDE_ACCPLUSBREAK)
-
 
     BATCHSIZE = 32   
 
@@ -253,13 +267,15 @@ if __name__ == '__main__':
         trackingpoints.reset_batch()
         trainBatch = TPSample(conf, myAgent, trackingpoints.numsamples)
         print("Iteration", i, "Accuracy",model.old_evaluate(trainBatch))  
+        print(model.eval_TDError(trainBatch))
         if i % 10 == 0:
             print(model.inference(trainBatch[0][:2])) #die ersten 2 states   
+            print(trainBatch[1][:2])
         trackingpoints.reset_batch()     
         while trackingpoints.has_next(BATCHSIZE):
             trainBatch = TPSample(conf, myAgent, BATCHSIZE)
             model.train_step(trainBatch)    
             
-#            
+    time.sleep(99999)
 
            
