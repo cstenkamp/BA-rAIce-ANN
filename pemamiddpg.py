@@ -8,49 +8,11 @@ Author: Patrick Emami
 """
 import tensorflow as tf
 import numpy as np
-import gym
-from gym import wrappers
 import tflearn
+import time
+import tensorflow.contrib.slim as slim
 
-from replay_buffer import ReplayBuffer
 
-# ==========================
-#   Training Parameters
-# ==========================
-# Max training steps
-MAX_EPISODES = 50000
-# Max episode length
-MAX_EP_STEPS = 1000
-# Base learning rate for the Actor network
-ACTOR_LEARNING_RATE = 0.0001
-# Base learning rate for the Critic Network
-CRITIC_LEARNING_RATE = 0.001
-# Discount factor
-GAMMA = 0.99
-# Soft target update param
-TAU = 0.001
-
-# ===========================
-#   Utility Parameters
-# ===========================
-# Render gym env during training
-RENDER_ENV = True
-# Use Gym Monitor
-GYM_MONITOR_EN = False
-# Gym environment
-ENV_NAME = 'Pendulum-v0'
-# Directory for storing gym results
-MONITOR_DIR = './results/gym_ddpg'
-# Directory for storing tensorboard summary results
-SUMMARY_DIR = './results/tf_ddpg'
-RANDOM_SEED = 1234
-# Size of replay buffer
-BUFFER_SIZE = 10000
-MINIBATCH_SIZE = 64
-
-# ===========================
-#   Actor and Critic DNNs
-# ===========================
 
 def _netCopyOps(fromNet, toNet, tau = 1):
     toCopy = fromNet.trainables
@@ -64,6 +26,11 @@ def _netCopyOps(fromNet, toNet, tau = 1):
     return op_holder
        
         
+def dense(x, units, activation=tf.identity, decay=None, minmax=None):
+    if minmax is None:
+        minmax = float(x.shape[1].value) ** -.5
+    return tf.layers.dense(x, units,activation=activation, kernel_initializer=tf.random_uniform_initializer(-minmax, minmax), kernel_regularizer=decay and tf.contrib.layers.l2_regularizer(1e-3))
+
         
         
 class actorNet():
@@ -73,19 +40,26 @@ class actorNet():
         self.name = name
         self.conf = conf
         self.agent = agent
-        num_actions = conf.num_actions
+        h_size = 100
         conv_stacksize = (self.conf.history_frame_nr*2 if self.conf.use_second_camera else self.conf.history_frame_nr) if self.agent.conv_stacked else 1        
         
-        s_dim = 3 #DELETEME
 
         with tf.variable_scope(name):
-            self.inputs = tflearn.input_data(shape=[None, s_dim])
-            net = tflearn.fully_connected(self.inputs, 400, activation='relu')
-            net = tflearn.fully_connected(net, 300, activation='relu')
-            # Final layer weights are init to Uniform[-3e-3, 3e-3]
-            w_init = tflearn.initializations.uniform(minval=-0.003, maxval=0.003)
-            self.outs = tflearn.fully_connected(net, num_actions, activation='tanh', weights_init=w_init)
-            # Scale output to -action_bound to action_bound
+            
+            self.conv_inputs = tf.placeholder(tf.float32, shape=[None, self.conf.image_dims[0], self.conf.image_dims[1], conv_stacksize], name="conv_inputs")  
+
+            rs_input = tf.reshape(self.conv_inputs, [-1, self.conf.image_dims[0], self.conf.image_dims[1], conv_stacksize]) #final dimension = number of color channels*number of stacked (history-)frames                  
+            #convolutional_layer(input_tensor, input_channels, kernel_size, stride, output_channels, name, act, is_trainable, batchnorm, is_training, weightdecay=False, pool=True, trainvars=None, varSum=None, initializer=None)
+           
+            self.conv1 = slim.conv2d(inputs=rs_input,num_outputs=32,kernel_size=[4,6],stride=[2,3],padding='VALID', biases_initializer=None, normalizer_fn=slim.batch_norm)
+            self.conv2 = slim.conv2d(inputs=self.conv1,num_outputs=64,kernel_size=[4,4],stride=[2,2],padding='VALID', biases_initializer=None, normalizer_fn=slim.batch_norm)
+            self.conv3 = slim.conv2d(inputs=self.conv2,num_outputs=64,kernel_size=[3,3],stride=[1,1],padding='VALID', biases_initializer=None, normalizer_fn=slim.batch_norm)
+            self.conv4 = slim.conv2d(inputs=self.conv3,num_outputs=h_size, kernel_size=[4,4],stride=[1,1],padding='VALID', biases_initializer=None, normalizer_fn=slim.batch_norm)          
+            self.conv4_flat = tf.reshape(self.conv4, [-1, h_size])
+            
+            self.fc1 = dense(self.conv4_flat, 50, tf.nn.relu)
+            self.fc2 = dense(self.fc1, conf.num_actions, tf.nn.tanh, minmax = 3e-4)
+            self.outs = self.fc2
             self.scaled_out = (((self.outs - tanh_min_bounds)/ (tanh_max_bounds - tanh_min_bounds)) * (max_bounds - min_bounds) + min_bounds) #broadcasts the bound arrays
             
 
@@ -121,14 +95,18 @@ class Actor(object):
 
 
     def train(self, inputs, a_gradient):
-        self.session.run(self.optimize, feed_dict={self.online.inputs: inputs,self.action_gradient: a_gradient})
+        self.session.run(self.optimize, feed_dict={self.online.conv_inputs: self.make_inputs(inputs),self.action_gradient: a_gradient})
 
     def predict(self, inputs, which="online"):
         net = self.online if which == "online" else self.target
-        return self.session.run(net.scaled_out, feed_dict={net.inputs: inputs})
+        return self.session.run(net.scaled_out, feed_dict={net.conv_inputs: self.make_inputs(inputs)})
 
     def update_target_network(self):
         self.session.run(self.smoothTargetUpdate)
+        
+    def make_inputs(self, inputs):
+        conv_inputs = [inputs[i][0] for i in range(len(inputs))]
+        return conv_inputs        
 
         
         
@@ -140,21 +118,25 @@ class criticNet():
         self.conf = conf
         self.agent = agent
         self.name = name  
-        num_actions = conf.num_actions
+        h_size = 100
         conv_stacksize = (self.conf.history_frame_nr*2 if self.conf.use_second_camera else self.conf.history_frame_nr) if self.agent.conv_stacked else 1
         
-        #deleteme
-        s_dim = 3
-
         with tf.variable_scope(name):
-            self.conv_inputs = tflearn.input_data(shape=[None, s_dim])
-            self.actions = tflearn.input_data(shape=[None, num_actions])
-            net = tflearn.fully_connected(self.conv_inputs, 400, activation='relu')
-            t1 = tflearn.fully_connected(net, 300)
-            t2 = tflearn.fully_connected(self.actions, 300)
-            net = tflearn.activation(tf.matmul(net, t1.W) + tf.matmul(self.actions, t2.W) + t2.b, activation='relu')
-            w_init = tflearn.initializations.uniform(minval=-0.003, maxval=0.003)
-            self.Q = tflearn.fully_connected(net, 1, weights_init=w_init)
+            
+            self.conv_inputs = tf.placeholder(tf.float32, shape=[None, self.conf.image_dims[0], self.conf.image_dims[1], conv_stacksize], name="conv_inputs")  
+            self.actions = tf.placeholder(tf.float32, shape=[None, self.conf.num_actions], name="action_inputs")  
+            
+            rs_input = tf.reshape(self.conv_inputs, [-1, self.conf.image_dims[0], self.conf.image_dims[1], conv_stacksize]) #final dimension = number of color channels*number of stacked (history-)frames                  
+            
+            self.conv1 = slim.conv2d(inputs=rs_input,num_outputs=32,kernel_size=[4,6],stride=[2,3],padding='VALID', biases_initializer=None, normalizer_fn=slim.batch_norm)
+            self.conv2 = slim.conv2d(inputs=self.conv1,num_outputs=64,kernel_size=[4,4],stride=[2,2],padding='VALID', biases_initializer=None, normalizer_fn=slim.batch_norm)
+            self.conv3 = slim.conv2d(inputs=self.conv2,num_outputs=64,kernel_size=[3,3],stride=[1,1],padding='VALID', biases_initializer=None, normalizer_fn=slim.batch_norm)
+            self.conv4 = slim.conv2d(inputs=self.conv3,num_outputs=h_size, kernel_size=[4,4],stride=[1,1],padding='VALID', biases_initializer=None, normalizer_fn=slim.batch_norm)          
+            self.conv4_flat = tf.reshape(self.conv4, [-1, h_size])
+            
+            fc1 = tf.concat([self.conv4_flat, self.actions], 1) 
+            fc2 = dense(fc1, 50, tf.nn.relu, decay=None)
+            self.Q = dense(fc2, conf.num_actions, decay=True, minmax=1e-4)
             
         self.trainables = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope=outerscope+"/"+self.name)
         self.ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS, scope=outerscope+"/"+self.name)      
@@ -187,18 +169,21 @@ class Critic(object):
 
 
     def train(self, inputs, action, target_Q):
-        return self.session.run([self.online.Q, self.optimize, self.loss], feed_dict={self.online.conv_inputs: inputs,self.online.actions: action,self.target_Q: target_Q})
+        return self.session.run([self.online.Q, self.optimize, self.loss], feed_dict={self.online.conv_inputs: self.make_inputs(inputs), self.online.actions: action,self.target_Q: target_Q})
 
     def predict(self, inputs, action, which="online"):
         net = self.online if which == "online" else self.target
-        return self.session.run(net.Q, feed_dict={net.conv_inputs: inputs, net.actions: action})
+        return self.session.run(net.Q, feed_dict={net.conv_inputs: self.make_inputs(inputs), net.actions: action})
 
     def action_gradients(self, inputs, actions):
-        return self.session.run(self.action_grads, feed_dict={self.online.conv_inputs: inputs,self.online.actions: actions})
+        return self.session.run(self.action_grads, feed_dict={self.online.conv_inputs: self.make_inputs(inputs), self.online.actions: actions})
 
     def update_target_network(self):
         self.session.run(self.smoothTargetUpdate)
-
+        
+    def make_inputs(self, inputs):
+        conv_inputs = [inputs[i][0] for i in range(len(inputs))]
+        return conv_inputs
         
     
         
@@ -225,112 +210,78 @@ class DDPG_model():
     #actor predicts action. critic predicts q-value of action. That is compared to the actual q-value of action. (TD-Error)
     #online-actor predicts new actions. actor uses critic's gradients to train, too.
     def train_step(self, batch):
-        oldstates, actions, rewards, terminals, newstates = batch
-
+        oldstates, actions, rewards, newstates, terminals = batch
         #Training the critic...
         target_q = self.critic.predict(newstates, self.actor.predict(newstates, "target"), "target")
         cumrewards = np.reshape([rewards[i] if terminals[i] else rewards[i]+0.99*target_q[i] for i in range(len(rewards))], (len(rewards),1))
         target_Q, _, loss = self.critic.train(oldstates, actions, cumrewards)
-
         #training the actor...        
         a_outs = self.actor.predict(oldstates)
         grads = self.critic.action_gradients(oldstates, a_outs)
         self.actor.train(oldstates, grads[0])
-
+        #updating the targetnets...
         self.actor.update_target_network()
         self.critic.update_target_network()
-        
-        return np.amax(target_Q)
+        return np.max(target_Q)
         
     def inference(self, oldstates):
         return self.actor.predict(oldstates, "online") #ist halt schneller wenn online.
-        
+
+    def evaluate(self, batch):
+        oldstates, actions, rewards, newstates, terminals = batch
+#        result = np.array([np.argmax(self.agent.discretize(*i)) for i in self.actor.predict(oldstates)])
+#        human = np.array([np.argmax(myAgent.discretize(*i)) for i in actions])
+        actorOuts = self.inference(oldstates)
+        return np.mean(np.array([abs(actorOuts[i][0] -actions[i][0]) for i in range(len(actions))]))
 
         
+
+
+def TPSample(conf, agent, batchsize, trackingpoints):
+    import read_supervised
+    tmp = list(read_supervised.create_QLearnInputs_from_PTStateBatch(*trackingpoints.next_batch(conf, agent, batchsize), agent))
+    tmp[1] = [[i[2]] for i in tmp[1]]
+    return tmp         
         
+    
         
-def train(sess, env, model, s_dim, a_dim):
-    # Initialize replay memory
-    replay_buffer = ReplayBuffer(BUFFER_SIZE, RANDOM_SEED)
-
-    for i in range(MAX_EPISODES):
-
-        s = env.reset()
-
-        ep_reward = 0
-        ep_ave_max_q = 0
-
-        for j in range(MAX_EP_STEPS):
-
-            if RENDER_ENV:
-                env.render()
-
-            # Added exploration noise
-            
-            a = model.inference(np.reshape(s, (1, 3))) + (1. / (1. + i))
-            
-            s2, r, terminal, info = env.step(a[0])
-
-            replay_buffer.add(np.reshape(s, (s_dim,)), np.reshape(a, (a_dim,)), r, terminal, np.reshape(s2, (s_dim,)))
-
-            # Keep adding experience to the memory until
-            # there are at least minibatch size samples
-            if replay_buffer.size() > MINIBATCH_SIZE:
-                batch = replay_buffer.sample_batch(MINIBATCH_SIZE)
-                
-                    
-                ep_ave_max_q += model.train_step(batch)
-                
-
-            s = s2
-            ep_reward += r
-
-            if terminal:
-                print('| Reward: %.2i' % int(ep_reward), " | Episode", i, '| Qmax: %.4f' % (ep_ave_max_q / float(j)))
-                break
 
 
-def main(_):
+def main():
     import config
     conf = config.Config()
     conf.target_update_tau = 1e-3
     conf.num_actions = 1    
-    conf.action_bounds = [(-2, 2)]
+    conf.action_bounds = [(-1, 1)]
     import read_supervised
     from server import Containers
     import dqn_rl_agent
     myAgent = dqn_rl_agent.Agent(conf, Containers(), True)
     
+    trackingpoints = read_supervised.TPList(conf.LapFolderName, conf.use_second_camera, conf.msperframe, conf.steering_steps, conf.INCLUDE_ACCPLUSBREAK)
+    BATCHSIZE = 64
+    
     tf.reset_default_graph()
     
-    with tf.Session() as sess:
+    model = DDPG_model(conf, myAgent, tf.Session())
 
-        env = gym.make(ENV_NAME)
-        np.random.seed(RANDOM_SEED)
-        tf.set_random_seed(RANDOM_SEED)
-        env.seed(RANDOM_SEED)
+    
+    for i in range(1000):
+        trackingpoints.reset_batch()
+        trainBatch = TPSample(conf, myAgent, trackingpoints.numsamples, trackingpoints)
+        print("Iteration", i, "Accuracy (0 is best)",model.evaluate(trainBatch))  
+        if i % 10 == 0:
+            print(np.array(model.inference(trainBatch[0][:2]))) #die ersten 2 states   
+            print(np.array(trainBatch[1][:2]))
+        trackingpoints.reset_batch()     
+        while trackingpoints.has_next(BATCHSIZE):
+            trainBatch = TPSample(conf, myAgent, BATCHSIZE, trackingpoints)
+            model.train_step(trainBatch)    
+            
+    time.sleep(99999)    
 
-        state_dim = env.observation_space.shape[0]
-        action_dim = env.action_space.shape[0]
-        action_bound = env.action_space.high
-        # Ensure action bound is symmetric
-        assert (env.action_space.high == -env.action_space.low)
-
-        model = DDPG_model(conf, myAgent, tf.Session())
-
-       
-        
-        if GYM_MONITOR_EN:
-            if not RENDER_ENV:
-                env = wrappers.Monitor(
-                    env, MONITOR_DIR, video_callable=False, force=True)
-            else:
-                env = wrappers.Monitor(env, MONITOR_DIR, force=True)
-
-        train(sess, env, model, state_dim, action_dim)
-
-        if GYM_MONITOR_EN:
-            env.monitor.close()
-
+    
+    
 if __name__ == '__main__':
-    tf.app.run()
+    main()
+            
