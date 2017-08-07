@@ -126,7 +126,7 @@ class actor():
             self.conf = conf
             self.agent = agent
             self.session = session
-            self.learning_rate = 0.001 #0.0001
+            self.learning_rate = 0.0001 #0.0001
             bounds = [(0, 1), (0, 1), (-1, 1)]
             
             self.online = actorNet(conf, agent, bounds)
