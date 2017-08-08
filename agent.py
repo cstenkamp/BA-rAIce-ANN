@@ -8,12 +8,10 @@ import time
 current_milli_time = lambda: int(round(time.time() * 1000))
 import numpy as np
 import threading
-import tensorflow as tf
 import os
 ####own classes###
 from myprint import myprint as print
 import read_supervised
-import infoscreen
 from evaluator import evaluator
 from inefficientmemory import Memory
 
@@ -26,14 +24,18 @@ class AbstractAgent(object):
         self.isinitialized = False
         self.containers = containers  
         self.conf = conf
-        self.ff_inputsize = 0
-        self.usesConv = True
-        self.conv_stacked = True
-        self.ff_stacked = False
-        self.model = None
-        self.graph = tf.Graph()
-        
-    ##############functions that should be impemented##########
+        self.isSupervised = False #wird überschrieben
+        self.isContinuous = False #wird überschrieben
+        self.ff_inputsize = 0     #wird überschrieben
+        self.usesConv = True      #wird überschrieben
+        self.conv_stacked = True  #wird überschrieben
+        self.ff_stacked = False   #wird überschrieben
+        self.model = None         #wird überschrieben
+    
+    ###########################################################################    
+    #################### Necessary functions ##################################
+    ###########################################################################
+    
     def checkIfInference(self):
         if self.conf.UPDATE_ONLY_IF_NEW and self.containers.inputval.alreadyread:
             return False
@@ -41,6 +43,10 @@ class AbstractAgent(object):
             
     def postRunInference(self, toUse, toSave): #toUse will already be a prepared string, toSave will be raw.
         self.containers.outputval.update(toUse, toSave, self.containers.inputval.CTimestamp, self.containers.inputval.STimestamp)  
+    
+    ###########################################################################
+    ################functions that may be overwritten##########################
+    ###########################################################################
     
     #creates the Agents state from the real state. this is the base version, other agents may overwrite it.
     def getAgentState(self, vvec1_hist, vvec2_hist, otherinput_hist, action_hist): 
@@ -59,7 +65,7 @@ class AbstractAgent(object):
         return action_hist[0] 
     
     def makeNetUsableAction(self, action):
-        return self.discretize(*action)
+        return np.argmax(self.discretize(*action))
         
     #state is either (s,a,r,s2,False) or only s. what needs to be done is make everything an array, and make action & otherinputs netusable
     def makeInferenceUsable(self, state):
@@ -71,17 +77,36 @@ class AbstractAgent(object):
             return ([s], [a], [r], [s2], [t])
         except ValueError: #too many values to unpack
             return [(np.rollaxis(state[0], 0, 3), self.makeNetUsableOtherInputs(state[1]))] 
+                    
+                    
+    def initForDriving(self, *args, **kwargs):
+        self.show_plots = kwargs["show_plots"] if "show_plots" in kwargs else True 
+        self.episode_statevals = []  #für evaluator
+        self.episodes = 0 #für evaluator, wird bei jedem neustart auf null gesetzt aber das ist ok dafür
+        self.evaluator = evaluator(self.containers, self, self.show_plots, self.conf.save_xml,      \
+                                   ["average rewards", "average Q-vals", "progress", "laptime"                    ], \
+                                   [(-0.5,2),          50,               100,         self.conf.time_ends_episode ] )                     
         
+    ###########################################################################
+    ################functions that should be impemented########################
+    ###########################################################################
     
-    def performNetwork(self, *args):
+    def performNetwork(self, *args, **kwargs):
         print("Another ANN Inference", level=3)
         
         
-    def initNetwork(self):
+    def runInference(self, *args, **kwargs):
         raise NotImplementedError    
-
-
-    #################### Helper functions#######################
+        
+        
+    def preTrain(self, *args, **kwargs):
+        raise NotImplementedError    
+        
+        
+    ###########################################################################
+    ########################### Helper functions###############################
+    ###########################################################################
+    
     def dediscretize(self, discrete):
         if not hasattr(discrete, "__len__"):  #lists, tuples and np arrays have lens, scalars (including numpy scalars) don't.
             val = [0]*(self.conf.steering_steps*4 if self.conf.INCLUDE_ACCPLUSBREAK else self.conf.steering_steps*3)
@@ -106,65 +131,128 @@ class AbstractAgent(object):
             os.makedirs(folder)   
         return folder
 
+        
 ###################################################################################################   
 ###################################################################################################   
 ###################################################################################################   
 ###################################################################################################  
+###################################################################################################  
 
   
 class AbstractRLAgent(AbstractAgent):
-    def __init__(self, conf, containers, *args, **kwargs):
+    def __init__(self, conf, containers, isPretrain=False, start_fresh=False, *args, **kwargs):
         super().__init__(conf, containers, *args, **kwargs)
-#        if not hasattr(self, "memory"): #einige agents haben bereits eine andere memory-implmentation, die sollste nicht überschreiben
-#            self.memory = Memory(conf.memorysize, conf, self)
+        self.start_fresh = start_fresh
         self.repeat_random_action_for = 1000
-        self.freezeInfReasons = []
-        self.freezeLearnReasons = [] 
         self.wallhitPunish = 1;
         self.wrongDirPunish = 10;
-        self.show_plots = kwargs["show_plots"] if "show_plots" in kwargs else False
-        self.keep_memory = self.conf.keep_memory #wird im server möglicherweise überschrieben
+        self.isPretrain = isPretrain
+        self.show_plots = False  #wird im initForDriving ggf überschrieben
+        
+
+    ###########################################################################
+    #################### functions that need to be implemented#################
+    ###########################################################################
+    
+
 
         
-    def initNetwork(self):    
-        assert self.containers is not None, "if you init the net for a RL-run, the containers must not be None!"
-        self.episode_statevals = []  #für evaluator
-        self.episodes = 0 #für evaluator, wird bei jedem neustart auf null gesetzt aber das ist ok dafür
+        
+    ###########################################################################
+    #################### functions that may be overwritten#####################        
+    ###########################################################################        
+
+    def initForDriving(self, *args, **kwargs):   
+        assert not self.isPretrain, "You need to load the agent as Not-pretrain for a run!"
+        assert self.containers is not None, "if you init the net for a run, the containers must not be None!"
+        if not self.start_fresh:
+            assert os.path.exists(self.folder(self.conf.pretrain_checkpoint_dir) or self.folder(self.conf.checkpoint_dir)), "I need any kind of pre-trained model"
+        
+        if not hasattr(self, "memory"): #einige agents haben bereits eine andere memory-implementation, die sollste nicht überschreiben
+            self.memory = Memory(self.conf.memorysize, self.conf, self)  
+        super().initForDriving(*args, **kwargs) 
+        self.keep_memory = kwargs["keep_memory"] if "keep_memory" in kwargs else self.conf.keep_memory
+        self.freezeInfReasons = []
+        self.freezeLearnReasons = [] 
         self.numInferencesAfterLearn = 0
         self.numLearnAfterInference = 0
         self.last_random_timestamp = 0
         self.last_random_action = None
-        self.evaluator = evaluator(self.containers, self, self.show_plots, self.conf.save_xml,      \
-                                   ["average rewards", "average Q-vals", "progress", "laptime"                    ], \
-                                   [(-0.5,2),          50,               100,         self.conf.time_ends_episode ] )
+        #self.isinitialized = True  #muss jeder agent individuell am Ende machen!
     
+        
+        
+#    def calculateReward(self, *gameState):
+#        vvec1_hist, vvec2_hist, otherinput_hist, action_hist = gameState
+#        stay_on_street = abs(otherinput_hist[0].CenterDist)
+#        stay_on_street = round(0 if stay_on_street < 5 else self.wallhitPunish if stay_on_street >= 10 else stay_on_street/10, 3)
+#        speed = otherinput_hist[0].SpeedSteer.speedInStreetDir / self.conf.MAXSPEED
+#        return speed - stay_on_street
+
+
+    def calculateReward(self, *gameState):
+        vvec1_hist, vvec2_hist, otherinput_hist, action_hist = gameState
+        progress_old = otherinput_hist[3].ProgressVec.Progress
+        progress_new = otherinput_hist[0].ProgressVec.Progress
+        if progress_old > 90 and progress_new < 10:
+            progress_new += 100
+        progress = round(progress_new-progress_old,3)
+        stay_on_street = abs(otherinput_hist[0].CenterDist)
+        stay_on_street = round(0 if stay_on_street < 5 else self.wallhitPunish if stay_on_street >= 10 else stay_on_street/20, 3)
+        return progress-stay_on_street
+
+        
     
-    #gamestate and paststate sind jeweils vvec1_hist, vvec2_hist, otherinputs_hist, action_hist #TODO: nicht mit gamestate und paststate, direkt mit agentstate!
+    def randomAction(self, speed):
+        print("Random Action!", level=6)
+        if current_milli_time() - self.last_random_timestamp > self.repeat_random_action_for:
+            action = np.random.randint(4) if self.conf.INCLUDE_ACCPLUSBREAK else np.random.randint(3)
+            if action == 0: brake, throttle = 0, 1
+            if action == 1: brake, throttle = 0, 0
+            if action == 2: brake, throttle = 1, 0
+            if action == 3: brake, throttle = 1, 1
+            if speed < 6:
+                brake, throttle = 0, 1  #wenn er nicht fährt bringt stehen nix!
+            #alternative 1a: steer = ((np.random.random()*2)-1)
+            #alternative 1b: steer = min(max(np.random.normal(scale=0.5), 1), -1)
+            #für 1a und 1b:  steer = read_supervised.dediscretize_steer(read_supervised.discretize_steering(steer, self.conf.steering_steps))
+            #alternative 2:
+            tmp = [0]*self.conf.steering_steps
+            tmp[np.random.randint(self.conf.steering_steps)] = 1
+            steer = read_supervised.dediscretize_steer(tmp)
+            self.last_random_timestamp = current_milli_time()
+            self.last_random_action = (throttle, brake, steer)
+        else:
+            throttle, brake, steer = self.last_random_action
+        #throttle, brake, steer = 1, 0, 0
+        result = "["+str(throttle)+", "+str(brake)+", "+str(steer)+"]"
+        return result, (throttle, brake, steer)  #er returned immer toUse, toSave     
+      
+    
+
+    ###########################################################################
+    ########################### Necessary functions ###########################
+    ###########################################################################
+
+        
+    #gamestate and paststate sind jeweils (vvec1_hist, vvec2_hist, otherinputs_hist, action_hist) #TODO: nicht mit gamestate und paststate, direkt mit agentstate!
     def addToMemory(self, gameState, pastState): 
         assert hasattr(self, "memory") and self.memory is not None, "I don't have a memory, that's fatal."
-        
-        if pastState: #was nicht der Fall DIREKT nach reset oder nach start ist (nur dann ist er False)
-            
+        if type(pastState) in (np.ndarray, list, tuple): #nach reset/start ist pastState einfach False
             past_conv_inputs, past_other_inputs, _ = self.getAgentState(*pastState)
             s  = (past_conv_inputs, past_other_inputs)
             a  = self.getAction(*pastState)  #das (throttle, brake, steer)-tuple. 
             r = self.calculateReward(*gameState)
             conv_inputs, other_inputs, _ = self.getAgentState(*gameState)
             s2 = (conv_inputs, other_inputs)
-            markovtuple = [s,a,r,s2,False]           
-            
+            markovtuple = [s,a,r,s2,False] #not actually a tuple because punish&endepisode require something mutable
             self.memory.append(markovtuple)  
-            
             print("adding to Memory:",a, r, level=4) 
-            
             #values for evalation:
             stateval = self.model.statevalue(self.makeInferenceUsable(s))[0] #TODO: gucken ob stateval richtig ist!
             self.episode_statevals.append(stateval)
-            
-            if self.containers.showscreen:
-                infoscreen.print(a, round(r,2), round(stateval,2), self.humantakingcontrolstring, containers= self.containers, wname="Last memory")
-                if len(self.memory) % 20 == 0:
-                    infoscreen.print(">"+str(len(self.memory)), containers= self.containers, wname="Memorysize")
+            return a, r, stateval, self.humantakingcontrolstring #damit agents das printen können wenn sie wollen
+        return None, 0, 0, ""
       
        
      
@@ -191,8 +279,10 @@ class AbstractRLAgent(AbstractAgent):
         return super().checkIfInference()
 
 
+        
     def preRunInference(self, gameState, pastState):
         self.addToMemory(gameState, pastState)
+        
         
 
     def postRunInference(self, toUse, toSave):
@@ -205,12 +295,11 @@ class AbstractRLAgent(AbstractAgent):
                 self.unFreezeInf("LearningComes")
                 
                 
-    def runInference(self, *args, **kwargs):
-        raise NotImplementedError
-
+                
     def canLearn(self):
         return len(self.memory) > self.conf.batch_size+self.conf.history_frame_nr+1 and \
                len(self.memory) > self.conf.replaystartsize and self.model.run_inferences() < self.conf.train_for
+
 
 
     def dauerLearnANN(self, learnSteps):
@@ -236,13 +325,35 @@ class AbstractRLAgent(AbstractAgent):
                 self.learnANN()
                 if self.conf.ForEveryInf and self.conf.ComesALearn and self.conf.learnMode == "parallel":
                     self.numLearnAfterInference += 1
-            i += 1
-                                         
+            i += 1                
         self.unFreezeInf("updateFrequency") #kann hier ruhig sein, da es eh nur unfreezed falls es aufgrund von diesem grund gefreezed war.
         if self.model.run_inferences() >= self.conf.train_for: #if you exited because you're completely done
             self.saveNet()
             print("Stopping learning because I'm done after", self.model.run_inferences(), "inferences", level=10)
         
+
+            
+    def learnANN(self):
+        QLearnInputs = self.create_QLearnInputs_from_MemoryBatch(self.memory.sample(self.conf.batch_size))
+        self.model.q_learn(QLearnInputs, False)
+        if self.model.step() > 0 and self.model.step() % self.conf.checkpointall == 0 or self.model.run_inferences() >= self.conf.train_for:
+            self.saveNet()          
+
+
+        
+    def punishLastAction(self, howmuch):
+        assert hasattr(self, "memory")
+        self.memory.punishLastAction(howmuch)
+        
+
+    def endEpisode(self, reason, gameState):  #reasons are: turnedaround, timeover, resetserver, wallhit, rounddone
+        assert hasattr(self, "memory")
+        #TODO: die ersten 2 zeilen kann auch der abstractagent schon, dann muss ich im server nicht immer nach hasattr(memory) fragen!
+        self.resetUnityAndServer()
+        self.episodes += 1        
+        mem_epi_slice = self.memory.endEpisode() #bei actions, nach denen resettet wurde, soll er den folgestate nicht mehr beachten (später gucken wenn reset=true dann setze Q_DECAY auf quasi 100%)
+        self.eval_episodeVals(mem_epi_slice, gameState, reason)
+
            
     def saveNet(self):
         self.freezeEverything("saveNet")
@@ -250,84 +361,8 @@ class AbstractRLAgent(AbstractAgent):
         if self.conf.save_memory_with_checkpoint and not self.model.isPretrain:
             self.memory.save_memory()
         self.unFreezeEverything("saveNet")
-           
-        
-            
-    def learnANN(self):
-        raise NotImplementedError
-
-
 
         
-#    def calculateReward(self, *gameState):
-#        vvec1_hist, vvec2_hist, otherinput_hist, action_hist = gameState
-#        stay_on_street = abs(otherinput_hist[0].CenterDist)
-#        stay_on_street = round(0 if stay_on_street < 5 else self.wallhitPunish if stay_on_street >= 10 else stay_on_street/10, 3)
-#        speed = otherinput_hist[0].SpeedSteer.speedInStreetDir / self.conf.MAXSPEED
-#        return speed - stay_on_street
-
-
-
-
-    def calculateReward(self, *gameState):
-        vvec1_hist, vvec2_hist, otherinput_hist, action_hist = gameState
-        progress_old = otherinput_hist[3].ProgressVec.Progress
-        progress_new = otherinput_hist[0].ProgressVec.Progress
-        if progress_old > 90 and progress_new < 10:
-            progress_new += 100
-        progress = round(progress_new-progress_old,3)
-        stay_on_street = abs(otherinput_hist[0].CenterDist)
-        stay_on_street = round(0 if stay_on_street < 5 else self.wallhitPunish if stay_on_street >= 10 else stay_on_street/20, 3)
-        return progress-stay_on_street
-
-
-
-    
-    def randomAction(self, speed):
-        print("Random Action!", level=6)
-        if current_milli_time() - self.last_random_timestamp > self.repeat_random_action_for:
-            
-            action = np.random.randint(4) if self.conf.INCLUDE_ACCPLUSBREAK else np.random.randint(3)
-            if action == 0: brake, throttle = 0, 1
-            if action == 1: brake, throttle = 0, 0
-            if action == 2: brake, throttle = 1, 0
-            if action == 3: brake, throttle = 1, 1
-            
-            if speed < 6:
-                brake, throttle = 0, 1  #wenn er nicht fährt bringt stehen nix!
-            
-            #alternative 1a: steer = ((np.random.random()*2)-1)
-            #alternative 1b: steer = min(max(np.random.normal(scale=0.5), 1), -1)
-            #für 1a und 1b:  steer = read_supervised.dediscretize_steer(read_supervised.discretize_steering(steer, self.conf.steering_steps))
-            #alternative 2:
-            tmp = [0]*self.conf.steering_steps
-            tmp[np.random.randint(self.conf.steering_steps)] = 1
-            steer = read_supervised.dediscretize_steer(tmp)
-            
-            
-            self.last_random_timestamp = current_milli_time()
-            self.last_random_action = (throttle, brake, steer)
-        else:
-            throttle, brake, steer = self.last_random_action
-            
-        #throttle, brake, steer = 1, 0, 0
-        result = "["+str(throttle)+", "+str(brake)+", "+str(steer)+"]"
-              
-        return result, (throttle, brake, steer)  #er returned immer toUse, toSave     
-
-
-
-    def endEpisode(self, reason, gameState):  #reasons are: turnedaround, timeover, resetserver, wallhit, rounddone
-        assert hasattr(self, "memory")
-        #TODO: die ersten 2 zeilen kann auch der abstractagent schon, dann muss ich im server nicht immer nach hasattr(memory) fragen!
-        self.resetUnityAndServer()
-        self.episodes += 1        
-        
-        mem_epi_slice = self.memory.endEpisode() #bei actions, nach denen resettet wurde, soll er den folgestate nicht mehr beachten (später gucken wenn reset=true dann setze Q_DECAY auf quasi 100%)
-        self.eval_episodeVals(mem_epi_slice, gameState, reason)
-
-
-
     def eval_episodeVals(self, mem_epi_slice, gameState, endReason):
         vvec1_hist, vvec2_hist, otherinput_hist, action_hist = gameState
         avg_rewards = round(self.memory.average_rewards(mem_epi_slice[0], mem_epi_slice[1]),3)
@@ -338,22 +373,25 @@ class AbstractRLAgent(AbstractAgent):
         progress = round(otherinput_hist[0].ProgressVec.Progress if endReason != "lapdone" else 100, 2)
         laptime = round(otherinput_hist[0].ProgressVec.Laptime,1)
         valid = otherinput_hist[0].ProgressVec.fValidLap
-        print("Avg-r:",avg_rewards,"Avg-Q:",avg_values,"progress:",progress,"laptime:",laptime,"(valid)" if valid else "", level=8)
-        if self.containers.showscreen:
-                infoscreen.print("rw:", avg_rewards, "Q:", avg_values, "prg:", progress, "time:", laptime, "(v)" if valid else "", containers=self.containers, wname="Last Epsd")
-        
+        evalstring = "Avg-r:",avg_rewards,"Avg-Q:",avg_values,"progress:",progress,"laptime:",laptime,"(valid)" if valid else ""
+        print(evalstring, level=8)
         self.evaluator.add_episode([avg_rewards, avg_values, progress, laptime], nr=self.episodes, startMemoryEntry=mem_epi_slice[0], endMemoryEntry=mem_epi_slice[1], endIteration=self.model.run_inferences(), reinfNetSteps=self.model.step(), endEpsilon=self.epsilon)
+        return evalstring
         
-                         
-            
-            
-    def punishLastAction(self, howmuch):
-        assert hasattr(self, "memory")
-        if self.containers.showscreen:
-            infoscreen.print(str(-abs(howmuch)), time.strftime("%H:%M:%S", time.gmtime()), containers=self.containers, wname="Last big punish")
-        self.memory.punishLastAction(howmuch)
-            
-        
+
+    ###########################################################################
+    ############################# Helper functions#############################
+    ###########################################################################
+
+    #memoryBatch is [[s,a,r,s2,t],[s,a,r,s2,t],[s,a,r,s2,t],...], what we want as Q-Learn-Input is [[s],[a],[r],[s2],[t]] 
+    #.. to be more precise: [[(c,f),a,r,(c,f),t],[(c,f),a,r,(c,f),t],...]  and [[(c,f)],[a],[r],[(c,f)],[t]]
+    def create_QLearnInputs_from_MemoryBatch(self, memoryBatch):
+        oldstates, actions, rewards, newstates, resetafters = zip(*memoryBatch)      
+        #is already [[(c,f)],[a],[r],[(c,f)],[t]], however the actions are tuples, and we want argmax's... and netUsableOtherinputs
+        actions = np.array([self.makeNetUsableAction((throttle, brake, steer)) for throttle, brake, steer in actions]) 
+        oldstates = [(np.rollaxis(np.array(i[0]), 0, 3), np.array(self.makeNetUsableOtherInputs(i[1]))) for i in oldstates]
+        newstates = [(np.rollaxis(np.array(i[0]), 0, 3), np.array(self.makeNetUsableOtherInputs(i[1]))) for i in newstates]#
+        return oldstates, actions, np.array(rewards), newstates, np.array(resetafters)
         
         
     def freezeEverything(self, reason):
@@ -403,6 +441,3 @@ class AbstractRLAgent(AbstractAgent):
                         pass
             except ValueError:
                 pass #you have nothing to do if it wasnt in there anyway.                      
-
-
-

@@ -22,46 +22,47 @@ current_milli_time = lambda: int(round(time.time() * 1000))
 
 
 class Agent(AbstractRLAgent):
-    def __init__(self, conf, containers, start_fresh, *args, **kwargs):
-        self.name = "dqn_rl_agent" #__file__[__file__.rfind("\\")+1:__file__.rfind(".")]
-#        self.memory = Efficientmemory(conf.memorysize, conf, self, conf.history_frame_nr, conf.use_constantbutbigmemory) #dieser agent unterstützt das effiziente memory
-        super().__init__(conf, containers, *args, **kwargs)
+    def __init__(self, conf, containers, isPretrain=False, start_fresh=False, *args, **kwargs):
+        self.name = __file__[__file__.rfind("\\")+1:__file__.rfind(".")]
+        super().__init__(conf, containers, isPretrain, start_fresh, *args, **kwargs)
         self.ff_inputsize = 30
         self.epsilon = self.conf.startepsilon
-        self.start_fresh = start_fresh
-        if not start_fresh:
-            assert os.path.exists(self.folder(self.conf.pretrain_checkpoint_dir) or self.folder(self.conf.checkpoint_dir)), "I need any kind of pre-trained model"
+        session = tf.Session(config=tf.ConfigProto(intra_op_parallelism_threads=2, allow_soft_placement=True))
+        self.model = DDDQN_model(self.conf, self, session, isPretrain=isPretrain)
+        self.model.initNet(load=(not self.start_fresh))
+
+
+
+    ###########################################################################
+    ########################functions that need to be implemented##############
+    ###########################################################################
+    
+    def initForDriving(self, *args, **kwargs): 
+#        self.memory = Efficientmemory(self.conf.memorysize, self.conf, self, self.conf.history_frame_nr, self.conf.use_constantbutbigmemory) #dieser agent unterstützt das effiziente memory        
+        super().initForDriving(*args, **kwargs)
+        self.isinitialized = True
+
 
 
     def runInference(self, gameState, pastState):
         if self.isinitialized and self.checkIfInference():
             self.preRunInference(gameState, pastState) #eg. adds to memory
             conv_inputs, other_inputs, stands_inputs = self.getAgentState(*gameState)
-                            
-#            ##############DELETETHISPART############## #to check how fast the pure socket connection, whithout ANN, is
-#            self.containers.outputval.send_via_senderthread("[1, 0, 0]", self.containers.inputval.CTimestamp, self.containers.inputval.STimestamp)
-#            return
-#            ##############DELETETHISPART ENDE##############
-            
             if self.canLearn() and np.random.random() > self.epsilon:
                 toUse, toSave = self.performNetwork(self.makeInferenceUsable((conv_inputs, other_inputs, stands_inputs)))
             else:
                 toUse, toSave = self.randomAction(gameState[2][0].SpeedSteer.velocity)
-            
                 if len(self.memory) >= self.conf.replaystartsize:
                     try:
                         self.epsilon = min(round(max(self.conf.startepsilon-((self.conf.startepsilon-self.conf.minepsilon)*((self.model.run_inferences()-self.conf.replaystartsize)/self.conf.finalepsilonframe)), self.conf.minepsilon), 5), 1)
                     except: #there are two different kinds of what can be stored in the config for the memory-decrease
                         self.epsilon = min(round(max(self.epsilon-self.conf.epsilondecrease, self.conf.minepsilon), 5), 1)
-                    
                 if self.containers.showscreen:
                     infoscreen.print(self.epsilon, containers=self.containers, wname="Epsilon")
-
             if self.containers.showscreen:
                 infoscreen.print(toUse, containers=self.containers, wname="Last command")
                 if self.model.run_inferences() % 100 == 0:
                     infoscreen.print(self.model.step(), "Iterations: >"+str(self.model.run_inferences()), containers=self.containers, wname="ReinfLearnSteps")
-
             self.postRunInference(toUse, toSave)
     
 
@@ -75,67 +76,8 @@ class Agent(AbstractRLAgent):
         return result, (throttle, brake, steer) #er returned immer toUse, toSave
 
 
-
-
-    def showqvals(self, qvals):
-        amount = self.conf.steering_steps*4 if self.conf.INCLUDE_ACCPLUSBREAK else self.conf.steering_steps*3
-        b = []
-        for i in range(amount):
-            a = [0]*amount
-            a[i] = 1
-            b.append(str(self.dediscretize(a)))
-        b = list(zip(b, qvals))
-        toprint = [str(i[0])[1:-1]+": "+str(i[1]) for i in b]
-        toprint = "\n".join(toprint)
-        
-        print(b, level=3)
-        if self.containers.showscreen:
-            infoscreen.print(toprint, containers= self.containers, wname="Current Q Vals")
-
-
-    #dauerlearnANN kommt aus der AbstractRLAgent
-        
-    
-    #memoryBatch is [[s,a,r,s2,t],[s,a,r,s2,t],[s,a,r,s2,t],...], what we want as Q-Learn-Input is [[s],[a],[r],[s2],[t]] 
-    #.. to be more precise: [[(c,f),a,r,(c,f),t],[(c,f),a,r,(c,f),t],...]  and [[(c,f)],[a],[r],[(c,f)],[t]]
-    def create_QLearnInputs_from_MemoryBatch(self, memoryBatch):
-        oldstates, actions, rewards, newstates, resetafters = zip(*memoryBatch)      
-        #is already [[(c,f)],[a],[r],[(c,f)],[t]], however the actions are tuples, and we want argmax's... and netUsableOtherinputs
-        actions = np.array([np.argmax(self.makeNetUsableAction((throttle, brake, steer))) for throttle, brake, steer in actions]) 
-        oldstates = [(np.rollaxis(np.array(i[0]), 0, 3), np.array(self.makeNetUsableOtherInputs(i[1]))) for i in oldstates]
-        newstates = [(np.rollaxis(np.array(i[0]), 0, 3), np.array(self.makeNetUsableOtherInputs(i[1]))) for i in newstates]#
-        return oldstates, actions, np.array(rewards), newstates, np.array(resetafters)
-        
-                
-    
-    def learnANN(self):   
-        QLearnInputs = self.create_QLearnInputs_from_MemoryBatch(self.memory.sample(self.conf.batch_size))
-        self.model.q_learn(QLearnInputs, False)
-        
-        print("ReinfLearnSteps:", self.model.step(), level=3)
-        if self.containers.showscreen:
-            infoscreen.print(self.model.step(), "Iterations: >"+str(self.model.run_inferences()), containers= self.containers, wname="ReinfLearnSteps")
-                    
-        if self.model.step() > 0 and self.model.step() % self.conf.checkpointall == 0 or self.model.run_inferences() >= self.conf.train_for:
-            self.saveNet()      
-                            
-                
-    #calculateReward ist in der AbstractRLAgent von der er erbt
-
-            
-    #randomAction ist ebenfalls in der AbstractRLAgent     
-            
-
-    def initNetwork(self, isPretrain): 
-        super().initNetwork()
-#        session = tf.Session(config=tf.ConfigProto(intra_op_parallelism_threads=2, allow_soft_placement=True))
-#        self.model = DDDQN_model(self.conf, self, session, isPretrain=isPretrain)
-#        self.model.initNet(load=(not self.start_fresh))
-#        self.isinitialized = True
-            
-        
-    
     def preTrain(self, dataset, iterations, supervised=False):
+#        assert self.model.step == 0, "I dont pretrain if the model already learned on real data!"
         print("Starting pretraining", level=10)
         pretrain_batchsize = 32
         for i in range(iterations):
@@ -154,18 +96,67 @@ class Agent(AbstractRLAgent):
                     
             if (i+1) % 25 == 0:
                 self.saveNet()
+
+    ###########################################################################
+    ########################overwritten functions##############################
+    ###########################################################################
+    
+    def eval_episodeVals(self, mem_epi_slice, gameState, endReason):
+        string = super().eval_episodeVals(mem_epi_slice, gameState, endReason)
+        if self.containers.showscreen: 
+            infoscreen.print(string, containers=self.containers, wname="Last Epsd")
+
+            
+    def punishLastAction(self, howmuch):
+        super().punishLastAction(howmuch)
+        if self.containers.showscreen:
+            infoscreen.print(str(-abs(howmuch)), time.strftime("%H:%M:%S", time.gmtime()), containers=self.containers, wname="Last big punish")
+            
+    def addToMemory(self, gameState, pastState):
+        a, r, stateval, changestring = super().addToMemory(gameState, pastState)
+        if self.containers.showscreen:
+            infoscreen.print(a, round(r,2), round(stateval,2), changestring, containers= self.containers, wname="Last memory")
+            if len(self.memory) % 20 == 0:
+                infoscreen.print(">"+str(len(self.memory)), containers= self.containers, wname="Memorysize")       
+                
+    def learnANN(self):  
+        super().learnANN()
+        print("ReinfLearnSteps:", self.model.step(), level=3)
+        if self.containers.showscreen:
+            infoscreen.print(self.model.step(), "Iterations: >"+str(self.model.run_inferences()), containers= self.containers, wname="ReinfLearnSteps")                
+                
+    ###########################################################################
+    ########################additional functions###############################
+    ###########################################################################
+    
+
+    def showqvals(self, qvals):
+        amount = self.conf.steering_steps*4 if self.conf.INCLUDE_ACCPLUSBREAK else self.conf.steering_steps*3
+        b = []
+        for i in range(amount):
+            a = [0]*amount
+            a[i] = 1
+            b.append(str(self.dediscretize(a)))
+        b = list(zip(b, qvals))
+        toprint = [str(i[0])[1:-1]+": "+str(i[1]) for i in b]
+        toprint = "\n".join(toprint)
+        print(b, level=3)
+        if self.containers.showscreen:
+            infoscreen.print(toprint, containers= self.containers, wname="Current Q Vals")
+
         
+    
             
 ###############################################################################
 
 if __name__ == '__main__':  
+    import sys
     import config
     conf = config.Config()
     import read_supervised
     from server import Containers; containers = Containers()
     tf.reset_default_graph()                                                          
-    myAgent = Agent(conf, containers, start_fresh=True)
-    myAgent.initNetwork(isPretrain=True)
+    myAgent = Agent(conf, containers, start_fresh=("-new" in sys.argv), isPretrain=True)
     trackingpoints = read_supervised.TPList(conf.LapFolderName, conf.use_second_camera, conf.msperframe, conf.steering_steps, conf.INCLUDE_ACCPLUSBREAK)
     print("Number of samples:",trackingpoints.numsamples)
     myAgent.preTrain(trackingpoints, 200)

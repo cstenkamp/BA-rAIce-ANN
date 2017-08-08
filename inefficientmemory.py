@@ -37,24 +37,25 @@ class Memory(object):
         self.lastsavetime = current_milli_time()
         self._size = 0
         
-        corrupted = False
-        if os.path.exists(self.memorypath+SAVENAME+'.pkl'):
-            try:
-                if os.path.getsize(self.memorypath+SAVENAME+'.pkl') > 1024 and (os.path.getsize(self.memorypath+SAVENAME+'.pkl') >= os.path.getsize(self.memorypath+SAVENAME+'TMP.pkl')-10240):
-                    self.pload(self.memorypath+SAVENAME+'.pkl', conf, agent, lock)
-                    print("Loading existing memory with", self._size, "entries", level=10)
-                else:
+        if not self.agent.start_fresh:
+            corrupted = False
+            if os.path.exists(self.memorypath+SAVENAME+'.pkl'):
+                try:
+                    if os.path.getsize(self.memorypath+SAVENAME+'.pkl') > 1024 and (os.path.getsize(self.memorypath+SAVENAME+'.pkl') >= os.path.getsize(self.memorypath+SAVENAME+'TMP.pkl')-10240):
+                        self.pload(self.memorypath+SAVENAME+'.pkl', conf, agent, lock)
+                        print("Loading existing memory with", self._size, "entries", level=10)
+                    else:
+                        corrupted = True
+                except:
                     corrupted = True
-            except:
-                corrupted = True
-        if corrupted:
-            print("Previous memory was corrupted!", level=10) 
-            if os.path.exists(self.memorypath+SAVENAME+'TMP.pkl'):
-                if os.path.getsize(self.memorypath+SAVENAME+'TMP.pkl') > 1024: 
-                    shutil.copyfile(self.memorypath+SAVENAME+'TMP.pkl', self.memorypath+SAVENAME+'.pkl')
-                    self.pload(self.memorypath+SAVENAME+'.pkl', conf, agent, lock)
-                    print("Loading Backup-Memory with", self._size, "entries", level=10)
-        
+            if corrupted:
+                print("Previous memory was corrupted!", level=10) 
+                if os.path.exists(self.memorypath+SAVENAME+'TMP.pkl'):
+                    if os.path.getsize(self.memorypath+SAVENAME+'TMP.pkl') > 1024: 
+                        shutil.copyfile(self.memorypath+SAVENAME+'TMP.pkl', self.memorypath+SAVENAME+'.pkl')
+                        self.pload(self.memorypath+SAVENAME+'.pkl', conf, agent, lock)
+                        print("Loading Backup-Memory with", self._size, "entries", level=10)
+            
         self.epistart = self._pointer
         
         

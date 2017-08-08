@@ -442,16 +442,20 @@ def create_QLearnInputs_from_PTStateBatch(presentStates, pastStates, agent):
     old_convs = np.rollaxis(np.array([agent.getAgentState(*i)[0] for i in pastStates]), 1, 4)
     old_other = np.array([agent.makeNetUsableOtherInputs(agent.getAgentState(*i)[1]) for i in pastStates])
     oldAgentStates = list(zip(old_convs, old_other))
+   
+    actions = [agent.makeNetUsableAction(agent.getAction(*i)) for i in pastStates]   
+               
+    if not agent.isSupervised:               
+        new_convs = np.rollaxis(np.array([agent.getAgentState(*i)[0] for i in presentStates]), 1, 4)
+        new_other = np.array([agent.makeNetUsableOtherInputs(agent.getAgentState(*i)[1]) for i in presentStates])
+        newAgentStates = list(zip(new_convs, new_other))
     
-    new_convs = np.rollaxis(np.array([agent.getAgentState(*i)[0] for i in presentStates]), 1, 4)
-    new_other = np.array([agent.makeNetUsableOtherInputs(agent.getAgentState(*i)[1]) for i in presentStates])
-    newAgentStates = list(zip(new_convs, new_other))
-    
-#    ArgmActions = [np.argmax(agent.makeNetUsableAction(agent.getAction(*i))) for i in pastStates]
-    actions = [agent.getAction(*i) for i in pastStates]
-
-    rewards = [agent.calculateReward(*i) for i in presentStates]
-    resetAfters = [False]*len(pastStates)
+        rewards = [agent.calculateReward(*i) for i in presentStates]
+                   
+        resetAfters = [False]*len(pastStates)
+    else:
+        newAgentStates, rewards, resetAfters = None, None, None
+                   
     return oldAgentStates, np.array(actions), np.array(rewards), newAgentStates, np.array(resetAfters) #wurde angepasst auf s,a,r,s2,t
                                 #eigentlich argmactions
 

@@ -82,17 +82,21 @@ class DuelDQN():
 
             
     def _inference(self, conv_inputs, ff_inputs, stands_inputs):
-        assert(conv_inputs is not None or ff_inputs is not None)
+        assert (conv_inputs is not None or ff_inputs is not None)
         ini = tf.truncated_normal_initializer(stddev=1.0 / math.sqrt(float(self.conf.image_dims[0]*self.conf.image_dims[1])))
 
         if conv_inputs is not None:
             rs_input = tf.reshape(conv_inputs, [-1, self.conf.image_dims[0], self.conf.image_dims[1], self.conv_stacksize]) #final dimension = number of color channels*number of stacked (history-)frames                  
             #convolutional_layer(input_tensor, input_channels, kernel_size, stride, output_channels, name, act, is_trainable, batchnorm, is_training, weightdecay=False, pool=True, trainvars=None, varSum=None, initializer=None)
-            conv1 = convolutional_layer(rs_input, self.conv_stacksize, [4,6], [2,3], 32, "Conv1", tf.nn.relu, True, True, True, False, False, {}, variable_summary, initializer=ini) #(?, 14, 14, 32)
-            conv2 = convolutional_layer(conv1, 32, [4,4], [2,2], 64, "Conv2", tf.nn.relu, True, True, True, False, False, {}, variable_summary, initializer=ini)                     #(?, 8, 8, 64)
-            conv3 = convolutional_layer(conv2, 64, [3,3], [2,2], 64, "Conv3", tf.nn.relu, True, True, True, False, True, {}, variable_summary, initializer=ini)                      #(?, 2, 2, 64)
-            conv4 = convolutional_layer(conv3, 64, [4,4], [2,2], self.h_size, "Conv4", tf.nn.relu, True, True, True, False, False, {}, variable_summary, initializer=ini)            #(?, 1, 1, 256)
-            conv4_flat = tf.reshape(conv4, [-1, self.h_size])
+#            conv1 = convolutional_layer(rs_input, self.conv_stacksize, [4,6], [2,3], 32, "Conv1", tf.nn.relu, True, True, True, False, False, {}, variable_summary, initializer=ini) #(?, 14, 14, 32)
+#            conv2 = convolutional_layer(conv1, 32, [4,4], [2,2], 64, "Conv2", tf.nn.relu, True, True, True, False, False, {}, variable_summary, initializer=ini)                     #(?, 8, 8, 64)
+#            conv3 = convolutional_layer(conv2, 64, [3,3], [2,2], 64, "Conv3", tf.nn.relu, True, True, True, False, True, {}, variable_summary, initializer=ini)                      #(?, 2, 2, 64)
+#            conv4 = convolutional_layer(conv3, 64, [4,4], [2,2], self.h_size, "Conv4", tf.nn.relu, True, True, True, False, False, {}, variable_summary, initializer=ini)            #(?, 1, 1, 256)
+            self.conv1 = slim.conv2d(inputs=rs_input,num_outputs=32,kernel_size=[4,6],stride=[2,3],padding='VALID', biases_initializer=None, normalizer_fn=slim.batch_norm)
+            self.conv2 = slim.conv2d(inputs=self.conv1,num_outputs=64,kernel_size=[4,4],stride=[2,2],padding='VALID', biases_initializer=None, normalizer_fn=slim.batch_norm)
+            self.conv3 = slim.conv2d(inputs=self.conv2,num_outputs=64,kernel_size=[3,3],stride=[1,1],padding='VALID', biases_initializer=None, normalizer_fn=slim.batch_norm)
+            self.conv4 = slim.conv2d(inputs=self.conv3,num_outputs=self.h_size,kernel_size=[4,4],stride=[1,1],padding='VALID', biases_initializer=None, normalizer_fn=slim.batch_norm)
+            conv4_flat = tf.reshape(self.conv4, [-1, self.h_size])
             if ff_inputs is not None:
                 fc0 = tf.concat([conv4_flat, ff_inputs], 1)
         else:    #fc_layer(input_tensor, input_size, output_size, name, is_trainable, batchnorm, is_training, weightdecay=False, act=None, keep_prob=1, trainvars=None, varSum=None, initializer=None)
@@ -109,8 +113,6 @@ class DuelDQN():
         self.Value = slim.batch_norm(tf.matmul(self.streamV,self.VW))
   
         Qout = self.Value + tf.subtract(self.Advantage,tf.reduce_mean(self.Advantage,axis=1,keep_dims=True))
-        Qmax = tf.reduce_max(Qout, axis=1) #not necessary anymore because we use Double-Q, only used for the stateval for the evaluator
-        predict = tf.argmax(Qout,1)
         
         def settozero(q):
             ZEROIS = 0
@@ -126,7 +128,10 @@ class DuelDQN():
         
         if self.isInference:
             Qout = tf.cond(tf.reduce_sum(self.stands_inputs) > 0, lambda: settozero(Qout), lambda: Qout) #wenn du stehst, brauchste dich nicht mehr für die ohne gas zu interessieren
-            
+        
+        Qmax = tf.reduce_max(Qout, axis=1) #not necessary anymore because we use Double-Q, only used for the stateval for the evaluator
+        predict = tf.argmax(Qout,1)
+
         return Qout, Qmax, predict 
     
 
@@ -188,8 +193,8 @@ class DuelDQN():
     #carstands ist true iff (single inference & carstands), in jedem anderem Fall false
     def feed_dict(self, inputs, targetQ=None, targetA=None, carstands = False, decay_lr=False):
 
-        conv_inputs = [inputs[i][0] for i in range(len(inputs))]
-        ff_inputs   = [inputs[i][1] for i in range(len(inputs))]
+        conv_inputs = np.array([inputs[i][0] for i in range(len(inputs))])
+        ff_inputs   = np.array([inputs[i][1] for i in range(len(inputs))])
         
         feed_dict = {}
         if len(inputs) == 1 and self.isInference:   
@@ -307,15 +312,15 @@ class DDDQN_model():
         return round(np.mean(np.array(actions == predict, dtype=int))*100, 2)
             
     #expects only a state (with stands_inputs)
-    def inference(self, statesBatch):
+    def inference(self, statesBatch):                                                    #TODO BEI DENEN BEIDEN HIER WIEDER ZURÜCK AUF TARGET ÄNDERN!!!!!!
         assert not self.isPretrain, "Please reload this network as a non-pretrain-one!"
         self.targetQN.run_inferences += 1
         carstands = statesBatch[0][2] if len(statesBatch) == 1 and len(statesBatch[0]) > 2 else False
-        return self.session.run([self.targetQN.predict, self.targetQN.Qout], feed_dict=self.targetQN.feed_dict(statesBatch, carstands = carstands))
+        return self.session.run([self.onlineQN.predict, self.onlineQN.Qout], feed_dict=self.onlineQN.feed_dict(statesBatch, carstands = carstands))
         
     #expects only a state (and no stands_inputs)
-    def statevalue(self, statesBatch):
-        return self.session.run(self.targetQN.Qmax, feed_dict=self.targetQN.feed_dict(statesBatch))
+    def statevalue(self, statesBatch):                                                   #TODO BEI DENEN BEIDEN HIER WIEDER ZURÜCK AUF TARGET ÄNDERN!!!!!!
+        return self.session.run(self.onlineQN.Qmax, feed_dict=self.onlineQN.feed_dict(statesBatch))
     
     
     #expects a whole s,a,r,s,t - tuple, needs however only s & a

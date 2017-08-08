@@ -528,10 +528,9 @@ def main(conf, agentname, no_learn, show_screen, show_plots, start_fresh, nomemo
         conf.startepsilon = 0 #or whatever random-value will be in 
             
     agentclass = __import__(agentname).Agent
-    containers.myAgent = agentclass(conf, containers, start_fresh, show_plots=show_plots) 
-    if hasattr(containers.myAgent, "memory") and nomemorykeep:
-        containers.myAgent.keep_memory = False 
-    containers.myAgent.initNetwork(isPretrain=False)
+    containers.myAgent = agentclass(conf, containers, isPretrain=False, start_fresh=start_fresh) 
+    keepmemory = (hasattr(containers.myAgent, "memory") and nomemorykeep)
+    containers.myAgent.initForDriving(keep_memory = keepmemory, show_plots=show_plots)
     
                                                                           
     containers.inputval = InputValContainer(conf, containers, containers.myAgent)

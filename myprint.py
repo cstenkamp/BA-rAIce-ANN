@@ -37,5 +37,3 @@ def printtofile(*args, **kwargs):
             text = " ".join(args)
             print(text)
             myfile.write(text+"\n")
-   
-            

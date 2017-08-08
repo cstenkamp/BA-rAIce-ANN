@@ -98,7 +98,8 @@ class xml_saver():
         if os.path.exists(filename) and ET.parse(filename).getroot().tag == "Evaluation":
             tree = ET.parse(filename)
             root = tree.getroot()
-            run = ET.SubElement(root, "run", date=datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"), memorysize=str(agent.memory._size))
+            memsize = agent.memory._size if hasattr(agent, "memory") else "NaN"
+            run = ET.SubElement(root, "run", date=datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"), memorysize=str(memsize))
             return root, run
         else:
             root = ET.Element("Evaluation", agent=agent.name)
