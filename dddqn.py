@@ -75,7 +75,7 @@ class DuelDQN():
             self.q_OP = self._q_training(self.q_loss, isPretrain)
             
         
-        
+        self.update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
         self.trainables = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope=self.name)
         self.saver = tf.train.Saver(var_list=get_variables(name))
         
@@ -84,55 +84,49 @@ class DuelDQN():
     def _inference(self, conv_inputs, ff_inputs, stands_inputs):
         assert (conv_inputs is not None or ff_inputs is not None)
         ini = tf.truncated_normal_initializer(stddev=1.0 / math.sqrt(float(self.conf.image_dims[0]*self.conf.image_dims[1])))
-
+        is_training = (tf.shape(ff_inputs)[0] > 1) if ff_inputs is not None else (tf.shape(conv_inputs)[0] > 1) #fürs batchnorm. Einziger Fall wo man nen python-bool für tf-conditionals nutzen darf
+        
         if conv_inputs is not None:
             rs_input = tf.reshape(conv_inputs, [-1, self.conf.image_dims[0], self.conf.image_dims[1], self.conv_stacksize]) #final dimension = number of color channels*number of stacked (history-)frames                  
             #convolutional_layer(input_tensor, input_channels, kernel_size, stride, output_channels, name, act, is_trainable, batchnorm, is_training, weightdecay=False, pool=True, trainvars=None, varSum=None, initializer=None)
-#            conv1 = convolutional_layer(rs_input, self.conv_stacksize, [4,6], [2,3], 32, "Conv1", tf.nn.relu, True, True, True, False, False, {}, variable_summary, initializer=ini) #(?, 14, 14, 32)
-#            conv2 = convolutional_layer(conv1, 32, [4,4], [2,2], 64, "Conv2", tf.nn.relu, True, True, True, False, False, {}, variable_summary, initializer=ini)                     #(?, 8, 8, 64)
-#            conv3 = convolutional_layer(conv2, 64, [3,3], [2,2], 64, "Conv3", tf.nn.relu, True, True, True, False, True, {}, variable_summary, initializer=ini)                      #(?, 2, 2, 64)
-#            conv4 = convolutional_layer(conv3, 64, [4,4], [2,2], self.h_size, "Conv4", tf.nn.relu, True, True, True, False, False, {}, variable_summary, initializer=ini)            #(?, 1, 1, 256)
-            self.conv1 = slim.conv2d(inputs=rs_input,num_outputs=32,kernel_size=[4,6],stride=[2,3],padding='VALID', biases_initializer=None)
-            self.conv2 = slim.conv2d(inputs=self.conv1,num_outputs=64,kernel_size=[4,4],stride=[2,2],padding='VALID', biases_initializer=None)
-            self.conv3 = slim.conv2d(inputs=self.conv2,num_outputs=64,kernel_size=[3,3],stride=[1,1],padding='VALID', biases_initializer=None)
-            self.conv4 = slim.conv2d(inputs=self.conv3,num_outputs=self.h_size*2, kernel_size=[4,4],stride=[1,1],padding='VALID', biases_initializer=None)
-            conv4_flat = tf.reshape(self.conv4, [-1, self.h_size*2])
-#            if ff_inputs is not None:
-#                fc0 = tf.concat([conv4_flat, ff_inputs], 1)
+            self.conv1 = convolutional_layer(rs_input, self.conv_stacksize, [4,6], [2,3], 32, "Conv1", tf.nn.relu, True, True, is_training, False, False, {}, variable_summary, initializer=ini) #(?, 14, 14, 32)
+            self.conv2 = convolutional_layer(self.conv1, 32, [4,4], [2,2], 64, "Conv2", tf.nn.relu, True, True, is_training, False, False, {}, variable_summary, initializer=ini)                     #(?, 8, 8, 64)
+            self.conv3 = convolutional_layer(self.conv2, 64, [3,3], [2,2], 64, "Conv3", tf.nn.relu, True, True, is_training, False, True, {}, variable_summary, initializer=ini)                      #(?, 2, 2, 64)
+            self.conv4 = convolutional_layer(self.conv3, 64, [4,4], [2,2], self.h_size, "Conv4", tf.nn.relu, True, True, is_training, False, False, {}, variable_summary, initializer=ini)            #(?, 1, 1, 256)
+            self.conv4_flat = tf.reshape(self.conv4, [-1, self.h_size*2])
+            if ff_inputs is not None:
+                fc0 = tf.concat([self.conv4_flat, ff_inputs], 1)
         else:    #fc_layer(input_tensor, input_size, output_size, name, is_trainable, batchnorm, is_training, weightdecay=False, act=None, keep_prob=1, trainvars=None, varSum=None, initializer=None)
-            pass #fc0 = fc_layer(ff_inputs, self.ff_stacksize*self.agent.ff_inputsize, self.agent.ff_inputsize, "FC0", True, True, True, False, tf.nn.relu, 1, {}, variable_summary, initializer=ini)   
+            fc0 = fc_layer(ff_inputs, self.ff_stacksize*self.agent.ff_inputsize, self.ff_stacksize*self.agent.ff_inputsize+self.h_size*2, "FC0", True, True, is_training, False, tf.nn.relu, 1, {}, variable_summary, initializer=ini)   
         
-#        fc0 = conv4_flat
-
-        fc0 = fc_layer(ff_inputs, self.agent.ff_inputsize, 300, "FC0", True, False, True, False, tf.nn.relu, 1, {}, variable_summary, initializer=ini)   
-            
-        fc1 = fc_layer(fc0, 300, self.h_size*2, "FC1", True, True, True, False, tf.nn.relu, 1, {}, variable_summary, initializer=ini)                 
+        fc1 = fc_layer(fc0, self.ff_stacksize*self.agent.ff_inputsize+self.h_size*2, self.h_size*2, "FC1", True, True, is_training, False, tf.nn.relu, 1, {}, variable_summary, initializer=ini)                 
 
         #Dueling DQN: split into separate advantage and value stream
         self.streamA,self.streamV = tf.split(fc1,2,1) 
         xavier_init = tf.contrib.layers.xavier_initializer()
         self.AW = tf.Variable(xavier_init([self.h_size,self.num_actions]))
         self.VW = tf.Variable(xavier_init([self.h_size,1]))
-        self.Advantage = slim.batch_norm(tf.matmul(self.streamA,self.AW))
-        self.Value = slim.batch_norm(tf.matmul(self.streamV,self.VW))
-  
+        self.Advantage = tf.matmul(self.streamA,self.AW)
+        self.Advantage = tf.layers.batch_normalization(self.Advantage, training=is_training, epsilon=1e-7, momentum=.95)
+        self.Value = tf.matmul(self.streamV,self.VW)
+        self.Value = tf.layers.batch_normalization(self.Value, training=is_training, epsilon=1e-7, momentum=.95)
         Qout = self.Value + tf.subtract(self.Advantage,tf.reduce_mean(self.Advantage,axis=1,keep_dims=True))
-#        
-#        def settozero(q):
-#            ZEROIS = 0
-#            q = tf.squeeze(q) #die stands_inputs sind nur dann True wenn es nur um ein sample geht
-#            if not self.conf.INCLUDE_ACCPLUSBREAK: #dann nimmste nur das argmax von den mittleren neurons (was die mit gas sind)
-#                q = tf.slice(q,tf.shape(q)//3,tf.shape(q)//3)
-#                q = tf.concat([tf.multiply(tf.ones(tf.shape(q)),ZEROIS), q, tf.multiply(tf.ones(tf.shape(q)), ZEROIS)], axis=0)
-#            else:
-#                q = tf.slice(q,tf.shape(q)//2,(tf.shape(q)//4)*3)
-#                q = tf.concat([tf.multiply(tf.ones(tf.shape(q)*2), ZEROIS), q, tf.multiply(tf.ones(tf.shape(q)), ZEROIS)], axis=0)                   
-#            q = tf.expand_dims(q, 0)            
-#            return q        
-#        
-#        if self.isInference:
-#            Qout = tf.cond(tf.reduce_sum(self.stands_inputs) > 0, lambda: settozero(Qout), lambda: Qout) #wenn du stehst, brauchste dich nicht mehr für die ohne gas zu interessieren
+
+        def settozero(q):
+            ZEROIS = 0
+            q = tf.squeeze(q) #die stands_inputs sind nur dann True wenn es nur um ein sample geht
+            if not self.conf.INCLUDE_ACCPLUSBREAK: #dann nimmste nur das argmax von den mittleren neurons (was die mit gas sind)
+                q = tf.slice(q,tf.shape(q)//3,tf.shape(q)//3)
+                q = tf.concat([tf.multiply(tf.ones(tf.shape(q)),ZEROIS), q, tf.multiply(tf.ones(tf.shape(q)), ZEROIS)], axis=0)
+            else:
+                q = tf.slice(q,tf.shape(q)//2,(tf.shape(q)//4)*3)
+                q = tf.concat([tf.multiply(tf.ones(tf.shape(q)*2), ZEROIS), q, tf.multiply(tf.ones(tf.shape(q)), ZEROIS)], axis=0)                   
+            q = tf.expand_dims(q, 0)            
+            return q        
         
+        if self.isInference:
+            Qout = tf.cond(tf.reduce_sum(self.stands_inputs) > 0, lambda: settozero(Qout), lambda: Qout) #wenn du stehst, brauchste dich nicht mehr für die ohne gas zu interessieren
+
         Qmax = tf.reduce_max(Qout, axis=1) #not necessary anymore because we use Double-Q, only used for the stateval for the evaluator
         predict = tf.argmax(Qout,1)
 
@@ -145,7 +139,9 @@ class DuelDQN():
         self.sv_new_lr = tf.placeholder(tf.float32, shape=[])                   
         self.sv_lr_update = tf.assign(self.sv_lr, self.sv_new_lr)  
         trainer = tf.train.AdamOptimizer(self.sv_lr)
-        train_op = trainer.minimize(loss, global_step=self.pretrain_step_tf)
+        update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
+        with tf.control_dependencies(update_ops): #because of batchnorm, see https://www.tensorflow.org/api_docs/python/tf/layers/batch_normalization
+            train_op = trainer.minimize(loss, global_step=self.pretrain_step_tf)
         return train_op
         
         
@@ -156,14 +152,18 @@ class DuelDQN():
             self.new_lr = tf.placeholder(tf.float32, shape=[]) 
             self.lr_update = tf.assign(self.lr, self.new_lr)    
             q_trainer = tf.train.AdamOptimizer(learning_rate=self.lr)
-            q_OP = q_trainer.minimize(loss, global_step=self.pretrain_step_tf) 
+            update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
+            with tf.control_dependencies(update_ops): #because of batchnorm, see https://www.tensorflow.org/api_docs/python/tf/layers/batch_normalization
+                q_OP = q_trainer.minimize(loss, global_step=self.pretrain_step_tf) 
         else:
             init_lr = self.conf.initial_lr
             self.lr = tf.Variable(tf.constant(init_lr), trainable=False)
             self.new_lr = tf.placeholder(tf.float32, shape=[]) 
             self.lr_update = tf.assign(self.lr, self.new_lr)    
             q_trainer = tf.train.AdamOptimizer(learning_rate=self.lr)
-            q_OP = q_trainer.minimize(loss, global_step=self.step_tf) 
+            update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
+            with tf.control_dependencies(update_ops): #because of batchnorm, see https://www.tensorflow.org/api_docs/python/tf/layers/batch_normalization
+                q_OP = q_trainer.minimize(loss, global_step=self.step_tf) 
         return q_OP
        
     ############################METHODS FOR RUNNING############################

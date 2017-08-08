@@ -43,7 +43,7 @@ class Agent(AbstractRLAgent):
         vvec1_hist, vvec2_hist, otherinput_hist, action_hist = gameState
 #        other_inputs = np.ravel([i.returnRelevant() for i in otherinput_hist])
         other_inputs = np.ravel(otherinput_hist[0].returnRelevant())
-        stands_inputs = otherinput_hist[0].SpeedSteer.velocity < 6
+        stands_inputs = otherinput_hist[0].SpeedSteer.velocity < 10
         return None, other_inputs, stands_inputs
     
     #Override
@@ -67,6 +67,8 @@ class Agent(AbstractRLAgent):
             conv_inputs, other_inputs, stands_inputs = self.getAgentState(*gameState)
             if self.canLearn() and np.random.random() > self.epsilon:
                 toUse, toSave = self.performNetwork(self.makeInferenceUsable((conv_inputs, other_inputs, stands_inputs)))
+                if self.containers.showscreen:
+                    infoscreen.print(toUse, containers=self.containers, wname="Last command")
             else:
                 toUse, toSave = self.randomAction(gameState[2][0].SpeedSteer.velocity)
                 if len(self.memory) >= self.conf.replaystartsize:
@@ -77,7 +79,6 @@ class Agent(AbstractRLAgent):
                 if self.containers.showscreen:
                     infoscreen.print(self.epsilon, containers=self.containers, wname="Epsilon")
             if self.containers.showscreen:
-                infoscreen.print(toUse, containers=self.containers, wname="Last command")
                 if self.model.run_inferences() % 100 == 0:
                     infoscreen.print(self.model.step(), "Iterations: >"+str(self.model.run_inferences()), containers=self.containers, wname="ReinfLearnSteps")
             self.postRunInference(toUse, toSave)

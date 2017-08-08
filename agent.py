@@ -53,7 +53,7 @@ class AbstractAgent(object):
         assert self.conf.use_cameras, "You disabled cameras in the config, which is impossible for this agent!"
         conv_inputs = np.concatenate([vvec1_hist, vvec2_hist]) if vvec2_hist is not None else vvec1_hist
         other_inputs = otherinput_hist[0].SpeedSteer.velocity
-        stands_inputs = otherinput_hist[0].SpeedSteer.velocity < 6
+        stands_inputs = otherinput_hist[0].SpeedSteer.velocity < 10
         return conv_inputs, other_inputs, stands_inputs
     
     def makeNetUsableOtherInputs(self, other_inputs): #normally, the otherinputs are stored as compact as possible. Networks may need to unpack that.
@@ -70,14 +70,15 @@ class AbstractAgent(object):
     #state is either (s,a,r,s2,False) or only s. what needs to be done is make everything an array, and make action & otherinputs netusable
     def makeInferenceUsable(self, state):
         visionroll = lambda vision: np.rollaxis(vision, 0, 3) if vision is not None else None 
+        makestate = lambda s: (visionroll(s[0]), self.makeNetUsableOtherInputs(s[1])) if len(s) < 3 else (visionroll(s[0]), self.makeNetUsableOtherInputs(s[1]), s[2])
         try:
             s, a, r, s2, t = state  
-            s = (visionroll(s[0]), self.makeNetUsableOtherInputs(s[1]))
+            s = makestate(s)
             a = self.makeNetUsableAction(a)
-            s2 = (np.rollaxis(s2[0], 0, 3), self.makeNetUsableOtherInputs(s2[1]))
+            s2 = makestate(s2)
             return ([s], [a], [r], [s2], [t])
         except ValueError: #too many values to unpack
-            return [(visionroll(state[0]), self.makeNetUsableOtherInputs(state[1]))] 
+            return [makestate(state)] 
                     
                     
     def initForDriving(self, *args, **kwargs):
