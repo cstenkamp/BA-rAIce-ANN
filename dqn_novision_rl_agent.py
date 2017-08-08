@@ -23,12 +23,12 @@ current_milli_time = lambda: int(round(time.time() * 1000))
 
 class Agent(AbstractRLAgent):
     def __init__(self, conf, containers, isPretrain=False, start_fresh=False, *args, **kwargs):
-        self.name = __file__[__file__.rfind("/")+1:__file__.rfind(".")]
+        self.name = __file__[__file__.rfind("\\")+1:__file__.rfind(".")]
         super().__init__(conf, containers, isPretrain, start_fresh, *args, **kwargs)
         self.ff_inputsize = 49
         self.epsilon = self.conf.startepsilon
         self.usesConv = False
-        self.ff_stacked = True
+        self.ff_stacked = False
         session = tf.Session(config=tf.ConfigProto(intra_op_parallelism_threads=2, allow_soft_placement=True))
         self.model = DDDQN_model(self.conf, self, session, isPretrain=isPretrain)
         self.model.initNet(load=(not self.start_fresh))
@@ -41,7 +41,8 @@ class Agent(AbstractRLAgent):
     #Override
     def getAgentState(self, *gameState):  
         vvec1_hist, vvec2_hist, otherinput_hist, action_hist = gameState
-        other_inputs = np.ravel([i.returnRelevant() for i in otherinput_hist])
+#        other_inputs = np.ravel([i.returnRelevant() for i in otherinput_hist])
+        other_inputs = np.ravel(otherinput_hist[0].returnRelevant())
         stands_inputs = otherinput_hist[0].SpeedSteer.velocity < 6
         return None, other_inputs, stands_inputs
     
@@ -135,7 +136,7 @@ class Agent(AbstractRLAgent):
                 infoscreen.print(">"+str(len(self.memory)), containers= self.containers, wname="Memorysize")       
                 
     def learnANN(self):  
-        super.learnANN()
+        super().learnANN()
         print("ReinfLearnSteps:", self.model.step(), level=3)
         if self.containers.showscreen:
             infoscreen.print(self.model.step(), "Iterations: >"+str(self.model.run_inferences()), containers= self.containers, wname="ReinfLearnSteps")                

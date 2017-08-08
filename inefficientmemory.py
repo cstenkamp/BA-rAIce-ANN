@@ -124,11 +124,12 @@ class Memory(object):
     def endEpisode(self):
         if self._size < 2:
             return
+        
         lastmemoryentry = self.pop() #oldstate, action, reward, newstate, fEnd
         if lastmemoryentry is not None:
             lastmemoryentry[4] = True
             self.append(lastmemoryentry)
-            
+                    
         prev_epistart = self.epistart
         self.epistart = self._pointer
         return prev_epistart, self.epistart

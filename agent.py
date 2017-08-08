@@ -69,14 +69,15 @@ class AbstractAgent(object):
         
     #state is either (s,a,r,s2,False) or only s. what needs to be done is make everything an array, and make action & otherinputs netusable
     def makeInferenceUsable(self, state):
+        visionroll = lambda vision: np.rollaxis(vision, 0, 3) if vision is not None else None 
         try:
             s, a, r, s2, t = state  
-            s = (np.rollaxis(s[0], 0, 3), self.makeNetUsableOtherInputs(s[1]))
+            s = (visionroll(s[0]), self.makeNetUsableOtherInputs(s[1]))
             a = self.makeNetUsableAction(a)
             s2 = (np.rollaxis(s2[0], 0, 3), self.makeNetUsableOtherInputs(s2[1]))
             return ([s], [a], [r], [s2], [t])
         except ValueError: #too many values to unpack
-            return [(np.rollaxis(state[0], 0, 3), self.makeNetUsableOtherInputs(state[1]))] 
+            return [(visionroll(state[0]), self.makeNetUsableOtherInputs(state[1]))] 
                     
                     
     def initForDriving(self, *args, **kwargs):
@@ -182,24 +183,24 @@ class AbstractRLAgent(AbstractAgent):
     
         
         
-#    def calculateReward(self, *gameState):
-#        vvec1_hist, vvec2_hist, otherinput_hist, action_hist = gameState
-#        stay_on_street = abs(otherinput_hist[0].CenterDist)
-#        stay_on_street = round(0 if stay_on_street < 5 else self.wallhitPunish if stay_on_street >= 10 else stay_on_street/10, 3)
-#        speed = otherinput_hist[0].SpeedSteer.speedInStreetDir / self.conf.MAXSPEED
-#        return speed - stay_on_street
-
-
     def calculateReward(self, *gameState):
         vvec1_hist, vvec2_hist, otherinput_hist, action_hist = gameState
-        progress_old = otherinput_hist[3].ProgressVec.Progress
-        progress_new = otherinput_hist[0].ProgressVec.Progress
-        if progress_old > 90 and progress_new < 10:
-            progress_new += 100
-        progress = round(progress_new-progress_old,3)
         stay_on_street = abs(otherinput_hist[0].CenterDist)
-        stay_on_street = round(0 if stay_on_street < 5 else self.wallhitPunish if stay_on_street >= 10 else stay_on_street/20, 3)
-        return progress-stay_on_street
+        stay_on_street = round(0 if stay_on_street < 5 else self.wallhitPunish if stay_on_street >= 10 else stay_on_street/10, 3)
+        speed = otherinput_hist[0].SpeedSteer.speedInStreetDir / self.conf.MAXSPEED
+        return speed - stay_on_street
+
+
+#    def calculateReward(self, *gameState):
+#        vvec1_hist, vvec2_hist, otherinput_hist, action_hist = gameState
+#        progress_old = otherinput_hist[3].ProgressVec.Progress
+#        progress_new = otherinput_hist[0].ProgressVec.Progress
+#        if progress_old > 90 and progress_new < 10:
+#            progress_new += 100
+#        progress = round(progress_new-progress_old,3)
+#        stay_on_street = abs(otherinput_hist[0].CenterDist)
+#        stay_on_street = round(0 if stay_on_street < 5 else self.wallhitPunish if stay_on_street >= 10 else stay_on_street/20, 3)
+#        return progress-stay_on_street
 
         
     
@@ -386,11 +387,12 @@ class AbstractRLAgent(AbstractAgent):
     #memoryBatch is [[s,a,r,s2,t],[s,a,r,s2,t],[s,a,r,s2,t],...], what we want as Q-Learn-Input is [[s],[a],[r],[s2],[t]] 
     #.. to be more precise: [[(c,f),a,r,(c,f),t],[(c,f),a,r,(c,f),t],...]  and [[(c,f)],[a],[r],[(c,f)],[t]]
     def create_QLearnInputs_from_MemoryBatch(self, memoryBatch):
+        visionroll = lambda vision: np.rollaxis(vision, 0, 3) if vision is not None else None 
         oldstates, actions, rewards, newstates, resetafters = zip(*memoryBatch)      
         #is already [[(c,f)],[a],[r],[(c,f)],[t]], however the actions are tuples, and we want argmax's... and netUsableOtherinputs
         actions = np.array([self.makeNetUsableAction((throttle, brake, steer)) for throttle, brake, steer in actions]) 
-        oldstates = [(np.rollaxis(np.array(i[0]), 0, 3), np.array(self.makeNetUsableOtherInputs(i[1]))) for i in oldstates]
-        newstates = [(np.rollaxis(np.array(i[0]), 0, 3), np.array(self.makeNetUsableOtherInputs(i[1]))) for i in newstates]#
+        oldstates = [(visionroll(i[0]), np.array(self.makeNetUsableOtherInputs(i[1]))) for i in oldstates]
+        newstates = [(visionroll(i[0]), np.array(self.makeNetUsableOtherInputs(i[1]))) for i in newstates]#
         return oldstates, actions, np.array(rewards), newstates, np.array(resetafters)
         
         

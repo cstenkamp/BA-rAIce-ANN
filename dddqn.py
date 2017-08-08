@@ -92,17 +92,21 @@ class DuelDQN():
 #            conv2 = convolutional_layer(conv1, 32, [4,4], [2,2], 64, "Conv2", tf.nn.relu, True, True, True, False, False, {}, variable_summary, initializer=ini)                     #(?, 8, 8, 64)
 #            conv3 = convolutional_layer(conv2, 64, [3,3], [2,2], 64, "Conv3", tf.nn.relu, True, True, True, False, True, {}, variable_summary, initializer=ini)                      #(?, 2, 2, 64)
 #            conv4 = convolutional_layer(conv3, 64, [4,4], [2,2], self.h_size, "Conv4", tf.nn.relu, True, True, True, False, False, {}, variable_summary, initializer=ini)            #(?, 1, 1, 256)
-            self.conv1 = slim.conv2d(inputs=rs_input,num_outputs=32,kernel_size=[4,6],stride=[2,3],padding='VALID', biases_initializer=None, normalizer_fn=slim.batch_norm)
-            self.conv2 = slim.conv2d(inputs=self.conv1,num_outputs=64,kernel_size=[4,4],stride=[2,2],padding='VALID', biases_initializer=None, normalizer_fn=slim.batch_norm)
-            self.conv3 = slim.conv2d(inputs=self.conv2,num_outputs=64,kernel_size=[3,3],stride=[1,1],padding='VALID', biases_initializer=None, normalizer_fn=slim.batch_norm)
-            self.conv4 = slim.conv2d(inputs=self.conv3,num_outputs=self.h_size,kernel_size=[4,4],stride=[1,1],padding='VALID', biases_initializer=None, normalizer_fn=slim.batch_norm)
-            conv4_flat = tf.reshape(self.conv4, [-1, self.h_size])
-            if ff_inputs is not None:
-                fc0 = tf.concat([conv4_flat, ff_inputs], 1)
+            self.conv1 = slim.conv2d(inputs=rs_input,num_outputs=32,kernel_size=[4,6],stride=[2,3],padding='VALID', biases_initializer=None)
+            self.conv2 = slim.conv2d(inputs=self.conv1,num_outputs=64,kernel_size=[4,4],stride=[2,2],padding='VALID', biases_initializer=None)
+            self.conv3 = slim.conv2d(inputs=self.conv2,num_outputs=64,kernel_size=[3,3],stride=[1,1],padding='VALID', biases_initializer=None)
+            self.conv4 = slim.conv2d(inputs=self.conv3,num_outputs=self.h_size*2, kernel_size=[4,4],stride=[1,1],padding='VALID', biases_initializer=None)
+            conv4_flat = tf.reshape(self.conv4, [-1, self.h_size*2])
+#            if ff_inputs is not None:
+#                fc0 = tf.concat([conv4_flat, ff_inputs], 1)
         else:    #fc_layer(input_tensor, input_size, output_size, name, is_trainable, batchnorm, is_training, weightdecay=False, act=None, keep_prob=1, trainvars=None, varSum=None, initializer=None)
-            fc0 = fc_layer(ff_inputs, self.ff_stacksize*self.agent.ff_inputsize, self.agent.ff_inputsize, "FC0", True, True, True, False, tf.nn.relu, 1, {}, variable_summary, initializer=ini)   
+            pass #fc0 = fc_layer(ff_inputs, self.ff_stacksize*self.agent.ff_inputsize, self.agent.ff_inputsize, "FC0", True, True, True, False, tf.nn.relu, 1, {}, variable_summary, initializer=ini)   
         
-        fc1 = fc_layer(fc0, self.h_size + self.agent.ff_inputsize, self.h_size*2, "FC1", True, True, True, False, tf.nn.relu, 1, {}, variable_summary, initializer=ini)                 
+#        fc0 = conv4_flat
+
+        fc0 = fc_layer(ff_inputs, self.agent.ff_inputsize, 300, "FC0", True, False, True, False, tf.nn.relu, 1, {}, variable_summary, initializer=ini)   
+            
+        fc1 = fc_layer(fc0, 300, self.h_size*2, "FC1", True, True, True, False, tf.nn.relu, 1, {}, variable_summary, initializer=ini)                 
 
         #Dueling DQN: split into separate advantage and value stream
         self.streamA,self.streamV = tf.split(fc1,2,1) 
@@ -113,21 +117,21 @@ class DuelDQN():
         self.Value = slim.batch_norm(tf.matmul(self.streamV,self.VW))
   
         Qout = self.Value + tf.subtract(self.Advantage,tf.reduce_mean(self.Advantage,axis=1,keep_dims=True))
-        
-        def settozero(q):
-            ZEROIS = 0
-            q = tf.squeeze(q) #die stands_inputs sind nur dann True wenn es nur um ein sample geht
-            if not self.conf.INCLUDE_ACCPLUSBREAK: #dann nimmste nur das argmax von den mittleren neurons (was die mit gas sind)
-                q = tf.slice(q,tf.shape(q)//3,tf.shape(q)//3)
-                q = tf.concat([tf.multiply(tf.ones(tf.shape(q)),ZEROIS), q, tf.multiply(tf.ones(tf.shape(q)), ZEROIS)], axis=0)
-            else:
-                q = tf.slice(q,tf.shape(q)//2,(tf.shape(q)//4)*3)
-                q = tf.concat([tf.multiply(tf.ones(tf.shape(q)*2), ZEROIS), q, tf.multiply(tf.ones(tf.shape(q)), ZEROIS)], axis=0)                   
-            q = tf.expand_dims(q, 0)            
-            return q        
-        
-        if self.isInference:
-            Qout = tf.cond(tf.reduce_sum(self.stands_inputs) > 0, lambda: settozero(Qout), lambda: Qout) #wenn du stehst, brauchste dich nicht mehr für die ohne gas zu interessieren
+#        
+#        def settozero(q):
+#            ZEROIS = 0
+#            q = tf.squeeze(q) #die stands_inputs sind nur dann True wenn es nur um ein sample geht
+#            if not self.conf.INCLUDE_ACCPLUSBREAK: #dann nimmste nur das argmax von den mittleren neurons (was die mit gas sind)
+#                q = tf.slice(q,tf.shape(q)//3,tf.shape(q)//3)
+#                q = tf.concat([tf.multiply(tf.ones(tf.shape(q)),ZEROIS), q, tf.multiply(tf.ones(tf.shape(q)), ZEROIS)], axis=0)
+#            else:
+#                q = tf.slice(q,tf.shape(q)//2,(tf.shape(q)//4)*3)
+#                q = tf.concat([tf.multiply(tf.ones(tf.shape(q)*2), ZEROIS), q, tf.multiply(tf.ones(tf.shape(q)), ZEROIS)], axis=0)                   
+#            q = tf.expand_dims(q, 0)            
+#            return q        
+#        
+#        if self.isInference:
+#            Qout = tf.cond(tf.reduce_sum(self.stands_inputs) > 0, lambda: settozero(Qout), lambda: Qout) #wenn du stehst, brauchste dich nicht mehr für die ohne gas zu interessieren
         
         Qmax = tf.reduce_max(Qout, axis=1) #not necessary anymore because we use Double-Q, only used for the stateval for the evaluator
         predict = tf.argmax(Qout,1)
@@ -231,6 +235,7 @@ class DuelDQN():
                 lr_decay = self.conf.lr_decay ** max(self.step-self.conf.lrdecayafter, 0.0)
                 new_lr = max(self.conf.initial_lr*lr_decay, self.conf.minimal_lr)
                 feed_dict[self.new_lr] = new_lr      
+
         return feed_dict
         
     
@@ -312,15 +317,15 @@ class DDDQN_model():
         return round(np.mean(np.array(actions == predict, dtype=int))*100, 2)
             
     #expects only a state (with stands_inputs)
-    def inference(self, statesBatch):                                                    #TODO BEI DENEN BEIDEN HIER WIEDER ZURÜCK AUF TARGET ÄNDERN!!!!!!
+    def inference(self, statesBatch):                                                    
         assert not self.isPretrain, "Please reload this network as a non-pretrain-one!"
         self.targetQN.run_inferences += 1
         carstands = statesBatch[0][2] if len(statesBatch) == 1 and len(statesBatch[0]) > 2 else False
-        return self.session.run([self.onlineQN.predict, self.onlineQN.Qout], feed_dict=self.onlineQN.feed_dict(statesBatch, carstands = carstands))
+        return self.session.run([self.targetQN.predict, self.targetQN.Qout], feed_dict=self.targetQN.feed_dict(statesBatch, carstands = carstands))
         
     #expects only a state (and no stands_inputs)
-    def statevalue(self, statesBatch):                                                   #TODO BEI DENEN BEIDEN HIER WIEDER ZURÜCK AUF TARGET ÄNDERN!!!!!!
-        return self.session.run(self.onlineQN.Qmax, feed_dict=self.onlineQN.feed_dict(statesBatch))
+    def statevalue(self, statesBatch):                                                  
+        return self.session.run(self.targetQN.Qmax, feed_dict=self.targetQN.feed_dict(statesBatch))
     
     
     #expects a whole s,a,r,s,t - tuple, needs however only s & a

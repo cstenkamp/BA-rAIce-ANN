@@ -40,7 +40,7 @@ class Config():
     
     #REINF_LEARN STUFF
     train_for = sys.maxsize-1
-    initial_lr = 0.00005
+    initial_lr = 0.001  #0.00005 
     lr_decay = 0.9999 #hier gehs um steps, nicht mehr um episoden!
     lrdecayafter = train_for//2
     minimal_lr = 0.000001
