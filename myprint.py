@@ -21,3 +21,21 @@ def myprint(*args, **kwargs):
         level = 5
     if level >= PRINTLEVEL:
         print(*args)
+        
+        
+def printtofile(*args, **kwargs):
+    global PRINTLEVEL
+    try:
+        level = kwargs["level"]
+        if level > MAX_NORMAL_LEVEL:
+           PRINTLEVEL = level
+    except KeyError:
+        level = 5
+    if level >= PRINTLEVEL:
+        with open("log.txt", "a") as myfile:
+            args = [str(i) for i in args]
+            text = " ".join(args)
+            print(text)
+            myfile.write(text+"\n")
+   
+            
