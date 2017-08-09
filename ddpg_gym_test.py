@@ -95,7 +95,6 @@ class ReplayBuffer(object):
         s2_batch = np.array([_[3] for _ in batch])
         t_batch = np.array([_[4] for _ in batch])
         
-        print(s_batch)
         return s_batch, a_batch, r_batch, s2_batch, t_batch
 
     def clear(self):
@@ -115,7 +114,8 @@ def train(env, model):
     for i in range(50000):
 
         s = env.reset()
-
+        s = (None, s) #a state for the memory is always (conv, ff), so as there is no conv, its (None, ss) in this case.
+        
         ep_reward = 0
         ep_ave_max_q = 0
 
@@ -125,14 +125,18 @@ def train(env, model):
                 env.render()
             
             
-            s = [(None, s)] #a state for the memory is always (conv, ff), so as there is no conv, its (None, ss) in this case.
-            a = model.inference(s) + (1. / (1. + i)) # Added exploration noise
+            
+            a = model.inference([s])
+            
+            a += (1. / (1. + i)) # Added exploration noise
+
 
             s2, r, t, info = env.step(a[0])
 
+            s2 = (None, s2)
+
+            replay_buffer.add((s, a[0], r, s2, t))
             
-            
-            replay_buffer.add((s, a, r, s2, t))
 
             
             if replay_buffer.size() > MINIBATCH_SIZE:

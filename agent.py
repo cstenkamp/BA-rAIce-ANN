@@ -145,8 +145,8 @@ class AbstractRLAgent(AbstractAgent):
     def __init__(self, conf, containers, isPretrain=False, start_fresh=False, *args, **kwargs):
         super().__init__(conf, containers, *args, **kwargs)
         self.start_fresh = start_fresh
-        self.repeat_random_action_for = 500
-        self.wallhitPunish = 10;
+        self.action_repeat = 4
+        self.wallhitPunish = 5;
         self.wrongDirPunish = 10;
         self.isPretrain = isPretrain
         self.show_plots = False  #wird im initForDriving ggf überschrieben
@@ -178,8 +178,9 @@ class AbstractRLAgent(AbstractAgent):
         self.freezeLearnReasons = [] 
         self.numInferencesAfterLearn = 0
         self.numLearnAfterInference = 0
-        self.last_random_timestamp = 0
-        self.last_random_action = None
+        self.last_action = None
+        self.repeated_action_for = self.action_repeat
+        self.numsteps = 0
         #self.isinitialized = True  #muss jeder agent individuell am Ende machen!
     
         
@@ -187,9 +188,9 @@ class AbstractRLAgent(AbstractAgent):
     def calculateReward(self, *gameState):
         vvec1_hist, vvec2_hist, otherinput_hist, action_hist = gameState
         stay_on_street = abs(otherinput_hist[0].CenterDist)
-        stay_on_street = round(0 if stay_on_street < 5 else self.wallhitPunish if stay_on_street >= 10 else stay_on_street/10, 3)
+        stay_on_street = round(1 if stay_on_street < 5 else -self.wallhitPunish if stay_on_street >= 10 else -stay_on_street/10, 3)
         speed = otherinput_hist[0].SpeedSteer.speedInStreetDir / self.conf.MAXSPEED
-        return speed - stay_on_street
+        return speed + stay_on_street  if speed + stay_on_street > 0 else 0
 
 
 #    def calculateReward(self, *gameState):
@@ -206,27 +207,21 @@ class AbstractRLAgent(AbstractAgent):
         
     
     def randomAction(self, speed):
-        if current_milli_time() - self.last_random_timestamp > self.repeat_random_action_for:
-            print("new random action", level=6)
-            action = np.random.randint(4) if self.conf.INCLUDE_ACCPLUSBREAK else np.random.randint(3)
-            if action == 0: brake, throttle = 0, 1
-            if action == 1: brake, throttle = 0, 0
-            if action == 2: brake, throttle = 1, 0
-            if action == 3: brake, throttle = 1, 1
-            if speed < 6:
-                brake, throttle = 0, 1  #wenn er nicht fährt bringt stehen nix!
-            #alternative 1a: steer = ((np.random.random()*2)-1)
-            #alternative 1b: steer = min(max(np.random.normal(scale=0.5), 1), -1)
-            #für 1a und 1b:  steer = read_supervised.dediscretize_steer(read_supervised.discretize_steering(steer, self.conf.steering_steps))
-            #alternative 2:
-            tmp = [0]*self.conf.steering_steps
-            tmp[np.random.randint(self.conf.steering_steps)] = 1
-            steer = read_supervised.dediscretize_steer(tmp)
-            self.last_random_timestamp = current_milli_time()
-            self.last_random_action = (throttle, brake, steer)
-        else:
-            throttle, brake, steer = self.last_random_action
-            print("repeating random action", level=6)
+        print("Random Action", level=6)
+        action = np.random.randint(4) if self.conf.INCLUDE_ACCPLUSBREAK else np.random.randint(3)
+        if action == 0: brake, throttle = 0, 1
+        if action == 1: brake, throttle = 0, 0
+        if action == 2: brake, throttle = 1, 0
+        if action == 3: brake, throttle = 1, 1
+        if speed < 6:
+            brake, throttle = 0, 1  #wenn er nicht fährt bringt stehen nix!
+        #alternative 1a: steer = ((np.random.random()*2)-1)
+        #alternative 1b: steer = min(max(np.random.normal(scale=0.5), 1), -1)
+        #für 1a und 1b:  steer = read_supervised.dediscretize_steer(read_supervised.discretize_steering(steer, self.conf.steering_steps))
+        #alternative 2:
+        tmp = [0]*self.conf.steering_steps
+        tmp[np.random.randint(self.conf.steering_steps)] = 1
+        steer = read_supervised.dediscretize_steer(tmp)
         #throttle, brake, steer = 1, 0, 0
         result = "["+str(throttle)+", "+str(brake)+", "+str(steer)+"]"
         return result, (throttle, brake, steer)  #er returned immer toUse, toSave     
@@ -285,13 +280,14 @@ class AbstractRLAgent(AbstractAgent):
         
     def preRunInference(self, gameState, pastState):
         self.addToMemory(gameState, pastState)
+        self.numsteps += 1
         
         
 
-    def postRunInference(self, toUse, toSave, wasRandom=False):
+    def postRunInference(self, toUse, toSave):
         super().postRunInference(toUse, toSave)
         if self.conf.learnMode == "between":
-            if self.model.run_inferences() % self.conf.ForEveryInf == 0 and self.canLearn() and not wasRandom:
+            if self.numsteps % self.conf.ForEveryInf == 0 and self.canLearn():
                 print("freezing python because after", self.model.run_inferences(), "iterations I need to learn (between)", level=2)
                 self.freezeInf("LearningComes")
                 self.dauerLearnANN(self.conf.ComesALearn)
