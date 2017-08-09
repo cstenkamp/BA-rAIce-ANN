@@ -44,7 +44,7 @@ class Otherinputs(Preotherinputs):
     def empty(self):
         return self.__eq__(empty_inputs())
     def returnRelevant(self):
-        return [i for i in self.SpeedSteer]+[i for i in self.StatusVector]+[self.CenterDist]+[i for i in self.LookAheadVec]
+        return [self.CenterDist]+[i for i in self.SpeedSteer]+[i for i in self.StatusVector]+[i for i in self.LookAheadVec]
         
                       
 empty_progressvec = lambda: Progressvec(0, 0, 0, 0)

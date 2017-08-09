@@ -52,7 +52,8 @@ def convolutional_layer(input_tensor, input_channels, kernel_size, stride, outpu
         if pool:
             h_act = max_pool_2x2(h_act)
         if batchnorm:
-            h_act = tf.layers.batch_normalization(h_act, training=is_training, epsilon=1e-7, momentum=.95)
+            h_act = tf.contrib.layers.batch_norm(h_act, center=True, scale=True, is_training=is_training)
+#            h_act = tf.layers.batch_normalization(h_act, training=is_training, epsilon=1e-7, momentum=.95)
         tf.summary.histogram("activations", h_act)
         return h_act
     
@@ -83,7 +84,8 @@ def fc_layer(input_tensor, input_size, output_size, name, is_trainable, batchnor
                 h_fc = tf.nn.dropout(h_fc, keep_prob)
                 #h_fc = tf.cond(keep_prob < 1, lambda: tf.nn.dropout(h_fc, keep_prob), lambda: h_fc)
         if batchnorm:
-            h_fc = tf.layers.batch_normalization(h_fc, training=is_training, epsilon=1e-7, momentum=.95) #training can be a python bool!
+            h_fc = tf.contrib.layers.batch_norm(h_fc, center=True, scale=True, is_training=is_training)
+#            h_fc = tf.layers.batch_normalization(h_fc, training=is_training, epsilon=1e-7, momentum=.95) #training can be a python bool!
         return h_fc
 
 

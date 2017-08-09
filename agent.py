@@ -287,10 +287,10 @@ class AbstractRLAgent(AbstractAgent):
         
         
 
-    def postRunInference(self, toUse, toSave):
+    def postRunInference(self, toUse, toSave, wasRandom=False):
         super().postRunInference(toUse, toSave)
         if self.conf.learnMode == "between":
-            if self.model.run_inferences() % self.conf.ForEveryInf == 0 and self.canLearn():
+            if self.model.run_inferences() % self.conf.ForEveryInf == 0 and self.canLearn() and not wasRandom:
                 print("freezing python because after", self.model.run_inferences(), "iterations I need to learn (between)", level=2)
                 self.freezeInf("LearningComes")
                 self.dauerLearnANN(self.conf.ComesALearn)

@@ -529,8 +529,7 @@ def main(conf, agentname, no_learn, show_screen, show_plots, start_fresh, nomemo
             
     agentclass = __import__(agentname).Agent
     containers.myAgent = agentclass(conf, containers, isPretrain=False, start_fresh=start_fresh) 
-    keepmemory = (hasattr(containers.myAgent, "memory") and nomemorykeep)
-    containers.myAgent.initForDriving(keep_memory = keepmemory, show_plots=show_plots)
+    containers.myAgent.initForDriving(keep_memory = (not nomemorykeep), show_plots=show_plots)
     
                                                                           
     containers.inputval = InputValContainer(conf, containers, containers.myAgent)

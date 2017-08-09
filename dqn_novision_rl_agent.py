@@ -69,6 +69,10 @@ class Agent(AbstractRLAgent):
                 toUse, toSave = self.performNetwork(self.makeInferenceUsable((conv_inputs, other_inputs, stands_inputs)))
                 if self.containers.showscreen:
                     infoscreen.print(toUse, containers=self.containers, wname="Last command")
+                if self.containers.showscreen:
+                    if self.model.run_inferences() % 100 == 0:
+                        infoscreen.print(self.model.step(), "Iterations: >"+str(self.model.run_inferences()), containers=self.containers, wname="ReinfLearnSteps")
+                self.postRunInference(toUse, toSave)
             else:
                 toUse, toSave = self.randomAction(gameState[2][0].SpeedSteer.velocity)
                 if len(self.memory) >= self.conf.replaystartsize:
@@ -78,10 +82,7 @@ class Agent(AbstractRLAgent):
                         self.epsilon = min(round(max(self.epsilon-self.conf.epsilondecrease, self.conf.minepsilon), 5), 1)
                 if self.containers.showscreen:
                     infoscreen.print(self.epsilon, containers=self.containers, wname="Epsilon")
-            if self.containers.showscreen:
-                if self.model.run_inferences() % 100 == 0:
-                    infoscreen.print(self.model.step(), "Iterations: >"+str(self.model.run_inferences()), containers=self.containers, wname="ReinfLearnSteps")
-            self.postRunInference(toUse, toSave)
+                self.postRunInference(toUse, toSave, wasRandom=True)
     
 
 

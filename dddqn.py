@@ -50,12 +50,12 @@ class DuelDQN():
             self.conv_stacksize = (self.conf.history_frame_nr*2 if self.conf.use_second_camera else self.conf.history_frame_nr) if self.agent.conv_stacked else 1
             self.ff_stacksize = self.conf.history_frame_nr if self.agent.ff_stacked else 1
             
-            
             #THIS IS FORWARD STEP
+            self.phase = tf.placeholder(tf.bool, name='phase') #for batchnorm
             self.conv_inputs = tf.placeholder(tf.float32, shape=[None, self.conf.image_dims[0], self.conf.image_dims[1], self.conv_stacksize], name="conv_inputs")  if self.agent.usesConv else None
             self.ff_inputs = tf.placeholder(tf.float32, shape=[None, self.ff_stacksize*self.agent.ff_inputsize], name="ff_inputs")  if self.agent.ff_inputsize else None
             self.stands_inputs = tf.placeholder(tf.float32, shape=[None], name="standing_inputs") #necessary for settozero            
-            self.Qout, self.Qmax, self.predict = self._inference(self.conv_inputs, self.ff_inputs, self.stands_inputs)
+            self.Qout, self.Qmax, self.predict = self._inference(self.conv_inputs, self.ff_inputs, self.stands_inputs, self.phase)
             
             #THIS IS SV_LEARN 
             self.targetA = tf.placeholder(shape=[None],dtype=tf.int32)
@@ -81,25 +81,28 @@ class DuelDQN():
         
 
             
-    def _inference(self, conv_inputs, ff_inputs, stands_inputs):
+    def _inference(self, conv_inputs, ff_inputs, stands_inputs, is_training):
         assert (conv_inputs is not None or ff_inputs is not None)
-        ini = tf.truncated_normal_initializer(stddev=1.0 / math.sqrt(float(self.conf.image_dims[0]*self.conf.image_dims[1])))
-        is_training = (tf.shape(ff_inputs)[0] > 1) if ff_inputs is not None else (tf.shape(conv_inputs)[0] > 1) #fürs batchnorm. Einziger Fall wo man nen python-bool für tf-conditionals nutzen darf
-        
+#        ini = tf.truncated_normal_initializer(stddev=1.0 / math.sqrt(float(self.conf.image_dims[0]*self.conf.image_dims[1])))
+        ini = tf.random_normal_initializer(0, 1e-3)
+        do_batchnorm = True        
+
         if conv_inputs is not None:
             rs_input = tf.reshape(conv_inputs, [-1, self.conf.image_dims[0], self.conf.image_dims[1], self.conv_stacksize]) #final dimension = number of color channels*number of stacked (history-)frames                  
             #convolutional_layer(input_tensor, input_channels, kernel_size, stride, output_channels, name, act, is_trainable, batchnorm, is_training, weightdecay=False, pool=True, trainvars=None, varSum=None, initializer=None)
-            self.conv1 = convolutional_layer(rs_input, self.conv_stacksize, [4,6], [2,3], 32, "Conv1", tf.nn.relu, True, True, is_training, False, False, {}, variable_summary, initializer=ini) #(?, 14, 14, 32)
-            self.conv2 = convolutional_layer(self.conv1, 32, [4,4], [2,2], 64, "Conv2", tf.nn.relu, True, True, is_training, False, False, {}, variable_summary, initializer=ini)                     #(?, 8, 8, 64)
-            self.conv3 = convolutional_layer(self.conv2, 64, [3,3], [2,2], 64, "Conv3", tf.nn.relu, True, True, is_training, False, True, {}, variable_summary, initializer=ini)                      #(?, 2, 2, 64)
-            self.conv4 = convolutional_layer(self.conv3, 64, [4,4], [2,2], self.h_size, "Conv4", tf.nn.relu, True, True, is_training, False, False, {}, variable_summary, initializer=ini)            #(?, 1, 1, 256)
+            self.conv1 = convolutional_layer(rs_input, self.conv_stacksize, [4,6], [2,3], 32, "Conv1", tf.nn.relu, True, do_batchnorm, is_training, False, False, {}, variable_summary, initializer=ini) #(?, 14, 14, 32)
+            self.conv2 = convolutional_layer(self.conv1, 32, [4,4], [2,2], 64, "Conv2", tf.nn.relu, True, do_batchnorm, is_training, False, False, {}, variable_summary, initializer=ini)                     #(?, 8, 8, 64)
+            self.conv3 = convolutional_layer(self.conv2, 64, [3,3], [2,2], 64, "Conv3", tf.nn.relu, True, do_batchnorm, is_training, False, True, {}, variable_summary, initializer=ini)                      #(?, 2, 2, 64)
+            self.conv4 = convolutional_layer(self.conv3, 64, [4,4], [2,2], self.h_size, "Conv4", tf.nn.relu, True, do_batchnorm, is_training, False, False, {}, variable_summary, initializer=ini)            #(?, 1, 1, 256)
             self.conv4_flat = tf.reshape(self.conv4, [-1, self.h_size*2])
             if ff_inputs is not None:
                 fc0 = tf.concat([self.conv4_flat, ff_inputs], 1)
+            length = self.h_size*2
         else:    #fc_layer(input_tensor, input_size, output_size, name, is_trainable, batchnorm, is_training, weightdecay=False, act=None, keep_prob=1, trainvars=None, varSum=None, initializer=None)
-            fc0 = fc_layer(ff_inputs, self.ff_stacksize*self.agent.ff_inputsize, self.ff_stacksize*self.agent.ff_inputsize+self.h_size*2, "FC0", True, True, is_training, False, tf.nn.relu, 1, {}, variable_summary, initializer=ini)   
-        
-        fc1 = fc_layer(fc0, self.ff_stacksize*self.agent.ff_inputsize+self.h_size*2, self.h_size*2, "FC1", True, True, is_training, False, tf.nn.relu, 1, {}, variable_summary, initializer=ini)                 
+            fc0 = fc_layer(ff_inputs, self.ff_stacksize*self.agent.ff_inputsize, self.ff_stacksize*self.agent.ff_inputsize, "FC0", True, do_batchnorm, is_training, False, tf.nn.relu, 1, {}, variable_summary, initializer=ini)   
+            length = 0
+            
+        fc1 = fc_layer(fc0, self.ff_stacksize*self.agent.ff_inputsize+length, self.h_size*2, "FC1", True, False, is_training, False, tf.nn.relu, 1, {}, variable_summary, initializer=ini)                 
 
         #Dueling DQN: split into separate advantage and value stream
         self.streamA,self.streamV = tf.split(fc1,2,1) 
@@ -107,10 +110,17 @@ class DuelDQN():
         self.AW = tf.Variable(xavier_init([self.h_size,self.num_actions]))
         self.VW = tf.Variable(xavier_init([self.h_size,1]))
         self.Advantage = tf.matmul(self.streamA,self.AW)
-        self.Advantage = tf.layers.batch_normalization(self.Advantage, training=is_training, epsilon=1e-7, momentum=.95)
+        if do_batchnorm:
+#            self.Advantage = tf.layers.batch_normalization(self.Advantage, training=is_training, epsilon=1e-7, momentum=.95)
+            self.Advantage = tf.contrib.layers.batch_norm(self.Advantage, center=True, scale=True, is_training=is_training)
         self.Value = tf.matmul(self.streamV,self.VW)
-        self.Value = tf.layers.batch_normalization(self.Value, training=is_training, epsilon=1e-7, momentum=.95)
+        if do_batchnorm:
+#            self.Value = tf.layers.batch_normalization(self.Value, training=is_training, epsilon=1e-7, momentum=.95)
+            self.Value = tf.contrib.layers.batch_norm(self.Value, center=True, scale=True, is_training=is_training)
         Qout = self.Value + tf.subtract(self.Advantage,tf.reduce_mean(self.Advantage,axis=1,keep_dims=True))
+        if do_batchnorm:
+#            Qout = tf.layers.batch_normalization(Qout, training=is_training, epsilon=1e-7, momentum=.95)
+            Qout = tf.contrib.layers.batch_norm(Qout, center=True, scale=True, is_training=is_training)
 
         def settozero(q):
             ZEROIS = 0
@@ -195,12 +205,12 @@ class DuelDQN():
         
         
     #carstands ist true iff (single inference & carstands), in jedem anderem Fall false
-    def feed_dict(self, inputs, targetQ=None, targetA=None, carstands = False, decay_lr=False):
+    def feed_dict(self, inputs, targetQ=None, targetA=None, carstands = False, decay_lr=False, is_training=True):
 
         conv_inputs = np.array([inputs[i][0] for i in range(len(inputs))])
         ff_inputs   = np.array([inputs[i][1] for i in range(len(inputs))])
         
-        feed_dict = {}
+        feed_dict = {self.phase: is_training}
         if len(inputs) == 1 and self.isInference:   
             self.stood_frames_ago = 0 if carstands else self.stood_frames_ago + 1
             if self.stood_frames_ago < 10: #wenn du vor einigen frames stands, gib jetzt auch gas
@@ -321,7 +331,7 @@ class DDDQN_model():
         assert not self.isPretrain, "Please reload this network as a non-pretrain-one!"
         self.targetQN.run_inferences += 1
         carstands = statesBatch[0][2] if len(statesBatch) == 1 and len(statesBatch[0]) > 2 else False
-        return self.session.run([self.targetQN.predict, self.targetQN.Qout], feed_dict=self.targetQN.feed_dict(statesBatch, carstands = carstands))
+        return self.session.run([self.targetQN.predict, self.targetQN.Qout], feed_dict=self.targetQN.feed_dict(statesBatch, carstands = carstands, is_training=False))
         
     #expects only a state (and no stands_inputs)
     def statevalue(self, statesBatch):                                                  
@@ -348,7 +358,7 @@ class DDDQN_model():
         folgeQ = self.session.run(self.targetQN.Qout,feed_dict=self.targetQN.feed_dict(newstates)) #No reduceMax anymore, but instead the action-prediciton because DDQN: instead of taking the max over Q-values when computing the target-Q value for our training step, we use our primary network to chose an action, and our target network to generate the target Q-value for that action. 
         consider_stateval = -(terminals - 1)
         doubleQ = folgeQ[range(len(terminals)),action]  
-        targetQ = rewards + (self.conf.q_decay*doubleQ * consider_stateval)
+        targetQ = rewards + (self.conf.q_decay * doubleQ * consider_stateval)
         #Update the network with our target values.
         if decay_lr:
             _, _ = self.session.run([self.onlineQN.q_OP, self.onlineQN.lr_update], feed_dict=self.onlineQN.feed_dict(oldstates, targetQ=targetQ, targetA=actions, decay_lr="q"))
