@@ -55,8 +55,11 @@ class DuelDQN():
             self.conv_inputs = tf.placeholder(tf.float32, shape=[None, self.conf.image_dims[0], self.conf.image_dims[1], self.conv_stacksize], name="conv_inputs")  if self.agent.usesConv else None
             self.ff_inputs = tf.placeholder(tf.float32, shape=[None, self.ff_stacksize*self.agent.ff_inputsize], name="ff_inputs")  if self.agent.ff_inputsize else None
             self.stands_inputs = tf.placeholder(tf.float32, shape=[None], name="standing_inputs") #necessary for settozero            
-            self.Qout, self.Qmax, self.predict = self._inference(self.conv_inputs, self.ff_inputs, self.stands_inputs, self.phase)
-            
+#            self.Qout, self.Qmax, self.predict = self._inference(self.conv_inputs, self.ff_inputs, self.stands_inputs, self.phase)
+            self.Qout = fc_layer(self.ff_inputs, self.agent.ff_inputsize, self.num_actions, "FC0", True, False, False, False, tf.nn.relu, 1, {}, variable_summary, initializer=tf.random_normal_initializer(0, 1e-100))               
+            self.Qmax = tf.reduce_max(self.Qout, axis=1) #not necessary anymore because we use Double-Q, only used for the stateval for the evaluator
+            self.predict = tf.argmax(self.Qout,1)
+
             #THIS IS SV_LEARN 
             self.targetA = tf.placeholder(shape=[None],dtype=tf.int32)
             self.targetA_OH = tf.one_hot(self.targetA, self.num_actions, dtype=tf.float32)
@@ -85,7 +88,7 @@ class DuelDQN():
         assert (conv_inputs is not None or ff_inputs is not None)
 #        ini = tf.truncated_normal_initializer(stddev=1.0 / math.sqrt(float(self.conf.image_dims[0]*self.conf.image_dims[1])))
         ini = tf.random_normal_initializer(0, 1e-3)
-        do_batchnorm = True        
+        do_batchnorm = False        
 
         if conv_inputs is not None:
             rs_input = tf.reshape(conv_inputs, [-1, self.conf.image_dims[0], self.conf.image_dims[1], self.conv_stacksize]) #final dimension = number of color channels*number of stacked (history-)frames                  
@@ -102,40 +105,42 @@ class DuelDQN():
             fc0 = fc_layer(ff_inputs, self.ff_stacksize*self.agent.ff_inputsize, self.ff_stacksize*self.agent.ff_inputsize, "FC0", True, do_batchnorm, is_training, False, tf.nn.relu, 1, {}, variable_summary, initializer=ini)   
             length = 0
             
-        fc1 = fc_layer(fc0, self.ff_stacksize*self.agent.ff_inputsize+length, self.h_size*2, "FC1", True, False, is_training, False, tf.nn.relu, 1, {}, variable_summary, initializer=ini)                 
-
-        #Dueling DQN: split into separate advantage and value stream
-        self.streamA,self.streamV = tf.split(fc1,2,1) 
-        xavier_init = tf.contrib.layers.xavier_initializer()
-        self.AW = tf.Variable(xavier_init([self.h_size,self.num_actions]))
-        self.VW = tf.Variable(xavier_init([self.h_size,1]))
-        self.Advantage = tf.matmul(self.streamA,self.AW)
-        if do_batchnorm:
-#            self.Advantage = tf.layers.batch_normalization(self.Advantage, training=is_training, epsilon=1e-7, momentum=.95)
-            self.Advantage = tf.contrib.layers.batch_norm(self.Advantage, center=True, scale=True, is_training=is_training)
-        self.Value = tf.matmul(self.streamV,self.VW)
-        if do_batchnorm:
-#            self.Value = tf.layers.batch_normalization(self.Value, training=is_training, epsilon=1e-7, momentum=.95)
-            self.Value = tf.contrib.layers.batch_norm(self.Value, center=True, scale=True, is_training=is_training)
-        Qout = self.Value + tf.subtract(self.Advantage,tf.reduce_mean(self.Advantage,axis=1,keep_dims=True))
-        if do_batchnorm:
-#            Qout = tf.layers.batch_normalization(Qout, training=is_training, epsilon=1e-7, momentum=.95)
-            Qout = tf.contrib.layers.batch_norm(Qout, center=True, scale=True, is_training=is_training)
-
-        def settozero(q):
-            ZEROIS = 0
-            q = tf.squeeze(q) #die stands_inputs sind nur dann True wenn es nur um ein sample geht
-            if not self.conf.INCLUDE_ACCPLUSBREAK: #dann nimmste nur das argmax von den mittleren neurons (was die mit gas sind)
-                q = tf.slice(q,tf.shape(q)//3,tf.shape(q)//3)
-                q = tf.concat([tf.multiply(tf.ones(tf.shape(q)),ZEROIS), q, tf.multiply(tf.ones(tf.shape(q)), ZEROIS)], axis=0)
-            else:
-                q = tf.slice(q,tf.shape(q)//2,(tf.shape(q)//4)*3)
-                q = tf.concat([tf.multiply(tf.ones(tf.shape(q)*2), ZEROIS), q, tf.multiply(tf.ones(tf.shape(q)), ZEROIS)], axis=0)                   
-            q = tf.expand_dims(q, 0)            
-            return q        
+        fc1 = fc_layer(fc0, self.ff_stacksize*self.agent.ff_inputsize+length, self.num_actions, "FC1", True, False, is_training, False, tf.nn.relu, 1, {}, variable_summary, initializer=ini)                 
+        Qout = fc1
         
-        if self.isInference:
-            Qout = tf.cond(tf.reduce_sum(self.stands_inputs) > 0, lambda: settozero(Qout), lambda: Qout) #wenn du stehst, brauchste dich nicht mehr für die ohne gas zu interessieren
+#        #Dueling DQN: split into separate advantage and value stream
+#        self.streamA,self.streamV = tf.split(fc1,2,1) 
+#        xavier_init = tf.contrib.layers.xavier_initializer()
+#        pessicmistic_ini = tf.random_normal_initializer(-2, 1e-3)
+#        self.AW = tf.Variable(xavier_init([self.h_size,self.num_actions]))
+#        self.VW = tf.Variable(pessicmistic_ini([self.h_size,1]))
+#        self.Advantage = tf.matmul(self.streamA,self.AW)
+#        if do_batchnorm:
+##            self.Advantage = tf.layers.batch_normalization(self.Advantage, training=is_training, epsilon=1e-7, momentum=.95)
+#            self.Advantage = tf.contrib.layers.batch_norm(self.Advantage, center=True, scale=True, is_training=is_training)
+#        self.Value = tf.matmul(self.streamV,self.VW)
+#        if do_batchnorm:
+##            self.Value = tf.layers.batch_normalization(self.Value, training=is_training, epsilon=1e-7, momentum=.95)
+#            self.Value = tf.contrib.layers.batch_norm(self.Value, center=True, scale=True, is_training=is_training)
+#        Qout = self.Value + tf.subtract(self.Advantage,tf.reduce_mean(self.Advantage,axis=1,keep_dims=True))
+#        if do_batchnorm:
+##            Qout = tf.layers.batch_normalization(Qout, training=is_training, epsilon=1e-7, momentum=.95)
+#            Qout = tf.contrib.layers.batch_norm(Qout, center=True, scale=True, is_training=is_training)
+
+#        def settozero(q):
+#            ZEROIS = 0 #wenn man NICHT double-q macht, dann nimmt er ja immer das argmax des Qs für nen statevalue, dann könnte mit ZEROIS=0 kein state nen value kleiner null haben
+#            q = tf.squeeze(q) #die stands_inputs sind nur dann True wenn es nur um ein sample geht
+#            if not self.conf.INCLUDE_ACCPLUSBREAK: #dann nimmste nur das argmax von den mittleren neurons (was die mit gas sind)
+#                q = tf.slice(q,tf.shape(q)//3,tf.shape(q)//3)
+#                q = tf.concat([tf.multiply(tf.ones(tf.shape(q)),ZEROIS), q, tf.multiply(tf.ones(tf.shape(q)), ZEROIS)], axis=0)
+#            else:
+#                q = tf.slice(q,tf.shape(q)//2,(tf.shape(q)//4)*3)
+#                q = tf.concat([tf.multiply(tf.ones(tf.shape(q)*2), ZEROIS), q, tf.multiply(tf.ones(tf.shape(q)), ZEROIS)], axis=0)                   
+#            q = tf.expand_dims(q, 0)            
+#            return q        
+        
+#        if self.isInference:
+#            Qout = tf.cond(tf.reduce_sum(self.stands_inputs) > 0, lambda: settozero(Qout), lambda: Qout) #wenn du stehst, brauchste dich nicht mehr für die ohne gas zu interessieren
 
         Qmax = tf.reduce_max(Qout, axis=1) #not necessary anymore because we use Double-Q, only used for the stateval for the evaluator
         predict = tf.argmax(Qout,1)
@@ -207,6 +212,8 @@ class DuelDQN():
     #carstands ist true iff (single inference & carstands), in jedem anderem Fall false
     def feed_dict(self, inputs, targetQ=None, targetA=None, carstands = False, decay_lr=False, is_training=True):
 
+        is_training = False
+        
         conv_inputs = np.array([inputs[i][0] for i in range(len(inputs))])
         ff_inputs   = np.array([inputs[i][1] for i in range(len(inputs))])
         
@@ -263,11 +270,12 @@ class DDDQN_model():
         self.session = session        
         self.isPretrain = isPretrain
         self.onlineQN = DuelDQN(conf, agent, "onlineNet", isPretrain=isPretrain)
-        self.targetQN = DuelDQN(conf, agent, "targetNet", isInference= True, isPretrain=isPretrain)
+        self.targetQN = self.onlineQN #DuelDQN(conf, agent, "targetNet", isInference= True, isPretrain=isPretrain)
+        
         
         self.smoothTargetNetUpdate = self._netCopyOps(self.onlineQN, self.targetQN, self.conf.target_update_tau)
         self.hardOnlineNetUpdate = self._netCopyOps(self.targetQN, self.onlineQN)
-     
+        
         
     def _netCopyOps(self, fromNet, toNet, tau = 1):
         toCopy = fromNet.trainables
@@ -331,11 +339,12 @@ class DDDQN_model():
         assert not self.isPretrain, "Please reload this network as a non-pretrain-one!"
         self.targetQN.run_inferences += 1
         carstands = statesBatch[0][2] if len(statesBatch) == 1 and len(statesBatch[0]) > 2 else False
-        return self.session.run([self.targetQN.predict, self.targetQN.Qout], feed_dict=self.targetQN.feed_dict(statesBatch, carstands = carstands, is_training=False))
+        return self.session.run([self.onlineQN.predict, self.onlineQN.Qout], feed_dict=self.onlineQN.feed_dict(statesBatch, carstands = carstands, is_training=False))
         
     #expects only a state (and no stands_inputs)
-    def statevalue(self, statesBatch):                                                  
-        return self.session.run(self.targetQN.Qmax, feed_dict=self.targetQN.feed_dict(statesBatch))
+    def statevalue(self, statesBatch):         
+#        print(self.session.run(self.onlineQN.Qout, feed_dict=self.onlineQN.feed_dict(statesBatch, is_training=False)))                                         
+        return self.session.run(self.targetQN.Qmax, feed_dict=self.targetQN.feed_dict(statesBatch, is_training=False))
     
     
     #expects a whole s,a,r,s,t - tuple, needs however only s & a
@@ -355,9 +364,10 @@ class DDDQN_model():
     def q_learn(self, batch, decay_lr = False):
         oldstates, actions, rewards, newstates, terminals = batch
         action = self.session.run(self.onlineQN.predict,feed_dict=self.onlineQN.feed_dict(newstates)) #TODO: im text schreiben wie das bei non-doubleDQN anders wäre
-        folgeQ = self.session.run(self.targetQN.Qout,feed_dict=self.targetQN.feed_dict(newstates)) #No reduceMax anymore, but instead the action-prediciton because DDQN: instead of taking the max over Q-values when computing the target-Q value for our training step, we use our primary network to chose an action, and our target network to generate the target Q-value for that action. 
+        folgeQ = self.session.run(self.onlineQN.Qout,feed_dict=self.onlineQN.feed_dict(newstates)) #No reduceMax anymore, but instead the action-prediciton because DDQN: instead of taking the max over Q-values when computing the target-Q value for our training step, we use our primary network to chose an action, and our target network to generate the target Q-value for that action. 
         consider_stateval = -(terminals - 1)
         doubleQ = folgeQ[range(len(terminals)),action]  
+        print(doubleQ)
         targetQ = rewards + (self.conf.q_decay * doubleQ * consider_stateval)
         #Update the network with our target values.
         if decay_lr:

@@ -383,7 +383,7 @@ class OutputValContainer(object):
                 self.send_via_senderthread(self.value, self.CTimestamp, self.STimestamp)
             else:
                 print("Didn't update output-value because the new one wouldn't be newer", level=10)
-                raise
+                #raise
         finally:
             self.lock.release()
 

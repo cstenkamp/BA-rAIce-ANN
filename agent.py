@@ -145,8 +145,8 @@ class AbstractRLAgent(AbstractAgent):
     def __init__(self, conf, containers, isPretrain=False, start_fresh=False, *args, **kwargs):
         super().__init__(conf, containers, *args, **kwargs)
         self.start_fresh = start_fresh
-        self.repeat_random_action_for = 1000
-        self.wallhitPunish = 1;
+        self.repeat_random_action_for = 500
+        self.wallhitPunish = 10;
         self.wrongDirPunish = 10;
         self.isPretrain = isPretrain
         self.show_plots = False  #wird im initForDriving ggf überschrieben
@@ -206,8 +206,8 @@ class AbstractRLAgent(AbstractAgent):
         
     
     def randomAction(self, speed):
-        print("Random Action!", level=6)
         if current_milli_time() - self.last_random_timestamp > self.repeat_random_action_for:
+            print("new random action", level=6)
             action = np.random.randint(4) if self.conf.INCLUDE_ACCPLUSBREAK else np.random.randint(3)
             if action == 0: brake, throttle = 0, 1
             if action == 1: brake, throttle = 0, 0
@@ -226,6 +226,7 @@ class AbstractRLAgent(AbstractAgent):
             self.last_random_action = (throttle, brake, steer)
         else:
             throttle, brake, steer = self.last_random_action
+            print("repeating random action", level=6)
         #throttle, brake, steer = 1, 0, 0
         result = "["+str(throttle)+", "+str(brake)+", "+str(steer)+"]"
         return result, (throttle, brake, steer)  #er returned immer toUse, toSave     

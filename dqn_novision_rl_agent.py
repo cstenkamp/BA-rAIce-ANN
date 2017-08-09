@@ -59,13 +59,22 @@ class Agent(AbstractRLAgent):
         super().initForDriving(*args, **kwargs)
         self.isinitialized = True
 
+        
+        
+        
+        
+        
+        
+
+        
+        
 
 
     def runInference(self, gameState, pastState):
         if self.isinitialized and self.checkIfInference():
             self.preRunInference(gameState, pastState) #eg. adds to memory
             conv_inputs, other_inputs, stands_inputs = self.getAgentState(*gameState)
-            if self.canLearn() and np.random.random() > self.epsilon:
+            if self.canLearn() and np.random.random() > self.epsilon and current_milli_time() - self.last_random_timestamp > self.repeat_random_action_for:
                 toUse, toSave = self.performNetwork(self.makeInferenceUsable((conv_inputs, other_inputs, stands_inputs)))
                 if self.containers.showscreen:
                     infoscreen.print(toUse, containers=self.containers, wname="Last command")
@@ -80,6 +89,8 @@ class Agent(AbstractRLAgent):
                         self.epsilon = min(round(max(self.conf.startepsilon-((self.conf.startepsilon-self.conf.minepsilon)*((self.model.run_inferences()-self.conf.replaystartsize)/self.conf.finalepsilonframe)), self.conf.minepsilon), 5), 1)
                     except: #there are two different kinds of what can be stored in the config for the memory-decrease
                         self.epsilon = min(round(max(self.epsilon-self.conf.epsilondecrease, self.conf.minepsilon), 5), 1)
+                if self.containers.showscreen:
+                    infoscreen.print(toUse, "(random)", containers=self.containers, wname="Last command")
                 if self.containers.showscreen:
                     infoscreen.print(self.epsilon, containers=self.containers, wname="Epsilon")
                 self.postRunInference(toUse, toSave, wasRandom=True)

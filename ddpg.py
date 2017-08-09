@@ -223,8 +223,9 @@ class Actor(object):
     def make_inputs(self, inputs, net, others={}):
         conv_inputs = [inputs[i][0] for i in range(len(inputs))]
         ff_inputs = [inputs[i][1] for i in range(len(inputs))]
-        feed_dict = {net.conv_inputs: conv_inputs, net.ff_inputs: ff_inputs}
-        return {**feed_dict, **others}
+        feed_conv = {net.conv_inputs: conv_inputs} if self.agent.usesConv else {}
+        feed_ff = {net.ff_inputs: ff_inputs} if self.agent.ff_inputsize > 0  else {}
+        return {**feed_conv, **feed_ff, **others}
 
         
         
@@ -278,8 +279,9 @@ class Critic(object):
     def make_inputs(self, inputs, net, others={}):
         conv_inputs = [inputs[i][0] for i in range(len(inputs))]
         ff_inputs = [inputs[i][1] for i in range(len(inputs))]
-        feed_dict = {net.conv_inputs: conv_inputs, net.ff_inputs: ff_inputs}
-        return {**feed_dict, **others}
+        feed_conv = {net.conv_inputs: conv_inputs} if self.agent.usesConv else {}
+        feed_ff = {net.ff_inputs: ff_inputs} if self.agent.ff_inputsize > 0  else {}
+        return {**feed_conv, **feed_ff, **others}
         
     
         
@@ -309,6 +311,7 @@ class DDPG_model():
     def train_step(self, batch):
         oldstates, actions, rewards, newstates, terminals = batch
         #Training the critic...
+        print("D", newstates)
         target_q = self.critic.predict(newstates, self.actor.predict(newstates, "target"), "target")
         cumrewards = np.reshape([rewards[i] if terminals[i] else rewards[i]+0.99*target_q[i] for i in range(len(rewards))], (len(rewards),1))
         target_Q, _, loss = self.critic.train(oldstates, actions, cumrewards)
