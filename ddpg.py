@@ -204,9 +204,9 @@ class Actor(object):
     
             self.actor_gradients = tf.gradients(self.online.scaled_out, self.online.trainables, -self.action_gradient)
             
-            update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
-            with tf.control_dependencies(update_ops): #because of batchnorm, see https://www.tensorflow.org/api_docs/python/tf/layers/batch_normalization
-                self.optimize = tf.train.AdamOptimizer(self.conf.actor_lr).apply_gradients(zip(self.actor_gradients, self.online.trainables))
+#            update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS, scope="actor")
+#            with tf.control_dependencies(update_ops): #because of batchnorm, see https://www.tensorflow.org/api_docs/python/tf/layers/batch_normalization
+            self.optimize = tf.train.AdamOptimizer(self.conf.actor_lr).apply_gradients(zip(self.actor_gradients, self.online.trainables))
     
 
 
@@ -223,8 +223,9 @@ class Actor(object):
     def make_inputs(self, inputs, net, others={}):
         conv_inputs = [inputs[i][0] for i in range(len(inputs))]
         ff_inputs = [inputs[i][1] for i in range(len(inputs))]
-        feed_dict = {net.conv_inputs: conv_inputs, net.ff_inputs: ff_inputs}
-        return {**feed_dict, **others}
+        feed_conv = {net.conv_inputs: conv_inputs} if self.agent.usesConv else {}
+        feed_ff = {net.ff_inputs: ff_inputs} if self.agent.ff_inputsize > 0  else {}
+        return {**feed_conv, **feed_ff, **others}
 
         
         
@@ -255,9 +256,9 @@ class Critic(object):
     
             self.loss = tf.losses.mean_squared_error(self.target_Q, self.online.Q)
             
-            update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
-            with tf.control_dependencies(update_ops): #because of batchnorm, see https://www.tensorflow.org/api_docs/python/tf/layers/batch_normalization
-                self.optimize = tf.train.AdamOptimizer(self.conf.critic_lr).minimize(self.loss)
+#            update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS, scope="critic") #dann müsste ich sachen für both online als auch target feeden, what the fuck tensorflow???
+#            with tf.control_dependencies(update_ops): #because of batchnorm, see https://www.tensorflow.org/api_docs/python/tf/layers/batch_normalization
+            self.optimize = tf.train.AdamOptimizer(self.conf.critic_lr).minimize(self.loss)
     
             self.action_grads = tf.gradients(self.online.Q, self.online.actions)
 
@@ -270,7 +271,7 @@ class Critic(object):
         return self.session.run(net.Q, feed_dict=self.make_inputs(inputs, net, {net.actions: action}))
 
     def action_gradients(self, inputs, actions):
-        return self.session.run(self.action_grads, feed_dict=self.make_inputs(self.online, inputs, {self.online.actions: actions}))
+        return self.session.run(self.action_grads, feed_dict=self.make_inputs(inputs, self.online, {self.online.actions: actions}))
 
     def update_target_network(self):
         self.session.run(self.smoothTargetUpdate)
@@ -278,8 +279,9 @@ class Critic(object):
     def make_inputs(self, inputs, net, others={}):
         conv_inputs = [inputs[i][0] for i in range(len(inputs))]
         ff_inputs = [inputs[i][1] for i in range(len(inputs))]
-        feed_dict = {net.conv_inputs: conv_inputs, net.ff_inputs: ff_inputs}
-        return {**feed_dict, **others}
+        feed_conv = {net.conv_inputs: conv_inputs} if self.agent.usesConv else {}
+        feed_ff = {net.ff_inputs: ff_inputs} if self.agent.ff_inputsize > 0  else {}
+        return {**feed_conv, **feed_ff, **others}
         
     
         
@@ -309,7 +311,8 @@ class DDPG_model():
     def train_step(self, batch):
         oldstates, actions, rewards, newstates, terminals = batch
         #Training the critic...
-        target_q = self.critic.predict(newstates, self.actor.predict(newstates, "target"), "target")
+        act = self.actor.predict(newstates, "target")
+        target_q = self.critic.predict(newstates, act, "target")
         cumrewards = np.reshape([rewards[i] if terminals[i] else rewards[i]+0.99*target_q[i] for i in range(len(rewards))], (len(rewards),1))
         target_Q, _, loss = self.critic.train(oldstates, actions, cumrewards)
         #training the actor...        

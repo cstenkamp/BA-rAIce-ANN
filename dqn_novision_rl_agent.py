@@ -65,25 +65,34 @@ class Agent(AbstractRLAgent):
         if self.isinitialized and self.checkIfInference():
             self.preRunInference(gameState, pastState) #eg. adds to memory
             conv_inputs, other_inputs, stands_inputs = self.getAgentState(*gameState)
-            if self.canLearn() and np.random.random() > self.epsilon:
-                toUse, toSave = self.performNetwork(self.makeInferenceUsable((conv_inputs, other_inputs, stands_inputs)))
-                if self.containers.showscreen:
-                    infoscreen.print(toUse, containers=self.containers, wname="Last command")
-                if self.containers.showscreen:
-                    if self.model.run_inferences() % 100 == 0:
-                        infoscreen.print(self.model.step(), "Iterations: >"+str(self.model.run_inferences()), containers=self.containers, wname="ReinfLearnSteps")
-                self.postRunInference(toUse, toSave)
+            self.repeated_action_for += 1
+            
+            if self.repeated_action_for < self.action_repeat:
+                toUse, toSave = self.last_action           
             else:
-                toUse, toSave = self.randomAction(gameState[2][0].SpeedSteer.velocity)
-                if len(self.memory) >= self.conf.replaystartsize:
-                    try:
-                        self.epsilon = min(round(max(self.conf.startepsilon-((self.conf.startepsilon-self.conf.minepsilon)*((self.model.run_inferences()-self.conf.replaystartsize)/self.conf.finalepsilonframe)), self.conf.minepsilon), 5), 1)
-                    except: #there are two different kinds of what can be stored in the config for the memory-decrease
-                        self.epsilon = min(round(max(self.epsilon-self.conf.epsilondecrease, self.conf.minepsilon), 5), 1)
-                if self.containers.showscreen:
-                    infoscreen.print(self.epsilon, containers=self.containers, wname="Epsilon")
-                self.postRunInference(toUse, toSave, wasRandom=True)
+                self.repeated_action_for = 0
+            
+                if self.canLearn() and np.random.random() > self.epsilon:
+                    toUse, toSave = self.performNetwork(self.makeInferenceUsable((conv_inputs, other_inputs, stands_inputs)))
+                    if self.containers.showscreen:
+                        infoscreen.print(toUse, containers=self.containers, wname="Last command")
+                    if self.containers.showscreen:
+                        if self.model.run_inferences() % 100 == 0:
+                            infoscreen.print(self.model.step(), "Iterations: >"+str(self.model.run_inferences()), containers=self.containers, wname="ReinfLearnSteps")
+                else:
+                    toUse, toSave = self.randomAction(gameState[2][0].SpeedSteer.velocity)
+                    if len(self.memory) >= self.conf.replaystartsize:
+                        try:
+                            self.epsilon = min(round(max(self.conf.startepsilon-((self.conf.startepsilon-self.conf.minepsilon)*((self.model.run_inferences()-self.conf.replaystartsize)/self.conf.finalepsilonframe)), self.conf.minepsilon), 5), 1)
+                        except: #there are two different kinds of what can be stored in the config for the memory-decrease
+                            self.epsilon = min(round(max(self.epsilon-self.conf.epsilondecrease, self.conf.minepsilon), 5), 1)
+                    if self.containers.showscreen:
+                        infoscreen.print(toUse, "(random)", containers=self.containers, wname="Last command")
+                        infoscreen.print(self.epsilon, containers=self.containers, wname="Epsilon")
+                self.last_action = toUse, toSave
+            self.postRunInference(toUse, toSave)
     
+                    
 
 
     def performNetwork(self, state):        

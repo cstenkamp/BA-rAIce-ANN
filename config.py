@@ -40,7 +40,7 @@ class Config():
     
     #REINF_LEARN STUFF
     train_for = sys.maxsize-1
-    initial_lr = 0.0001  #0.00005 
+    initial_lr = 0.00001  #0.00005 
     lr_decay = 0.9999 #hier gehs um steps, nicht mehr um episoden!
     lrdecayafter = train_for//2
     minimal_lr = 0.000001
@@ -54,18 +54,18 @@ class Config():
     checkpointall = 1000 #RLsteps, not inferences!
     
     #LEARN SETTINGS    
+    ForEveryInf, ComesALearn = 400, 100
     wallhit_ends_episode = True #problem: wenn es das nicht tun würde, würde er beim lernen den Q-val des folgestates mitbeachten und denken "oh, gegen die Wand fahren ist voll gut"...
     lapdone_ends_episode = True
     time_ends_episode = 60 #sekunden oder False
     save_memory_with_checkpoint = True
     save_memory_on_exit = False
     save_memory_all_mins = False
-    replaystartsize = 0
+    replaystartsize = 40000
     memorysize = 50000
     use_constantbutbigmemory = False
     visionvecdtype = np.int8 #wäre es np.bool würde er den rand als street sehen!
     keep_memory = True
-    ForEveryInf, ComesALearn = 400, 100
     learnMode = "between" #"parallel", "between", "remote" (the latter is tobedone)
 
     

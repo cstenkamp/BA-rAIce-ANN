@@ -70,14 +70,13 @@ class ReplayBuffer(object):
         self.buffer = deque()
         random.seed(random_seed)
 
-    def add(self, s, a, r, s2, t):
-        experience = (s, a, r, s2, t)
+    def add(self, batch):
         if self.count < self.buffer_size: 
-            self.buffer.append(experience)
+            self.buffer.append(batch)
             self.count += 1
         else:
             self.buffer.popleft()
-            self.buffer.append(experience)
+            self.buffer.append(batch)
 
     def size(self):
         return self.count
@@ -95,7 +94,7 @@ class ReplayBuffer(object):
         r_batch = np.array([_[2] for _ in batch])
         s2_batch = np.array([_[3] for _ in batch])
         t_batch = np.array([_[4] for _ in batch])
-
+        
         return s_batch, a_batch, r_batch, s2_batch, t_batch
 
     def clear(self):
@@ -115,7 +114,8 @@ def train(env, model):
     for i in range(50000):
 
         s = env.reset()
-
+        s = (None, s) #a state for the memory is always (conv, ff), so as there is no conv, its (None, ss) in this case.
+        
         ep_reward = 0
         ep_ave_max_q = 0
 
@@ -123,15 +123,20 @@ def train(env, model):
 
             if RENDER_ENV:
                 env.render()
-
-            # Added exploration noise
-            a = model.inference(np.reshape(s, (1, 3))) + (1. / (1. + i))
-
-            s2, r, terminal, info = env.step(a[0])
-
-            s = (None, s) #a state for the memory is always (conv, ff), so as there is no conv, its (None, ss) in this case.
             
-            replay_buffer.add(np.reshape(s, (model.agent.ff_inputsize,)), np.reshape(a, (model.conf.num_actions,)), r, np.reshape(s2, (model.agent.ff_inputsize,)), terminal)
+            
+            
+            a = model.inference([s])
+            
+            a += (1. / (1. + i)) # Added exploration noise
+
+
+            s2, r, t, info = env.step(a[0])
+
+            s2 = (None, s2)
+
+            replay_buffer.add((s, a[0], r, s2, t))
+            
 
             
             if replay_buffer.size() > MINIBATCH_SIZE:
@@ -142,7 +147,7 @@ def train(env, model):
             s = s2
             ep_reward += r
 
-            if terminal:
+            if t:
                 print('| Reward: %.2i' % int(ep_reward), " | Episode", i, '| Qmax: %.4f' % (ep_ave_max_q / float(j)))
                 break
 
@@ -167,11 +172,13 @@ def main(_):
     conf.image_dims = (0,0)
     conf.target_update_tau = 0.001               
     conf.actor_lr = 0.0001
-    conf.critic_lr = 0.001     
+    conf.critic_lr = 0.001 
      
     myAgent = dummy()
     myAgent.ff_inputsize = env.observation_space.shape[0]
-    myAgent.usesConv = False    
+    myAgent.usesConv = False        
+    myAgent.ff_stacked = False
+    myAgent.ff_inputsize = 3
 
     model = DDPG_model(conf, myAgent, tf.Session())
 
