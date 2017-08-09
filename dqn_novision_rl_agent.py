@@ -23,7 +23,7 @@ current_milli_time = lambda: int(round(time.time() * 1000))
 
 class Agent(AbstractRLAgent):
     def __init__(self, conf, containers, isPretrain=False, start_fresh=False, *args, **kwargs):
-        self.name = __file__[__file__.rfind("\\")+1:__file__.rfind(".")]
+        self.name = "dqn_novision_rl_agent"#__file__[__file__.rfind("\\")+1:__file__.rfind(".")]
         super().__init__(conf, containers, isPretrain, start_fresh, *args, **kwargs)
         self.ff_inputsize = 49
         self.epsilon = self.conf.startepsilon
@@ -186,14 +186,66 @@ class Agent(AbstractRLAgent):
 ###############################################################################
 
 if __name__ == '__main__':  
-    import sys
+#    import sys
+#    import config
+#    conf = config.Config()
+#    import read_supervised
+#    from server import Containers; containers = Containers()
+#    tf.reset_default_graph()                                                          
+#    myAgent = Agent(conf, containers, start_fresh=("-new" in sys.argv), isPretrain=True)
+#    trackingpoints = read_supervised.TPList(conf.LapFolderName, conf.use_second_camera, conf.msperframe, conf.steering_steps, conf.INCLUDE_ACCPLUSBREAK)
+#    print("Number of samples:",trackingpoints.numsamples)
+#    myAgent.preTrain(trackingpoints, 200)
+#    time.sleep(999)
+
+
+
     import config
     conf = config.Config()
     import read_supervised
     from server import Containers; containers = Containers()
     tf.reset_default_graph()                                                          
-    myAgent = Agent(conf, containers, start_fresh=("-new" in sys.argv), isPretrain=True)
-    trackingpoints = read_supervised.TPList(conf.LapFolderName, conf.use_second_camera, conf.msperframe, conf.steering_steps, conf.INCLUDE_ACCPLUSBREAK)
-    print("Number of samples:",trackingpoints.numsamples)
-    myAgent.preTrain(trackingpoints, 200)
-    time.sleep(999)
+    myAgent = Agent(conf, containers, isPretrain=False)
+    myAgent.initForDriving()
+    
+    for i in range(20):
+        for i in range(200):
+            trainBatch = myAgent.create_QLearnInputs_from_MemoryBatch(myAgent.memory.sample(conf.batch_size))
+            myAgent.model.q_learn(trainBatch, False)
+        myAgent.model.save()
+#    
+#        for i in range(iterations):
+#            start_time = time.time()
+#            dataset.reset_batch()
+#            trainBatch = read_supervised.create_QLearnInputs_from_PTStateBatch(*dataset.next_batch(self.conf, self, dataset.numsamples), self)
+#            print('Iteration %3d: Accuracy = %.2f%% (%.1f sec)' % (self.model.pretrain_episode(), self.model.getAccuracy(trainBatch), time.time()-start_time), level=10)
+#            self.model.inc_episode()
+#            dataset.reset_batch()
+#            while dataset.has_next(pretrain_batchsize):
+#                trainBatch = read_supervised.create_QLearnInputs_from_PTStateBatch(*dataset.next_batch(self.conf, self, pretrain_batchsize), self)
+#                if supervised:
+#                    self.model.sv_learn(trainBatch, True)
+#                else:
+#                    self.model.q_learn(trainBatch, True)    
+#                        
+#    
+    
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

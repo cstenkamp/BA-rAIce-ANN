@@ -40,16 +40,16 @@ class Config():
     
     #REINF_LEARN STUFF
     train_for = sys.maxsize-1
-    initial_lr = 0.00001  #0.00005 
+    initial_lr = 0.000025  #0.000025
     lr_decay = 0.9999 #hier gehs um steps, nicht mehr um episoden!
     lrdecayafter = train_for//2
     minimal_lr = 0.000001
     
-    target_update_tau = 0.1 #0.001 
+    target_update_tau = 0.001 
     batch_size = 32
-    startepsilon = 0.2
+    startepsilon = 0#0.2
     finalepsilonframe = 100000  #I could use epsilondecrease = 0.0001 instead, however then every new run epsilon would reset to startepsilon (since it doesn't depend on numIterations then)
-    minepsilon = 0.005
+    minepsilon = 0#0.005
     q_decay = 0.99
     checkpointall = 1000 #RLsteps, not inferences!
     
@@ -61,7 +61,7 @@ class Config():
     save_memory_with_checkpoint = True
     save_memory_on_exit = False
     save_memory_all_mins = False
-    replaystartsize = 40000
+    replaystartsize = 4000
     memorysize = 50000
     use_constantbutbigmemory = False
     visionvecdtype = np.int8 #wäre es np.bool würde er den rand als street sehen!

@@ -124,20 +124,20 @@ class DuelDQN():
         if do_batchnorm:
             Qout = tf.contrib.layers.batch_norm(Qout, center=True, scale=True, is_training=is_training)
 
-#        def settozero(q):
-#            ZEROIS = 0
-#            q = tf.squeeze(q) #die stands_inputs sind nur dann True wenn es nur um ein sample geht
-#            if not self.conf.INCLUDE_ACCPLUSBREAK: #dann nimmste nur das argmax von den mittleren neurons (was die mit gas sind)
-#                q = tf.slice(q,tf.shape(q)//3,tf.shape(q)//3)
-#                q = tf.concat([tf.multiply(tf.ones(tf.shape(q)),ZEROIS), q, tf.multiply(tf.ones(tf.shape(q)), ZEROIS)], axis=0)
-#            else:
-#                q = tf.slice(q,tf.shape(q)//2,(tf.shape(q)//4)*3)
-#                q = tf.concat([tf.multiply(tf.ones(tf.shape(q)*2), ZEROIS), q, tf.multiply(tf.ones(tf.shape(q)), ZEROIS)], axis=0)                   
-#            q = tf.expand_dims(q, 0)            
-#            return q        
-#        
-#        if self.isInference:
-#            Qout = tf.cond(tf.reduce_sum(self.stands_inputs) > 0, lambda: settozero(Qout), lambda: Qout) #wenn du stehst, brauchste dich nicht mehr für die ohne gas zu interessieren
+        def settozero(q):
+            ZEROIS = 0
+            q = tf.squeeze(q) #die stands_inputs sind nur dann True wenn es nur um ein sample geht
+            if not self.conf.INCLUDE_ACCPLUSBREAK: #dann nimmste nur das argmax von den mittleren neurons (was die mit gas sind)
+                q = tf.slice(q,tf.shape(q)//3,tf.shape(q)//3)
+                q = tf.concat([tf.multiply(tf.ones(tf.shape(q)),ZEROIS), q, tf.multiply(tf.ones(tf.shape(q)), ZEROIS)], axis=0)
+            else:
+                q = tf.slice(q,tf.shape(q)//2,(tf.shape(q)//4)*3)
+                q = tf.concat([tf.multiply(tf.ones(tf.shape(q)*2), ZEROIS), q, tf.multiply(tf.ones(tf.shape(q)), ZEROIS)], axis=0)                   
+            q = tf.expand_dims(q, 0)            
+            return q        
+        
+        if self.isInference:
+            Qout = tf.cond(tf.reduce_sum(self.stands_inputs) > 0, lambda: settozero(Qout), lambda: Qout) #wenn du stehst, brauchste dich nicht mehr für die ohne gas zu interessieren
 
         Qmax = tf.reduce_max(Qout, axis=1) #not necessary anymore because we use Double-Q, only used for the stateval for the evaluator
         predict = tf.argmax(Qout,1)
@@ -208,9 +208,7 @@ class DuelDQN():
         
     #carstands ist true iff (single inference & carstands), in jedem anderem Fall false
     def feed_dict(self, inputs, targetQ=None, targetA=None, carstands = False, decay_lr=False, is_training=True):
-
-        is_training = False
-        
+   
         conv_inputs = np.array([inputs[i][0] for i in range(len(inputs))])
         ff_inputs   = np.array([inputs[i][1] for i in range(len(inputs))])
         
@@ -360,10 +358,10 @@ class DDDQN_model():
     def q_learn(self, batch, decay_lr = False):
         oldstates, actions, rewards, newstates, terminals = batch
         action = self.session.run(self.onlineQN.predict,feed_dict=self.onlineQN.feed_dict(newstates)) #TODO: im text schreiben wie das bei non-doubleDQN anders wäre
-        folgeQ = self.session.run(self.onlineQN.Qout,feed_dict=self.onlineQN.feed_dict(newstates)) #No reduceMax anymore, but instead the action-prediciton because DDQN: instead of taking the max over Q-values when computing the target-Q value for our training step, we use our primary network to chose an action, and our target network to generate the target Q-value for that action. 
+        folgeQ = self.session.run(self.targetQN.Qout,feed_dict=self.targetQN.feed_dict(newstates)) #No reduceMax anymore, but instead the action-prediciton because DDQN: instead of taking the max over Q-values when computing the target-Q value for our training step, we use our primary network to chose an action, and our target network to generate the target Q-value for that action. 
         consider_stateval = -(terminals - 1)
         doubleQ = folgeQ[range(len(terminals)),action]  
-        print(doubleQ)
+#        print(doubleQ)
         targetQ = rewards + (self.conf.q_decay * doubleQ * consider_stateval)
         #Update the network with our target values.
         if decay_lr:

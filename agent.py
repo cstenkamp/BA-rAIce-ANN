@@ -187,8 +187,8 @@ class AbstractRLAgent(AbstractAgent):
         
     def calculateReward(self, *gameState):
         vvec1_hist, vvec2_hist, otherinput_hist, action_hist = gameState
-        stay_on_street = abs(otherinput_hist[0].CenterDist)
-        stay_on_street = round(1 if stay_on_street < 5 else -self.wallhitPunish if stay_on_street >= 10 else -stay_on_street/10, 3)
+        dist = abs(otherinput_hist[0].CenterDist)
+        stay_on_street = min(1 if dist < 5 else -self.wallhitPunish if dist >= 10 else 1/((dist-5) if (dist-5) != 0 else 0.00001), 1)
         speed = otherinput_hist[0].SpeedSteer.speedInStreetDir / self.conf.MAXSPEED
         return speed + stay_on_street  if speed + stay_on_street > 0 else 0
 
