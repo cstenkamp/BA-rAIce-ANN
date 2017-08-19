@@ -15,7 +15,7 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' #so that TF doesn't show its warnings
 import math
 #====own classes====
 from myprint import myprint as print
-from utils import convolutional_layer, fc_layer, variable_summary
+from utils import convolutional_layer, fc_layer, variable_summary, netCopyOps
 
 
 
@@ -257,24 +257,9 @@ class DDDQN_model():
         self.targetQN = DuelDQN(conf, agent, "targetNet", isInference= True, isPretrain=isPretrain)
         
         
-        self.smoothTargetNetUpdate = self._netCopyOps(self.onlineQN, self.targetQN, self.conf.target_update_tau)
-        self.hardOnlineNetUpdate = self._netCopyOps(self.targetQN, self.onlineQN)
+        self.smoothTargetNetUpdate = netCopyOps(self.onlineQN, self.targetQN, self.conf.target_update_tau)
+        self.hardOnlineNetUpdate = netCopyOps(self.targetQN, self.onlineQN)
         
-        
-    def _netCopyOps(self, fromNet, toNet, tau = 1):
-        toCopy = fromNet.trainables
-        toPast = toNet.trainables
-        op_holder = []
-        for idx,var in enumerate(toCopy[:]):
-            if tau == 1:
-                op_holder.append(toPast[idx].assign(var.value()))
-            else:
-                op_holder.append(toPast[idx].assign((var.value()*tau) + ((1-tau)*toPast[idx].value())))
-        return op_holder
-    
-    def _runMultipleOps(self, op_holder,sess):
-        for op in op_holder:
-            sess.run(op)        
         
             
     def initNet(self, load=False):
@@ -291,11 +276,11 @@ class DDDQN_model():
             else:
                 self.targetQN.load(self.session, from_pretrain=True)     
                 self.session.run(self.onlineQN.pretrain_step_tf.assign(self.targetQN.pretrain_step_tf))
-        self._runMultipleOps(self.hardOnlineNetUpdate, self.session)
+        self.session.run(self.hardOnlineNetUpdate)
         self.lastTrained = None
             
     def save(self):
-        if self.lastTrained == self.onlineQN:
+        if self.lastTrained == self.onlineQN: #falls zuletzt q_train gemacht wurde
             self.session.run(self.targetQN.pretrain_step_tf.assign(self.onlineQN.pretrain_step_tf))
             self.session.run(self.targetQN.step_tf.assign(self.onlineQN.step_tf))
         self.targetQN.save(self.session)            
@@ -357,7 +342,7 @@ class DDDQN_model():
             _, _ = self.session.run([self.onlineQN.q_OP, self.onlineQN.lr_update], feed_dict=self.onlineQN.feed_dict(oldstates, targetQ=targetQ, targetA=actions, decay_lr="q"))
         else:
             _ = self.session.run(self.onlineQN.q_OP, feed_dict=self.onlineQN.feed_dict(oldstates, targetQ=targetQ, targetA=actions))
-        self._runMultipleOps(self.smoothTargetNetUpdate, self.session) #Update the target network toward the primary network.
+        self.session.run(self.smoothTargetNetUpdate) #Update the target network toward the primary network.
         if not self.isPretrain:
             self.onlineQN.step = self.onlineQN.step_tf.eval(self.session)
         self.lastTrained = self.onlineQN

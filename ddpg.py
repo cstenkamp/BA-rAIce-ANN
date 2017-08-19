@@ -3,20 +3,12 @@ import numpy as np
 import time
 import tensorflow.contrib.slim as slim
 from myprint import printtofile as print
+from utils import netCopyOps
+import os
+from tensorflow.contrib.framework import get_variables
 
 #batchnorm doesnt really work, and if, only with huge minibatches https://www.reddit.com/r/MachineLearning/comments/671455/d_batch_normalization_in_reinforcement_learning/
 
-
-def _netCopyOps(fromNet, toNet, tau = 1):
-    toCopy = fromNet.trainables
-    toPast = toNet.trainables
-    op_holder = []
-    for idx,var in enumerate(toCopy[:]):
-        if tau == 1:
-            op_holder.append(toPast[idx].assign(var.value()))
-        else:
-            op_holder.append(toPast[idx].assign((var.value()*tau) + ((1-tau)*toPast[idx].value())))
-    return op_holder
        
         
 def dense(x, units, activation=tf.identity, decay=None, minmax=None):
@@ -65,7 +57,7 @@ def dense(x, units, activation=tf.identity, decay=None, minmax=None):
 #
 #        self.trainables = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope=outerscope+"/"+self.name)
 #        self.ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS, scope=outerscope+"/"+self.name)      
-        
+#        self.saver = tf.train.Saver(var_list=get_variables(outerscope+"/"+self.name))        
         
         
 
@@ -97,7 +89,7 @@ class lowdim_actorNet():
             
         self.trainables = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope=outerscope+"/"+self.name)
         self.ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS, scope=outerscope+"/"+self.name)      
-        
+        self.saver = tf.train.Saver(var_list=get_variables(outerscope+"/"+self.name))
 
 
         
@@ -139,7 +131,8 @@ class lowdim_actorNet():
 #            self.Q = dense(self.fc2, conf.num_actions, decay=True, minmax=3e-4)
 #            
 #        self.trainables = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope=outerscope+"/"+self.name)
-#        self.ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS, scope=outerscope+"/"+self.name)      
+#        self.ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS, scope=outerscope+"/"+self.name)
+#        self.saver = tf.train.Saver(var_list=get_variables(outerscope+"/"+self.name))      
         
        
         
@@ -170,7 +163,7 @@ class lowdim_criticNet():
             
         self.trainables = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope=outerscope+"/"+self.name)
         self.ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS, scope=outerscope+"/"+self.name)      
-        
+        self.saver = tf.train.Saver(var_list=get_variables(outerscope+"/"+self.name))
        
                 
         
@@ -178,10 +171,11 @@ class lowdim_criticNet():
 
         
 class Actor(object):
-    def __init__(self, conf, agent, session, batchnormstring=""):
+    def __init__(self, conf, agent, session, batchnormstring="", isPretrain=False):
         self.conf = conf
         self.agent = agent
         self.session = session
+        self.isPretrain = isPretrain
         kwargs = {"batchnorm": batchnormstring} if len(batchnormstring) > 0 else {}
         
         with tf.variable_scope("actor"):
@@ -193,7 +187,7 @@ class Actor(object):
                 self.online = lowdim_actorNet(conf, agent, **kwargs)
                 self.target = lowdim_actorNet(conf, agent, name="target", **kwargs)
                 
-            self.smoothTargetUpdate = _netCopyOps(self.online, self.target, self.conf.target_update_tau)
+            self.smoothTargetUpdate = netCopyOps(self.online, self.target, self.conf.target_update_tau)
     
             # provided by the critic network
             self.action_gradient = tf.placeholder(tf.float32, [None, self.conf.num_actions], name="actiongradient")
@@ -221,6 +215,12 @@ class Actor(object):
         feed_ff = {net.ff_inputs: ff_inputs} if self.agent.ff_inputsize > 0  else {}
         return {**feed_conv, **feed_ff, **others, net.phase: is_training}
 
+
+    def save(self, session):
+        folder = self.conf.pretrain_checkpoint_dir if self.isPretrain else self.conf.checkpoint_dir
+        checkpoint_file = os.path.join(self.agent.folder(folder), 'actor.ckpt')        
+        self.target.saver.save(session, checkpoint_file) #, global_step=self.pretrain_step_tf if self.isPretrain else self.step_tf)
+        print("Saved Actor.", level=6) 
         
         
         
@@ -229,10 +229,11 @@ class Actor(object):
         
 
 class Critic(object):
-    def __init__(self, conf, agent, session, batchnormstring=""):
+    def __init__(self, conf, agent, session, batchnormstring="", isPretrain=False):
         self.conf = conf
         self.agent = agent
         self.session = session
+        self.isPretrain = isPretrain
         kwargs = {"batchnorm": batchnormstring} if len(batchnormstring) > 0 else {}
 
         with tf.variable_scope("critic"):
@@ -244,7 +245,7 @@ class Critic(object):
                 self.online = lowdim_criticNet(conf, agent, **kwargs)
                 self.target = lowdim_criticNet(conf, agent, name="target", **kwargs)            
                 
-            self.smoothTargetUpdate = _netCopyOps(self.online, self.target, self.conf.target_update_tau)
+            self.smoothTargetUpdate = netCopyOps(self.online, self.target, self.conf.target_update_tau)
     
             self.target_Q = tf.placeholder(tf.float32, [None, 1], name="target_Q")
     
@@ -275,28 +276,55 @@ class Critic(object):
         feed_ff = {net.ff_inputs: ff_inputs} if self.agent.ff_inputsize > 0  else {}
         return {**feed_conv, **feed_ff, **others, net.phase: is_training}
         
-    
+
+    def save(self, session):
+        folder = self.conf.pretrain_checkpoint_dir if self.isPretrain else self.conf.checkpoint_dir
+        checkpoint_file = os.path.join(self.agent.folder(folder), 'critic.ckpt')        
+        self.target.saver.save(session, checkpoint_file) #, global_step=self.pretrain_step_tf if self.isPretrain else self.step_tf)
+        print("Saved Critic.", level=6)     
+
+
         
         
 class DDPG_model():
     
-    def __init__(self,  conf, agent, session, actorbatchnorm="", criticbatchnorm=""):
+    def __init__(self,  conf, agent, session, isPretrain=False, actorbatchnorm="", criticbatchnorm=""):
         self.conf = conf
         self.agent = agent
         self.session = session
-        self.initNet(actorbatchnorm, criticbatchnorm)
+        self.isPretrain = isPretrain
+        self.actor = Actor(self.conf, self.agent, self.session, actorbatchnorm, isPretrain)
+        self.critic = Critic(self.conf, self.agent, self.session, criticbatchnorm, isPretrain) 
         
         
-    def initNet(self, actornormstring, criticnormstring):
-        
-        self.actor = Actor(self.conf, self.agent, self.session, actornormstring)
-        self.critic = Critic(self.conf, self.agent, self.session, criticnormstring)     
-        
+    def initNet(self, load=False):
         self.session.run(tf.global_variables_initializer())
-        self.session.run(_netCopyOps(self.actor.target, self.actor.online))
-        self.session.run(_netCopyOps(self.critic.target, self.critic.online))      
+        
+#        if load == "preTrain":
+#            self.targetQN.load(self.session, from_pretrain=True)     
+#            self.session.run(self.onlineQN.pretrain_step_tf.assign(self.targetQN.pretrain_step_tf))
+#        elif load == "noPreTrain":
+#            self.targetQN.load(self.session, from_pretrain=False)   
+#            self.session.run(self.onlineQN.step_tf.assign(self.targetQN.step_tf))
+#        elif load != False: #versuche RLLearn, wenn das nicht geht pretrain
+#            if self.targetQN.load(self.session, from_pretrain=False):
+#                self.session.run(self.onlineQN.step_tf.assign(self.targetQN.step_tf))
+#            else:
+#                self.targetQN.load(self.session, from_pretrain=True)     
+#                self.session.run(self.onlineQN.pretrain_step_tf.assign(self.targetQN.pretrain_step_tf))
+                
+                
+        self.session.run(netCopyOps(self.actor.target, self.actor.online))
+        self.session.run(netCopyOps(self.critic.target, self.critic.online))      
         
     
+        
+    def save(self):
+        self.actor.save(self.session)            
+        self.critic.save(self.session)
+
+        
+        
         
     #actor predicts action. critic predicts q-value of action. That is compared to the actual q-value of action. (TD-Error)
     #online-actor predicts new actions. actor uses critic's gradients to train, too.
@@ -316,6 +344,7 @@ class DDPG_model():
         #updating the targetnets...
         self.actor.update_target_network()
         self.critic.update_target_network()
+        self.save()
         return np.max(target_Q)
         
         

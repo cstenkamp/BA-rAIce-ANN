@@ -100,6 +100,15 @@ def variable_summary(var, what=""):
         tf.summary.histogram('histogram', var)
 
 
+        
+def netCopyOps(fromNet, toNet, tau = 1):
+    op_holder = []
+    for idx,var in enumerate(fromNet.trainables[:]):
+        op_holder.append(toNet.trainables[idx].assign((var.value()*tau) + ((1-tau)*toNet.trainables[idx].value())))
+    return op_holder
+
+    
+    
 ###############################################################################
 #alternatively to the direct TF-implementation of layers, one could have used the tf.layers as well:
 #def dense(x, units, activation=None, decay=None, minmax=None):
