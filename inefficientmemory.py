@@ -129,11 +129,8 @@ class Memory(object):
         if lastmemoryentry is not None:
             lastmemoryentry[4] = True
             self.append(lastmemoryentry)
-                    
-        for j in range(self._pointer-10, self._pointer):
-            print(self._buffer[j][0][1][0], self.agent.dediscretize(self.agent.discretize(*self._buffer[j][1])), self._buffer[j][2], self._buffer[j][3][1][0], self._buffer[j][4])
-            
-            
+#        for j in range(self._pointer-10, self._pointer):
+#            print(self._buffer[j][0][1][0], self.agent.dediscretize(self.agent.discretize(*self._buffer[j][1])), self._buffer[j][2], self._buffer[j][3][1][0], self._buffer[j][4])
         prev_epistart = self.epistart
         self.epistart = self._pointer
         return prev_epistart, self.epistart

@@ -5,13 +5,6 @@ Created on Thu Aug  3 15:38:25 2017
 @author: nivradmin
 """
 
-#TODO: 
-# -die variable_summary(loss, "loss") etc fehlen für TensorBoard
-# -die Möglichkeit auf RMSProp mit den originalen DQN settings
-# -nicht doch CPU und GPU gleichzeitig inference und lernen?
-# -ist die eval von vorher komplett wieder hier?
-# -die calculate_value ist noch nicht da (und muss auch anders, da doubleDQN)
-#
 
 import tensorflow.contrib.slim as slim
 from tensorflow.contrib.framework import get_variables
@@ -54,8 +47,8 @@ class DuelDQN():
             self.phase = tf.placeholder(tf.bool, name='phase') #for batchnorm
             self.conv_inputs = tf.placeholder(tf.float32, shape=[None, self.conf.image_dims[0], self.conf.image_dims[1], self.conv_stacksize], name="conv_inputs")  if self.agent.usesConv else None
             self.ff_inputs = tf.placeholder(tf.float32, shape=[None, self.ff_stacksize*self.agent.ff_inputsize], name="ff_inputs")  if self.agent.ff_inputsize else None
-            self.stands_inputs = tf.placeholder(tf.float32, shape=[None], name="standing_inputs") #necessary for settozero            
-            self.Qout, self.Qmax, self.predict = self._inference(self.conv_inputs, self.ff_inputs, self.stands_inputs, self.phase)
+            self.stands_input = tf.placeholder(tf.bool, name="stands_input") #necessary for settozero            
+            self.Qout, self.Qmax, self.predict = self._inference(self.conv_inputs, self.ff_inputs, self.stands_input, self.phase)
 #            self.Qout = fc_layer(self.ff_inputs, self.agent.ff_inputsize, self.num_actions, "FC0", True, False, False, False, tf.nn.relu, 1, {}, variable_summary, initializer=tf.random_normal_initializer(0, 1e-100))               
 #            self.Qmax = tf.reduce_max(self.Qout, axis=1) 
 #            self.predict = tf.argmax(self.Qout,1)            
@@ -85,7 +78,7 @@ class DuelDQN():
         
 
             
-    def _inference(self, conv_inputs, ff_inputs, stands_inputs, is_training):
+    def _inference(self, conv_inputs, ff_inputs, stands_input, is_training):
         assert (conv_inputs is not None or ff_inputs is not None)
 #        ini = tf.truncated_normal_initializer(stddev=1.0 / math.sqrt(float(self.conf.image_dims[0]*self.conf.image_dims[1])))
         ini = tf.random_normal_initializer(0, 1e-3)
@@ -126,7 +119,7 @@ class DuelDQN():
 
         def settozero(q):
             ZEROIS = 0
-            q = tf.squeeze(q) #die stands_inputs sind nur dann True wenn es nur um ein sample geht
+            q = tf.squeeze(q) #stands_input ist nur dann True wenn es nur um ein sample geht
             if not self.conf.INCLUDE_ACCPLUSBREAK: #dann nimmste nur das argmax von den mittleren neurons (was die mit gas sind)
                 q = tf.slice(q,tf.shape(q)//3,tf.shape(q)//3)
                 q = tf.concat([tf.multiply(tf.ones(tf.shape(q)),ZEROIS), q, tf.multiply(tf.ones(tf.shape(q)), ZEROIS)], axis=0)
@@ -135,9 +128,9 @@ class DuelDQN():
                 q = tf.concat([tf.multiply(tf.ones(tf.shape(q)*2), ZEROIS), q, tf.multiply(tf.ones(tf.shape(q)), ZEROIS)], axis=0)                   
             q = tf.expand_dims(q, 0)            
             return q        
-        
+            
         if self.isInference:
-            Qout = tf.cond(tf.reduce_sum(self.stands_inputs) > 0, lambda: settozero(Qout), lambda: Qout) #wenn du stehst, brauchste dich nicht mehr für die ohne gas zu interessieren
+            Qout = tf.cond(self.stands_input, lambda: settozero(Qout), lambda: Qout) #wenn du stehst, brauchste dich nicht mehr für die ohne gas zu interessieren
 
         Qmax = tf.reduce_max(Qout, axis=1) #not necessary anymore because we use Double-Q, only used for the stateval for the evaluator
         predict = tf.argmax(Qout,1)
@@ -213,15 +206,11 @@ class DuelDQN():
         ff_inputs   = np.array([inputs[i][1] for i in range(len(inputs))])
         
         feed_dict = {self.phase: is_training}
-        if len(inputs) == 1 and self.isInference:   
+        if not is_training and self.isInference:   
             self.stood_frames_ago = 0 if carstands else self.stood_frames_ago + 1
-            if self.stood_frames_ago < 10: #wenn du vor einigen frames stands, gib jetzt auch gas
+            if self.stood_frames_ago < 4: #wenn du vor einigen frames stands, gib jetzt auch gas
                 carstands = True
-#            conv_inputs = np.expand_dims(conv_inputs, axis=0) #expand_dims weil hier quasi batchsize=1
-#            ff_inputs= np.expand_dims(ff_inputs, axis=0) 
-            stands_inputs = [carstands]
         else:
-            stands_inputs = [False]*len(inputs)
             if targetQ is not None: #targetQ und targetA werden nur beim learning verwendet, und dann ist ebennicht inference
                 feed_dict[self.targetQ] = targetQ
             if targetA is not None:
@@ -231,8 +220,8 @@ class DuelDQN():
             feed_dict[self.conv_inputs] = conv_inputs
         if self.agent.ff_inputsize:
             feed_dict[self.ff_inputs] = ff_inputs 
-        if self.isInference:
-            feed_dict[self.stands_inputs] = stands_inputs #ist halt 0 wenn false, was richtig ist
+        
+        feed_dict[self.stands_input] = carstands 
             
         if decay_lr == "sv":
             lr_decay = self.conf.pretrain_sv_lr_decay ** max(self.pretrain_episode-self.conf.pretrain_lrdecayafter, 0.0)
@@ -265,7 +254,7 @@ class DDDQN_model():
         self.session = session        
         self.isPretrain = isPretrain
         self.onlineQN = DuelDQN(conf, agent, "onlineNet", isPretrain=isPretrain)
-        self.targetQN = self.onlineQN #DuelDQN(conf, agent, "targetNet", isInference= True, isPretrain=isPretrain)
+        self.targetQN = DuelDQN(conf, agent, "targetNet", isInference= True, isPretrain=isPretrain)
         
         
         self.smoothTargetNetUpdate = self._netCopyOps(self.onlineQN, self.targetQN, self.conf.target_update_tau)
@@ -326,17 +315,18 @@ class DDDQN_model():
     #expects a whole s,a,r,s,t - tuple, needs however only s & a
     def getAccuracy(self, batch):
         oldstates, actions, _, _, _ = batch
-        predict = self.session.run(self.targetQN.predict,feed_dict=self.targetQN.feed_dict(oldstates))
+        predict = self.session.run(self.targetQN.predict,feed_dict=self.targetQN.feed_dict(oldstates, is_training=False))
         return round(np.mean(np.array(actions == predict, dtype=int))*100, 2)
             
-    #expects only a state (with stands_inputs)
+    #expects only a state (with stands_input)
     def inference(self, statesBatch):                                                    
         assert not self.isPretrain, "Please reload this network as a non-pretrain-one!"
         self.targetQN.run_inferences += 1
         carstands = statesBatch[0][2] if len(statesBatch) == 1 and len(statesBatch[0]) > 2 else False
-        return self.session.run([self.onlineQN.predict, self.onlineQN.Qout], feed_dict=self.onlineQN.feed_dict(statesBatch, carstands = carstands, is_training=False))
+        return self.session.run([self.targetQN.predict, self.targetQN.Qout], feed_dict=self.targetQN.feed_dict(statesBatch, carstands = carstands, is_training=False))
         
-    #expects only a state (and no stands_inputs)
+        
+    #expects only a state (and no stands_input)
     def statevalue(self, statesBatch):                                                  
         return self.session.run(self.targetQN.Qmax, feed_dict=self.targetQN.feed_dict(statesBatch, is_training=False))
     
@@ -361,7 +351,6 @@ class DDDQN_model():
         folgeQ = self.session.run(self.targetQN.Qout,feed_dict=self.targetQN.feed_dict(newstates)) #No reduceMax anymore, but instead the action-prediciton because DDQN: instead of taking the max over Q-values when computing the target-Q value for our training step, we use our primary network to chose an action, and our target network to generate the target Q-value for that action. 
         consider_stateval = -(terminals - 1)
         doubleQ = folgeQ[range(len(terminals)),action]  
-#        print(doubleQ)
         targetQ = rewards + (self.conf.q_decay * doubleQ * consider_stateval)
         #Update the network with our target values.
         if decay_lr:

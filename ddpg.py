@@ -4,6 +4,7 @@ import time
 import tensorflow.contrib.slim as slim
 from myprint import printtofile as print
 
+#batchnorm doesnt really work, and if, only with huge minibatches https://www.reddit.com/r/MachineLearning/comments/671455/d_batch_normalization_in_reinforcement_learning/
 
 
 def _netCopyOps(fromNet, toNet, tau = 1):
@@ -45,19 +46,19 @@ def dense(x, units, activation=tf.identity, decay=None, minmax=None):
 #            rs_input = tf.reshape(self.conv_inputs, [-1, self.conf.image_dims[0], self.conf.image_dims[1], conv_stacksize]) #final dimension = number of color channels*number of stacked (history-)frames                  
 #            #convolutional_layer(input_tensor, input_channels, kernel_size, stride, output_channels, name, act, is_trainable, batchnorm, is_training, weightdecay=False, pool=True, trainvars=None, varSum=None, initializer=None)
 #            if batchnorm[0]=="t":
-#                rs_input = tf.layers.batch_normalization(rs_input, training=is_training, epsilon=1e-7, momentum=.95) 
+#                rs_input = tf.contrib.layers.batch_norm(rs_input, is_training=is_training, updates_collections=None, epsilon=1e-7) 
 #            self.conv1 = slim.conv2d(inputs=rs_input,num_outputs=32,kernel_size=[4,6],stride=[2,3],padding='VALID', biases_initializer=None, normalizer_fn=slim.batch_norm if batchnorm[1]=="t" else None, activation_fn=tf.nn.relu)
 #            self.conv2 = slim.conv2d(inputs=self.conv1,num_outputs=32,kernel_size=[4,4],stride=[2,2],padding='VALID', biases_initializer=None, normalizer_fn=slim.batch_norm if batchnorm[2]=="t" else None, activation_fn=tf.nn.relu)
 #            self.conv3 = slim.conv2d(inputs=self.conv2,num_outputs=32,kernel_size=[3,3],stride=[2,2],padding='VALID', biases_initializer=None, normalizer_fn=slim.batch_norm if batchnorm[3]=="t" else None, activation_fn=tf.nn.relu)
 #            self.conv3_flat = tf.reshape(self.conv3, [-1, 2*2*32])
 #            if batchnorm[4]=="t":
-#                self.conv3_flat = tf.layers.batch_normalization(self.conv3_flat, training=is_training, epsilon=1e-7, momentum=.95) #"in all layers prior to the action input" 
+#                self.conv3_flat = tf.contrib.layers.batch_norm(self.conv3_flat, updates_collections=None, is_training=is_training, epsilon=1e-7) #"in all layers prior to the action input" 
 #            self.fc1 = dense(self.conv3_flat, 200, tf.nn.relu, decay=decay)
 #            if batchnorm[5]=="t":
-#                self.fc1 = tf.layers.batch_normalization(self.fc1, training=is_training, epsilon=1e-7, momentum=.95)
+#                self.fc1 = tf.contrib.layers.batch_norm(self.fc1, updates_collections=None, is_training=is_training, epsilon=1e-7)
 #            self.fc2 = dense(self.fc1, 200, tf.nn.relu, decay=decay)
 #            if batchnorm[6]=="t":
-#                self.fc2 = tf.layers.batch_normalization(self.fc2, training=is_training, epsilon=1e-7, momentum=.95)
+#                self.fc2 = tf.contrib.layers.batch_norm(self.fc2, updates_collections=None, is_training=is_training, epsilon=1e-7)
 #            self.outs = dense(self.fc2, conf.num_actions, tf.nn.tanh, decay=decay, minmax = 3e-4)
 #            self.scaled_out = (((self.outs - tanh_min_bounds)/ (tanh_max_bounds - tanh_min_bounds)) * (max_bounds - min_bounds) + min_bounds) #broadcasts the bound arrays
 #            
@@ -70,7 +71,7 @@ def dense(x, units, activation=tf.identity, decay=None, minmax=None):
 
         
 class lowdim_actorNet():
-     def __init__(self, conf, agent, outerscope="actor", name="online", batchnorm = "ftt"):       
+     def __init__(self, conf, agent, outerscope="actor", name="online", batchnorm = "fff"):       
         tanh_min_bounds,tanh_max_bounds = np.array([-1]), np.array([1])
         min_bounds, max_bounds = np.array(list(zip(*conf.action_bounds))) 
         self.name = name
@@ -84,13 +85,13 @@ class lowdim_actorNet():
             self.phase = tf.placeholder(tf.bool, name='phase') #for batchnorm, true heißt is_training
             self.ff_inputs =   tf.placeholder(tf.float32, shape=[None, ff_stacksize*self.agent.ff_inputsize], name="ff_inputs")  
             if batchnorm[0]=="t":
-                self.ff_inputs = tf.layers.batch_normalization(self.ff_inputs, training=self.phase, epsilon=1e-7, momentum=.95)
+                self.ff_inputs = tf.contrib.layers.batch_norm(self.ff_inputs, updates_collections=None, is_training=self.phase)
             self.fc1 = dense(self.ff_inputs, 400, tf.nn.relu, decay=decay)
             if batchnorm[1]=="t":
-                self.fc1 = tf.layers.batch_normalization(self.fc1, training=self.phase, epsilon=1e-7, momentum=.95)
+                self.fc1 = tf.contrib.layers.batch_norm(self.fc1, updates_collections=None, is_training=self.phase, epsilon=1e-7)
             self.fc2 = dense(self.fc1, 300, tf.nn.relu, decay=decay)
             if batchnorm[2]=="t":
-                self.fc2 = tf.layers.batch_normalization(self.fc2, training=self.phase, epsilon=1e-7, momentum=.95)
+                self.fc2 = tf.contrib.layers.batch_norm(self.fc2, updates_collections=None, is_training=self.phase, epsilon=1e-7)
             self.outs = dense(self.fc2, conf.num_actions, tf.nn.tanh, decay=decay, minmax = 3e-4)
             self.scaled_out = (((self.outs - tanh_min_bounds)/ (tanh_max_bounds - tanh_min_bounds)) * (max_bounds - min_bounds) + min_bounds) #broadcasts the bound arrays
             
@@ -121,20 +122,20 @@ class lowdim_actorNet():
 #            rs_input = tf.reshape(self.conv_inputs, [-1, self.conf.image_dims[0], self.conf.image_dims[1], conv_stacksize]) #final dimension = number of color channels*number of stacked (history-)frames                  
 #
 #            if batchnorm[0]=="t":
-#                rs_input = tf.layers.batch_normalization(rs_input, training=is_training, epsilon=1e-7, momentum=.95)  
+#                rs_input = tf.contrib.layers.batch_norm(rs_input, updates_collections=None, is_training=is_training, epsilon=1e-7)  
 #            self.conv1 = slim.conv2d(inputs=rs_input,num_outputs=32,kernel_size=[4,6],stride=[2,3],padding='VALID', biases_initializer=None, normalizer_fn=slim.batch_norm if batchnorm[1]=="t" else None, activation_fn=tf.nn.relu, weights_regularizer=slim.l2_regularizer(decayrate))
 #            self.conv2 = slim.conv2d(inputs=self.conv1,num_outputs=32,kernel_size=[4,4],stride=[2,2],padding='VALID', biases_initializer=None, normalizer_fn=slim.batch_norm if batchnorm[2]=="t" else None, activation_fn=tf.nn.relu, weights_regularizer=slim.l2_regularizer(decayrate))
 #            self.conv3 = slim.conv2d(inputs=self.conv2,num_outputs=32,kernel_size=[3,3],stride=[2,2],padding='VALID', biases_initializer=None, normalizer_fn=slim.batch_norm if batchnorm[3]=="t" else None, activation_fn=tf.nn.relu, weights_regularizer=slim.l2_regularizer(decayrate))
 #            self.conv3_flat = tf.reshape(self.conv3, [-1, 2*2*32])
 #            if batchnorm[4]=="t":
-#                self.conv3_flat = tf.layers.batch_normalization(self.conv3_flat, training=is_training, epsilon=1e-7, momentum=.95) #"in all layers prior to the action input"
+#                self.conv3_flat = tf.contrib.layers.batch_norm(self.conv3_flat, updates_collections=None, is_training=is_training, epsilon=1e-7) #"in all layers prior to the action input"
 #            self.conv3_flat = tf.concat([self.conv3_flat, self.actions], 1) 
 #            self.fc1 = dense(self.conv3_flat, 200, tf.nn.relu, decay=True)
 #            if batchnorm[5]=="t":
-#                self.fc1 = tf.layers.batch_normalization(self.fc1, training=is_training, epsilon=1e-7, momentum=.95)
+#                self.fc1 = tf.contrib.layers.batch_norm(self.fc1, updates_collections=None, is_training=is_training, epsilon=1e-7)
 #            self.fc2 = dense(self.fc1, 200, tf.nn.relu, decay=True)
 #            if batchnorm[6]=="t":
-#                self.fc2 = tf.layers.batch_normalization(self.fc2, training=is_training, epsilon=1e-7, momentum=.95)
+#                self.fc2 = tf.contrib.layers.batch_norm(self.fc2, updates_collections=None, is_training=is_training, epsilon=1e-7)
 #            self.Q = dense(self.fc2, conf.num_actions, decay=True, minmax=3e-4)
 #            
 #        self.trainables = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope=outerscope+"/"+self.name)
@@ -144,7 +145,7 @@ class lowdim_actorNet():
         
         
 class lowdim_criticNet():
-     def __init__(self, conf, agent, outerscope="critic", name="online", batchnorm="ftt"):       
+     def __init__(self, conf, agent, outerscope="critic", name="online", batchnorm="fff"):       
         self.conf = conf
         self.agent = agent
         self.name = name   
@@ -157,14 +158,14 @@ class lowdim_criticNet():
             
             self.actions = tf.placeholder(tf.float32, shape=[None, self.conf.num_actions], name="action_inputs")  
             if batchnorm[0]=="t":
-                self.ff_inputs = tf.layers.batch_normalization(self.ff_inputs, training=self.phase, epsilon=1e-7, momentum=.95)
+                self.ff_inputs = tf.contrib.layers.batch_norm(self.ff_inputs, updates_collections=None, is_training=self.phase, epsilon=1e-7)
             self.fc1 = dense(self.ff_inputs, 400, tf.nn.relu, decay=True)
             if batchnorm[1]=="t":
-                self.fc1 = tf.layers.batch_normalization(self.fc1, training=self.phase, epsilon=1e-7, momentum=.95)
+                self.fc1 = tf.contrib.layers.batch_norm(self.fc1, updates_collections=None, is_training=self.phase, epsilon=1e-7)
             self.fc1 =  tf.concat([self.fc1, self.actions], 1)   
             self.fc2 = dense(self.fc1, 300, tf.nn.relu, decay=True)
             if batchnorm[2]=="t":
-                self.fc2 = tf.layers.batch_normalization(self.fc2, training=self.phase, epsilon=1e-7, momentum=.95)
+                self.fc2 = tf.contrib.layers.batch_norm(self.fc2, updates_collections=None, is_training=self.phase, epsilon=1e-7)
             self.Q = dense(self.fc2, conf.num_actions, decay=True, minmax=3e-4)
             
         self.trainables = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope=outerscope+"/"+self.name)
@@ -302,24 +303,24 @@ class DDPG_model():
     def train_step(self, batch):
         oldstates, actions, rewards, newstates, terminals = batch
         #Training the critic...
-        update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
-        with tf.control_dependencies(update_ops): #because of batchnorm, see https://www.tensorflow.org/api_docs/python/tf/layers/batch_normalization
-            act = self.actor.predict(newstates, "target")
-            target_q = self.critic.predict(newstates, act, "target")
-            cumrewards = np.reshape([rewards[i] if terminals[i] else rewards[i]+0.99*target_q[i] for i in range(len(rewards))], (len(rewards),1))
-            target_Q, _, loss = self.critic.train(oldstates, actions, cumrewards)
-            #training the actor...        
-            a_outs = self.actor.predict(oldstates)
-            grads = self.critic.action_gradients(oldstates, a_outs)
-            self.actor.train(oldstates, grads[0])
-            #updating the targetnets...
-            self.actor.update_target_network()
-            self.critic.update_target_network()
+#        update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
+#        with tf.control_dependencies(update_ops): #because of batchnorm, see https://www.tensorflow.org/api_docs/python/tf/layers/batch_normalization
+        act = self.actor.predict(newstates, "target")
+        target_q = self.critic.predict(newstates, act, "target")
+        cumrewards = np.reshape([rewards[i] if terminals[i] else rewards[i]+0.99*target_q[i] for i in range(len(rewards))], (len(rewards),1))
+        target_Q, _, loss = self.critic.train(oldstates, actions, cumrewards)
+        #training the actor...        
+        a_outs = self.actor.predict(oldstates)
+        grads = self.critic.action_gradients(oldstates, a_outs)
+        self.actor.train(oldstates, grads[0])
+        #updating the targetnets...
+        self.actor.update_target_network()
+        self.critic.update_target_network()
         return np.max(target_Q)
         
         
     def inference(self, oldstates):
-        return self.actor.predict(oldstates, "target", is_training=False) #ist halt schneller wenn online.
+        return self.actor.predict(oldstates, "target", is_training=False)         
         
 
     def evaluate(self, batch):
@@ -373,7 +374,7 @@ def main():
     myAgent = ddpg_rl_agent.Agent(conf, Containers(), True)
     
     trackingpoints = read_supervised.TPList(conf.LapFolderName, conf.use_second_camera, conf.msperframe, conf.steering_steps, conf.INCLUDE_ACCPLUSBREAK)
-    BATCHSIZE = 16
+    BATCHSIZE = 128
     
     conf.actor_lr = 0.000001
     conf.critic_lr = 0.0001
