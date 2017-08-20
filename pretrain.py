@@ -15,15 +15,27 @@ import read_supervised
 from server import Containers
 
 
-def main(conf, agentname, containers, start_fresh):
+def main(conf, agentname, containers, start_fresh, fake_real):
 
     agentclass = __import__(agentname).Agent
-    myAgent = agentclass(conf, containers, isPretrain=True, start_fresh=start_fresh)    
+    myAgent = agentclass(conf, containers, isPretrain=(not fake_real), start_fresh=start_fresh)    
+        
+    #TODO: das fake_real muss noch so geändert werden dass es ZWEI optionen gibt: fake_real UND dass man AUSSUCHEN KANN ob von memory oder von pretrain!!!!
     
     tf.reset_default_graph()                                                          
     trackingpoints = read_supervised.TPList(conf.LapFolderName, conf.use_second_camera, conf.msperframe, conf.steering_steps, conf.INCLUDE_ACCPLUSBREAK)
     print("Number of samples:",trackingpoints.numsamples)
-    myAgent.preTrain(trackingpoints, 200)
+    
+    if not fake_real:
+        myAgent.preTrain(trackingpoints, 200)
+    else:
+        myAgent.initForDriving()
+        for i in range(20):
+            for i in range(200):
+                trainBatch = myAgent.create_QLearnInputs_from_MemoryBatch(myAgent.memory.sample(conf.batch_size))
+                myAgent.model.q_learn(trainBatch, False)
+            myAgent.model.save()        
+    
     time.sleep(999)
 
 
@@ -48,4 +60,4 @@ if __name__ == '__main__':
         else:
             agentname = "dqn_rl_agent"
             
-    main(conf, agentname, containers, ("-startfresh" in sys.argv))
+    main(conf, agentname, containers, ("-startfresh" in sys.argv), ("-fakereal" in sys.argv))

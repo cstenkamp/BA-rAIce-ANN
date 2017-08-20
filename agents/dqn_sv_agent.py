@@ -36,7 +36,8 @@ class Agent(AbstractAgent):
         self.isinitialized = True
             
         
-    def preTrain(self, dataset, iterations):
+    def preTrain(self, dataset, iterations, supervised=True):
+        assert supervised, "the SV-agent can only train supervisedly!"
         print("Starting pretraining", level=10)
         pretrain_batchsize = self.conf.pretrain_batch_size
         for i in range(iterations):
@@ -52,18 +53,3 @@ class Agent(AbstractAgent):
             if (i+1) % 25 == 0:
                 self.model.save()    
         
-        
-        
-###############################################################################
-if __name__ == '__main__':  
-    import sys
-    import config
-    conf = config.Config()
-    import read_supervised
-    from server import Containers; containers = Containers()
-    tf.reset_default_graph()                                                          
-    myAgent = Agent(conf, containers, isPretrain = True, start_fresh=("-new" in sys.argv))
-    trackingpoints = read_supervised.TPList(conf.LapFolderName, conf.use_second_camera, conf.msperframe, conf.steering_steps, conf.INCLUDE_ACCPLUSBREAK)
-    print("Number of samples:",trackingpoints.numsamples)
-    myAgent.preTrain(trackingpoints, 200)
-    time.sleep(999)

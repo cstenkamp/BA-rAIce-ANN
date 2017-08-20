@@ -134,19 +134,3 @@ class Agent(AbstractRLAgent):
             infoscreen.print(toprint, containers= self.containers, wname="Current Q Vals")
 
         
-    
-            
-###############################################################################
-
-#if __name__ == '__main__':  
-#    import sys
-#    import config
-#    conf = config.Config()
-#    import read_supervised
-#    from server import Containers; containers = Containers()
-#    tf.reset_default_graph()                                                          
-#    myAgent = Agent(conf, containers, start_fresh=("-new" in sys.argv), isPretrain=True)
-#    trackingpoints = read_supervised.TPList(conf.LapFolderName, conf.use_second_camera, conf.msperframe, conf.steering_steps, conf.INCLUDE_ACCPLUSBREAK)
-#    print("Number of samples:",trackingpoints.numsamples)
-#    myAgent.preTrain(trackingpoints, 200)
-#    time.sleep(999)
