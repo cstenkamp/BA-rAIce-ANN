@@ -28,9 +28,13 @@ class Agent(AbstractRLAgent):
         super().__init__(conf, containers, isPretrain, start_fresh, *args, **kwargs)
         self.ff_inputsize = 30
         self.isContinuous = True
-#        session = tf.Session(config=tf.ConfigProto(intra_op_parallelism_threads=2, allow_soft_placement=True))
-#        self.model = DDPG_model(self.conf, self, session, isPretrain=isPretrain)
-#        self.model.initNet(load=(not self.start_fresh))
+        self.usesConv = False
+        self.ff_stacked = False
+        self.epsilon = self.conf.startepsilon
+        self._noiseState = [0]*self.conf.num_actions
+        session = tf.Session(config=tf.ConfigProto(intra_op_parallelism_threads=2, allow_soft_placement=True))
+        self.model = DDPG_model(self.conf, self, session, isPretrain=isPretrain)
+        self.model.initNet(load=(not self.start_fresh))
 
 
 
@@ -39,35 +43,22 @@ class Agent(AbstractRLAgent):
     ###########################################################################
     
     #im gegensatz zu den DQN-basierten agents muss er die action nicht diskretisieren
+    #Override
     def makeNetUsableAction(self, action):
         return action
 
+    #Override
+    def getAgentState(self, *gameState):  
+        vvec1_hist, vvec2_hist, otherinput_hist, action_hist = gameState
+#        other_inputs = np.ravel([i.returnRelevant() for i in otherinput_hist])
+        other_inputs = np.ravel(otherinput_hist[0].returnRelevant())
+        stands_inputs = otherinput_hist[0].SpeedSteer.velocity < 10
+        return None, other_inputs, stands_inputs
     
-#    def eval_episodeVals(self, mem_epi_slice, gameState, endReason):
-#        string = super().eval_episodeVals(mem_epi_slice, gameState, endReason)
-#        if self.containers.showscreen: 
-#            infoscreen.print(string, containers=self.containers, wname="Last Epsd")
-#
-#            
-#    def punishLastAction(self, howmuch):
-#        super().punishLastAction(howmuch)
-#        if self.containers.showscreen:
-#            infoscreen.print(str(-abs(howmuch)), time.strftime("%H:%M:%S", time.gmtime()), containers=self.containers, wname="Last big punish")
-#            
-#    def addToMemory(self, gameState, pastState):
-#        a, r, stateval, changestring = super().addToMemory(gameState, pastState)
-#        if self.containers.showscreen:
-#            infoscreen.print(a, round(r,2), round(stateval,2), changestring, containers= self.containers, wname="Last memory")
-#            if len(self.memory) % 20 == 0:
-#                infoscreen.print(">"+str(len(self.memory)), containers= self.containers, wname="Memorysize")       
-#                
-#    def learnANN(self):  
-#        super.learnANN()
-#        print("ReinfLearnSteps:", self.model.step(), level=3)
-#        if self.containers.showscreen:
-#            infoscreen.print(self.model.step(), "Iterations: >"+str(self.model.run_inferences()), containers= self.containers, wname="ReinfLearnSteps")                
-                
-            
+    #Override
+    def makeNetUsableOtherInputs(self, other_inputs): #normally, the otherinputs are stored as compact as possible. Networks may need to unpack that.
+        return other_inputs
+
             
 
     ###########################################################################
@@ -78,6 +69,15 @@ class Agent(AbstractRLAgent):
 #        self.memory = Efficientmemory(self.conf.memorysize, self.conf, self, self.conf.history_frame_nr, self.conf.use_constantbutbigmemory) #dieser agent unterstützt das effiziente memory        
         super().initForDriving(*args, **kwargs)
         self.isinitialized = True
+
+
+    #classical Ornstein-Uhlenbeck-process. The trick in that is, that the mu of the noise is always that one of the last iteration (->temporal correlation)
+    def make_noisy(self, action, theta=0.15, std=0.2):
+        self._noiseState = theta * self._noiseState + np.random.normal(np.zeros_like(self._noiseState), std)
+        action = action + self.epsilon * self._noiseState
+        clip = lambda x,b: min(max(x,b[0]),b[1])
+        action = [clip(action[i],self.conf.action_bounds[i]) for i in range(len(action))]
+        return action
 
 
 

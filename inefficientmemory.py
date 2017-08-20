@@ -114,7 +114,7 @@ class Memory(object):
 #        return batch            
 
         
-    def pop(self):
+    def _pop(self):
         self._pointer = (self._pointer - 1) % self.capacity
         self._size -= 1
         return self._buffer[self._pointer]
@@ -125,7 +125,7 @@ class Memory(object):
         if self._size < 2:
             return
         
-        lastmemoryentry = self.pop() #oldstate, action, reward, newstate, fEnd
+        lastmemoryentry = self._pop() #oldstate, action, reward, newstate, fEnd
         if lastmemoryentry is not None:
             lastmemoryentry[4] = True
             self.append(lastmemoryentry)
@@ -139,7 +139,7 @@ class Memory(object):
     def punishLastAction(self, howmuch):
         if self._size < 2:
             return
-        lastmemoryentry = self.pop() #oldstate, action, reward, newstate, fEnd
+        lastmemoryentry = self._pop() #oldstate, action, reward, newstate, fEnd
         if lastmemoryentry is not None:
             lastmemoryentry[2] -= abs(howmuch)
             self.append(lastmemoryentry)     

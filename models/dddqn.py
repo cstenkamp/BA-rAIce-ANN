@@ -69,7 +69,7 @@ class DuelDQN():
             self.compareQ = tf.reduce_sum(tf.multiply(self.Qout, self.targetA_OH), axis=1) #der td_error von den actions über die wir nicht lernen wollen ist null
             self.td_error = tf.square(self.targetQ - self.compareQ) 
             self.q_loss = tf.reduce_mean(self.td_error)
-            self.q_OP = self._q_training(self.q_loss, isPretrain)
+            self.q_OP = self._q_train_step_steping(self.q_loss, isPretrain)
             
         
         self.update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
@@ -200,11 +200,9 @@ class DuelDQN():
         
         
     #carstands ist true iff (single inference & carstands), in jedem anderem Fall false
-    def feed_dict(self, inputs, targetQ=None, targetA=None, carstands = False, decay_lr=False, is_training=True):
-   
+    def _make_inputs(self, inputs, targetQ=None, targetA=None, carstands = False, decay_lr=False, is_training=True):
         conv_inputs = np.array([inputs[i][0] for i in range(len(inputs))])
         ff_inputs   = np.array([inputs[i][1] for i in range(len(inputs))])
-        
         feed_dict = {self.phase: is_training}
         if not is_training and self.isInference:   
             self.stood_frames_ago = 0 if carstands else self.stood_frames_ago + 1
@@ -215,14 +213,11 @@ class DuelDQN():
                 feed_dict[self.targetQ] = targetQ
             if targetA is not None:
                 feed_dict[self.targetA] = targetA
-        
         if self.agent.usesConv:
             feed_dict[self.conv_inputs] = conv_inputs
         if self.agent.ff_inputsize:
             feed_dict[self.ff_inputs] = ff_inputs 
-        
         feed_dict[self.stands_input] = carstands 
-            
         if decay_lr == "sv":
             lr_decay = self.conf.pretrain_sv_lr_decay ** max(self.pretrain_episode-self.conf.pretrain_lrdecayafter, 0.0)
             new_lr = max(self.conf.pretrain_sv_initial_lr*lr_decay, self.conf.pretrain_sv_minimal_lr)
@@ -236,12 +231,14 @@ class DuelDQN():
                 lr_decay = self.conf.lr_decay ** max(self.step-self.conf.lrdecayafter, 0.0)
                 new_lr = max(self.conf.initial_lr*lr_decay, self.conf.minimal_lr)
                 feed_dict[self.new_lr] = new_lr      
-
         return feed_dict
         
     
 
 
+##############################################################################################################################
+##############################################################################################################################
+##############################################################################################################################
         
         
         
@@ -254,13 +251,9 @@ class DDDQN_model():
         self.session = session        
         self.isPretrain = isPretrain
         self.onlineQN = DuelDQN(conf, agent, "onlineNet", isPretrain=isPretrain)
-        self.targetQN = DuelDQN(conf, agent, "targetNet", isInference= True, isPretrain=isPretrain)
-        
-        
+        self.targetQN = DuelDQN(conf, agent, "targetNet", isInference= True, isPretrain=isPretrain)        
         self.smoothTargetNetUpdate = netCopyOps(self.onlineQN, self.targetQN, self.conf.target_update_tau)
-        self.hardOnlineNetUpdate = netCopyOps(self.targetQN, self.onlineQN)
-        
-        
+                
             
     def initNet(self, load=False):
         self.session.run(tf.global_variables_initializer())
@@ -276,15 +269,17 @@ class DDDQN_model():
             else:
                 self.targetQN.load(self.session, from_pretrain=True)     
                 self.session.run(self.onlineQN.pretrain_step_tf.assign(self.targetQN.pretrain_step_tf))
-        self.session.run(self.hardOnlineNetUpdate)
+        self.session.run(self.netCopyOps(self.targetQN, self.onlineQN))
         self.lastTrained = None
             
+        
     def save(self):
         if self.lastTrained == self.onlineQN: #falls zuletzt q_train gemacht wurde
             self.session.run(self.targetQN.pretrain_step_tf.assign(self.onlineQN.pretrain_step_tf))
             self.session.run(self.targetQN.step_tf.assign(self.onlineQN.step_tf))
         self.targetQN.save(self.session)            
            
+        
     def pretrain_episode(self):
         return self.targetQN.pretrain_episode
     def inc_episode(self):
@@ -298,50 +293,53 @@ class DDDQN_model():
         
         
     #expects a whole s,a,r,s,t - tuple, needs however only s & a
-    def getAccuracy(self, batch):
+    def getAccuracy(self, batch, likeDDPG=True):
         oldstates, actions, _, _, _ = batch
-        predict = self.session.run(self.targetQN.predict,feed_dict=self.targetQN.feed_dict(oldstates, is_training=False))
-        return round(np.mean(np.array(actions == predict, dtype=int))*100, 2)
+        predict = self.session.run(self.targetQN.predict,feed_dict=self.targetQN.make_inputs(oldstates, is_training=False))
+        if likeDDPG:
+            return np.mean(np.array([abs(predict[i][0] -actions[i][0]) for i in range(len(actions))]))
+        else:
+            return round(np.mean(np.array(actions == predict, dtype=int))*100, 2)
             
     #expects only a state (with stands_input)
-    def inference(self, statesBatch):                                                    
+    def inference(self, oldstates):                                                    
         assert not self.isPretrain, "Please reload this network as a non-pretrain-one!"
         self.targetQN.run_inferences += 1
-        carstands = statesBatch[0][2] if len(statesBatch) == 1 and len(statesBatch[0]) > 2 else False
-        return self.session.run([self.targetQN.predict, self.targetQN.Qout], feed_dict=self.targetQN.feed_dict(statesBatch, carstands = carstands, is_training=False))
+        carstands = oldstates[0][2] if len(oldstates) == 1 and len(oldstates[0]) > 2 else False
+        return self.session.run([self.targetQN.predict, self.targetQN.Qout], feed_dict=self.targetQN.make_inputs(oldstates, carstands = carstands, is_training=False))
         
         
     #expects only a state (and no stands_input)
-    def statevalue(self, statesBatch):                                                  
-        return self.session.run(self.targetQN.Qmax, feed_dict=self.targetQN.feed_dict(statesBatch, is_training=False))
+    def statevalue(self, oldstates):                                                  
+        return self.session.run(self.targetQN.Qmax, feed_dict=self.targetQN.make_inputs(oldstates, is_training=False))
     
     
     #expects a whole s,a,r,s,t - tuple, needs however only s & a
-    def sv_learn(self, batch, decay_lr = True):
+    def sv_train_step(self, batch, decay_lr = True):
         assert self.isPretrain, "Supervised-Learning is only allowed as Pre-training!"
         oldstates, actions, _, _, _ = batch
         if decay_lr:
-            _, loss, _ = self.session.run([self.targetQN.sv_OP, self.targetQN.sv_loss, self.targetQN.sv_lr_update], feed_dict=self.targetQN.feed_dict(oldstates, targetA=actions, decay_lr="sv"))
+            _, loss, _ = self.session.run([self.targetQN.sv_OP, self.targetQN.sv_loss, self.targetQN.sv_lr_update], feed_dict=self.targetQN.make_inputs(oldstates, targetA=actions, decay_lr="sv"))
         else:
-            _, loss, _ = self.session.run([self.targetQN.sv_OP, self.targetQN.sv_loss], feed_dict=self.targetQN.feed_dict(oldstates, targetA=actions))
+            _, loss, _ = self.session.run([self.targetQN.sv_OP, self.targetQN.sv_loss], feed_dict=self.targetQN.make_inputs(oldstates, targetA=actions))
         self.lastTrained = self.targetQN
         #print("Learning rate:",self.session.run(self.targetQN.sv_lr))
         return loss
     
     
     #expects a whole s,a,r,s,t - tuple  
-    def q_learn(self, batch, decay_lr = False):
+    def q_train_step(self, batch, decay_lr = False):
         oldstates, actions, rewards, newstates, terminals = batch
-        action = self.session.run(self.onlineQN.predict,feed_dict=self.onlineQN.feed_dict(newstates)) #TODO: im text schreiben wie das bei non-doubleDQN anders wäre
-        folgeQ = self.session.run(self.targetQN.Qout,feed_dict=self.targetQN.feed_dict(newstates)) #No reduceMax anymore, but instead the action-prediciton because DDQN: instead of taking the max over Q-values when computing the target-Q value for our training step, we use our primary network to chose an action, and our target network to generate the target Q-value for that action. 
+        action = self.session.run(self.onlineQN.predict,feed_dict=self.onlineQN.make_inputs(newstates)) #TODO: im text schreiben wie das bei non-doubleDQN anders wäre
+        folgeQ = self.session.run(self.targetQN.Qout,feed_dict=self.targetQN.make_inputs(newstates)) #No reduceMax anymore, but instead the action-prediciton because DDQN: instead of taking the max over Q-values when computing the target-Q value for our training step, we use our primary network to chose an action, and our target network to generate the target Q-value for that action. 
         consider_stateval = -(terminals - 1)
         doubleQ = folgeQ[range(len(terminals)),action]  
         targetQ = rewards + (self.conf.q_decay * doubleQ * consider_stateval)
         #Update the network with our target values.
         if decay_lr:
-            _, _ = self.session.run([self.onlineQN.q_OP, self.onlineQN.lr_update], feed_dict=self.onlineQN.feed_dict(oldstates, targetQ=targetQ, targetA=actions, decay_lr="q"))
+            _, _ = self.session.run([self.onlineQN.q_OP, self.onlineQN.lr_update], feed_dict=self.onlineQN.make_inputs(oldstates, targetQ=targetQ, targetA=actions, decay_lr="q"))
         else:
-            _ = self.session.run(self.onlineQN.q_OP, feed_dict=self.onlineQN.feed_dict(oldstates, targetQ=targetQ, targetA=actions))
+            _ = self.session.run(self.onlineQN.q_OP, feed_dict=self.onlineQN.make_inputs(oldstates, targetQ=targetQ, targetA=actions))
         self.session.run(self.smoothTargetNetUpdate) #Update the target network toward the primary network.
         if not self.isPretrain:
             self.onlineQN.step = self.onlineQN.step_tf.eval(self.session)
@@ -404,8 +402,8 @@ if __name__ == '__main__':
 #        trackingpoints.reset_batch()
 #        while trackingpoints.has_next(BATCHSIZE):
 #            trainBatch = TPSample(conf, myAgent, BATCHSIZE)
-#            #model.sv_learn(trainBatch, True)
-#            model.q_learn(trainBatch, True)    
+#            #model.sv_train_step(trainBatch, True)
+#            model.q_train_step(trainBatch, True)    
 #        if (i+1) % 5 == 0:
 #            model.save()
            
@@ -423,6 +421,6 @@ if __name__ == '__main__':
 #        trackingpoints.reset_batch()
 #        while trackingpoints.has_next(BATCHSIZE):
 #            trainBatch = TPSample(conf, myAgent, BATCHSIZE)
-#            model.q_learn(trainBatch, True)    
+#            model.q_train_step(trainBatch, True)    
 #        if (i+1) % 5 == 0:
 #            model.save()

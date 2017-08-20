@@ -71417,3 +71417,286 @@ False
 [[-0.00064683]]
 True
 True
+gym_chkpt\actor.ckpt
+./gym_chkpt\actor.ckpt
+Saved Actor.
+Saved Critic.
+./gym_chkpt\actor.ckpt
+Saved Actor.
+Saved Critic.
+./gym_chkpt\actor.ckpt
+Saved Actor.
+Saved Critic.
+./gym_chkpt\actor.ckpt
+Saved Actor.
+Saved Critic.
+./gym_chkpt\actor.ckpt
+Saved Actor.
+Saved Actor.
+Saved Critic.
+Saved Actor.
+Saved Critic.
+Saved Actor.
+Saved Critic.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Loaded from RL-train
+Loaded from RL-train
+Step: 0
+Loaded from RL-train
+Step: 0
+Loaded from pretrain
+Step: 0
+Loaded from RL-train
+Step: 0
+Couldn't load from RL-train
+Couldn't load from RL-train
+Couldn't load from RL-train
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Loaded from RL-train
+Step: 0
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Couldn't load from RL-train
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Loaded from RL-train
+Step: 0
+Saved Model.
+Couldn't load from RL-train
+Saved Model.
+Saved Model.
+Loaded from RL-train
+Step: 4136
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Loaded from RL-train
+Step: 16272
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Couldn't load from RL-train
+Saved Model.
+Loaded from RL-train
+Step: 136
+Saved Model.
+Saved Model.
+Couldn't load from RL-train
+Saved Model.
+Loaded from RL-train
+Step: 136
+Saved Model.
+Saved Model.
+Couldn't load from RL-train
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Loaded from RL-train
+Step: 28136
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.
+Saved Model.

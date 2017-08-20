@@ -19,6 +19,7 @@ import gym
 from gym import wrappers
 from collections import deque
 import random
+import os
 
 from ddpg import DDPG_model
 
@@ -90,49 +91,38 @@ class ReplayBuffer(object):
 
 
 def train(env, model):
-
     # Initialize replay memory
     replay_buffer = ReplayBuffer(BUFFER_SIZE, RANDOM_SEED)
-
     for i in range(50000):
-
         s = env.reset()
         s = (None, s) #a state for the memory is always (conv, ff), so as there is no conv, its (None, ss) in this case.
-        
         ep_reward = 0
         ep_ave_max_q = 0
-
         for j in range(1000): #max.ep-step
-
             if RENDER_ENV:
                 env.render()
-            
-            
-            
             a = model.inference([s])
-            
             a += (1. / (1. + i)) # Added exploration noise
-
-
             s2, r, t, info = env.step(a[0])
-
             s2 = (None, s2)
-
             replay_buffer.add((s, a[0], r, s2, t))
-            
-
-            
             if replay_buffer.size() > MINIBATCH_SIZE:
                 batch = replay_buffer.sample_batch(MINIBATCH_SIZE)
-                
                 ep_ave_max_q += model.train_step(batch) 
-                
             s = s2
             ep_reward += r
-
             if t:
                 print('| Reward: %.2i' % int(ep_reward), " | Episode", i, '| Qmax: %.4f' % (ep_ave_max_q / float(j)))
                 break
+        if i % 20 == 0:
+            model.save()        
+
+
+
+def folder(x):
+    if not os.path.exists(x):
+        os.makedirs(x)
+    return x
 
             
 class dummy():
@@ -156,14 +146,18 @@ def main(_):
     conf.target_update_tau = 0.001               
     conf.actor_lr = 0.0001
     conf.critic_lr = 0.001 
+    conf.checkpoint_dir = ".\gym_chkpt"
      
+    
     myAgent = dummy()
     myAgent.ff_inputsize = env.observation_space.shape[0]
     myAgent.usesConv = False        
     myAgent.ff_stacked = False
     myAgent.ff_inputsize = 3
+    myAgent.folder = folder
 
     model = DDPG_model(conf, myAgent, tf.Session())
+    model.initNet("noPreTrain")
 
 
     if GYM_MONITOR_EN:
