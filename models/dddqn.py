@@ -82,7 +82,7 @@ class DuelDQN():
         assert (conv_inputs is not None or ff_inputs is not None)
 #        ini = tf.truncated_normal_initializer(stddev=1.0 / math.sqrt(float(self.conf.image_dims[0]*self.conf.image_dims[1])))
         ini = tf.random_normal_initializer(0, 1e-3)
-        do_batchnorm = False        
+        do_batchnorm = True        
 
         if conv_inputs is not None:
             rs_input = tf.reshape(conv_inputs, [-1, self.conf.image_dims[0], self.conf.image_dims[1], self.conv_stacksize]) #final dimension = number of color channels*number of stacked (history-)frames                  
@@ -123,7 +123,7 @@ class DuelDQN():
             Qout = tf.contrib.layers.batch_norm(Qout, center=True, scale=True, is_training=is_training)
 
         def settozero(q):
-            ZEROIS = 0
+            ZEROIS = -10
             q = tf.squeeze(q) #stands_input ist nur dann True wenn es nur um ein sample geht
             if not self.conf.INCLUDE_ACCPLUSBREAK: #dann nimmste nur das argmax von den mittleren neurons (was die mit gas sind)
                 q = tf.slice(q,tf.shape(q)//3,tf.shape(q)//3)

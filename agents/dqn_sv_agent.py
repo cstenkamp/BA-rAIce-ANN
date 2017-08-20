@@ -29,7 +29,8 @@ class Agent(AbstractAgent):
         action, qvals = self.model.inference(self.makeInferenceUsable(agentState)) #former is argmax, latter are individual qvals
         throttle, brake, steer = self.dediscretize(action[0])
         toUse = "["+str(throttle)+", "+str(brake)+", "+str(steer)+"]"
-        return toUse, None
+        return toUse, (throttle, brake, steer)
+
 
     def initForDriving(self, *args, **kwargs): 
         super().initForDriving()
