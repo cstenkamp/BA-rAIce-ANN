@@ -27,12 +27,10 @@ class Agent(AbstractRLAgent):
         self.ff_inputsize = 30
         self.isContinuous = True
         self.usesConv = False
-        self.ff_stacked = False
-        self.epsilon = self.conf.startepsilon
         self._noiseState = [0]*self.conf.num_actions
         session = tf.Session(config=tf.ConfigProto(intra_op_parallelism_threads=2, allow_soft_placement=True))
         self.model = DDPG_model(self.conf, self, session, isPretrain=isPretrain)
-        self.model.initNet(load=(not self.start_fresh))
+        self.model.initNet(load=("preTrain" if (self.isPretrain and not start_fresh) else (not start_fresh)))
 
 
 
@@ -78,9 +76,12 @@ class Agent(AbstractRLAgent):
         return action
 
 
-    #because we don't do epsilon-greedy here but ONP, we let randomAction be policAction
+    #because we don't do epsilon-greedy here but ONP, we let randomAction be policyAction... but only once we filled the memory enough
     def randomAction(self, agentState):
-        return self.policyAction(agentState)
+        if len(self.memory) > self.conf.replaystartsize:
+            return self.policyAction(agentState)
+        else:
+            return super().randomAction(agentState)
     
     
     def policyAction(self, agentState):

@@ -28,7 +28,7 @@ class Agent(AbstractRLAgent):
         self.ff_inputsize = 30
         session = tf.Session(config=tf.ConfigProto(intra_op_parallelism_threads=2, allow_soft_placement=True))
         self.model = DDDQN_model(self.conf, self, session, isPretrain=isPretrain)
-        self.model.initNet(load=(not self.start_fresh))
+        self.model.initNet(load=("preTrain" if (self.isPretrain and not start_fresh) else (not start_fresh)))
 
 
 
@@ -56,6 +56,14 @@ class Agent(AbstractRLAgent):
         return toUse, (throttle, brake, steer) #er returned immer toUse, toSave
 
     
+
+    def randomAction(self, agentState):
+        toUse, toSave = super().randomAction(agentState)
+        if self.containers.showscreen:
+            infoscreen.print(toUse, "(random)", containers=self.containers, wname="Last command")
+            infoscreen.print(self.epsilon, containers=self.containers, wname="Epsilon")
+        return toUse, toSave
+
 
 #    def preTrain(self, dataset, iterations, supervised=False):
 ##        assert self.model.step == 0, "I dont pretrain if the model already learned on real data!"

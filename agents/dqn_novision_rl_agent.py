@@ -29,7 +29,7 @@ class Agent(AbstractRLAgent):
         self.usesConv = False
         session = tf.Session(config=tf.ConfigProto(intra_op_parallelism_threads=2, allow_soft_placement=True))
         self.model = DDDQN_model(self.conf, self, session, isPretrain=isPretrain)
-        self.model.initNet(load=(not self.start_fresh))
+        self.model.initNet(load=("preTrain" if (self.isPretrain and not start_fresh) else (not start_fresh)))
 
 
     ###########################################################################

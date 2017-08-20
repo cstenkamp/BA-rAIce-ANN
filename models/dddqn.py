@@ -91,15 +91,19 @@ class DuelDQN():
             self.conv2 = convolutional_layer(self.conv1, 32, [4,4], [2,2], 64, "Conv2", tf.nn.relu, True, do_batchnorm, is_training, False, False, {}, variable_summary, initializer=ini)                     #(?, 8, 8, 64)
             self.conv3 = convolutional_layer(self.conv2, 64, [3,3], [2,2], 64, "Conv3", tf.nn.relu, True, do_batchnorm, is_training, False, True, {}, variable_summary, initializer=ini)                      #(?, 2, 2, 64)
             self.conv4 = convolutional_layer(self.conv3, 64, [4,4], [2,2], self.h_size, "Conv4", tf.nn.relu, True, do_batchnorm, is_training, False, False, {}, variable_summary, initializer=ini)            #(?, 1, 1, 256)
-            self.conv4_flat = tf.reshape(self.conv4, [-1, self.h_size*2])
-            if ff_inputs is not None:
-                fc0 = tf.concat([self.conv4_flat, ff_inputs], 1)
-            length = self.h_size*2
-        else:    #fc_layer(input_tensor, input_size, output_size, name, is_trainable, batchnorm, is_training, weightdecay=False, act=None, keep_prob=1, trainvars=None, varSum=None, initializer=None)
+            self.conv4_flat = tf.reshape(self.conv4, [-1, self.h_size])
+        else:
+            self.conv4_flat = tf.zeros(None)
+        
+        
+        if ff_inputs is not None:
             fc0 = fc_layer(ff_inputs, self.ff_stacksize*self.agent.ff_inputsize, self.ff_stacksize*self.agent.ff_inputsize, "FC0", True, do_batchnorm, is_training, False, tf.nn.relu, 1, {}, variable_summary, initializer=ini)   
-            length = 0
-            
-        fc1 = fc_layer(fc0, self.ff_stacksize*self.agent.ff_inputsize+length, self.h_size*2, "FC1", True, do_batchnorm, is_training, False, tf.nn.relu, 1, {}, variable_summary, initializer=ini)                 
+        else:
+            fc0 = tf.zeros(None)
+        
+        fc0 = tf.concat([self.conv4_flat, fc0], 1)
+        length = fc0.get_shape()[1]
+        fc1 = fc_layer(fc0, length, self.h_size*2, "FC1", True, do_batchnorm, is_training, False, tf.nn.relu, 1, {}, variable_summary, initializer=ini)                 
 
         #Dueling DQN: split into separate advantage and value stream
         self.streamA,self.streamV = tf.split(fc1,2,1) 

@@ -25,20 +25,11 @@ class Agent(AbstractAgent):
         self.model.initNet(load=(False if start_fresh else "preTrain"))
 
         
-    def runInference(self, gameState, pastState): #since we don't have a memory in this agent, we don't care for other_inputs_toSave
-        if self.isinitialized and self.checkIfInference():
-            conv_inputs, other_inputs, stands_inputs = self.getAgentState(*gameState)
-            toUse, toSave = self.performNetwork(self.makeInferenceUsable((conv_inputs, other_inputs, stands_inputs)))
-            self.postRunInference(toUse, toSave)
-                
-
-    def performNetwork(self, state):        
-        super().performNetwork(state)
-        action, qvals = self.model.inference(state) #former is argmax, latter are individual qvals
+    def policyAction(self, agentState):
+        action, qvals = self.model.inference(self.makeInferenceUsable(agentState)) #former is argmax, latter are individual qvals
         throttle, brake, steer = self.dediscretize(action[0])
-        result = "["+str(throttle)+", "+str(brake)+", "+str(steer)+"]"
-        return result, (throttle, brake, steer) #er returned immer toUse, toSave
-            
+        toUse = "["+str(throttle)+", "+str(brake)+", "+str(steer)+"]"
+        return toUse, None
 
     def initForDriving(self, *args, **kwargs): 
         super().initForDriving()
@@ -51,13 +42,13 @@ class Agent(AbstractAgent):
         for i in range(iterations):
             start_time = time.time()
             dataset.reset_batch()
-            trainBatch = read_supervised.create_QLearnInputs_from_PTStateBatch(*dataset.next_batch(self.conf, self, dataset.numsamples), self)
-            print('Iteration %3d: Accuracy = %.2f%% (%.1f sec)' % (self.model.pretrain_episode(), self.model.getAccuracy(trainBatch), time.time()-start_time), level=10)
+            trainBatch = dataset.create_QLearnInputs_fromBatch(*dataset.next_batch(self.conf, self, dataset.numsamples), self)
+            print('Iteration %3d: Accuracy = %.2f%% (%.1f sec)' % (self.model.pretrain_episode(), self.model.getAccuracy(trainBatch, likeDDPG=False), time.time()-start_time), level=10)
             self.model.inc_episode()
             dataset.reset_batch()
             while dataset.has_next(pretrain_batchsize):
-                trainBatch = read_supervised.create_QLearnInputs_from_PTStateBatch(*dataset.next_batch(self.conf, self, pretrain_batchsize), self)
-                self.model.sv_learn(trainBatch, True)
+                trainBatch = dataset.create_QLearnInputs_fromBatch(*dataset.next_batch(self.conf, self, pretrain_batchsize), self)
+                self.model.sv_train_step(trainBatch, True)
             if (i+1) % 25 == 0:
                 self.model.save()    
         

@@ -17,7 +17,7 @@ from read_supervised import empty_inputs, make_otherinputs
 import infoscreen
 import config
 from read_supervised import cutoutandreturnvectors
-#die Agents werden untem imported, da sie abhängig von sys-commands sind
+#die Agents werden unten nach bedarf imported, da sie abhängig von sys-arguments sind
 
 
 import warnings
