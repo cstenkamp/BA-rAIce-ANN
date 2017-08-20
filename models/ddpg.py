@@ -333,20 +333,22 @@ class DDPG_model():
     #expects a whole s,a,r,s,t - tuple, needs however only s & a
     def getAccuracy(self, batch):
         oldstates, actions, _, _, _ = batch
-        predict = self.inference(oldstates)
+        predict = self.inference(oldstates)[0]
         return np.mean(np.array([abs(predict[i][0] -actions[i][0]) for i in range(len(actions))]))
 
     
     #expects only a state 
     def inference(self, oldstates):
         assert not self.isPretrain, "Please reload this network as a non-pretrain-one!"
-        return self.actor.predict(oldstates, "target", is_training=False)  
+        action = self.actor.predict(oldstates, useOnline=False, is_training=False)
+        value =  self.critic.predict(oldstates, action, useOnline=False)
+        return action, value
         
     
     #expects only a state 
     def statevalue(self, oldstates):                                                  
-        action = actor.predict(oldstates, "target", is_training=False)  
-        return self.critic.predict(oldstates,action)
+        action = self.actor.predict(oldstates, useOnline=False, is_training=False)  
+        return self.critic.predict(oldstates, action, useOnline=False)
     
     
     
@@ -356,8 +358,8 @@ class DDPG_model():
         #Training the critic...
 #        update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
 #        with tf.control_dependencies(update_ops): #because of batchnorm, see https://www.tensorflow.org/api_docs/python/tf/layers/batch_normalization
-        act = self.actor.predict(newstates, "target")
-        target_q = self.critic.predict(newstates, act, "target")
+        act = self.actor.predict(newstates, useOnline=False)
+        target_q = self.critic.predict(newstates, act, useOnline=False)
         cumrewards = np.reshape([rewards[i] if terminals[i] else rewards[i]+0.99*target_q[i] for i in range(len(rewards))], (len(rewards),1))
         target_Q, _, loss = self.critic.train(oldstates, actions, cumrewards)
         #training the actor...        

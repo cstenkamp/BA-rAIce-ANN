@@ -165,6 +165,7 @@ class plotter():
         self.episode += 1
         self.num_epis = self.episode if self.episode > self.num_epis else self.num_epis
         
+        
         try:
             if not run_from_ipython():
                 if SHOW_IN_SUBPLOTS:
@@ -173,7 +174,7 @@ class plotter():
                     plt.sca(self.ax)
             
             if SHOW_IN_SUBPLOTS:
-                [i.cla() for i in self.ax]   
+#                [i.cla() for i in self.ax]   
                 for i in range(len(self.all_vals)):
                     self.ax[i].plot(range(self.episode), self.all_vals[i], self.colors[i])
                     self.ax[i].axis([0, self.num_epis, self.minvals[i], self.maxvals[i]])

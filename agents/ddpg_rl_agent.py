@@ -14,11 +14,9 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 #====own classes====
 from agent import AbstractRLAgent
 from myprint import myprint as print
-import infoscreen
 from efficientmemory import Memory as Efficientmemory
 from ddpg import DDPG_model 
 
-current_milli_time = lambda: int(round(time.time() * 1000))
 
 
 
@@ -72,47 +70,31 @@ class Agent(AbstractRLAgent):
 
 
     #classical Ornstein-Uhlenbeck-process. The trick in that is, that the mu of the noise is always that one of the last iteration (->temporal correlation)
-    def make_noisy(self, action, theta=0.15, std=0.2):
-        self._noiseState = theta * self._noiseState + np.random.normal(np.zeros_like(self._noiseState), std)
+    def make_noisy(self, action):
+        self._noiseState = self.conf.ornstein_theta * self._noiseState + np.random.normal(np.zeros_like(self._noiseState), self.conf.ornstein_std)
         action = action + self.epsilon * self._noiseState
         clip = lambda x,b: min(max(x,b[0]),b[1])
         action = [clip(action[i],self.conf.action_bounds[i]) for i in range(len(action))]
         return action
 
 
+    #because we don't do epsilon-greedy here but ONP, we let randomAction be policAction
+    def randomAction(self, agentState):
+        return self.policyAction(agentState)
+    
+    
+    def policyAction(self, agentState):
+        action, _ = self.model.inference(self.makeInferenceUsable(agentState))
+        action = self.make_noisy(action)
+        toUse = "["+str(action[0])+", "+str(action[1])+", "+str(action[2])+"]"
+        return toUse, action
 
-#    def runInference(self, gameState, pastState):
-#        if self.isinitialized and self.checkIfInference():
-#            self.preRunInference(gameState, pastState) #eg. adds to memory
-#            conv_inputs, other_inputs, stands_inputs = self.getAgentState(*gameState)
-#            if self.canLearn() and np.random.random() > self.epsilon:
-#                toUse, toSave = self.performNetwork(self.makeInferenceUsable((conv_inputs, other_inputs, stands_inputs)))
-#            else:
-#                toUse, toSave = self.randomAction(gameState[2][0].SpeedSteer.velocity)
-#                if len(self.memory) >= self.conf.replaystartsize:
-#                    try:
-#                        self.epsilon = min(round(max(self.conf.startepsilon-((self.conf.startepsilon-self.conf.minepsilon)*((self.model.run_inferences()-self.conf.replaystartsize)/self.conf.finalepsilonframe)), self.conf.minepsilon), 5), 1)
-#                    except: #there are two different kinds of what can be stored in the config for the memory-decrease
-#                        self.epsilon = min(round(max(self.epsilon-self.conf.epsilondecrease, self.conf.minepsilon), 5), 1)
-#                if self.containers.showscreen:
-#                    infoscreen.print(self.epsilon, containers=self.containers, wname="Epsilon")
-#            if self.containers.showscreen:
-#                infoscreen.print(toUse, containers=self.containers, wname="Last command")
-#                if self.model.run_inferences() % 100 == 0:
-#                    infoscreen.print(self.model.step(), "Iterations: >"+str(self.model.run_inferences()), containers=self.containers, wname="ReinfLearnSteps")
-#            self.postRunInference(toUse, toSave)
-#    
-#
-#
-#    def performNetwork(self, state):        
-#        super().performNetwork(state)
-#        action, qvals = self.model.inference(state) #former is argmax, latter are individual qvals
-#        throttle, brake, steer = self.dediscretize(action[0])
-#        result = "["+str(throttle)+", "+str(brake)+", "+str(steer)+"]"
-#        self.showqvals(qvals[0])
-#        return result, (throttle, brake, steer) #er returned immer toUse, toSave
-#
-#
+
+    def preTrain(self, dataset, Iterations, supervised=False):
+        if supervised:
+            raise ValueError("A DDPG-Model cannot learn supervisedly!")
+        raise NotImplementedError
+
 #    def preTrain(self, dataset, iterations, supervised=False):
 #        print("Starting pretraining", level=10)
 #        pretrain_batchsize = 32

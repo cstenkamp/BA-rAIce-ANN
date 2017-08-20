@@ -20,6 +20,8 @@ class Config():
     xml_dir = "./"
     save_xml = True
     #wir haben super-über-ordner für RLLearn, checkpoint, summarylogdir & memory für jede kombi aus hframes, secondcam, mspersec... und dann der agent-folder
+    agents_file_dir = "./agents/"
+    models_file_dir = "./models/"
     
     #PRETRAIN STUFF
     pretrain_batch_size = 32
@@ -47,11 +49,13 @@ class Config():
     
     target_update_tau = 0.001 
     batch_size = 32
-    startepsilon = 0#0.2
-    finalepsilonframe = 100000  #I could use epsilondecrease = 0.0001 instead, however then every new run epsilon would reset to startepsilon (since it doesn't depend on numIterations then)
-    minepsilon = 0#0.005
+    startepsilon = 0.2
+    minepsilon = 0.005
+    finalepsilonframe = 100000
     q_decay = 0.99
     checkpointall = 1000 #RLsteps, not inferences!
+    ornstein_theta = 0.15
+    ornstein_std = 0.2
     
     #LEARN SETTINGS    
     ForEveryInf, ComesALearn = 400, 100
@@ -71,6 +75,7 @@ class Config():
     
     #GAME SETTINGS
     history_frame_nr = 4 #incl. dem jetzigem!
+    action_repeat = 4
     speed_neurons = 30 
     SPEED_AS_ONEHOT = False    
     image_dims = [30,45] 
@@ -104,6 +109,8 @@ class Config():
         assert not (self.use_second_camera and (self.history_frame_nr == 1)), "If you're using 2 cameras, you have to use historyframes!"
         assert os.path.exists(self.LapFolderName), "No data to train on at all!"        
         if self.learnMode == "parallel" and not self.has_gpu(): self.learnMode = "between"
+        sys.path.append(self.agents_file_dir)
+        sys.path.append(self.models_file_dir)
 
 
 

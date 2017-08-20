@@ -51,7 +51,7 @@ def showScreen(containers):
     lastpunish.pack(fill=X)
     reinflearnsteps = ThreadSafeConsole(root, width=1, height=1)
     reinflearnsteps.pack(fill=X)
-    lastepisode = ThreadSafeConsole(root, width=1, height=1)
+    lastepisode = ThreadSafeConsole(root, width=1, height=2)
     lastepisode.pack(fill=X)
     currentqvals = ThreadSafeConsole(root, width=55, height=22)
     currentqvals.pack(fill=X)

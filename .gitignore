@@ -5,6 +5,7 @@ old_checkpoints
 **.rar
 data*
 dqn/
+gym_chkpt*
 
 #-----------------------------------------DELPHI-FILES-----------------------------------------
 # Delphi compiler-generated binaries (safe to delete)

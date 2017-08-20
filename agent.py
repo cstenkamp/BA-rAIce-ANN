@@ -24,6 +24,7 @@ class AbstractAgent(object):
         self.isinitialized = False
         self.containers = containers  
         self.conf = conf
+        self.action_repeat = self.conf.action_repeat #kann überschrieben werden
         self.isSupervised = False #wird überschrieben
         self.isContinuous = False #wird überschrieben
         self.ff_inputsize = 0     #wird überschrieben
@@ -36,14 +37,11 @@ class AbstractAgent(object):
     #################### Necessary functions ##################################
     ###########################################################################
     
-    def checkIfInference(self):
+    def checkIfAction(self):
         if self.conf.UPDATE_ONLY_IF_NEW and self.containers.inputval.alreadyread:
             return False
         return True
-            
-    def postRunInference(self, toUse, toSave): #toUse will already be a prepared string, toSave will be raw.
-        self.containers.outputval.update(toUse, toSave, self.containers.inputval.CTimestamp, self.containers.inputval.STimestamp)  
-    
+                
     ###########################################################################
     ################functions that may be overwritten##########################
     ###########################################################################
@@ -83,27 +81,41 @@ class AbstractAgent(object):
                     
     def initForDriving(self, *args, **kwargs):
         self.show_plots = kwargs["show_plots"] if "show_plots" in kwargs else True 
+        self.numsteps = 0
+        self.last_action = None
+        self.repeated_action_for = self.action_repeat
         self.episode_statevals = []  #für evaluator
         self.episodes = 0 #für evaluator, wird bei jedem neustart auf null gesetzt aber das ist ok dafür
         self.evaluator = evaluator(self.containers, self, self.show_plots, self.conf.save_xml,      \
                                    ["average rewards", "average Q-vals", "progress", "laptime"                    ], \
                                    [(-0.5,2),          50,               100,         self.conf.time_ends_episode ] )                     
         
+
+        
+    def performAction(self, gameState, pastState):
+        if self.isinitialized and self.checkIfAction():
+            self.numsteps += 1
+            self.repeated_action_for += 1                
+            if self.repeated_action_for < self.action_repeat:
+                toUse, toSave = self.last_action 
+            else:
+                agentState = self.getAgentState(*gameState) #may be overridden
+                toUse, toSave = self.policyAction(agentState)
+                self.last_action = toUse, toSave                
+            self.containers.outputval.update(toUse, toSave, self.containers.inputval.CTimestamp, self.containers.inputval.STimestamp)  
+
+                    
+            
     ###########################################################################
     ################functions that should be impemented########################
     ###########################################################################
-    
-    def performNetwork(self, *args, **kwargs):
-        print("Another ANN Inference", level=3)
-        
-        
-    def runInference(self, *args, **kwargs):
-        raise NotImplementedError    
-        
+            
         
     def preTrain(self, *args, **kwargs):
         raise NotImplementedError    
         
+    def policyAction(self, agentState):
+        raise NotImplementedError
         
     ###########################################################################
     ########################### Helper functions###############################
@@ -145,20 +157,24 @@ class AbstractRLAgent(AbstractAgent):
     def __init__(self, conf, containers, isPretrain=False, start_fresh=False, *args, **kwargs):
         super().__init__(conf, containers, *args, **kwargs)
         self.start_fresh = start_fresh
-        self.action_repeat = 4
         self.wallhitPunish = 5;
         self.wrongDirPunish = 10;
         self.isPretrain = isPretrain
         self.show_plots = False  #wird im initForDriving ggf überschrieben
+        self.startepsilon = self.conf.startepsilon #standard from config, but may be overridden
+        self.minepsilon = self.conf.minepsilon #standard from config, but may be overridden
+        self.finalepsilonframe = self.conf.finalepsilonframe #standard from config, but may be overridden
+        #memory will only be added in initfordriving
         
 
     ###########################################################################
     #################### functions that need to be implemented#################
     ###########################################################################
     
+    #if not overridden, this can be used as a complete-random-agent
+    def policyAction(self, agentState):
+        return self.randomAction(agentState)
 
-
-        
         
     ###########################################################################
     #################### functions that may be overwritten#####################        
@@ -178,9 +194,7 @@ class AbstractRLAgent(AbstractAgent):
         self.freezeLearnReasons = [] 
         self.numInferencesAfterLearn = 0
         self.numLearnAfterInference = 0
-        self.last_action = None
-        self.repeated_action_for = self.action_repeat
-        self.numsteps = 0
+        self.epsilon = self.startepsilon
         #self.isinitialized = True  #muss jeder agent individuell am Ende machen!
     
         
@@ -206,15 +220,15 @@ class AbstractRLAgent(AbstractAgent):
 
         
     
-    def randomAction(self, speed):
-        print("Random Action", level=6)
+    def randomAction(self, agentState):
+        print("Random Action", level=2)
         action = np.random.randint(4) if self.conf.INCLUDE_ACCPLUSBREAK else np.random.randint(3)
         if action == 0: brake, throttle = 0, 1
         if action == 1: brake, throttle = 0, 0
         if action == 2: brake, throttle = 1, 0
         if action == 3: brake, throttle = 1, 1
-        if speed < 6:
-            brake, throttle = 0, 1  #wenn er nicht fährt bringt stehen nix!
+        if agentState[2]: #"carstands"
+            brake, throttle = 0, 1 
         #alternative 1a: steer = ((np.random.random()*2)-1)
         #alternative 1b: steer = min(max(np.random.normal(scale=0.5), 1), -1)
         #für 1a und 1b:  steer = read_supervised.dediscretize_steer(read_supervised.discretize_steering(steer, self.conf.steering_steps))
@@ -226,12 +240,43 @@ class AbstractRLAgent(AbstractAgent):
         result = "["+str(throttle)+", "+str(brake)+", "+str(steer)+"]"
         return result, (throttle, brake, steer)  #er returned immer toUse, toSave     
       
-    
 
     ###########################################################################
     ########################### Necessary functions ###########################
     ###########################################################################
 
+
+    #overridden from AbstractAgent
+    #this assumes standard epsilon-greedy. If agent's differ from that, they can let randomaction return policyaction and use self.epsilon therein if needed
+    def performAction(self, gameState, pastState):
+        if self.isinitialized and self.checkIfAction():
+            self.numsteps += 1
+            self.repeated_action_for += 1
+            self.addToMemory(gameState, pastState)
+                
+            if self.repeated_action_for < self.action_repeat:
+                toUse, toSave = self.last_action 
+            else:
+                agentState = self.getAgentState(*gameState) #may be overridden
+                if len(self.memory) >= self.conf.replaystartsize:
+                    self.epsilon = min(round(max(self.startepsilon-((self.startepsilon-self.minepsilon)*((self.model.run_inferences()-self.conf.replaystartsize)/self.finalepsilonframe)), self.minepsilon), 5), 1)
+                    if np.random.random() > self.epsilon:
+                        toUse, toSave = self.randomAction(agentState)
+                    else:
+                        toUse, toSave = self.policyAction(agentState)
+                else:
+                    toUse, toSave = self.randomAction(agentState)
+                self.last_action = toUse, toSave
+                
+            self.containers.outputval.update(toUse, toSave, self.containers.inputval.CTimestamp, self.containers.inputval.STimestamp)  
+            if self.conf.learnMode == "between":
+                if self.numsteps % self.conf.ForEveryInf == 0 and self.canLearn():
+                    print("freezing python because after", self.model.run_inferences(), "iterations I need to learn (between)", level=2)
+                    self.freezeInf("LearningComes")
+                    self.dauerLearnANN(self.conf.ComesALearn)
+                    self.unFreezeInf("LearningComes")
+                
+            
         
     #gamestate and paststate sind jeweils (vvec1_hist, vvec2_hist, otherinputs_hist, action_hist) #TODO: nicht mit gamestate und paststate, direkt mit agentstate!
     def addToMemory(self, gameState, pastState): 
@@ -254,7 +299,7 @@ class AbstractRLAgent(AbstractAgent):
       
        
      
-    def checkIfInference(self):
+    def checkIfAction(self):
         if self.containers.freezeInf:
             return False
         #hier gehts darum die Inference zu freezen bis das learnen eingeholt hat. (falls update_frequency gesetzt)
@@ -270,30 +315,15 @@ class AbstractRLAgent(AbstractAgent):
                 if self.numLearnAfterInference < self.conf.ComesALearn:
                     self.freezeInf("updateFrequency")
                     print("FREEZEINF", self.numLearnAfterInference, self.numInferencesAfterLearn, level=2)
-                    return super().checkIfInference()
+                    return super().checkIfAction()
                 self.numLearnAfterInference = 0
             self.numInferencesAfterLearn += 1
         #print(self.numLearnAfterInference, self.numInferencesAfterLearn, level=10)
-        return super().checkIfInference()
+        if self.model.run_inferences() >= self.conf.train_for: 
+            return False
+        else:
+            return super().checkIfAction()
 
-
-        
-    def preRunInference(self, gameState, pastState):
-        self.addToMemory(gameState, pastState)
-        self.numsteps += 1
-        
-        
-
-    def postRunInference(self, toUse, toSave):
-        super().postRunInference(toUse, toSave)
-        if self.conf.learnMode == "between":
-            if self.numsteps % self.conf.ForEveryInf == 0 and self.canLearn():
-                print("freezing python because after", self.model.run_inferences(), "iterations I need to learn (between)", level=2)
-                self.freezeInf("LearningComes")
-                self.dauerLearnANN(self.conf.ComesALearn)
-                self.unFreezeInf("LearningComes")
-                
-                
                 
     def canLearn(self):
         return len(self.memory) > self.conf.batch_size+self.conf.history_frame_nr+1 and \
@@ -334,7 +364,7 @@ class AbstractRLAgent(AbstractAgent):
             
     def learnANN(self):
         QLearnInputs = self.create_QLearnInputs_from_MemoryBatch(self.memory.sample(self.conf.batch_size))
-        self.model.q_learn(QLearnInputs, False)
+        self.model.q_train_step(QLearnInputs, False)
         if self.model.step() > 0 and self.model.step() % self.conf.checkpointall == 0 or self.model.run_inferences() >= self.conf.train_for:
             self.saveNet()          
 

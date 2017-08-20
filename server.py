@@ -152,7 +152,7 @@ class receiver_thread(threading.Thread):
                                     
                             print("PYTHON RECEIVES TIME:", STime, time.time()*1000, level=4)
                             self.containers.inputval.update(visionvec, vvec2, allOneDs, STime, CTime)  #note that visionvec and vvec2 can both be None                                                           
-                            self.containers.myAgent.runInference(self.containers.inputval.read(), self.containers.inputval.read(pastState=True))
+                            self.containers.myAgent.performAction(self.containers.inputval.read(), self.containers.inputval.read(pastState=True))
                         
             except TimeoutError:
                 if len(self.containers.receiverthreads) < 2:

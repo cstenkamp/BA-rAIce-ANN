@@ -69,7 +69,7 @@ class DuelDQN():
             self.compareQ = tf.reduce_sum(tf.multiply(self.Qout, self.targetA_OH), axis=1) #der td_error von den actions über die wir nicht lernen wollen ist null
             self.td_error = tf.square(self.targetQ - self.compareQ) 
             self.q_loss = tf.reduce_mean(self.td_error)
-            self.q_OP = self._q_train_step_steping(self.q_loss, isPretrain)
+            self.q_OP = self._q_training(self.q_loss, isPretrain)
             
         
         self.update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
@@ -200,7 +200,7 @@ class DuelDQN():
         
         
     #carstands ist true iff (single inference & carstands), in jedem anderem Fall false
-    def _make_inputs(self, inputs, targetQ=None, targetA=None, carstands = False, decay_lr=False, is_training=True):
+    def make_inputs(self, inputs, targetQ=None, targetA=None, carstands = False, decay_lr=False, is_training=True):
         conv_inputs = np.array([inputs[i][0] for i in range(len(inputs))])
         ff_inputs   = np.array([inputs[i][1] for i in range(len(inputs))])
         feed_dict = {self.phase: is_training}
@@ -269,7 +269,7 @@ class DDDQN_model():
             else:
                 self.targetQN.load(self.session, from_pretrain=True)     
                 self.session.run(self.onlineQN.pretrain_step_tf.assign(self.targetQN.pretrain_step_tf))
-        self.session.run(self.netCopyOps(self.targetQN, self.onlineQN))
+        self.session.run(netCopyOps(self.targetQN, self.onlineQN))
         self.lastTrained = None
             
         
