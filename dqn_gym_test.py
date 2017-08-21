@@ -73,7 +73,7 @@ def train(env, model):
             if np.random.random() < epsilon:
                 a = env.action_space.sample()
             else:
-                a = int(model.inference([s])[0])
+                a = int(model.inference([s])[0]) 
                 if a != lasta: 
                     print(a)
                 lasta = a
