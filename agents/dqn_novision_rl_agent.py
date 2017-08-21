@@ -89,6 +89,7 @@ class Agent(AbstractRLAgent):
             dataset.reset_batch()
             trainBatch = dataset.create_QLearnInputs_fromBatch(*dataset.next_batch(self.conf, self, dataset.numsamples), self)
             print('Iteration %3d: Accuracy = %.2f%% (%.1f sec)' % (self.model.pretrain_episode(), self.model.getAccuracy(trainBatch, likeDDPG=False), time.time()-start_time), level=10)
+            print(np.mean(self.model.statevalue(trainBatch)))
             self.model.inc_episode()
             dataset.reset_batch()
             while dataset.has_next(pretrain_batchsize):
