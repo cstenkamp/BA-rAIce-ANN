@@ -54,7 +54,6 @@ class DuelDQN():
 #            self.Qmax = tf.reduce_max(self.Qout, axis=1) 
 #            self.predict = tf.argmax(self.Qout,1)            
             
-            
             #THIS IS SV_LEARN 
             self.targetA = tf.placeholder(shape=[None],dtype=tf.int32)
             self.targetA_OH = tf.one_hot(self.targetA, self.num_actions, dtype=tf.float32)

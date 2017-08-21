@@ -97,6 +97,7 @@ class Agent(AbstractRLAgent):
         raise NotImplementedError
 
 #    def preTrain(self, dataset, iterations, supervised=False):
+        #assert self.model.step() == 0, "I dont pretrain if the model already learned on real data!"
 #        print("Starting pretraining", level=10)
 #        pretrain_batchsize = 32
 #        for i in range(iterations):

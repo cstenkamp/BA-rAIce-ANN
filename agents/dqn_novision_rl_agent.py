@@ -82,6 +82,7 @@ class Agent(AbstractRLAgent):
 
 
     def preTrain(self, dataset, iterations, supervised=False):
+        assert self.model.step() == 0, "I dont pretrain if the model already learned on real data!"
         print("Starting pretraining", level=10)
         pretrain_batchsize = self.conf.pretrain_batch_size
         for i in range(iterations):
@@ -89,7 +90,6 @@ class Agent(AbstractRLAgent):
             dataset.reset_batch()
             trainBatch = dataset.create_QLearnInputs_fromBatch(*dataset.next_batch(self.conf, self, dataset.numsamples), self)
             print('Iteration %3d: Accuracy = %.2f%% (%.1f sec)' % (self.model.pretrain_episode(), self.model.getAccuracy(trainBatch, likeDDPG=False), time.time()-start_time), level=10)
-            print(np.mean(self.model.statevalue(trainBatch)))
             self.model.inc_episode()
             dataset.reset_batch()
             while dataset.has_next(pretrain_batchsize):
@@ -97,7 +97,7 @@ class Agent(AbstractRLAgent):
                 if supervised:
                     self.model.sv_train_step(trainBatch, True)
                 else:
-                    self.model.q_train_step(trainBatch, True)    
+                    self.model.q_train_step(trainBatch, False)    
             if (i+1) % 25 == 0:
                 self.model.save()    
                 

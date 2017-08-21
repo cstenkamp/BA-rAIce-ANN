@@ -65,26 +65,25 @@ class Agent(AbstractRLAgent):
         return toUse, toSave
 
 
-#    def preTrain(self, dataset, iterations, supervised=False):
-##        assert self.model.step == 0, "I dont pretrain if the model already learned on real data!"
-#        print("Starting pretraining", level=10)
-#        pretrain_batchsize = 32
-#        for i in range(iterations):
-#            start_time = time.time()
-#            dataset.reset_batch()
-#            trainBatch = read_supervised.create_QLearnInputs_from_PTStateBatch(*dataset.next_batch(self.conf, self, dataset.numsamples), self)
-#            print('Iteration %3d: Accuracy = %.2f%% (%.1f sec)' % (self.model.pretrain_episode(), self.model.getAccuracy(trainBatch), time.time()-start_time), level=10)
-#            self.model.inc_episode()
-#            dataset.reset_batch()
-#            while dataset.has_next(pretrain_batchsize):
-#                trainBatch = read_supervised.create_QLearnInputs_from_PTStateBatch(*dataset.next_batch(self.conf, self, pretrain_batchsize), self)
-#                if supervised:
-#                    self.model.sv_learn(trainBatch, True)
-#                else:
-#                    self.model.q_learn(trainBatch, True)    
-#                    
-#            if (i+1) % 25 == 0:
-#                self.saveNet()
+    def preTrain(self, dataset, iterations, supervised=False):
+        assert self.model.step() == 0, "I dont pretrain if the model already learned on real data!"
+        print("Starting pretraining", level=10)
+        pretrain_batchsize = self.conf.pretrain_batch_size
+        for i in range(iterations):
+            start_time = time.time()
+            dataset.reset_batch()
+            trainBatch = dataset.create_QLearnInputs_fromBatch(*dataset.next_batch(self.conf, self, dataset.numsamples), self)
+            print('Iteration %3d: Accuracy = %.2f%% (%.1f sec)' % (self.model.pretrain_episode(), self.model.getAccuracy(trainBatch, likeDDPG=False), time.time()-start_time), level=10)
+            self.model.inc_episode()
+            dataset.reset_batch()
+            while dataset.has_next(pretrain_batchsize):
+                trainBatch = dataset.create_QLearnInputs_fromBatch(*dataset.next_batch(self.conf, self, pretrain_batchsize), self)
+                if supervised:
+                    self.model.sv_train_step(trainBatch, True)
+                else:
+                    self.model.q_train_step(trainBatch, False)    
+            if (i+1) % 25 == 0:
+                self.model.save()   
 
     ###########################################################################
     ########################overwritten functions##############################
