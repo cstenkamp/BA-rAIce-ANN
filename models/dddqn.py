@@ -38,7 +38,7 @@ class DuelDQN():
         self.pretrain_episode = 0
         self.run_inferences = 0
         self.step = 0
-        self.h_size = 128
+        self.h_size = 256
         self.stood_frames_ago = 0 #das wird benutzt damit er, wenn er einmal stand, sich merken kann ob erst kurz her ist (für settozero)
         with tf.variable_scope(name, reuse=None):
             self.pretrain_episode_tf = tf.Variable(tf.constant(self.pretrain_episode), dtype=tf.int32, name='pretrain_episode_tf', trainable=False)
@@ -56,9 +56,6 @@ class DuelDQN():
             self.ff_inputs = tf.placeholder(tf.float32, shape=[None, self.ff_stacksize*self.agent.ff_inputsize], name="ff_inputs")  if self.agent.ff_inputsize else None
             self.stands_input = tf.placeholder(tf.bool, name="stands_input") #necessary for settozero            
             self.Qout, self.Qmax, self.predict = self._inference(self.conv_inputs, self.ff_inputs, self.stands_input, self.phase)
-#            self.Qout = fc_layer(self.ff_inputs, self.agent.ff_inputsize, self.num_actions, "FC0", True, False, False, False, tf.nn.relu, 1, {}, variable_summary, initializer=tf.random_normal_initializer(0, 1e-100))               
-#            self.Qmax = tf.reduce_max(self.Qout, axis=1) 
-#            self.predict = tf.argmax(self.Qout,1)            
             
             #THIS IS SV_LEARN 
             self.targetA = tf.placeholder(shape=[None],dtype=tf.int32)
@@ -114,14 +111,14 @@ class DuelDQN():
         
         length = fc0.get_shape()[1]
 #        fc1 = fc_layer(fc0, length, self.h_size*2, "FC1", True, do_batchnorm, is_training, False, tf.nn.relu, 1, {}, variable_summary, initializer=ini)    
-        fc1 = dense(ff_inputs, self.h_size*2, tf.nn.relu)             
+        fc1 = dense(ff_inputs, self.h_size, tf.nn.relu)             
 
         #Dueling DQN: split into separate advantage and value stream
         self.streamA,self.streamV = tf.split(fc1,2,1) 
         xavier_init = tf.contrib.layers.xavier_initializer()
         neutral_init = tf.random_normal_initializer(0, 1e-50)
-        self.AW = tf.Variable(xavier_init([self.h_size,self.num_actions]))
-        self.VW = tf.Variable(neutral_init([self.h_size,1]))
+        self.AW = tf.Variable(xavier_init([self.h_size//2,self.num_actions]))
+        self.VW = tf.Variable(neutral_init([self.h_size//2,1]))
         self.Advantage = tf.matmul(self.streamA,self.AW)
 #        if do_batchnorm:
 #            self.Advantage = tf.contrib.layers.batch_norm(self.Advantage, center=True, scale=True, is_training=is_training)
@@ -345,10 +342,10 @@ class DDDQN_model():
     #expects a whole s,a,r,s,t - tuple  
     def q_train_step(self, batch, decay_lr = False):
         oldstates, actions, rewards, newstates, terminals = batch
-        action = self.session.run(self.onlineQN.predict,feed_dict=self.onlineQN.make_inputs(newstates)) #TODO: im text schreiben wie das bei non-doubleDQN anders wäre
+        nextA = self.session.run(self.onlineQN.predict,feed_dict=self.onlineQN.make_inputs(newstates)) #TODO: im text schreiben wie das bei non-doubleDQN anders wäre
         folgeQ = self.session.run(self.targetQN.Qout,feed_dict=self.targetQN.make_inputs(newstates)) #No reduceMax anymore, but instead the action-prediciton because DDQN: instead of taking the max over Q-values when computing the target-Q value for our training step, we use our primary network to chose an action, and our target network to generate the target Q-value for that action. 
         consider_stateval = -(terminals - 1)
-        doubleQ = folgeQ[range(len(terminals)),action]  
+        doubleQ = folgeQ[range(len(terminals)),nextA]  
         targetQ = rewards + (self.conf.q_decay * doubleQ * consider_stateval)
         #Update the network with our target values.
         if decay_lr:

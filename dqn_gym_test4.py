@@ -12,6 +12,7 @@ from collections import deque
 import random
 import os
 import tensorflow.contrib.slim as slim
+from dddqn import DDDQN_model
 
 
 # ==========================
@@ -37,15 +38,8 @@ load_model = False #Whether to load a saved model.
 h_size = 32 #The size of the final convolutional layer before splitting it into Advantage and Value streams.
 tau = 0.01 #Rate to update target network toward primary network
 
-def dense(x, units, activation=tf.identity, decay=None, minmax=None):
-    if minmax is None:
-        minmax = float(x.shape[1].value) ** -.5
-    return tf.layers.dense(x, units,activation=activation, kernel_initializer=tf.random_uniform_initializer(-minmax, minmax), kernel_regularizer=decay and tf.contrib.layers.l2_regularizer(1e-2))
-
-
 
 class ReplayBuffer(object):
-
     def __init__(self, buffer_size):
         self.buffer_size = buffer_size
         self.count = 0
@@ -72,69 +66,13 @@ class ReplayBuffer(object):
         return s_batch, a_batch, r_batch, s2_batch, t_batch
 
 
-        
-class Qnetwork():
-    def __init__(self):
-        
-        h_size = 256
-        num_actions=4
-        LEARNINGRATE = 0.005
-        self.ff_inputs = tf.placeholder(tf.float32, shape=[None, 16], name="ff_inputs")
-        self.fc1 = dense(self.ff_inputs, h_size, tf.nn.relu)             
-        self.streamAC,self.streamVC = tf.split(self.fc1,2,1)
-        self.streamA = slim.flatten(self.streamAC)
-        self.streamV = slim.flatten(self.streamVC)
-        xavier_init = tf.contrib.layers.xavier_initializer()
-        self.AW = tf.Variable(xavier_init([h_size//2,num_actions]))
-        self.VW = tf.Variable(xavier_init([h_size//2,1]))
-        self.Advantage = tf.matmul(self.streamA,self.AW)
-        self.Value = tf.matmul(self.streamV,self.VW)
-        
-        #Then combine them together to get our final Q-values.
-        self.Qout = self.Value + tf.subtract(self.Advantage,tf.reduce_mean(self.Advantage,axis=1,keep_dims=True))
-        self.predict = tf.argmax(self.Qout,1)
-        
-        #Below we obtain the loss by taking the sum of squares difference between the target and prediction Q values.
-        self.targetQ = tf.placeholder(shape=[None],dtype=tf.float32, name="targetQ") #ursprünglich [None,4]
-        self.actions = tf.placeholder(shape=[None],dtype=tf.int32, name="targetA")
-        self.actions_onehot = tf.one_hot(self.actions, num_actions,dtype=tf.float32)
-        self.compareQ = tf.reduce_sum(tf.multiply(self.Qout, self.actions_onehot), axis=1, name="calcQ")
-        
-        self.td_error = tf.square(self.targetQ - self.compareQ)  #ursprünglich Q-Qout
-        self.loss = tf.reduce_mean(self.td_error)
-        self.trainer = tf.train.AdamOptimizer(learning_rate=LEARNINGRATE)
-        self.updateModel = self.trainer.minimize(self.loss)
-
-        
-def updateTargetGraph(tfVars,tau):
-    total_vars = len(tfVars)
-    op_holder = []
-    for idx,var in enumerate(tfVars[0:total_vars//2]):
-        op_holder.append(tfVars[idx+total_vars//2].assign((var.value()*tau) + ((1-tau)*tfVars[idx+total_vars//2].value())))
-    return op_holder
-
-def updateTarget(op_holder,sess):
-    for op in op_holder:
-        sess.run(op)        
-        
-        
-
-def train(env):
+   
+def train(env, model):
     tf.reset_default_graph()
-
-    mainQN = Qnetwork()
-    targetQN = Qnetwork()
-    
-    trainables = tf.trainable_variables()
-    targetOps = updateTargetGraph(trainables,tau)
     replay_buffer = ReplayBuffer(BUFFER_SIZE)
     
     total_steps = 0
-    
-#    e = startE
-#    stepDrop = (startE - endE)/annealing_steps
     e = 0.1
-                
     lasthundredavg = deque(100*[0], 100)           
     
     with tf.Session() as sess:
@@ -142,50 +80,28 @@ def train(env):
         for episode in range(num_episodes):
             
             s = env.reset()
+            s = (None, np.identity(model.agent.ff_inputsize)[s])
             ep_reward = 0
             ep_ave_max_q = 0
             
             for j in range(1000): #max.ep-step
-            
                 if RENDER_ENV:
                     env.render()
-                          
+                
                 if np.random.rand(1) < e or total_steps < pre_train_steps:
                     a = [env.action_space.sample()]
                 else:
-                    a = sess.run(mainQN.predict, feed_dict={mainQN.ff_inputs:[np.identity(16)[s]]})
+                    a = model.inference([s])[0]
                 
                 s2, r, t, info = env.step(a[0])
+                s2 = (None, np.identity(model.agent.ff_inputsize)[s2])
                 total_steps += 1
                 replay_buffer.append((s, a[0], r, s2, t))
                 
                 if total_steps > pre_train_steps:
-#                    if e > endE:
-#                        e -= stepDrop
-                    
                     if total_steps % (update_freq) == 0:
                         trainBatch = replay_buffer.sample(MINIBATCH_SIZE) #Get a random batch of experiences.
-                        b_s, b_a, b_r, b_s2, b_t = trainBatch      
-                        
-                        
-                        nextA = sess.run(mainQN.predict,feed_dict={mainQN.ff_inputs:[np.identity(16)[i] for i in b_s2]})
-#                        Q2 = sess.run(targetQN.Qout,feed_dict={targetQN.ff_inputs:[np.identity(16)[i] for i in b_s2]})
-                        Q2 = sess.run(targetQN.Qout,feed_dict={targetQN.ff_inputs:[np.identity(16)[i] for i in b_s2]})
-                        end_multiplier = -(b_t-1)
-                        doubleQ = Q2[range(MINIBATCH_SIZE),nextA]
-                        targetQ = b_r + (y * doubleQ * end_multiplier)
-                        sess.run(mainQN.updateModel,feed_dict={mainQN.ff_inputs:np.identity(16)[b_s],mainQN.targetQ:targetQ,mainQN.actions: b_a})
-                        
-                        updateTarget(targetOps,sess) 
-                        
-#                        origQs = sess.run(mainQN.Qout,feed_dict={mainQN.ff_inputs:[np.identity(16)[i] for i in b_s]})
-#                        Q2 = sess.run(mainQN.Qout,feed_dict={mainQN.ff_inputs:[np.identity(16)[i] for i in b_s2]})
-#                        end_multiplier = -(b_t-1)
-#                        maxQ2 = np.max(Q2,axis=1)
-#                        for i in range(len(b_t)):
-#                            origQs[i,b_a[i]] = b_r[i] + y*maxQ2[i]*end_multiplier[i]
-#                        sess.run(mainQN.updateModel,feed_dict={mainQN.ff_inputs:np.identity(16)[b_s],mainQN.targetQ:origQs,mainQN.actions: b_a})                        
-
+                        model.q_train_step(trainBatch)
 
                 s = s2
                 ep_reward += r
@@ -200,13 +116,47 @@ def train(env):
 
 
     
+def folder(x):
+    if not os.path.exists(x):
+        os.makedirs(x)
+    return x
+
+            
+class dummy():
+    def __init__(self):
+        pass
+
+    
     
 def main(_):
     tf.reset_default_graph()
 
     env = gym.make(ENV_NAME)
     
-    train(env)
+    print(env.action_space)
+    
+    conf = dummy()
+    conf.image_dims = (0,0)
+    conf.target_update_tau = 0.01               
+    conf.checkpoint_dir = ".\gym_chkpt3"
+    conf.pretrain_sv_initial_lr = 0.0
+    conf.initial_lr = 0.005
+    conf.use_settozero = False
+    conf.q_decay = 0.99
+    
+    
+    myAgent = dummy()
+    myAgent.usesConv = False        
+    myAgent.ff_stacked = False
+    myAgent.ff_inputsize = 16
+    myAgent.folder = folder
+    myAgent.conv_stacked = False
+    myAgent.isSupervised = False
+
+    model = DDDQN_model(conf, myAgent, tf.Session(), num_actions=4)
+    model.initNet("noPreTrain")
+
+    train(env, model)
 
 
         
