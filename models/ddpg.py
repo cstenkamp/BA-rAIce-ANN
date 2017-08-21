@@ -360,7 +360,7 @@ class DDPG_model():
 #        with tf.control_dependencies(update_ops): #because of batchnorm, see https://www.tensorflow.org/api_docs/python/tf/layers/batch_normalization
         act = self.actor.predict(newstates, useOnline=False)
         target_q = self.critic.predict(newstates, act, useOnline=False)
-        cumrewards = np.reshape([rewards[i] if terminals[i] else rewards[i]+0.99*target_q[i] for i in range(len(rewards))], (len(rewards),1))
+        cumrewards = np.reshape([rewards[i] if terminals[i] else rewards[i]+self.conf.q_decay*target_q[i] for i in range(len(rewards))], (len(rewards),1))
         target_Q, _, loss = self.critic.train(oldstates, actions, cumrewards)
         #training the actor...        
         a_outs = self.actor.predict(oldstates)

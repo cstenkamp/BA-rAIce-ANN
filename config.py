@@ -56,6 +56,7 @@ class Config():
     checkpointall = 1000 #RLsteps, not inferences!
     ornstein_theta = 0.15
     ornstein_std = 0.2
+    use_settozero = True
     
     #LEARN SETTINGS    
     ForEveryInf, ComesALearn = 400, 100

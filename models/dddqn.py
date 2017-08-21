@@ -23,7 +23,7 @@ from utils import convolutional_layer, fc_layer, variable_summary, netCopyOps
 class DuelDQN():
     
     ############################BUILDING THE COMPUTATION GRAPH#################
-    def __init__(self, conf, agent, name, isInference=False, isPretrain=False):  
+    def __init__(self, conf, agent, name, isInference=False, isPretrain=False, num_actions=None):  
         self.conf = conf
         self.agent = agent
         self.name = name  
@@ -40,7 +40,7 @@ class DuelDQN():
             self.step_tf = tf.Variable(tf.constant(0), dtype=tf.int32, name='step_tf', trainable=False)
             self.run_inferences_tf = tf.Variable(tf.constant(self.run_inferences), dtype=tf.int32, name='run_inferences_tf', trainable=False) #diese ist hier nur zum backupen
             
-            self.num_actions = self.conf.steering_steps*4 if self.conf.INCLUDE_ACCPLUSBREAK else self.conf.steering_steps*3
+            self.num_actions = num_actions if num_actions is not None else self.conf.steering_steps*4 if self.conf.INCLUDE_ACCPLUSBREAK else self.conf.steering_steps*3 
             self.conv_stacksize = (self.conf.history_frame_nr*2 if self.conf.use_second_camera else self.conf.history_frame_nr) if self.agent.conv_stacked else 1
             self.ff_stacksize = self.conf.history_frame_nr if self.agent.ff_stacked else 1
             
@@ -122,20 +122,20 @@ class DuelDQN():
         if do_batchnorm:
             Qout = tf.contrib.layers.batch_norm(Qout, center=True, scale=True, is_training=is_training)
 
-        def settozero(q):
-            ZEROIS = -sys.maxsize-1 if self.agent.isSupervised else 0
-            q = tf.squeeze(q) #stands_input ist nur dann True wenn es nur um ein sample geht
-            if not self.conf.INCLUDE_ACCPLUSBREAK: #dann nimmste nur das argmax von den mittleren neurons (was die mit gas sind)
-                q = tf.slice(q,tf.shape(q)//3,tf.shape(q)//3)
-                q = tf.concat([tf.multiply(tf.ones(tf.shape(q)),ZEROIS), q, tf.multiply(tf.ones(tf.shape(q)), ZEROIS)], axis=0)
-            else:
-                q = tf.slice(q,tf.shape(q)//2,(tf.shape(q)//4)*3)
-                q = tf.concat([tf.multiply(tf.ones(tf.shape(q)*2), ZEROIS), q, tf.multiply(tf.ones(tf.shape(q)), ZEROIS)], axis=0)                   
-            q = tf.expand_dims(q, 0)            
-            return q        
-            
-        if self.isInference:
-            Qout = tf.cond(self.stands_input, lambda: settozero(Qout), lambda: Qout) #wenn du stehst, brauchste dich nicht mehr für die ohne gas zu interessieren
+        if self.conf.use_settozero:
+            def settozero(q):
+                ZEROIS = -sys.maxsize-1 if self.agent.isSupervised else 0
+                q = tf.squeeze(q) #stands_input ist nur dann True wenn es nur um ein sample geht
+                if not self.conf.INCLUDE_ACCPLUSBREAK: #dann nimmste nur das argmax von den mittleren neurons (was die mit gas sind)
+                    q = tf.slice(q,tf.shape(q)//3,tf.shape(q)//3)
+                    q = tf.concat([tf.multiply(tf.ones(tf.shape(q)),ZEROIS), q, tf.multiply(tf.ones(tf.shape(q)), ZEROIS)], axis=0)
+                else:
+                    q = tf.slice(q,tf.shape(q)//2,(tf.shape(q)//4)*3)
+                    q = tf.concat([tf.multiply(tf.ones(tf.shape(q)*2), ZEROIS), q, tf.multiply(tf.ones(tf.shape(q)), ZEROIS)], axis=0)                   
+                q = tf.expand_dims(q, 0)            
+                return q        
+            if self.isInference:
+                Qout = tf.cond(self.stands_input, lambda: settozero(Qout), lambda: Qout) #wenn du stehst, brauchste dich nicht mehr für die ohne gas zu interessieren
 
         Qmax = tf.reduce_max(Qout, axis=1) #not necessary anymore because we use Double-Q, only used for the stateval for the evaluator
         predict = tf.argmax(Qout,1)
@@ -250,13 +250,13 @@ class DuelDQN():
 class DDDQN_model():
     #this is the class for Double-Dueling-DQN, containing BOTH the online and the target DuelDQN-Network        
         
-    def __init__(self, conf, agent, session, isPretrain=False):
+    def __init__(self, conf, agent, session, isPretrain=False, num_actions=None):
         self.conf = conf
         self.agent = agent
         self.session = session        
         self.isPretrain = isPretrain
-        self.onlineQN = DuelDQN(conf, agent, "onlineNet", isPretrain=isPretrain)
-        self.targetQN = DuelDQN(conf, agent, "targetNet", isInference=(not isPretrain), isPretrain=isPretrain)        
+        self.onlineQN = DuelDQN(conf, agent, "onlineNet", isPretrain=isPretrain, num_actions=num_actions)
+        self.targetQN = DuelDQN(conf, agent, "targetNet", isInference=(not isPretrain), isPretrain=isPretrain, num_actions=num_actions)        
         self.smoothTargetNetUpdate = netCopyOps(self.onlineQN, self.targetQN, self.conf.target_update_tau)
                 
             
@@ -350,7 +350,7 @@ class DDDQN_model():
             self.onlineQN.step = self.onlineQN.step_tf.eval(self.session)
         self.lastTrained = self.onlineQN
         #print("Learning rate:",self.session.run(self.onlineQN.lr))
-        return
+        return np.max(targetQ)
         
 ###########################################################################################################
 ###########################################################################################################
