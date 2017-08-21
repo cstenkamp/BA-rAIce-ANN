@@ -35,7 +35,7 @@ pre_train_steps = 100
 max_epLength = 50 #The max allowed length of our episode.
 load_model = False #Whether to load a saved model.
 h_size = 32 #The size of the final convolutional layer before splitting it into Advantage and Value streams.
-tau = 0.001 #Rate to update target network toward primary network
+tau = 0.01 #Rate to update target network toward primary network
 
 def dense(x, units, activation=tf.identity, decay=None, minmax=None):
     if minmax is None:
@@ -168,13 +168,15 @@ def train(env):
                         b_s, b_a, b_r, b_s2, b_t = trainBatch      
                         
                         
-                        origPr = sess.run(mainQN.predict,feed_dict={mainQN.ff_inputs:[np.identity(16)[i] for i in b_s]})
-                        Q2 = sess.run(mainQN.Qout,feed_dict={mainQN.ff_inputs:[np.identity(16)[i] for i in b_s2]})
+                        nextA = sess.run(mainQN.predict,feed_dict={mainQN.ff_inputs:[np.identity(16)[i] for i in b_s2]})
+#                        Q2 = sess.run(targetQN.Qout,feed_dict={targetQN.ff_inputs:[np.identity(16)[i] for i in b_s2]})
+                        Q2 = sess.run(targetQN.Qout,feed_dict={targetQN.ff_inputs:[np.identity(16)[i] for i in b_s2]})
                         end_multiplier = -(b_t-1)
-                        doubleQ = Q2[range(MINIBATCH_SIZE),origPr]
-                        targetQ = b_r + (y*doubleQ * end_multiplier)
+                        doubleQ = Q2[range(MINIBATCH_SIZE),nextA]
+                        targetQ = b_r + (y * doubleQ * end_multiplier)
                         sess.run(mainQN.updateModel,feed_dict={mainQN.ff_inputs:np.identity(16)[b_s],mainQN.targetQ:targetQ,mainQN.actions: b_a})
                         
+                        updateTarget(targetOps,sess) 
                         
 #                        origQs = sess.run(mainQN.Qout,feed_dict={mainQN.ff_inputs:[np.identity(16)[i] for i in b_s]})
 #                        Q2 = sess.run(mainQN.Qout,feed_dict={mainQN.ff_inputs:[np.identity(16)[i] for i in b_s2]})
