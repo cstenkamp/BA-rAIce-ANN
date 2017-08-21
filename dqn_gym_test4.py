@@ -78,7 +78,7 @@ class Qnetwork():
         
         h_size = 256
         num_actions=4
-        LEARNINGRATE = 0.1
+        LEARNINGRATE = 0.005
         self.ff_inputs = tf.placeholder(tf.float32, shape=[None, 16], name="ff_inputs")
         self.fc1 = dense(self.ff_inputs, h_size, tf.nn.relu)             
         self.streamAC,self.streamVC = tf.split(self.fc1,2,1)
@@ -94,32 +94,40 @@ class Qnetwork():
         self.Qout = self.Value + tf.subtract(self.Advantage,tf.reduce_mean(self.Advantage,axis=1,keep_dims=True))
         self.predict = tf.argmax(self.Qout,1)
         
-#        #Below we obtain the loss by taking the sum of squares difference between the target and prediction Q values.
-#        self.targetQ = tf.placeholder(shape=[None,4],dtype=tf.float32)
-##        self.actions = tf.placeholder(shape=[None,1],dtype=tf.int32)
-##        self.actions_onehot = tf.one_hot(self.actions,num_actions,dtype=tf.float32)
-##        self.Q = tf.reduce_sum(tf.multiply(self.Qout, self.actions_onehot), axis=1)
-#        
-#        self.td_error = tf.square(self.targetQ - self.Qout) #rechter teil ist eigentich self.Q
-#        self.loss = tf.reduce_mean(self.td_error)
-#        self.trainer = tf.train.AdamOptimizer(learning_rate=LEARNINGRATE)
-#        self.updateModel = self.trainer.minimize(self.loss)
+        #Below we obtain the loss by taking the sum of squares difference between the target and prediction Q values.
+        self.targetQ = tf.placeholder(shape=[None],dtype=tf.float32, name="targetQ") #ursprünglich [None,4]
+        self.actions = tf.placeholder(shape=[None],dtype=tf.int32, name="targetA")
+        self.actions_onehot = tf.one_hot(self.actions, num_actions,dtype=tf.float32)
+        self.compareQ = tf.reduce_sum(tf.multiply(self.Qout, self.actions_onehot), axis=1, name="calcQ")
+        
+        self.td_error = tf.square(self.targetQ - self.compareQ)  #ursprünglich Q-Qout
+        self.loss = tf.reduce_mean(self.td_error)
+        self.trainer = tf.train.AdamOptimizer(learning_rate=LEARNINGRATE)
+        self.updateModel = self.trainer.minimize(self.loss)
 
         
-#        self.ff_inputs = tf.placeholder(shape=[None,16],dtype=tf.float32)
-#        self.W = tf.Variable(tf.random_uniform([16,4],0,0.01))
-#        self.Qout = tf.matmul(self.ff_inputs,self.W)
-#        self.predict = tf.argmax(self.Qout,1)
+def updateTargetGraph(tfVars,tau):
+    total_vars = len(tfVars)
+    op_holder = []
+    for idx,var in enumerate(tfVars[0:total_vars//2]):
+        op_holder.append(tfVars[idx+total_vars//2].assign((var.value()*tau) + ((1-tau)*tfVars[idx+total_vars//2].value())))
+    return op_holder
+
+def updateTarget(op_holder,sess):
+    for op in op_holder:
+        sess.run(op)        
         
-        #Below we obtain the loss by taking the sum of squares difference between the target and prediction Q values.
-        self.targetQ = tf.placeholder(shape=[None,4],dtype=tf.float32)
-        loss = tf.reduce_sum(tf.square(self.targetQ - self.Qout))
-        trainer = tf.train.GradientDescentOptimizer(learning_rate=0.005)
-        self.updateModel = trainer.minimize(loss)
-    
+        
 
 def train(env):
     tf.reset_default_graph()
+
+    mainQN = Qnetwork()
+    targetQN = Qnetwork()
+    
+    trainables = tf.trainable_variables()
+    targetOps = updateTargetGraph(trainables,tau)
+    replay_buffer = ReplayBuffer(BUFFER_SIZE)
     
     total_steps = 0
     
@@ -127,9 +135,7 @@ def train(env):
 #    stepDrop = (startE - endE)/annealing_steps
     e = 0.1
                 
-    replay_buffer = ReplayBuffer(BUFFER_SIZE)               
     lasthundredavg = deque(100*[0], 100)           
-    net = Qnetwork()
     
     with tf.Session() as sess:
         sess.run(tf.global_variables_initializer())
@@ -147,34 +153,37 @@ def train(env):
                 if np.random.rand(1) < e or total_steps < pre_train_steps:
                     a = [env.action_space.sample()]
                 else:
-                    a = sess.run(net.predict, feed_dict={net.ff_inputs:[np.identity(16)[s]]})
+                    a = sess.run(mainQN.predict, feed_dict={mainQN.ff_inputs:[np.identity(16)[s]]})
                 
                 s2, r, t, info = env.step(a[0])
                 total_steps += 1
-                replay_buffer.append((s, a, r, s2, t))
+                replay_buffer.append((s, a[0], r, s2, t))
                 
                 if total_steps > pre_train_steps:
 #                    if e > endE:
 #                        e -= stepDrop
                     
                     if total_steps % (update_freq) == 0:
-                        trainBatch = replay_buffer.sample(32) #Get a random batch of experiences.
+                        trainBatch = replay_buffer.sample(MINIBATCH_SIZE) #Get a random batch of experiences.
                         b_s, b_a, b_r, b_s2, b_t = trainBatch      
-#                        b_s = b_s[0]; b_a = b_a[0]; b_r = b_r[0]; b_s2 = b_s2[0]; b_t = b_t[0]
-                                                 
-                        allQ = sess.run(net.Qout,feed_dict={net.ff_inputs:[np.identity(16)[i] for i in b_s]})
                         
-                        Q1 = sess.run(net.Qout,feed_dict={net.ff_inputs:[np.identity(16)[i] for i in b_s2]})
-                        maxQ1 = np.max(Q1,axis=1)
                         
-                        targetQ = allQ
+                        origPr = sess.run(mainQN.predict,feed_dict={mainQN.ff_inputs:[np.identity(16)[i] for i in b_s]})
+                        Q2 = sess.run(mainQN.Qout,feed_dict={mainQN.ff_inputs:[np.identity(16)[i] for i in b_s2]})
                         end_multiplier = -(b_t-1)
+                        doubleQ = Q2[range(MINIBATCH_SIZE),origPr]
+                        targetQ = b_r + (y*doubleQ * end_multiplier)
+                        sess.run(mainQN.updateModel,feed_dict={mainQN.ff_inputs:np.identity(16)[b_s],mainQN.targetQ:targetQ,mainQN.actions: b_a})
                         
-                        for i in range(len(b_t)):
-                            targetQ[i,b_a[i]] = b_r[i] + y*maxQ1[i]*end_multiplier[i]
-                            
                         
-                        sess.run(net.updateModel,feed_dict={net.ff_inputs:np.identity(16)[b_s],net.targetQ:targetQ})
+#                        origQs = sess.run(mainQN.Qout,feed_dict={mainQN.ff_inputs:[np.identity(16)[i] for i in b_s]})
+#                        Q2 = sess.run(mainQN.Qout,feed_dict={mainQN.ff_inputs:[np.identity(16)[i] for i in b_s2]})
+#                        end_multiplier = -(b_t-1)
+#                        maxQ2 = np.max(Q2,axis=1)
+#                        for i in range(len(b_t)):
+#                            origQs[i,b_a[i]] = b_r[i] + y*maxQ2[i]*end_multiplier[i]
+#                        sess.run(mainQN.updateModel,feed_dict={mainQN.ff_inputs:np.identity(16)[b_s],mainQN.targetQ:origQs,mainQN.actions: b_a})                        
+
 
                 s = s2
                 ep_reward += r
