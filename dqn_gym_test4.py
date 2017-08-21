@@ -76,13 +76,13 @@ class ReplayBuffer(object):
 class Qnetwork():
     def __init__(self):
         
-        self.ff_inputs = tf.placeholder(shape=[1,16],dtype=tf.float32)
+        self.ff_inputs = tf.placeholder(shape=[None,16],dtype=tf.float32)
         self.W = tf.Variable(tf.random_uniform([16,4],0,0.01))
         self.Qout = tf.matmul(self.ff_inputs,self.W)
         self.predict = tf.argmax(self.Qout,1)
         
         #Below we obtain the loss by taking the sum of squares difference between the target and prediction Q values.
-        self.nextQ = tf.placeholder(shape=[1,4],dtype=tf.float32)
+        self.nextQ = tf.placeholder(shape=[None,4],dtype=tf.float32)
         loss = tf.reduce_sum(tf.square(self.nextQ - self.Qout))
         trainer = tf.train.GradientDescentOptimizer(learning_rate=0.1)
         self.updateModel = trainer.minimize(loss)
@@ -118,32 +118,34 @@ def train(env):
                 if np.random.rand(1) < e or total_steps < pre_train_steps:
                     a = [env.action_space.sample()]
                 else:
-                    a = sess.run(net.predict, feed_dict={net.ff_inputs:np.identity(16)[s:s+1]})
+                    a = sess.run(net.predict, feed_dict={net.ff_inputs:[np.identity(16)[s]]})
                 
                 s2, r, t, info = env.step(a[0])
                 total_steps += 1
-                replay_buffer.append(([s], a, r, [s2], t))
+                replay_buffer.append((s, a, r, s2, t))
                 
                 if total_steps > pre_train_steps:
 #                    if e > endE:
 #                        e -= stepDrop
                     
                     if total_steps % (update_freq) == 0:
-                        trainBatch = replay_buffer.sample(1) #Get a random batch of experiences.
+                        trainBatch = replay_buffer.sample(32) #Get a random batch of experiences.
                         b_s, b_a, b_r, b_s2, b_t = trainBatch      
-                        b_s = b_s[0][0]; b_a = b_a[0]; b_r = b_r[0]; b_s2 = b_s2[0][0]; b_t = b_t[0]
-                               
+#                        b_s = b_s[0]; b_a = b_a[0]; b_r = b_r[0]; b_s2 = b_s2[0]; b_t = b_t[0]
+                                                 
+                        allQ = sess.run(net.Qout,feed_dict={net.ff_inputs:[np.identity(16)[i] for i in b_s]})
                         
-                        allQ = sess.run(net.Qout,feed_dict={net.ff_inputs:np.identity(16)[b_s:b_s+1]})
-                        
-                        Q1 = sess.run(net.Qout,feed_dict={net.ff_inputs:np.identity(16)[b_s2:b_s2+1]})
-                        maxQ1 = np.max(Q1)
+                        Q1 = sess.run(net.Qout,feed_dict={net.ff_inputs:[np.identity(16)[i] for i in b_s2]})
+                        maxQ1 = np.max(Q1,axis=1)
                         
                         targetQ = allQ
                         end_multiplier = -(b_t-1)
-                        targetQ[0,b_a[0]] = b_r + y*maxQ1*end_multiplier
                         
-                        _,W1 = sess.run([net.updateModel,net.W],feed_dict={net.ff_inputs:np.identity(16)[b_s:b_s+1],net.nextQ:targetQ})
+                        for i in range(len(b_t)):
+                            targetQ[i,b_a[i]] = b_r[i] + y*maxQ1[i]*end_multiplier[i]
+                            
+                        
+                        _,W1 = sess.run([net.updateModel,net.W],feed_dict={net.ff_inputs:np.identity(16)[b_s],net.nextQ:targetQ})
 
                 s = s2
                 ep_reward += r
@@ -151,7 +153,7 @@ def train(env):
                     lasthundredavg.append(ep_reward)
                     avg = np.mean(lasthundredavg)
                     print('| Reward: %.2i' % int(ep_reward), " | Last100:",avg," | Episode", episode, '| Qmax: %.4f' % (ep_ave_max_q / float(j)),' Epsilon:',e)
-                    e = 1./((episode/50) + 10)
+                    e = 1./((episode/50) + 20)
                     break
 
             
