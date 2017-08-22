@@ -29,7 +29,7 @@ def dense(x, units, activation=tf.identity, decay=None, minmax=None):
 class DuelDQN():
     
     ############################BUILDING THE COMPUTATION GRAPH#################
-    def __init__(self, conf, agent, name, isInference=False, isPretrain=False, num_actions=None):  
+    def __init__(self, conf, agent, name, isInference=False, isPretrain=False):  
         self.conf = conf
         self.agent = agent
         self.name = name  
@@ -40,15 +40,13 @@ class DuelDQN():
         self.step = 0
         self.h_size = 256
         self.stood_frames_ago = 0 #das wird benutzt damit er, wenn er einmal stand, sich merken kann ob erst kurz her ist (für settozero)
+        self.conv_stacksize = self.conf.conv_stacksize if self.agent.conv_stacked else 1
+        self.ff_stacksize = self.conf.ff_stacksize if self.agent.ff_stacked else 1
         with tf.variable_scope(name, reuse=None):
             self.pretrain_episode_tf = tf.Variable(tf.constant(self.pretrain_episode), dtype=tf.int32, name='pretrain_episode_tf', trainable=False)
             self.pretrain_step_tf = tf.Variable(tf.constant(0), dtype=tf.int32, name='pretrain_step_tf', trainable=False) #diese ist hier nur zum backupen
             self.step_tf = tf.Variable(tf.constant(0), dtype=tf.int32, name='step_tf', trainable=False)
             self.run_inferences_tf = tf.Variable(tf.constant(self.run_inferences), dtype=tf.int32, name='run_inferences_tf', trainable=False) #diese ist hier nur zum backupen
-            
-            self.num_actions = num_actions if num_actions is not None else self.conf.steering_steps*4 if self.conf.INCLUDE_ACCPLUSBREAK else self.conf.steering_steps*3 
-            self.conv_stacksize = (self.conf.history_frame_nr*2 if self.conf.use_second_camera else self.conf.history_frame_nr) if self.agent.conv_stacked else 1
-            self.ff_stacksize = self.conf.history_frame_nr if self.agent.ff_stacked else 1
             
             #THIS IS FORWARD STEP
             self.phase = tf.placeholder(tf.bool, name='phase') #for batchnorm
@@ -59,7 +57,7 @@ class DuelDQN():
             
             #THIS IS SV_LEARN 
             self.targetA = tf.placeholder(shape=[None],dtype=tf.int32)
-            self.targetA_OH = tf.one_hot(self.targetA, self.num_actions, dtype=tf.float32)
+            self.targetA_OH = tf.one_hot(self.targetA, self.conf.dnum_actions, dtype=tf.float32)
             self.sv_loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(labels=self.targetA_OH, logits=self.Qout))
             self.sv_OP = self._sv_training(self.sv_loss)  
             
@@ -68,7 +66,7 @@ class DuelDQN():
             #Below we obtain the loss by taking the sum of squares difference between the target and prediction Q values.
             self.targetQ = tf.placeholder(shape=[None],dtype=tf.float32)
             #self.targetA = tf.placeholder(shape=[None],dtype=tf.int32)
-            #self.targetA_OH = tf.one_hot(self.targetA, self.num_actions, dtype=tf.float32)
+            #self.targetA_OH = tf.one_hot(self.targetA, self.conf.dnum_actions, dtype=tf.float32)
             self.compareQ = tf.reduce_sum(tf.multiply(self.Qout, self.targetA_OH), axis=1) #der td_error von den actions über die wir nicht lernen wollen ist null
             self.td_error = tf.square(self.targetQ - self.compareQ) 
             self.q_loss = tf.reduce_mean(self.td_error)
@@ -113,7 +111,7 @@ class DuelDQN():
         self.streamA,self.streamV = tf.split(fc1,2,1) 
         xavier_init = tf.contrib.layers.xavier_initializer()
         neutral_init = tf.random_normal_initializer(0, 1e-50)
-        self.AW = tf.Variable(xavier_init([self.h_size//2,self.num_actions]))
+        self.AW = tf.Variable(xavier_init([self.h_size//2,self.conf.dnum_actions]))
         self.VW = tf.Variable(neutral_init([self.h_size//2,1]))
         self.Advantage = tf.matmul(self.streamA,self.AW)
 #        if do_batchnorm:
@@ -253,13 +251,13 @@ class DuelDQN():
 class DDDQN_model():
     #this is the class for Double-Dueling-DQN, containing BOTH the online and the target DuelDQN-Network        
         
-    def __init__(self, conf, agent, session, isPretrain=False, num_actions=None):
+    def __init__(self, conf, agent, session, isPretrain=False):
         self.conf = conf
         self.agent = agent
         self.session = session        
         self.isPretrain = isPretrain
-        self.onlineQN = DuelDQN(conf, agent, "onlineNet", isPretrain=isPretrain, num_actions=num_actions)
-        self.targetQN = DuelDQN(conf, agent, "targetNet", isInference=(not isPretrain), isPretrain=isPretrain, num_actions=num_actions)        
+        self.onlineQN = DuelDQN(conf, agent, "onlineNet", isPretrain=isPretrain)
+        self.targetQN = DuelDQN(conf, agent, "targetNet", isInference=(not isPretrain), isPretrain=isPretrain)        
         self.smoothTargetNetUpdate = netCopyOps(self.onlineQN, self.targetQN, self.conf.target_update_tau)
                 
             

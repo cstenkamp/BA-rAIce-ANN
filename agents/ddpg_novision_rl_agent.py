@@ -22,12 +22,12 @@ from ddpg import DDPG_model
 
 class Agent(AbstractRLAgent):
     def __init__(self, conf, containers, isPretrain=False, start_fresh=False, *args, **kwargs):
-        self.name = "dqn_rl_agent" #__file__[__file__.rfind("\\")+1:__file__.rfind(".")]
+        self.name = "ddpg_novision_rl_agent" #__file__[__file__.rfind("\\")+1:__file__.rfind(".")]
         super().__init__(conf, containers, isPretrain, start_fresh, *args, **kwargs)
         self.ff_inputsize = 30
         self.isContinuous = True
         self.usesConv = False
-        self._noiseState = [0]*self.conf.num_actions
+        self._noiseState = np.array([0]*self.conf.num_actions)
         session = tf.Session(config=tf.ConfigProto(intra_op_parallelism_threads=2, allow_soft_placement=True))
         self.model = DDPG_model(self.conf, self, session, isPretrain=isPretrain)
         self.model.initNet(load=("preTrain" if (self.isPretrain and not start_fresh) else (not start_fresh)))

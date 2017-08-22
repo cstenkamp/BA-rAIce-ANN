@@ -112,7 +112,9 @@ class Config():
         if self.learnMode == "parallel" and not self.has_gpu(): self.learnMode = "between"
         sys.path.append(self.agents_file_dir)
         sys.path.append(self.models_file_dir)
-
+        self.dnum_actions = self.steering_steps*4 if self.INCLUDE_ACCPLUSBREAK else self.steering_steps*3 
+        self.conv_stacksize = (self.conf.history_frame_nr*2 if self.conf.use_second_camera else self.conf.history_frame_nr) 
+        self.ff_stacksize = self.conf.history_frame_nr 
 
 
     

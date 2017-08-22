@@ -143,6 +143,7 @@ def main(_):
     conf.initial_lr = 0.005
     conf.use_settozero = False
     conf.q_decay = 0.99
+    conf.dnum_actions = 4
     
     
     myAgent = dummy()
@@ -153,7 +154,7 @@ def main(_):
     myAgent.conv_stacked = False
     myAgent.isSupervised = False
 
-    model = DDDQN_model(conf, myAgent, tf.Session(), num_actions=4)
+    model = DDDQN_model(conf, myAgent, tf.Session())
     model.initNet("noPreTrain")
 
     train(env, model)

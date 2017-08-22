@@ -24,6 +24,18 @@ ENV_NAME = 'MountainCar-v0'
 BUFFER_SIZE = 10000
 MINIBATCH_SIZE = 64
 
+update_freq = 4 #How often to perform a training step.
+y = .99 #Discount factor on the target Q-values
+startE = 0.5 #Starting chance of random action
+endE = 0.001 #Final chance of random action
+#annealing_steps = 200000 #How many steps of training to reduce startE to endE.
+num_episodes = 40000 #How many episodes of game environment to train network with.
+pre_train_steps = 100
+max_epLength = 50 #The max allowed length of our episode.
+load_model = False #Whether to load a saved model.
+h_size = 32 #The size of the final convolutional layer before splitting it into Advantage and Value streams.
+tau = 0.01 #Rate to update target network toward primary network
+
 
 class ReplayBuffer(object):
 
@@ -57,48 +69,59 @@ class ReplayBuffer(object):
         
 
 
+
 def train(env, model):
-    # Initialize replay memory
-    epsilon = 0.9
-    lasta = None
+    tf.reset_default_graph()
     replay_buffer = ReplayBuffer(BUFFER_SIZE)
-    for episode in range(5000):
-        s = env.reset()
-        s = (None, s) #a state for the memory is always (conv, ff), so as there is no conv, its (None, ss) in this case.
-        ep_reward = 0
-        ep_ave_max_q = 0
-        for j in range(1000): #max.ep-step
-            if RENDER_ENV:
-                env.render()
-            if np.random.random() < epsilon:
-                a = env.action_space.sample()
-            else:
-                a = int(model.inference([s])[0]) 
-                if a != lasta: 
-                    print(a)
-                lasta = a
+    
+    total_steps = 0
+    e = 0.1
+    lasthundredavg = deque(100*[0], 100)           
+    
+    with tf.Session() as sess:
+        sess.run(tf.global_variables_initializer())
+        for episode in range(num_episodes):
             
+            s = env.reset()
+            s = (None, s)
+            ep_reward = 0
+            ep_ave_max_q = 0
             
-            s2, r, t, info = env.step(a)
-            s2 = (None, s2)
-            replay_buffer.append((s, a, r, s2, t))
-            if len(replay_buffer) > MINIBATCH_SIZE:
-                batch = replay_buffer.sample(MINIBATCH_SIZE)
-                ep_ave_max_q += model.q_train_step(batch) 
-            s = s2
-            ep_reward += r
-            if t:
-                print('| Reward: %.2i' % int(ep_reward), " | Episode", episode, '| Qmax: %.4f' % (ep_ave_max_q / float(j)))
-                break
+            for j in range(1000): #max.ep-step
+                if RENDER_ENV:
+                    env.render()
+                
+                if np.random.rand(1) < e or total_steps < pre_train_steps:
+                    a = [2] if s[1][0] < -0.9 or s[1][1] > 0 or (abs(s[1][1]) < 0.001 and s[1][0] < -0.5) else [0]
+                else:
+                    a = model.inference([s])[0]
+                    
+                
+                
+                s2, r, t, info = env.step(a[0])
+                s2 = (None, s2)
+                total_steps += 1
+                replay_buffer.append((s, a[0], r, s2, t))
+                
+                if total_steps > pre_train_steps:
+                    if total_steps % (update_freq) == 0:
+                        trainBatch = replay_buffer.sample(MINIBATCH_SIZE) #Get a random batch of experiences.
+                        model.q_train_step(trainBatch)
+
+                s = s2
+                ep_reward += r
+                if t:
+                    lasthundredavg.append(ep_reward)
+                    avg = np.mean(lasthundredavg)
+                    print('| Reward: %.2i' % int(ep_reward), " | Last100:",avg," | Episode", episode, '| Qmax: %.4f' % (ep_ave_max_q / float(j)),' Epsilon:',e)
+                    e = 1./((episode/100) + 1 )
+                    e = 0 if e < 0.4 else e
+                    break
+
             
-        if episode % 20 == 0:
-            model.save()     
-            
-        epsilon -= 0.0025
-        print("Epsilon:",epsilon)
 
 
-
+    
 def folder(x):
     if not os.path.exists(x):
         os.makedirs(x)
@@ -116,26 +139,28 @@ def main(_):
 
     env = gym.make(ENV_NAME)
     
+    print(env.action_space)
+    
     conf = dummy()
     conf.image_dims = (0,0)
-    conf.target_update_tau = 0.001               
-    conf.actor_lr = 0.0001
-    conf.critic_lr = 0.001 
-    conf.checkpoint_dir = ".\gym_chkpt2"
+    conf.target_update_tau = 0.01               
+    conf.checkpoint_dir = ".\gym_chkpt3"
     conf.pretrain_sv_initial_lr = 0.0
-    conf.initial_lr = 0.001
+    conf.initial_lr = 0.005
     conf.use_settozero = False
     conf.q_decay = 0.99
+    conf.dnum_actions = 3
+    
     
     myAgent = dummy()
     myAgent.usesConv = False        
     myAgent.ff_stacked = False
-    myAgent.ff_inputsize = len(env.observation_space.high)
+    myAgent.ff_inputsize = 2
     myAgent.folder = folder
     myAgent.conv_stacked = False
     myAgent.isSupervised = False
 
-    model = DDDQN_model(conf, myAgent, tf.Session(), num_actions=3)
+    model = DDDQN_model(conf, myAgent, tf.Session())
     model.initNet("noPreTrain")
 
     train(env, model)
