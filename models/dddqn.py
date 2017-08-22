@@ -87,31 +87,27 @@ class DuelDQN():
         ini = tf.random_normal_initializer(0, 1e-3)
         do_batchnorm = False        
 
-#        if conv_inputs is not None:
-#            rs_input = tf.reshape(conv_inputs, [-1, self.conf.image_dims[0], self.conf.image_dims[1], self.conv_stacksize]) #final dimension = number of color channels*number of stacked (history-)frames                  
-#            #convolutional_layer(input_tensor, input_channels, kernel_size, stride, output_channels, name, act, is_trainable, batchnorm, is_training, weightdecay=False, pool=True, trainvars=None, varSum=None, initializer=None)
-#            self.conv1 = convolutional_layer(rs_input, self.conv_stacksize, [4,6], [2,3], 32, "Conv1", tf.nn.relu, True, do_batchnorm, is_training, False, False, {}, variable_summary, initializer=ini) #(?, 14, 14, 32)
-#            self.conv2 = convolutional_layer(self.conv1, 32, [4,4], [2,2], 64, "Conv2", tf.nn.relu, True, do_batchnorm, is_training, False, False, {}, variable_summary, initializer=ini)                     #(?, 8, 8, 64)
-#            self.conv3 = convolutional_layer(self.conv2, 64, [3,3], [2,2], 64, "Conv3", tf.nn.relu, True, do_batchnorm, is_training, False, True, {}, variable_summary, initializer=ini)                      #(?, 2, 2, 64)
-#            self.conv4 = convolutional_layer(self.conv3, 64, [4,4], [2,2], self.h_size, "Conv4", tf.nn.relu, True, do_batchnorm, is_training, False, False, {}, variable_summary, initializer=ini)            #(?, 1, 1, 256)
-#            self.conv4_flat = tf.reshape(self.conv4, [-1, self.h_size])
-#        
-#        if ff_inputs is not None:
-#            fc_in = fc_layer(ff_inputs, self.ff_stacksize*self.agent.ff_inputsize, self.ff_stacksize*self.agent.ff_inputsize, "FC0", True, do_batchnorm, is_training, False, tf.nn.relu, 1, {}, variable_summary, initializer=ini)   
-#
-#
-#        if conv_inputs is not None and ff_inputs is not None:
-#            fc0 = tf.concat([self.conv4_flat, fc_in], 1)
-#        elif conv_inputs is not None:
-#            fc0 = self.conv4_flat
-#        else:
-#            fc0 = fc_in
-
-        fc0 = ff_inputs
+        if conv_inputs is not None:
+            rs_input = tf.reshape(conv_inputs, [-1, self.conf.image_dims[0], self.conf.image_dims[1], self.conv_stacksize]) #final dimension = number of color channels*number of stacked (history-)frames                  
+            #convolutional_layer(input_tensor, input_channels, kernel_size, stride, output_channels, name, act, is_trainable, batchnorm, is_training, weightdecay=False, pool=True, trainvars=None, varSum=None, initializer=None)
+            self.conv1 = convolutional_layer(rs_input, self.conv_stacksize, [4,6], [2,3], 32, "Conv1", tf.nn.relu, True, do_batchnorm, is_training, False, False, {}, variable_summary, initializer=ini) #(?, 14, 14, 32)
+            self.conv2 = convolutional_layer(self.conv1, 32, [4,4], [2,2], 64, "Conv2", tf.nn.relu, True, do_batchnorm, is_training, False, False, {}, variable_summary, initializer=ini)                     #(?, 8, 8, 64)
+            self.conv3 = convolutional_layer(self.conv2, 64, [3,3], [2,2], 64, "Conv3", tf.nn.relu, True, do_batchnorm, is_training, False, True, {}, variable_summary, initializer=ini)                      #(?, 2, 2, 64)
+            self.conv4 = convolutional_layer(self.conv3, 64, [4,4], [2,2], self.h_size, "Conv4", tf.nn.relu, True, do_batchnorm, is_training, False, False, {}, variable_summary, initializer=ini)            #(?, 1, 1, 256)
+            self.conv4_flat = tf.reshape(self.conv4, [-1, self.h_size])
         
-        length = fc0.get_shape()[1]
-#        fc1 = fc_layer(fc0, length, self.h_size*2, "FC1", True, do_batchnorm, is_training, False, tf.nn.relu, 1, {}, variable_summary, initializer=ini)    
-        fc1 = dense(ff_inputs, self.h_size, tf.nn.relu)             
+        if ff_inputs is not None:
+            fc_in = dense(ff_inputs, ff_inputs.get_shape()[1]*2, tf.nn.relu)
+#            fc_in = fc_layer(ff_inputs, self.ff_stacksize*self.agent.ff_inputsize, self.ff_stacksize*self.agent.ff_inputsize, "FC0", True, do_batchnorm, is_training, False, tf.nn.relu, 1, {}, variable_summary, initializer=ini)   
+
+        if conv_inputs is not None and ff_inputs is not None:
+            fc0 = tf.concat([self.conv4_flat, fc_in], 1)
+        elif conv_inputs is not None:
+            fc0 = self.conv4_flat
+        else:
+            fc0 = fc_in
+        
+        fc1 = dense(fc0, self.h_size, tf.nn.relu)             
 
         #Dueling DQN: split into separate advantage and value stream
         self.streamA,self.streamV = tf.split(fc1,2,1) 
@@ -129,20 +125,20 @@ class DuelDQN():
 #        if do_batchnorm:
 #            Qout = tf.contrib.layers.batch_norm(Qout, center=True, scale=True, is_training=is_training)
 
-#        if self.conf.use_settozero:
-#            def settozero(q):
-#                ZEROIS = -sys.maxsize-1 if self.agent.isSupervised else 0
-#                q = tf.squeeze(q) #stands_input ist nur dann True wenn es nur um ein sample geht
-#                if not self.conf.INCLUDE_ACCPLUSBREAK: #dann nimmste nur das argmax von den mittleren neurons (was die mit gas sind)
-#                    q = tf.slice(q,tf.shape(q)//3,tf.shape(q)//3)
-#                    q = tf.concat([tf.multiply(tf.ones(tf.shape(q)),ZEROIS), q, tf.multiply(tf.ones(tf.shape(q)), ZEROIS)], axis=0)
-#                else:
-#                    q = tf.slice(q,tf.shape(q)//2,(tf.shape(q)//4)*3)
-#                    q = tf.concat([tf.multiply(tf.ones(tf.shape(q)*2), ZEROIS), q, tf.multiply(tf.ones(tf.shape(q)), ZEROIS)], axis=0)                   
-#                q = tf.expand_dims(q, 0)            
-#                return q        
-#            if self.isInference:
-#                Qout = tf.cond(self.stands_input, lambda: settozero(Qout), lambda: Qout) #wenn du stehst, brauchste dich nicht mehr für die ohne gas zu interessieren
+        if self.conf.use_settozero:
+            def settozero(q):
+                ZEROIS = -sys.maxsize-1 if self.agent.isSupervised else 0
+                q = tf.squeeze(q) #stands_input ist nur dann True wenn es nur um ein sample geht
+                if not self.conf.INCLUDE_ACCPLUSBREAK: #dann nimmste nur das argmax von den mittleren neurons (was die mit gas sind)
+                    q = tf.slice(q,tf.shape(q)//3,tf.shape(q)//3)
+                    q = tf.concat([tf.multiply(tf.ones(tf.shape(q)),ZEROIS), q, tf.multiply(tf.ones(tf.shape(q)), ZEROIS)], axis=0)
+                else:
+                    q = tf.slice(q,tf.shape(q)//2,(tf.shape(q)//4)*3)
+                    q = tf.concat([tf.multiply(tf.ones(tf.shape(q)*2), ZEROIS), q, tf.multiply(tf.ones(tf.shape(q)), ZEROIS)], axis=0)                   
+                q = tf.expand_dims(q, 0)            
+                return q        
+            if self.isInference:
+                Qout = tf.cond(self.stands_input, lambda: settozero(Qout), lambda: Qout) #wenn du stehst, brauchste dich nicht mehr für die ohne gas zu interessieren
 
         Qmax = tf.reduce_max(Qout, axis=1) #not necessary anymore because we use Double-Q, only used for the stateval for the evaluator
         predict = tf.argmax(Qout,1)
