@@ -54,6 +54,11 @@ class Agent(AbstractRLAgent):
     #Override
     def makeNetUsableOtherInputs(self, other_inputs): #normally, the otherinputs are stored as compact as possible. Networks may need to unpack that.
         return other_inputs
+    
+    
+    def endEpisode(self, *args, **kwargs):
+        self._noiseState = np.array([0]*self.conf.num_actions)
+        super().endEpisode(*args, **kwargs)
 
             
 
