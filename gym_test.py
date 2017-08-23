@@ -22,7 +22,7 @@ IS_CONTINOUS = True
 NUM_EPISODES = 50000
 MAX_STEPS_EPISODE = 2000
 SAVEALL = 2000
-
+SAVE_PATH = "data/"
 
 class Memory():
     
@@ -75,7 +75,7 @@ class config():
         self.image_dims = (96,96)
         self.conv_stacksize= 3 #bilder sind RGB
         
-        self.checkpoint_dir = ".\gym_"+ENV_NAME+"ckpt"
+        self.checkpoint_dir = SAVE_PATH+"/gym_"+ENV_NAME+"_ckpt"
         self.q_decay = 0.99 
         self.ornstein_theta = 0.15
         self.ornstein_std = 0.2

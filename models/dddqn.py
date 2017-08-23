@@ -70,6 +70,7 @@ class DuelDQN():
             self.compareQ = tf.reduce_sum(tf.multiply(self.Qout, self.targetA_OH), axis=1) #der td_error von den actions über die wir nicht lernen wollen ist null
             self.td_error = tf.square(self.targetQ - self.compareQ) 
             self.q_loss = tf.reduce_mean(self.td_error)
+#            self.q_loss = tf.clip_by_value(self.q_loss, -1, 1) #according to the DuelDQN paper
             self.q_OP = self._q_training(self.q_loss, isPretrain)
             
         

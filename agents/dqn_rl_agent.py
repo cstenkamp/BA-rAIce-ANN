@@ -71,9 +71,6 @@ class Agent(AbstractRLAgent):
         pretrain_batchsize = self.conf.pretrain_batch_size
         for i in range(iterations):
             start_time = time.time()
-            dataset.reset_batch()
-            trainBatch = dataset.create_QLearnInputs_fromBatch(*dataset.next_batch(self.conf, self, dataset.numsamples), self)
-            print('Iteration %3d: Accuracy = %.2f%% (%.1f sec)' % (self.model.pretrain_episode(), self.model.getAccuracy(trainBatch, likeDDPG=False), time.time()-start_time), level=10)
             self.model.inc_episode()
             dataset.reset_batch()
             while dataset.has_next(pretrain_batchsize):
@@ -81,9 +78,13 @@ class Agent(AbstractRLAgent):
                 if supervised:
                     self.model.sv_train_step(trainBatch, True)
                 else:
-                    self.model.q_train_step(trainBatch, False)    
+                    self.model.q_train_step(trainBatch, True)    
             if (i+1) % 25 == 0:
                 self.model.save()   
+
+            dataset.reset_batch()
+            trainBatch = dataset.create_QLearnInputs_fromBatch(*dataset.next_batch(self.conf, self, dataset.numsamples), self)
+            print('Iteration %3d: Accuracy = %.2f%% (%.1f sec)' % (self.model.pretrain_episode(), self.model.getAccuracy(trainBatch, likeDDPG=False), time.time()-start_time), level=10)
 
     ###########################################################################
     ########################overwritten functions##############################

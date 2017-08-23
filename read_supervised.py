@@ -75,6 +75,7 @@ class TrackingPoint(object):
         self.progress = progress
         self.vectors = vectors
         self.speed = speed
+        self.endedAfter = False
                 
     def make_vecs(self):
        if self.vectors != "":
@@ -214,6 +215,7 @@ class TPList(object):
                 currcontent = self.extract_appropriate(currcontent, int(currinfo["trackAllXMS"]), msperframe, currinfo["filename"])    
                 if currcontent is not None:                 
                     self.all_trackingpoints.extend(currcontent)
+                    
         self.prepare_tplist()          
         self.numsamples = len(self.all_trackingpoints)
         self.reset_batch()
@@ -223,7 +225,7 @@ class TPList(object):
             print("%s could not be used because it recorded not enough frames!" % filename)
             return None
         elif float(wishmsperframe)*0.95 < float(TPmsperframe) < float(wishmsperframe)*1.05:
-            return TPList
+            returntp = TPList
         else:
             fraction = round(wishmsperframe/TPmsperframe*100)/100
             i = 0
@@ -231,6 +233,7 @@ class TPList(object):
             while round(i) < len(TPList):
                 returntp.append(TPList[round(i)])
                 i += fraction
+        returntp[len(returntp)-1].endedAfter = True
         return returntp
     
     def consider_delay(self, TPList, TPmsperframe):
@@ -276,11 +279,13 @@ class TPList(object):
         past_otherinputs_batch = []
         actions_batch = []
         past_actions_batch = []
+        episode_ended_batch = []
         
         for indexindex in range(self.batchindex,self.batchindex+batch_size):
             
             vvec1_hist, vvec2_hist, otherinput_hist, action_hist = self._read(conf, agent, batch_size, self.randomindices[indexindex])
             past_vvec1_hist, past_vvec2_hist, past_otherinput_hist, past_action_hist = self._read(conf, agent, batch_size, self.randomindices[indexindex], readPast = True)
+            episode_ended_batch.append(self.all_trackingpoints[((self.randomindices[indexindex]-1) % len(self.all_trackingpoints))].endedAfter)
             
             vvec_batch.append(vvec1_hist)
             past_vvec_batch.append(past_vvec1_hist)
@@ -293,7 +298,8 @@ class TPList(object):
 
         self.batchindex += batch_size
         return (np.array(vvec_batch), np.array(vvec2_batch), otherinputs_batch, np.array(actions_batch)), \
-               (np.array(past_vvec_batch), np.array(past_vvec2_batch), past_otherinputs_batch, np.array(past_actions_batch))
+               (np.array(past_vvec_batch), np.array(past_vvec2_batch), past_otherinputs_batch, np.array(past_actions_batch)), \
+               np.array(episode_ended_batch)
 
     
     def _read(self, conf, agent, batch_size, index, readPast = False):
@@ -315,13 +321,14 @@ class TPList(object):
     
     #returns [[s],[a],[r],[s2],[t]], where every state s = (conf, ff)
     @staticmethod
-    def create_QLearnInputs_fromBatch(presentStates, pastStates, agent):
+    def create_QLearnInputs_fromBatch(presentStates, pastStates, resetAfters, agent):
         presentStates = list(zip(*presentStates))
         pastStates = list(zip(*pastStates))
         
         old_convs = np.rollaxis(np.array([agent.getAgentState(*i)[0] for i in pastStates]), 1, 4) if agent.usesConv else [None]*len(presentStates)
         old_other = np.array([agent.makeNetUsableOtherInputs(agent.getAgentState(*i)[1]) for i in pastStates])
         oldAgentStates = list(zip(old_convs, old_other))
+        
        
         actions = [agent.makeNetUsableAction(agent.getAction(*i)) for i in pastStates]   
                    
@@ -330,12 +337,12 @@ class TPList(object):
             new_other = np.array([agent.makeNetUsableOtherInputs(agent.getAgentState(*i)[1]) for i in presentStates])
             newAgentStates = list(zip(new_convs, new_other))
         
-            rewards = [agent.calculateReward(*i) for i in presentStates]
+            rewards = [agent.calculateReward(*i) for i in pastStates]
                        
-            resetAfters = [False]*len(pastStates)
         else:
             newAgentStates, rewards, resetAfters = None, None, None
                        
+        print(oldAgentStates, actions, rewards, newAgentStates, resetAfters)
         return oldAgentStates, np.array(actions), np.array(rewards), newAgentStates, np.array(resetAfters) #wurde angepasst auf s,a,r,s2,t
 
 
@@ -475,7 +482,7 @@ if __name__ == '__main__':
     trackingpoints = TPList(conf.LapFolderName, conf.use_second_camera, conf.msperframe, conf.steering_steps, conf.INCLUDE_ACCPLUSBREAK)
     print("Number of samples:",trackingpoints.numsamples)
     while trackingpoints.has_next(10):
-        presentStates, pastStates = trackingpoints.next_batch(conf, myAgent, 10)
+        presentStates, pastStates, _ = trackingpoints.next_batch(conf, myAgent, 10)
     
     vvec, vvec2, otherinputs, actions = presentStates  
     print(vvec.shape)

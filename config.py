@@ -36,7 +36,7 @@ class Config():
     pretrain_sv_lr_decay = 0.9
     pretrain_sv_minimal_lr = 1e-6 
     
-    pretrain_q_initial_lr = 0.00005
+    pretrain_q_initial_lr = 0.00025 #0.00025
     pretrain_q_lr_decay = 0.999
     pretrain_q_minimal_lr = 0.000001
     
@@ -47,7 +47,7 @@ class Config():
     lrdecayafter = train_for//2
     minimal_lr = 0.000001
     
-    target_update_tau = 0.001 
+    target_update_tau = 0.001
     batch_size = 32
     startepsilon = 0.2
     minepsilon = 0.005
@@ -113,8 +113,8 @@ class Config():
         sys.path.append(self.agents_file_dir)
         sys.path.append(self.models_file_dir)
         self.dnum_actions = self.steering_steps*4 if self.INCLUDE_ACCPLUSBREAK else self.steering_steps*3 
-        self.conv_stacksize = (self.conf.history_frame_nr*2 if self.conf.use_second_camera else self.conf.history_frame_nr) 
-        self.ff_stacksize = self.conf.history_frame_nr 
+        self.conv_stacksize = (self.history_frame_nr*2 if self.use_second_camera else self.history_frame_nr) 
+        self.ff_stacksize = self.history_frame_nr 
 
 
     
