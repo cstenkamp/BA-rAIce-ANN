@@ -109,6 +109,13 @@ def netCopyOps(fromNet, toNet, tau = 1):
 
     
     
+def random_unlike(x,agent):
+    y = np.random.randint(agent.conf.dnum_actions)
+    while y == x:
+        y = np.random.randint(agent.conf.dnum_actions)
+    return y
+
+
 ###############################################################################
 #alternatively to the direct TF-implementation of layers, one could have used the tf.layers as well:
 #def dense(x, units, activation=None, decay=None, minmax=None):

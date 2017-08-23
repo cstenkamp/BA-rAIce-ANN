@@ -56,7 +56,7 @@ class DuelDQN():
             self.Qout, self.Qmax, self.predict = self._inference(self.conv_inputs, self.ff_inputs, self.stands_input, self.phase)
             
             #THIS IS SV_LEARN 
-            self.targetA = tf.placeholder(shape=[None],dtype=tf.int32)
+            self.targetA = tf.placeholder(shape=[None],dtype=tf.int32,name="targetA")
             self.targetA_OH = tf.one_hot(self.targetA, self.conf.dnum_actions, dtype=tf.float32)
             self.sv_loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(labels=self.targetA_OH, logits=self.Qout))
             self.sv_OP = self._sv_training(self.sv_loss)  
@@ -64,7 +64,7 @@ class DuelDQN():
             
             #THIS IS DDQN-LEARN
             #Below we obtain the loss by taking the sum of squares difference between the target and prediction Q values.
-            self.targetQ = tf.placeholder(shape=[None],dtype=tf.float32)
+            self.targetQ = tf.placeholder(shape=[None],dtype=tf.float32,name="targetQ")
             #self.targetA = tf.placeholder(shape=[None],dtype=tf.int32)
             #self.targetA_OH = tf.one_hot(self.targetA, self.conf.dnum_actions, dtype=tf.float32)
             self.compareQ = tf.reduce_sum(tf.multiply(self.Qout, self.targetA_OH), axis=1) #der td_error von den actions über die wir nicht lernen wollen ist null
@@ -111,7 +111,7 @@ class DuelDQN():
         #Dueling DQN: split into separate advantage and value stream
         self.streamA,self.streamV = tf.split(fc1,2,1) 
         xavier_init = tf.contrib.layers.xavier_initializer()
-        neutral_init = tf.random_normal_initializer(0, 1e-50)
+        neutral_init = tf.random_normal_initializer(1e-20, 1e-20) #tinytiny positive bias becasue relu
         self.AW = tf.Variable(xavier_init([self.h_size//2,self.conf.dnum_actions]))
         self.VW = tf.Variable(neutral_init([self.h_size//2,1]))
         self.Advantage = tf.matmul(self.streamA,self.AW)
@@ -210,6 +210,7 @@ class DuelDQN():
     def make_inputs(self, inputs, targetQ=None, targetA=None, carstands = False, decay_lr=False, is_training=True):
         conv_inputs = np.array([inputs[i][0] for i in range(len(inputs))])
         ff_inputs   = np.array([inputs[i][1] for i in range(len(inputs))])
+        
         feed_dict = {self.phase: is_training}
         if not is_training and self.isInference:   
             self.stood_frames_ago = 0 if carstands else self.stood_frames_ago + 1
@@ -237,7 +238,7 @@ class DuelDQN():
             else:
                 lr_decay = self.conf.lr_decay ** max(self.step-self.conf.lrdecayafter, 0.0)
                 new_lr = max(self.conf.initial_lr*lr_decay, self.conf.minimal_lr)
-                feed_dict[self.new_lr] = new_lr      
+                feed_dict[self.new_lr] = new_lr    
         return feed_dict
         
     
@@ -302,6 +303,7 @@ class DDDQN_model():
     #expects a whole s,a,r,s,t - tuple, needs however only s & a
     def getAccuracy(self, batch, likeDDPG=True):
         oldstates, actions, _, _, _ = batch
+        #print(self.session.run(self.targetQN.Qout,feed_dict=self.targetQN.make_inputs(oldstates, is_training=False)))
         predict = self.session.run(self.targetQN.predict,feed_dict=self.targetQN.make_inputs(oldstates, is_training=False))
         if likeDDPG:
             return np.mean(np.array([abs(predict[i][0] -actions[i][0]) for i in range(len(actions))]))

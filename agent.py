@@ -258,7 +258,7 @@ class AbstractRLAgent(AbstractAgent):
                 toUse, toSave = self.last_action 
             else:
                 agentState = self.getAgentState(*gameState) #may be overridden
-                if len(self.memory) >= self.conf.replaystartsize:
+                if len(self.memory) >= self.conf.replaystartsize or self.epsilon == 0:
                     self.epsilon = min(round(max(self.startepsilon-((self.startepsilon-self.minepsilon)*((self.model.run_inferences()-self.conf.replaystartsize)/self.finalepsilonframe)), self.minepsilon), 5), 1)
                     if np.random.random() < self.epsilon:
                         toUse, toSave = self.randomAction(agentState)

@@ -16,6 +16,7 @@ from myprint import myprint as print
 import infoscreen
 from efficientmemory import Memory as Efficientmemory
 from dddqn import DDDQN_model 
+from utils import random_unlike
 
 current_milli_time = lambda: int(round(time.time() * 1000))
 
@@ -80,6 +81,18 @@ class Agent(AbstractRLAgent):
             infoscreen.print(self.epsilon, containers=self.containers, wname="Epsilon")
         return toUse, toSave
 
+    
+    def make_trainbatch(self,dataset,batchsize,epsilon=0):
+        trainBatch = dataset.create_QLearnInputs_fromBatch(*dataset.next_batch(self.conf, self, batchsize), self)
+        s,a,r,s2,t = trainBatch
+        if np.random.random() < epsilon:
+            r = np.zeros_like(r)
+            a = np.array([random_unlike(i,self) for i in a])
+            t = np.array([True]*len(t))
+            trainBatch = s,a,r,s2,t
+        return trainBatch
+
+
 
     def preTrain(self, dataset, iterations, supervised=False):
         assert self.model.step() == 0, "I dont pretrain if the model already learned on real data!"
@@ -87,20 +100,19 @@ class Agent(AbstractRLAgent):
         pretrain_batchsize = self.conf.pretrain_batch_size
         for i in range(iterations):
             start_time = time.time()
-            dataset.reset_batch()
-            trainBatch = dataset.create_QLearnInputs_fromBatch(*dataset.next_batch(self.conf, self, dataset.numsamples), self)
-            print('Iteration %3d: Accuracy = %.2f%% (%.1f sec)' % (self.model.pretrain_episode(), self.model.getAccuracy(trainBatch, likeDDPG=False), time.time()-start_time), level=10)
             self.model.inc_episode()
             dataset.reset_batch()
             while dataset.has_next(pretrain_batchsize):
-                trainBatch = dataset.create_QLearnInputs_fromBatch(*dataset.next_batch(self.conf, self, pretrain_batchsize), self)
+                trainBatch = self.make_trainbatch(dataset,pretrain_batchsize,0.8)
                 if supervised:
                     self.model.sv_train_step(trainBatch, True)
                 else:
                     self.model.q_train_step(trainBatch, False)    
             if (i+1) % 25 == 0:
                 self.model.save()    
-                
+            dataset.reset_batch()
+            trainBatch = self.make_trainbatch(dataset,dataset.numsamples)
+            print('Iteration %3d: Accuracy = %.2f%% (%.1f sec)' % (self.model.pretrain_episode(), self.model.getAccuracy(trainBatch, likeDDPG=False), time.time()-start_time), level=10)
 
     ###########################################################################
     ########################overwritten functions##############################

@@ -324,25 +324,18 @@ class TPList(object):
     def create_QLearnInputs_fromBatch(presentStates, pastStates, resetAfters, agent):
         presentStates = list(zip(*presentStates))
         pastStates = list(zip(*pastStates))
-        
-        old_convs = np.rollaxis(np.array([agent.getAgentState(*i)[0] for i in pastStates]), 1, 4) if agent.usesConv else [None]*len(presentStates)
+        old_convs =  np.rollaxis(np.array([agent.getAgentState(*i)[0] for i in pastStates]), 1, 4) if agent.usesConv else [None]*len(pastStates)
         old_other = np.array([agent.makeNetUsableOtherInputs(agent.getAgentState(*i)[1]) for i in pastStates])
         oldAgentStates = list(zip(old_convs, old_other))
-        
-       
         actions = [agent.makeNetUsableAction(agent.getAction(*i)) for i in pastStates]   
-                   
         if not agent.isSupervised:               
             new_convs = np.rollaxis(np.array([agent.getAgentState(*i)[0] for i in presentStates]), 1, 4) if agent.usesConv else [None]*len(presentStates)
             new_other = np.array([agent.makeNetUsableOtherInputs(agent.getAgentState(*i)[1]) for i in presentStates])
             newAgentStates = list(zip(new_convs, new_other))
-        
             rewards = [agent.calculateReward(*i) for i in pastStates]
-                       
         else:
             newAgentStates, rewards, resetAfters = None, None, None
-                       
-        print(oldAgentStates, actions, rewards, newAgentStates, resetAfters)
+        
         return oldAgentStates, np.array(actions), np.array(rewards), newAgentStates, np.array(resetAfters) #wurde angepasst auf s,a,r,s2,t
 
 
