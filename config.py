@@ -36,7 +36,7 @@ class Config():
     pretrain_sv_lr_decay = 0.9
     pretrain_sv_minimal_lr = 1e-6 
     
-    pretrain_q_initial_lr = 0.00025 #0.00025
+    pretrain_q_initial_lr = 0.0025 #0.00025
     pretrain_q_lr_decay = 0.999
     pretrain_q_minimal_lr = 0.000001
     
@@ -47,7 +47,7 @@ class Config():
     lrdecayafter = train_for//2
     minimal_lr = 0.000001
     
-    target_update_tau = 0.01 #0.001
+    target_update_tau = 0.001 #0.001
     batch_size = 32
     startepsilon = 0.2
     minepsilon = 0.005
@@ -56,7 +56,7 @@ class Config():
     checkpointall = 1000 #RLsteps, not inferences!
     ornstein_theta = 0.15
     ornstein_std = 0.2
-    use_settozero = False
+    use_settozero = True
     
     #LEARN SETTINGS    
     ForEveryInf, ComesALearn = 400, 100

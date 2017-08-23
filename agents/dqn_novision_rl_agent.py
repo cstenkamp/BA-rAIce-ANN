@@ -107,7 +107,7 @@ class Agent(AbstractRLAgent):
                 if supervised:
                     self.model.sv_train_step(trainBatch, True)
                 else:
-                    self.model.q_train_step(trainBatch, False)    
+                    self.model.q_train_step(trainBatch, True)    
             if (i+1) % 25 == 0:
                 self.model.save()    
             dataset.reset_batch()
