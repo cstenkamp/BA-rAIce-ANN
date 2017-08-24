@@ -21,8 +21,9 @@ RENDER_ENV = True
 IS_CONTINOUS = True
 NUM_EPISODES = 50000
 MAX_STEPS_EPISODE = 2000
-SAVEALL = 2000
+SAVEALL = 20
 SAVE_PATH = "data/"
+MEMORYSIZE = 44000 #max for carracing!
 
 class Memory():
     
@@ -124,7 +125,7 @@ class agent():
             self.model = DDDQN_model(conf, self, tf.Session())
         self.model.initNet("noPreTrain")
          
-        self.memory = Memory(100000)
+        self.memory = Memory(MEMORYSIZE)
         self.isSupervised = False
         
       
