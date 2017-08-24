@@ -23,7 +23,7 @@ class Agent(AbstractRLAgent):
     def __init__(self, conf, containers, isPretrain=False, start_fresh=False, *args, **kwargs):
         self.name = "dqn_novision_rl_agent"#__file__[__file__.rfind("\\")+1:__file__.rfind(".")]
         super().__init__(conf, containers, isPretrain, start_fresh, *args, **kwargs)
-        self.ff_inputsize = 49 + conf.num_actions * conf.ff_stacksize #61
+        self.ff_inputsize = 61 #49 + conf.num_actions * conf.ff_stacksize #61
         self.usesConv = False
         session = tf.Session(config=tf.ConfigProto(intra_op_parallelism_threads=2, allow_soft_placement=True))
         self.model = DDDQN_model(self.conf, self, session, isPretrain=isPretrain)

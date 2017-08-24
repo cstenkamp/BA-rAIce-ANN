@@ -23,7 +23,7 @@ class Agent(AbstractRLAgent):
     def __init__(self, conf, containers, isPretrain=False, start_fresh=False, *args, **kwargs):
         self.name = "ddpg_novision_rl_agent" #__file__[__file__.rfind("\\")+1:__file__.rfind(".")]
         super().__init__(conf, containers, isPretrain, start_fresh, *args, **kwargs)
-        self.ff_inputsize = 49 + conf.num_actions * conf.ff_stacksize #61
+        self.ff_inputsize = 61# 49 + conf.num_actions * conf.ff_stacksize #61
         self.isContinuous = True
         self.usesConv = False
         self._noiseState = np.array([0]*self.conf.num_actions)
@@ -38,7 +38,8 @@ class Agent(AbstractRLAgent):
     
     #im gegensatz zu den DQN-basierten agents muss er die action nicht diskretisieren
     def makeNetUsableAction(self, action):
-        return action
+#        return [(1+action[2])/2]
+        return [action[0]]
 
     def getAgentState(self, *gameState):  
         vvec1_hist, vvec2_hist, otherinput_hist, action_hist = gameState
@@ -104,7 +105,8 @@ class Agent(AbstractRLAgent):
             s,a,r,s2,t = trainBatch
             a2 = a + np.random.normal(np.zeros_like(a), epsilon*self.conf.ornstein_std)
             a2 = np.array([[clip(curr_a[i],self.conf.action_bounds[i]) for i in range(len(curr_a))] for curr_a in a2])
-            rewarddiff = [1-min(np.linalg.norm(a2[i]-a[i]),1) for i in range(len(a))]
+            rewarddiff = [1-min(np.linalg.norm(abs(a2[i]-a[i])),1) for i in range(len(a))]
+            assert np.all([i <= 1 for i in rewarddiff])
             r = [r[i]*rewarddiff[i] if r[i] > 0 else r[i]*(1+rewarddiff[i]) for i in range(len(rewarddiff))]
             trainBatch = s,a2,r,s2,t
         return trainBatch
@@ -112,7 +114,7 @@ class Agent(AbstractRLAgent):
 
     def preTrain(self, dataset, iterations, supervised=False):
         assert self.model.step() == 0, "I dont pretrain if the model already learned on real data!"
-        iterations = self.conf.pretrain_iterations if iterations is None else iterations
+        iterations = 10000 #self.conf.pretrain_iterations if iterations is None else iterations
         if supervised:
             raise ValueError("A DDPG-Model cannot learn supervisedly!")
         print("Starting pretraining", level=10)
@@ -123,11 +125,12 @@ class Agent(AbstractRLAgent):
             while dataset.has_next(self.conf.pretrain_batch_size):
                 trainBatch = self.make_trainbatch(dataset,self.conf.pretrain_batch_size,0.8)
                 self.model.q_train_step(trainBatch, True)    
-            if (i+1) % 25 == 0:
+            if (i+1) % 800 == 0:
                 self.model.save()    
-            dataset.reset_batch()
-            trainBatch = self.make_trainbatch(dataset,dataset.numsamples)
-            print('Iteration %3d: Closeness = %.2f (%.1f sec)' % (self.model.pretrain_episode(), self.model.getAccuracy(trainBatch), time.time()-start_time), level=10)
+            if i % 50 == 0:
+                dataset.reset_batch()
+                trainBatch = self.make_trainbatch(dataset,dataset.numsamples)
+                print('Iteration %3d: Closeness = %.2f (%.1f sec)' % (self.model.pretrain_episode(), self.model.getAccuracy(trainBatch), time.time()-start_time), level=10)
             
 
 

@@ -89,8 +89,12 @@ class Config():
     steering_steps = 7
     INCLUDE_ACCPLUSBREAK = False
     #for continuus algorithms
-    num_actions = 3
-    action_bounds = [(0, 1), (0, 1), (-1, 1)]
+#    num_actions = 3
+#    action_bounds = [(0, 1), (0, 1), (-1, 1)]
+    num_actions = 1
+    action_bounds = [(0,1)]
+#    num_actions = 2
+#    action_bounds = [(0,1),(0,1)]
     throttle_index = 0
     brake_index = 1
     steer_index = 2

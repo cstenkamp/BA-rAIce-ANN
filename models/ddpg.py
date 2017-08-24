@@ -65,7 +65,7 @@ class conv_actorNet():
 
         
 class lowdim_actorNet():
-     def __init__(self, conf, agent, outerscope="actor", name="online", batchnorm = "ftt"):       
+     def __init__(self, conf, agent, outerscope="actor", name="online", batchnorm = "ttt"):       
         tanh_min_bounds,tanh_max_bounds = np.array([-1]), np.array([1])
         min_bounds, max_bounds = np.array(list(zip(*conf.action_bounds))) 
         self.name = name
@@ -99,22 +99,22 @@ class lowdim_actorNet():
 
 #set brake-value to zero if car stands and care for not braking & accelerating simultaneously... however both apply ONLY in inference
 def apply_constraints(conf, outs, stands_input):
-    if not conf.INCLUDE_ACCPLUSBREAK: #if both throttle and brake are > 0.5, set brake to zero
-        brakeallzero =  tf.stack([outs[:,0], -tf.ones([tf.shape(outs)[0]]), outs[:,2]],axis=1) if conf.brake_index == 1 \
-                   else tf.stack([outs[:,0], outs[:,1], -tf.ones([tf.shape(outs)[0]])],axis=1) if conf.brake_index == 2 \
-                   else tf.stack([-tf.ones([tf.shape(outs)[0]]), outs[:,1], outs[:,2]],axis=1)
-        applywhere = tf.logical_and(tf.cast((outs[:,conf.throttle_index] > -0.1), tf.bool), tf.cast((outs[:,conf.brake_index] > -0.1), tf.bool))
-        outs = tf.cond(stands_input, lambda:tf.where(applywhere, brakeallzero, outs), lambda: outs)  
-    if conf.use_settozero:
-        brakeallzero =  tf.stack([outs[:,0], -tf.ones([tf.shape(outs)[0]]), outs[:,2]],axis=1) if conf.brake_index == 1 \
-                   else tf.stack([outs[:,0], outs[:,1], -tf.ones([tf.shape(outs)[0]])],axis=1) if conf.brake_index == 2 \
-                   else tf.stack([-tf.ones([tf.shape(outs)[0]]), outs[:,1], outs[:,2]],axis=1)
-        outs = tf.cond(stands_input,lambda: brakeallzero, lambda: outs)
-        throttlebig =  tf.stack([outs[:,0], tf.ones([tf.shape(outs)[0]]), outs[:,2]],axis=1) if conf.throttle_index == 1 \
-                  else tf.stack([outs[:,0], outs[:,1], tf.ones([tf.shape(outs)[0]])],axis=1) if conf.throttle_index == 2 \
-                  else tf.stack([tf.ones([tf.shape(outs)[0]]), outs[:,1], outs[:,2]],axis=1)
-        applywhere = tf.cast((outs[:,conf.throttle_index] < -0.1), tf.bool)
-        outs = tf.cond(stands_input, lambda: tf.where(applywhere, throttlebig, outs), lambda: outs)
+#    if not conf.INCLUDE_ACCPLUSBREAK: #if both throttle and brake are > 0.5, set brake to zero
+#        brakeallzero =  tf.stack([outs[:,0], -tf.ones([tf.shape(outs)[0]]), outs[:,2]],axis=1) if conf.brake_index == 1 \
+#                   else tf.stack([outs[:,0], outs[:,1], -tf.ones([tf.shape(outs)[0]])],axis=1) if conf.brake_index == 2 \
+#                   else tf.stack([-tf.ones([tf.shape(outs)[0]]), outs[:,1], outs[:,2]],axis=1)
+#        applywhere = tf.logical_and(tf.cast((outs[:,conf.throttle_index] > -0.1), tf.bool), tf.cast((outs[:,conf.brake_index] > -0.1), tf.bool))
+#        outs = tf.cond(stands_input, lambda:tf.where(applywhere, brakeallzero, outs), lambda: outs)  
+#    if conf.use_settozero:
+#        brakeallzero =  tf.stack([outs[:,0], -tf.ones([tf.shape(outs)[0]]), outs[:,2]],axis=1) if conf.brake_index == 1 \
+#                   else tf.stack([outs[:,0], outs[:,1], -tf.ones([tf.shape(outs)[0]])],axis=1) if conf.brake_index == 2 \
+#                   else tf.stack([-tf.ones([tf.shape(outs)[0]]), outs[:,1], outs[:,2]],axis=1)
+#        outs = tf.cond(stands_input,lambda: brakeallzero, lambda: outs)
+#        throttlebig =  tf.stack([outs[:,0], tf.ones([tf.shape(outs)[0]]), outs[:,2]],axis=1) if conf.throttle_index == 1 \
+#                  else tf.stack([outs[:,0], outs[:,1], tf.ones([tf.shape(outs)[0]])],axis=1) if conf.throttle_index == 2 \
+#                  else tf.stack([tf.ones([tf.shape(outs)[0]]), outs[:,1], outs[:,2]],axis=1)
+#        applywhere = tf.cast((outs[:,conf.throttle_index] < -0.1), tf.bool)
+#        outs = tf.cond(stands_input, lambda: tf.where(applywhere, throttlebig, outs), lambda: outs)
     return outs
 
 
@@ -167,7 +167,7 @@ class conv_criticNet():
         
         
 class lowdim_criticNet():
-     def __init__(self, conf, agent, outerscope="critic", name="online", batchnorm="ftt"):       
+     def __init__(self, conf, agent, outerscope="critic", name="online", batchnorm="ttt"):       
         self.conf = conf
         self.agent = agent
         self.name = name   
@@ -402,9 +402,9 @@ class DDPG_model():
         predict = self.actor.predict(oldstates, useOnline=False, is_training=False)
         print(predict[:5])
         print(actions[:5])
-        print("acc",np.mean(np.array([abs(np.linalg.norm(predict[i][0]-actions[i][0])) for i in range(len(actions))])))
-        print("brake",np.mean(np.array([abs(np.linalg.norm(predict[i][1]-actions[i][1])) for i in range(len(actions))])))
-        print("steer",np.mean(np.array([abs(np.linalg.norm(predict[i][2]-actions[i][2])) for i in range(len(actions))])))
+        print("steer",np.mean(np.array([np.linalg.norm(abs(predict[i][0]-actions[i][0])) for i in range(len(actions))])))
+#        print("brake",np.mean(np.array([abs(np.linalg.norm(predict[i][1]-actions[i][1])) for i in range(len(actions))])))
+#        print("steer",np.mean(np.array([abs(np.linalg.norm(predict[i][2]-actions[i][2])) for i in range(len(actions))])))
         return np.mean(np.array([abs(np.linalg.norm(predict[i]-actions[i])) for i in range(len(actions))]))
 
     

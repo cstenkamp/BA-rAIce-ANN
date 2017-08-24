@@ -15,7 +15,7 @@ import read_supervised
 from server import Containers
 
 
-def main(conf, agentname, containers, start_fresh, fake_real, numiters):
+def main(conf, agentname, containers, start_fresh, fake_real, numiters, supervised=False):
 
     agentclass = __import__(agentname).Agent
     myAgent = agentclass(conf, containers, isPretrain=(not fake_real), start_fresh=start_fresh)    
@@ -27,7 +27,11 @@ def main(conf, agentname, containers, start_fresh, fake_real, numiters):
     print("Number of samples:",trackingpoints.numsamples)
     
     if not fake_real:
-        myAgent.preTrain(trackingpoints, numiters)
+        if supervised:
+            print("Training supervisedly! Not recommended!")
+            myAgent.preTrain(trackingpoints, numiters, supervised=True)
+        else:
+            myAgent.preTrain(trackingpoints, numiters) #dann nimm die standard-einstellung! nicht epxlizit false
     else:
         myAgent.initForDriving()
         for i in range(20):
@@ -36,7 +40,6 @@ def main(conf, agentname, containers, start_fresh, fake_real, numiters):
                 myAgent.model.q_learn(trainBatch, False)
             myAgent.model.save()        
     
-    time.sleep(999)
 
 
 
@@ -57,6 +60,7 @@ if __name__ == '__main__':
     else:
         numiters = None
         
+        
 
     if "--agent" in sys.argv:
         num = sys.argv.index("--agent")
@@ -72,4 +76,4 @@ if __name__ == '__main__':
         else:
             agentname = "dqn_rl_agent"
             
-    main(conf, agentname, containers, ("-startfresh" in sys.argv), ("-fakereal" in sys.argv), numiters)
+    main(conf, agentname, containers, ("-startfresh" in sys.argv), ("-fakereal" in sys.argv), numiters, ("-supervised" in sys.argv))

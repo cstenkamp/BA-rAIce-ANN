@@ -60,7 +60,7 @@ class AbstractAgent(object):
     
     def makeNetUsableOtherInputs(self, other_inputs): #normally, the otherinputs are stored as compact as possible. Networks may need to unpack that.
         speed = self.inflate_speed(other_inputs[0])
-        flat_actions = flatten([i if i != None else (0,0,0) for i in other_inputs[1]])
+        flat_actions = flatten([i if i is not None else (0,0,0) for i in other_inputs[1]])
         other_inputs = speed; other_inputs.extend(flat_actions)
         assert len(other_inputs) == self.ff_inputsize        
         return other_inputs
