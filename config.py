@@ -8,6 +8,7 @@ Created on Thu Jul 20 22:09:03 2017
 import sys
 import os
 import numpy as np
+np.set_printoptions(suppress=True)
 
 class Config():
     #FOLDER STUFF
@@ -24,7 +25,7 @@ class Config():
     models_file_dir = "./models/"
     
     #PRETRAIN STUFF
-    pretrain_batch_size = 32
+    pretrain_batch_size = 128
     pretrain_iterations = 90     #90, 120
     pretrain_lrdecayafter = pretrain_iterations//2  #//3 für 90, 120
     pretrain_checkpointall = 10

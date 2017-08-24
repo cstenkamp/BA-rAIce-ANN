@@ -87,6 +87,7 @@ class config():
         self.throttle_index = 1
         self.brake_index = 2
         self.steer_index = 0
+        self.INCLUDE_ACCPLUSBREAK = False
         
         if ENV_NAME == "Pendulum-v0":
             self.update_frequency = 1   

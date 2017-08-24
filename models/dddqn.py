@@ -305,7 +305,7 @@ class DDDQN_model():
         oldstates, actions, _, _, _ = batch
         predict = self.session.run(self.targetQN.predict,feed_dict=self.targetQN.make_inputs(oldstates, is_training=False))
         if likeDDPG:
-            return np.mean(np.array([abs(predict[i][0] -actions[i][0]) for i in range(len(actions))]))
+            return np.mean(np.array([abs(np.linalg.norm(predict[i]-actions[i])) for i in range(len(actions))]))
         else:
             return round(np.mean(np.array(actions == predict, dtype=int))*100, 2)
             
@@ -375,60 +375,3 @@ class DDDQN_model():
 #    targets = [agent.makeNetUsableAction(agent.getAction(*presentState)) for presentState in presentStates]
 #    return targets
 #                      
-
-
-def TPSample(conf, agent, batchsize):
-    return read_supervised.create_QLearnInputs_from_PTStateBatch(*trackingpoints.next_batch(conf, agent, batchsize), agent)
-    #returns [[s],[a],[r],[s2],[t]], so to only get the actions it's result[1], to only get the first three actions it's result[1][:3]
-    #to get the first three of each it's result[:][:3], however pay attention that every state s and s2 = (conv, ff, stands). 
-    #so to get the ff's of the first three items it is [result[0][:3][i][1] for i in range(3)]
-
-###########################################################################################################
-###########################################################################################################
-###########################################################################################################
-
-if __name__ == '__main__':       
-    import config
-    conf = config.Config()
-    import read_supervised
-    from server import Containers; containers = Containers()
-    import dqn_rl_agent
-    myAgent = dqn_rl_agent.Agent(conf, containers, True)
-    trackingpoints = read_supervised.TPList(conf.LapFolderName, conf.use_second_camera, conf.msperframe, conf.steering_steps, conf.INCLUDE_ACCPLUSBREAK)
-    
-    BATCHSIZE = 32   
-
-    #PRETRAINING:
-#    tf.reset_default_graph()
-#    model = DDDQN_model(conf, myAgent, tf.Session(), isPretrain=True)
-#    model.initNet(load="preTrain")
-#    for i in range(11-model.pretrain_episode()):
-#        trackingpoints.reset_batch()
-#        trainBatch = TPSample(conf, myAgent, trackingpoints.numsamples)
-#        print("Iteration",model.pretrain_episode(),"Accuracy",model.getAccuracy(trainBatch),"%")
-#        model.inc_episode()
-#        trackingpoints.reset_batch()
-#        while trackingpoints.has_next(BATCHSIZE):
-#            trainBatch = TPSample(conf, myAgent, BATCHSIZE)
-#            #model.sv_train_step(trainBatch, True)
-#            model.q_train_step(trainBatch, True)    
-#        if (i+1) % 5 == 0:
-#            model.save()
-           
-            
-#   #Fake real training
-#    tf.reset_default_graph()
-#    model = DDDQN_model(conf, myAgent, tf.Session(), isPretrain=False)
-#    model.initNet(load=False)
-#    for i in range(100):
-#        trackingpoints.reset_batch()
-#        trainBatch = TPSample(conf, myAgent, trackingpoints.numsamples)
-#        print("Step",model.step(),"Accuracy",model.getAccuracy(trainBatch),"%") 
-#        if i % 10 == 0:
-#            print(model.inference(trainBatch[0][:2])) #die ersten 2 states
-#        trackingpoints.reset_batch()
-#        while trackingpoints.has_next(BATCHSIZE):
-#            trainBatch = TPSample(conf, myAgent, BATCHSIZE)
-#            model.q_train_step(trainBatch, True)    
-#        if (i+1) % 5 == 0:
-#            model.save()

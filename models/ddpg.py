@@ -65,7 +65,7 @@ class conv_actorNet():
 
         
 class lowdim_actorNet():
-     def __init__(self, conf, agent, outerscope="actor", name="online", batchnorm = "fff"):       
+     def __init__(self, conf, agent, outerscope="actor", name="online", batchnorm = "ttt"):       
         tanh_min_bounds,tanh_max_bounds = np.array([-1]), np.array([1])
         min_bounds, max_bounds = np.array(list(zip(*conf.action_bounds))) 
         self.name = name
@@ -80,7 +80,9 @@ class lowdim_actorNet():
             self.ff_inputs =   tf.placeholder(tf.float32, shape=[None, ff_stacksize*self.agent.ff_inputsize], name="ff_inputs")  
             self.stands_input = tf.placeholder(tf.bool, name="stands_input") #necessary for settozero            
             if batchnorm[0]=="t":
-                self.ff_inputs = tf.contrib.layers.batch_norm(self.ff_inputs, updates_collections=None, is_training=self.phase)
+                self.fc1 = dense(tf.contrib.layers.batch_norm(self.ff_inputs, updates_collections=None, is_training=self.phase), 400, tf.nn.relu, decay=decay) 
+            else:
+                self.fc1 = dense(self.ff_inputs, 400, tf.nn.relu, decay=decay) 
             self.fc1 = dense(self.ff_inputs, 400, tf.nn.relu, decay=decay)
             if batchnorm[1]=="t":
                 self.fc1 = tf.contrib.layers.batch_norm(self.fc1, updates_collections=None, is_training=self.phase, epsilon=1e-7)
@@ -97,23 +99,25 @@ class lowdim_actorNet():
 
 #set brake-value to zero if car stands and care for not braking & accelerating simultaneously
 def apply_constraints(conf, outs, stands_input):
-    if not conf.INCLUDE_ACCPLUSBREAK: #if both throttle and brake are > 0.5, set brake to zero
-        brakeallzero =  tf.stack([outs[:,0], -tf.ones([tf.shape(outs)[0]]), outs[:,2]],axis=1) if conf.brake_index == 1 \
-                   else tf.stack([outs[:,0], outs[:,1], -tf.ones([tf.shape(outs)[0]])],axis=1) if conf.brake_index == 2 \
-                   else tf.stack([-tf.ones([tf.shape(outs)[0]]), outs[:,1], outs[:,2]],axis=1)
-        applywhere = tf.logical_and(tf.cast((outs[:,conf.throttle_index] > -0.1), tf.bool), tf.cast((outs[:,conf.brake_index] > -0.1), tf.bool))
-        outs = tf.where(applywhere, brakeallzero, outs)  
-    if conf.use_settozero:
-        brakeallzero =  tf.stack([outs[:,0], -tf.ones([tf.shape(outs)[0]]), outs[:,2]],axis=1) if conf.brake_index == 1 \
-                   else tf.stack([outs[:,0], outs[:,1], -tf.ones([tf.shape(outs)[0]])],axis=1) if conf.brake_index == 2 \
-                   else tf.stack([-tf.ones([tf.shape(outs)[0]]), outs[:,1], outs[:,2]],axis=1)
-        outs = tf.cond(stands_input,lambda: brakeallzero, lambda: outs)
-        throttlebig =  tf.stack([outs[:,0], tf.ones([tf.shape(outs)[0]]), outs[:,2]],axis=1) if conf.throttle_index == 1 \
-                  else tf.stack([outs[:,0], outs[:,1], tf.ones([tf.shape(outs)[0]])],axis=1) if conf.throttle_index == 2 \
-                  else tf.stack([tf.ones([tf.shape(outs)[0]]), outs[:,1], outs[:,2]],axis=1)
-        applywhere = tf.cast((outs[:,conf.throttle_index] < -0.1), tf.bool)
-        outs = tf.cond(stands_input, lambda: tf.where(applywhere, throttlebig, outs), lambda: outs)
     return outs
+#
+#    if not conf.INCLUDE_ACCPLUSBREAK: #if both throttle and brake are > 0.5, set brake to zero
+#        brakeallzero =  tf.stack([outs[:,0], -tf.ones([tf.shape(outs)[0]]), outs[:,2]],axis=1) if conf.brake_index == 1 \
+#                   else tf.stack([outs[:,0], outs[:,1], -tf.ones([tf.shape(outs)[0]])],axis=1) if conf.brake_index == 2 \
+#                   else tf.stack([-tf.ones([tf.shape(outs)[0]]), outs[:,1], outs[:,2]],axis=1)
+#        applywhere = tf.logical_and(tf.cast((outs[:,conf.throttle_index] > -0.1), tf.bool), tf.cast((outs[:,conf.brake_index] > -0.1), tf.bool))
+#        outs = tf.where(applywhere, brakeallzero, outs)  
+#    if conf.use_settozero:
+#        brakeallzero =  tf.stack([outs[:,0], -tf.ones([tf.shape(outs)[0]]), outs[:,2]],axis=1) if conf.brake_index == 1 \
+#                   else tf.stack([outs[:,0], outs[:,1], -tf.ones([tf.shape(outs)[0]])],axis=1) if conf.brake_index == 2 \
+#                   else tf.stack([-tf.ones([tf.shape(outs)[0]]), outs[:,1], outs[:,2]],axis=1)
+#        outs = tf.cond(stands_input,lambda: brakeallzero, lambda: outs)
+#        throttlebig =  tf.stack([outs[:,0], tf.ones([tf.shape(outs)[0]]), outs[:,2]],axis=1) if conf.throttle_index == 1 \
+#                  else tf.stack([outs[:,0], outs[:,1], tf.ones([tf.shape(outs)[0]])],axis=1) if conf.throttle_index == 2 \
+#                  else tf.stack([tf.ones([tf.shape(outs)[0]]), outs[:,1], outs[:,2]],axis=1)
+#        applywhere = tf.cast((outs[:,conf.throttle_index] < -0.1), tf.bool)
+#        outs = tf.cond(stands_input, lambda: tf.where(applywhere, throttlebig, outs), lambda: outs)
+#    return outs
 
 
 ##############################################################################################################################
@@ -165,7 +169,7 @@ class conv_criticNet():
         
         
 class lowdim_criticNet():
-     def __init__(self, conf, agent, outerscope="critic", name="online", batchnorm="fff"):       
+     def __init__(self, conf, agent, outerscope="critic", name="online", batchnorm="ttt"):       
         self.conf = conf
         self.agent = agent
         self.name = name   
@@ -173,12 +177,13 @@ class lowdim_criticNet():
 
         with tf.variable_scope(name):
             
-            self.ff_inputs =   tf.placeholder(tf.float32, shape=[None, ff_stacksize*self.agent.ff_inputsize], name="ff_inputs")  
+            self.ff_inputs =  tf.placeholder(tf.float32, shape=[None, ff_stacksize*self.agent.ff_inputsize], name="ff_inputs")  
             self.phase = tf.placeholder(tf.bool, name='phase') #for batchnorm, true heißt is_training
             self.actions = tf.placeholder(tf.float32, shape=[None, self.conf.num_actions], name="action_inputs")  
             if batchnorm[0]=="t":
-                self.ff_inputs = tf.contrib.layers.batch_norm(self.ff_inputs, updates_collections=None, is_training=self.phase, epsilon=1e-7)
-            self.fc1 = dense(self.ff_inputs, 400, tf.nn.relu, decay=True)
+                self.fc1 = dense(tf.contrib.layers.batch_norm(self.ff_inputs, updates_collections=None, is_training=self.phase, epsilon=1e-7), 400, tf.nn.relu, decay=True)
+            else:
+                self.fc1 = dense(self.ff_inputs, 400, tf.nn.relu, decay=True)
             if batchnorm[1]=="t":
                 self.fc1 = tf.contrib.layers.batch_norm(self.fc1, updates_collections=None, is_training=self.phase, epsilon=1e-7)
             self.fc1 =  tf.concat([self.fc1, self.actions], 1)   
@@ -210,6 +215,10 @@ class Actor(object):
         with tf.variable_scope("actor"):
             with tf.variable_scope("target"): #damit der saver das mit saved            
                 self.step_tf = tf.Variable(tf.constant(0), dtype=tf.int32, name='step_tf', trainable=False)
+                self.run_inferences_tf = tf.Variable(tf.constant(0), dtype=tf.int32, name='run_inferences_tf', trainable=False)
+                self.pretrain_episode_tf = tf.Variable(tf.constant(0), dtype=tf.int32, name='pretrain_episode_tf', trainable=False)
+                self.pretrain_step_tf = tf.Variable(tf.constant(0), dtype=tf.int32, name='pretrain_step_tf', trainable=False)
+                
             if self.agent.usesConv:
                 self.online = conv_actorNet(conf, agent, **kwargs)
                 self.target = conv_actorNet(conf, agent, name="target", **kwargs)
@@ -220,7 +229,11 @@ class Actor(object):
             # provided by the critic network
             self.action_gradient = tf.placeholder(tf.float32, [None, self.conf.num_actions], name="actiongradient")
             self.actor_gradients = tf.gradients(self.online.scaled_out, self.online.trainables, -self.action_gradient)
-            self.optimize = tf.train.AdamOptimizer(self.conf.actor_lr).apply_gradients(zip(self.actor_gradients, self.online.trainables), global_step=self.step_tf)
+            if self.isPretrain:
+                self.optimize = tf.train.AdamOptimizer(self.conf.actor_lr).apply_gradients(zip(self.actor_gradients, self.online.trainables), global_step=self.pretrain_step_tf)
+            else:
+                self.optimize = tf.train.AdamOptimizer(self.conf.actor_lr).apply_gradients(zip(self.actor_gradients, self.online.trainables), global_step=self.step_tf)
+                
             
         self.saver = tf.train.Saver(var_list=get_variables("actor/target"))
 
@@ -269,7 +282,8 @@ class Critic(object):
             
             with tf.variable_scope("target"): #damit der saver das mit saved
                 self.step_tf = tf.Variable(tf.constant(0), dtype=tf.int32, name='step_tf', trainable=False)
-            
+                self.pretrain_step_tf = tf.Variable(tf.constant(0), dtype=tf.int32, name='pretrain_step_tf', trainable=False)
+                
             if self.agent.usesConv:
                 self.online = conv_criticNet(conf, agent, **kwargs)
                 self.target = conv_criticNet(conf, agent, name="target", **kwargs)
@@ -280,7 +294,10 @@ class Critic(object):
             self.smoothTargetUpdate = netCopyOps(self.online, self.target, self.conf.target_update_tau)
             self.target_Q = tf.placeholder(tf.float32, [None, 1], name="target_Q")
             self.loss = tf.losses.mean_squared_error(self.target_Q, self.online.Q)
-            self.optimize = tf.train.AdamOptimizer(self.conf.critic_lr).minimize(self.loss, global_step = self.step_tf)
+            if self.isPretrain:
+                self.optimize = tf.train.AdamOptimizer(self.conf.critic_lr).minimize(self.loss, global_step = self.pretrain_step_tf)
+            else:
+                self.optimize = tf.train.AdamOptimizer(self.conf.critic_lr).minimize(self.loss, global_step = self.step_tf)
             self.action_grads = tf.gradients(self.online.Q, self.online.actions)
             
         self.saver = tf.train.Saver(var_list=get_variables("critic/target"))
@@ -323,6 +340,8 @@ class DDPG_model():
         self.isPretrain = isPretrain
         self.actor = Actor(self.conf, self.agent, self.session, actorbatchnorm, isPretrain)
         self.critic = Critic(self.conf, self.agent, self.session, criticbatchnorm, isPretrain) 
+        self.run_inf = 0
+        self.pretrain_ep = 0
         
         
     def initNet(self, load=False):
@@ -343,9 +362,11 @@ class DDPG_model():
     def save(self):
         folder = self.conf.pretrain_checkpoint_dir if self.isPretrain else self.conf.checkpoint_dir
         critic_file = os.path.join(self.agent.folder(os.path.join(folder,"critic")), 'model.ckpt')
-        self.critic.saver.save(self.session, critic_file, global_step=self.critic.step_tf)
+        self.critic.saver.save(self.session, critic_file, global_step=self.critic.pretrain_step_tf if self.isPretrain else self.critic.step_tf)
         actor_file = os.path.join(self.agent.folder(os.path.join(folder,"actor")), 'model.ckpt')
-        self.actor.saver.save(self.session, actor_file, global_step=self.actor.step_tf)
+        self.session.run(self.actor.run_inferences_tf.assign(self.run_inf))
+        self.session.run(self.actor.pretrain_episode_tf.assign(self.pretrain_ep))
+        self.actor.saver.save(self.session, actor_file, global_step=self.actor.pretrain_step_tf if self.isPretrain else self.actor.step_tf)
         print("Saved Model.", level=6) 
         
     
@@ -356,33 +377,40 @@ class DDPG_model():
         if critic_ckpt and actor_ckpt and critic_ckpt.model_checkpoint_path and actor_ckpt.model_checkpoint_path:
             self.critic.saver.restore(self.session, critic_ckpt.model_checkpoint_path)
             self.actor.saver.restore(self.session, actor_ckpt.model_checkpoint_path)
+            self.run_inf = self.actor.run_inferences_tf.eval(self.session)
+            self.pretrain_ep = self.actor.pretrain_episode_tf.eval(self.session)
         else:
             print("Couldn't load", ("from pretrain" if from_pretrain else "from RL-train"), level=10)
             return False
         print("Loaded",("from pretrain" if from_pretrain else "from RL-train"), level=10)
-        print("Step:",self.actor.step_tf.eval(self.session))
+        print("Pretrain-Step:",self.actor.pretrain_step_tf.eval(self.session), "Pretrain-Episode:",self.pretrain_ep,"Main-Step:",self.step(), "Run'n Iterations:", self.run_inf, level=10)
         return True
         
-    def step(self): #TODO DO
-        return 0
-    def inc_episode(self): #TODO DO
-        return 0
+    
+    def step(self): 
+        return self.actor.step_tf.eval(self.session)
+    def inc_episode(self): 
+        if self.isPretrain:
+            self.pretrain_ep += 1
     def pretrain_episode(self):
-        return 0
+        return self.pretrain_ep
     def run_inferences(self):
-        return 0
+        return self.run_inf
     
    
     #expects a whole s,a,r,s,t - tuple, needs however only s & a
     def getAccuracy(self, batch, likeDDPG=True): #dummy for consistency to DDDQN
         oldstates, actions, _, _, _ = batch
         predict = self.actor.predict(oldstates, useOnline=False, is_training=False)
-        return np.mean(np.array([abs(predict[i][0] -actions[i][0]) for i in range(len(actions))]))
+        print(predict[:5])
+        print(actions[:5])
+        return np.mean(np.array([abs(np.linalg.norm(predict[i]-actions[i])) for i in range(len(actions))]))
 
     
     #expects only a state 
     def inference(self, oldstates):
         assert not self.isPretrain, "Please reload this network as a non-pretrain-one!"
+        self.run_inf += 1
         action = self.actor.predict(oldstates, useOnline=False, is_training=False)
         value =  self.critic.predict(oldstates, action, useOnline=False)
         return action, value
@@ -416,74 +444,3 @@ class DDPG_model():
         
                
         
-
-
-        
-    
-    
-    
-
-
-#def TPSample(conf, agent, batchsize, trackingpoints):
-#    import read_supervised
-#    tmp = list(read_supervised.create_QLearnInputs_from_PTStateBatch(*trackingpoints.next_batch(conf, agent, batchsize), agent))
-#    tmp[1] = [[i[2]] for i in tmp[1]]
-#    return tmp         
-#        
-#    
-#    
-#def learn(conf, myAgent, batchsize, trackingpoints, iterations, actornorm="", criticnorm=""):
-#    tf.reset_default_graph()
-#    
-#    model = DDPG_model(conf, myAgent, tf.Session(), actornorm, criticnorm)
-#
-#    print("ACTORNORM", actornorm, "  CRITICNORM", criticnorm)
-#    
-#    for i in range(iterations):
-#        trackingpoints.reset_batch()
-#        trainBatch = TPSample(conf, myAgent, trackingpoints.numsamples, trackingpoints)
-#        print("Iteration", i, "Accuracy (0 is best)",model.evaluate(trainBatch))  
-#        if i % 5 == 0:
-#            print(np.array(model.inference(trainBatch[0][:6]))) #die ersten 2 states   
-#            print(np.array(trainBatch[1][:6]))
-#        trackingpoints.reset_batch()     
-#        while trackingpoints.has_next(batchsize):
-#            trainBatch = TPSample(conf, myAgent, batchsize, trackingpoints)
-#            model.q_train_step(trainBatch)    
-#                
-#        
-#
-#
-#def main():
-#    import config
-#    conf = config.Config()
-#    conf.num_actions = 1    
-#    conf.action_bounds = [(-1, 1)]
-#    import read_supervised
-#    from server import Containers
-#    import ddpg_rl_agent
-#    myAgent = ddpg_rl_agent.Agent(conf, Containers(), True)
-#    
-#    trackingpoints = read_supervised.TPList(conf.LapFolderName, conf.use_second_camera, conf.msperframe, conf.steering_steps, conf.INCLUDE_ACCPLUSBREAK)
-#    BATCHSIZE = 128
-#    
-#    conf.actor_lr = 0.000001
-#    conf.critic_lr = 0.0001
-#    
-##    for i in range(64,128):     
-##        actornorm = str(bin(i))[2:].replace("0","f").replace("1","t") 
-##        for j in range(64,128):         
-##            criticnorm = str(bin(j))[2:].replace("0","f").replace("1","t")
-#    
-#    learn("tffffft", "tftftff", conf, myAgent, BATCHSIZE, trackingpoints, 200)    
-#
-#            
-#            
-#            
-#    time.sleep(99999)    
-#
-#    
-#    
-#if __name__ == '__main__':
-#    main()
-#            

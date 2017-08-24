@@ -31,17 +31,14 @@ class Agent(AbstractRLAgent):
         self.model.initNet(load=("preTrain" if (self.isPretrain and not start_fresh) else (not start_fresh)))
 
 
-
     ###########################################################################
     ########################overwritten functions##############################
     ###########################################################################
     
     #im gegensatz zu den DQN-basierten agents muss er die action nicht diskretisieren
-    #Override
     def makeNetUsableAction(self, action):
         return action
 
-    #Override
     def getAgentState(self, *gameState):  
         vvec1_hist, vvec2_hist, otherinput_hist, action_hist = gameState
 #        other_inputs = np.ravel([i.returnRelevant() for i in otherinput_hist])
@@ -49,16 +46,13 @@ class Agent(AbstractRLAgent):
         stands_inputs = otherinput_hist[0].SpeedSteer.velocity < 10
         return None, other_inputs, stands_inputs
     
-    #Override
     def makeNetUsableOtherInputs(self, other_inputs): #normally, the otherinputs are stored as compact as possible. Networks may need to unpack that.
         return other_inputs
-    
     
     def endEpisode(self, *args, **kwargs):
         self._noiseState = np.array([0]*self.conf.num_actions)
         super().endEpisode(*args, **kwargs)
 
-            
 
     ###########################################################################
     ########################functions that need to be implemented##############
@@ -75,7 +69,7 @@ class Agent(AbstractRLAgent):
         self._noiseState = self.conf.ornstein_theta * self._noiseState + (1-self.conf.ornstein_theta) * np.random.normal(np.zeros_like(self._noiseState), self.conf.ornstein_std)
         action = action + 10*self.epsilon * self._noiseState
         clip = lambda x,b: min(max(x,b[0]),b[1])
-        action = [clip(action[i],self.conf.action_bounds[i]) for i in range(len(action))]
+        action = np.array([clip(action[i],self.conf.action_bounds[i]) for i in range(len(action))])
         return action
 
 
@@ -94,45 +88,36 @@ class Agent(AbstractRLAgent):
         return toUse, action
 
 
-    def preTrain(self, dataset, Iterations, supervised=False):
-        if supervised:
-            raise ValueError("A DDPG-Model cannot learn supervisedly!")
-        super().preTrain( dataset, Iterations, supervised=False)
-
-
-
 
     def make_trainbatch(self,dataset,batchsize,epsilon=0):
+        clip = lambda x,b: min(max(x,b[0]),b[1])
         trainBatch = dataset.create_QLearnInputs_fromBatch(*dataset.next_batch(self.conf, self, batchsize), self)
-#        s,a,r,s2,t = trainBatch
-#        if np.random.random() < epsilon:
-#            r = np.zeros_like(r)
-#            a = np.array([random_unlike(i,self) for i in a])
-#            t = np.array([True]*len(t))
-#            trainBatch = s,a,r,s2,t
+        if epsilon > np.random.random():
+            s,a,r,s2,t = trainBatch
+            a2 = a + np.random.normal(np.zeros_like(a), epsilon*self.conf.ornstein_std)
+            a2 = np.array([[clip(curr_a[i],self.conf.action_bounds[i]) for i in range(len(curr_a))] for curr_a in a2])
+            rewarddiff = [1-min(np.linalg.norm(a2[i]-a[i]),1) for i in range(len(a))]
+            r = [r[i]*rewarddiff[i] if r[i] > 0 else r[i]*(1+rewarddiff[i]) for i in range(len(rewarddiff))]
+            trainBatch = s,a2,r,s2,t
         return trainBatch
 
 
-#    def preTrain(self, dataset, iterations, supervised=False):
-        #assert self.model.step() == 0, "I dont pretrain if the model already learned on real data!"
-#        print("Starting pretraining", level=10)
-#        pretrain_batchsize = 32
-#        for i in range(iterations):
-#            start_time = time.time()
-#            dataset.reset_batch()
-#            trainBatch = read_supervised.create_QLearnInputs_from_PTStateBatch(*dataset.next_batch(self.conf, self, dataset.numsamples), self)
-#            print('Iteration %3d: Accuracy = %.2f%% (%.1f sec)' % (self.model.pretrain_episode(), self.model.getAccuracy(trainBatch), time.time()-start_time), level=10)
-#            self.model.inc_episode()
-#            dataset.reset_batch()
-#            while dataset.has_next(pretrain_batchsize):
-#                trainBatch = read_supervised.create_QLearnInputs_from_PTStateBatch(*dataset.next_batch(self.conf, self, pretrain_batchsize), self)
-#                if supervised:
-#                    self.model.sv_learn(trainBatch, True)
-#                else:
-#                    self.model.q_learn(trainBatch, True)    
-#                    
-#            if (i+1) % 25 == 0:
-#                self.saveNet()
-
-
-        
+    def preTrain(self, dataset, iterations, supervised=False):
+        assert self.model.step() == 0, "I dont pretrain if the model already learned on real data!"
+        iterations = self.conf.pretrain_iterations if iterations is None else iterations
+        if supervised:
+            raise ValueError("A DDPG-Model cannot learn supervisedly!")
+        print("Starting pretraining", level=10)
+        for i in range(iterations):
+            start_time = time.time()
+            self.model.inc_episode()
+            dataset.reset_batch()
+            while dataset.has_next(self.conf.pretrain_batch_size):
+                trainBatch = self.make_trainbatch(dataset,self.conf.pretrain_batch_size,0.8)
+                self.model.q_train_step(trainBatch, True)    
+            if (i+1) % 25 == 0:
+                self.model.save()    
+            dataset.reset_batch()
+            trainBatch = self.make_trainbatch(dataset,dataset.numsamples)
+            print('Iteration %3d: Closeness = %.2f (%.1f sec)' % (self.model.pretrain_episode(), self.model.getAccuracy(trainBatch), time.time()-start_time), level=10)
+            
