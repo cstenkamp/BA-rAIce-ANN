@@ -146,11 +146,18 @@ class Memory(object):
     
     
     def average_rewards(self, fromwhere, towhere):
-        if fromwhere < towhere:
-            tmp = self._buffer[fromwhere:towhere]
-        else:
-            tmp = self._buffer[fromwhere:]+self._buffer[:towhere]
-        rewards = np.array(list(zip(*tmp))[2])
+        try:
+            if fromwhere < towhere:
+                tmp = self._buffer[fromwhere:towhere]
+            else:
+                tmp = self._buffer[fromwhere:]+self._buffer[:towhere]
+            rewards = np.array(list(zip(*tmp))[2])
+        except TypeError as e:
+            print("TYPEERROR")
+            print("fromwhere:",fromwhere)
+            print("towhere:",towhere)
+            print(tmp)
+            raise e
         return np.mean(rewards)
     
     

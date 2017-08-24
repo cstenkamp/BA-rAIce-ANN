@@ -205,7 +205,12 @@ class AbstractRLAgent(AbstractAgent):
         dist = abs(otherinput_hist[0].CenterDist)
         stay_on_street = min(1 if dist < 5 else -self.wallhitPunish if dist >= 10 else 1/((dist-5) if (dist-5) != 0 else 0.00001), 1)
         speed = otherinput_hist[0].SpeedSteer.speedInStreetDir / self.conf.MAXSPEED
-        return speed + stay_on_street  if speed + stay_on_street > 0 else 0
+        prog = otherinput_hist[0].ProgressVec.Progress/100 #"die dicken fische liegen hinten" <- extra reward for coming far
+        prog = prog if prog > 0 else 0
+        direction_bonus = ((360-otherinput_hist[0].SpeedSteer.carAngle)/360)-0.5 if -otherinput_hist[0].SpeedSteer.rightDirection else -1
+        rew = speed + stay_on_street + prog + direction_bonus
+        rew = min(max(rew, -5),5)
+        return rew 
 
 
 #    def calculateReward(self, *gameState):

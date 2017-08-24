@@ -5,6 +5,7 @@ import tensorflow.contrib.slim as slim
 from myprint import myprint as print
 from utils import netCopyOps
 import os
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' #so that TF doesn't show its warnings
 from tensorflow.contrib.framework import get_variables
 
 #batchnorm doesnt really work, and if, only with huge minibatches https://www.reddit.com/r/MachineLearning/comments/671455/d_batch_normalization_in_reinforcement_learning/
@@ -32,6 +33,7 @@ class conv_actorNet():
         with tf.variable_scope(name):
             self.conv_inputs = tf.placeholder(tf.float32, shape=[None, self.conf.image_dims[0], self.conf.image_dims[1], conv_stacksize], name="conv_inputs")  
             self.ff_inputs =   tf.placeholder(tf.float32, shape=[None, ff_stacksize*self.agent.ff_inputsize], name="ff_inputs")  
+            self.stands_input = tf.placeholder(tf.bool, name="stands_input") #necessary for settozero            
             self.phase = tf.placeholder(tf.bool, name='phase') #for batchnorm, true heißt is_training
 
             rs_input = tf.reshape(self.conv_inputs, [-1, self.conf.image_dims[0], self.conf.image_dims[1], conv_stacksize]) #final dimension = number of color channels*number of stacked (history-)frames                  
@@ -53,13 +55,13 @@ class conv_actorNet():
             if batchnorm[6]=="t":
                 self.fc2 = tf.contrib.layers.batch_norm(self.fc2, updates_collections=None, is_training=self.phase, epsilon=1e-7)
             self.outs = dense(self.fc2, conf.num_actions, tf.nn.tanh, decay=decay, minmax = 3e-4)
+            self.outs = apply_constraints(self.conf, self.outs, self.stands_input)
             self.scaled_out = (((self.outs - tanh_min_bounds)/ (tanh_max_bounds - tanh_min_bounds)) * (max_bounds - min_bounds) + min_bounds) #broadcasts the bound arrays
             
 
         self.trainables = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope=outerscope+"/"+self.name)
         self.ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS, scope=outerscope+"/"+self.name)      
-        
-        
+
 
         
 class lowdim_actorNet():
@@ -76,6 +78,7 @@ class lowdim_actorNet():
             
             self.phase = tf.placeholder(tf.bool, name='phase') #for batchnorm, true heißt is_training
             self.ff_inputs =   tf.placeholder(tf.float32, shape=[None, ff_stacksize*self.agent.ff_inputsize], name="ff_inputs")  
+            self.stands_input = tf.placeholder(tf.bool, name="stands_input") #necessary for settozero            
             if batchnorm[0]=="t":
                 self.ff_inputs = tf.contrib.layers.batch_norm(self.ff_inputs, updates_collections=None, is_training=self.phase)
             self.fc1 = dense(self.ff_inputs, 400, tf.nn.relu, decay=decay)
@@ -85,10 +88,32 @@ class lowdim_actorNet():
             if batchnorm[2]=="t":
                 self.fc2 = tf.contrib.layers.batch_norm(self.fc2, updates_collections=None, is_training=self.phase, epsilon=1e-7)
             self.outs = dense(self.fc2, conf.num_actions, tf.nn.tanh, decay=decay, minmax = 3e-4)
+            self.outs = apply_constraints(self.conf, self.outs, self.stands_input)
             self.scaled_out = (((self.outs - tanh_min_bounds)/ (tanh_max_bounds - tanh_min_bounds)) * (max_bounds - min_bounds) + min_bounds) #broadcasts the bound arrays
-            
+                              
         self.trainables = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope=outerscope+"/"+self.name)
         self.ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS, scope=outerscope+"/"+self.name)      
+
+
+#set brake-value to zero if car stands and care for not braking & accelerating simultaneously
+def apply_constraints(conf, outs, stands_input):
+    if not conf.INCLUDE_ACCPLUSBREAK: #if both throttle and brake are > 0.5, set brake to zero
+        brakeallzero =  tf.stack([outs[:,0], -tf.ones([tf.shape(outs)[0]]), outs[:,2]],axis=1) if conf.brake_index == 1 \
+                   else tf.stack([outs[:,0], outs[:,1], -tf.ones([tf.shape(outs)[0]])],axis=1) if conf.brake_index == 2 \
+                   else tf.stack([-tf.ones([tf.shape(outs)[0]]), outs[:,1], outs[:,2]],axis=1)
+        applywhere = tf.logical_and(tf.cast((outs[:,conf.throttle_index] > -0.1), tf.bool), tf.cast((outs[:,conf.brake_index] > -0.1), tf.bool))
+        outs = tf.where(applywhere, brakeallzero, outs)  
+    if conf.use_settozero:
+        brakeallzero =  tf.stack([outs[:,0], -tf.ones([tf.shape(outs)[0]]), outs[:,2]],axis=1) if conf.brake_index == 1 \
+                   else tf.stack([outs[:,0], outs[:,1], -tf.ones([tf.shape(outs)[0]])],axis=1) if conf.brake_index == 2 \
+                   else tf.stack([-tf.ones([tf.shape(outs)[0]]), outs[:,1], outs[:,2]],axis=1)
+        outs = tf.cond(stands_input,lambda: brakeallzero, lambda: outs)
+        throttlebig =  tf.stack([outs[:,0], tf.ones([tf.shape(outs)[0]]), outs[:,2]],axis=1) if conf.throttle_index == 1 \
+                  else tf.stack([outs[:,0], outs[:,1], tf.ones([tf.shape(outs)[0]])],axis=1) if conf.throttle_index == 2 \
+                  else tf.stack([tf.ones([tf.shape(outs)[0]]), outs[:,1], outs[:,2]],axis=1)
+        applywhere = tf.cast((outs[:,conf.throttle_index] < -0.1), tf.bool)
+        outs = tf.cond(stands_input, lambda: tf.where(applywhere, throttlebig, outs), lambda: outs)
+    return outs
 
 
 ##############################################################################################################################
@@ -179,6 +204,7 @@ class Actor(object):
         self.agent = agent
         self.session = session
         self.isPretrain = isPretrain
+        self.stood_frames_ago = 0
         kwargs = {"batchnorm": batchnormstring} if len(batchnormstring) > 0 else {}
         
         with tf.variable_scope("actor"):
@@ -202,15 +228,22 @@ class Actor(object):
         self.session.run(self.optimize, feed_dict=self._make_inputs(inputs, self.online, {self.action_gradient: a_gradient}))
 
     def predict(self, inputs, useOnline=True, is_training=True):
+        carstands = inputs[0][2] if len(inputs) == 1 and len(inputs[0]) > 2 else False
         net = self.online if useOnline else self.target
-        return self.session.run(net.scaled_out, feed_dict=self._make_inputs(inputs, net, is_training=is_training))
+        return self.session.run(net.scaled_out, feed_dict=self._make_inputs(inputs, net, is_training=is_training, carstands=carstands))
+         
 
     def update_target_network(self):
         self.session.run(self.smoothTargetUpdate)
         
-    def _make_inputs(self, inputs, net, others={}, is_training=True):
+    def _make_inputs(self, inputs, net, others={}, is_training=True, carstands=False):
+        if not is_training:   
+            self.stood_frames_ago = 0 if carstands else self.stood_frames_ago + 1
+            if self.stood_frames_ago < 4: #wenn du vor einigen frames stands, gib jetzt auch gas
+                carstands = True
         conv_inputs = [inputs[i][0] for i in range(len(inputs))]
         ff_inputs = [inputs[i][1] for i in range(len(inputs))]
+        others[net.stands_input] = carstands 
         feed_conv = {net.conv_inputs: conv_inputs} if self.agent.usesConv else {}
         feed_ff = {net.ff_inputs: ff_inputs} if self.agent.ff_inputsize > 0  else {}
         return {**feed_conv, **feed_ff, **others, net.phase: is_training}
