@@ -54,7 +54,7 @@ class Config():
     finalepsilonframe = 100000
     q_decay = 0.99
     checkpointall = 1000 #RLsteps, not inferences!
-    ornstein_theta = 0.15
+    ornstein_theta = 0.6
     ornstein_std = 0.2
     use_settozero = True
     
@@ -66,7 +66,7 @@ class Config():
     save_memory_with_checkpoint = True
     save_memory_on_exit = False
     save_memory_all_mins = False
-    replaystartsize = 4000
+    replaystartsize = 32#4000
     memorysize = 50000
     use_constantbutbigmemory = False
     visionvecdtype = np.int8 #wäre es np.bool würde er den rand als street sehen!
@@ -90,6 +90,9 @@ class Config():
     #for continuus algorithms
     num_actions = 3
     action_bounds = [(0, 1), (0, 1), (-1, 1)]
+    throttle_index = 0
+    brake_index = 1
+    steer_index = 2
     actor_lr = 0.0001
     critic_lr = 0.001
     

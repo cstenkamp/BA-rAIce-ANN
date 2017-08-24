@@ -303,7 +303,6 @@ class DDDQN_model():
     #expects a whole s,a,r,s,t - tuple, needs however only s & a
     def getAccuracy(self, batch, likeDDPG=True):
         oldstates, actions, _, _, _ = batch
-        #print(self.session.run(self.targetQN.Qout,feed_dict=self.targetQN.make_inputs(oldstates, is_training=False)))
         predict = self.session.run(self.targetQN.predict,feed_dict=self.targetQN.make_inputs(oldstates, is_training=False))
         if likeDDPG:
             return np.mean(np.array([abs(predict[i][0] -actions[i][0]) for i in range(len(actions))]))

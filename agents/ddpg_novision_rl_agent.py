@@ -72,8 +72,8 @@ class Agent(AbstractRLAgent):
 
     #classical Ornstein-Uhlenbeck-process. The trick in that is, that the mu of the noise is always that one of the last iteration (->temporal correlation)
     def make_noisy(self, action):
-        self._noiseState = self.conf.ornstein_theta * self._noiseState + np.random.normal(np.zeros_like(self._noiseState), self.conf.ornstein_std)
-        action = action + self.epsilon * self._noiseState
+        self._noiseState = self.conf.ornstein_theta * self._noiseState + (1-self.conf.ornstein_theta) * np.random.normal(np.zeros_like(self._noiseState), self.conf.ornstein_std)
+        action = action + 10*self.epsilon * self._noiseState
         clip = lambda x,b: min(max(x,b[0]),b[1])
         action = [clip(action[i],self.conf.action_bounds[i]) for i in range(len(action))]
         return action
@@ -98,6 +98,8 @@ class Agent(AbstractRLAgent):
         if supervised:
             raise ValueError("A DDPG-Model cannot learn supervisedly!")
         super().preTrain( dataset, Iterations, supervised=False)
+
+
 
 
     def make_trainbatch(self,dataset,batchsize,epsilon=0):
