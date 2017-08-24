@@ -39,7 +39,7 @@ def print(*args, containers, wname):
 def showScreen(containers):
     root = Tk()     
     root.title("rAIce-ANN - Started "+time.strftime("%H:%M:%S", time.gmtime()))                    
-    lastcommand = ThreadSafeConsole(root, width=1, height=1)
+    lastcommand = ThreadSafeConsole(root, width=55, height=1)
     lastcommand.pack(fill=X)
     memorysize = ThreadSafeConsole(root, width=1, height=1)
     memorysize.pack(fill=X)
@@ -53,8 +53,11 @@ def showScreen(containers):
     reinflearnsteps.pack(fill=X)
     lastepisode = ThreadSafeConsole(root, width=1, height=2)
     lastepisode.pack(fill=X)
-    currentqvals = ThreadSafeConsole(root, width=55, height=22)
-    currentqvals.pack(fill=X)
+    if not containers.myAgent.isContinuous:
+        currentqvals = ThreadSafeConsole(root, width=55, height=containers.conf.dnum_actions+1)
+        currentqvals.pack(fill=X)
+    else:
+        currentqvals = None
     x = root.winfo_screenwidth()-449
     y = 0 #root.winfo_screenheight()-200
     root.geometry('+%d+%d' % (x, y))   

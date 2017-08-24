@@ -16,14 +16,14 @@ from efficientmemory import Memory as Efficientmemory
 from dddqn import DDDQN_model 
 
 current_milli_time = lambda: int(round(time.time() * 1000))
-
+flatten = lambda l: [item for sublist in l for item in sublist]
 
 
 class Agent(AbstractRLAgent):
     def __init__(self, conf, containers, isPretrain=False, start_fresh=False, *args, **kwargs):
         self.name = "dqn_novision_rl_agent"#__file__[__file__.rfind("\\")+1:__file__.rfind(".")]
         super().__init__(conf, containers, isPretrain, start_fresh, *args, **kwargs)
-        self.ff_inputsize = 49
+        self.ff_inputsize = 49 + conf.num_actions * conf.ff_stacksize #61
         self.usesConv = False
         session = tf.Session(config=tf.ConfigProto(intra_op_parallelism_threads=2, allow_soft_placement=True))
         self.model = DDDQN_model(self.conf, self, session, isPretrain=isPretrain)
@@ -34,15 +34,14 @@ class Agent(AbstractRLAgent):
     ########################overwritten functions##############################
     ###########################################################################
 
-    #Override
     def getAgentState(self, *gameState):  
         vvec1_hist, vvec2_hist, otherinput_hist, action_hist = gameState
+        flat_actions = flatten([i if i != None else (0,0,0) for i in action_hist])
 #        other_inputs = np.ravel([i.returnRelevant() for i in otherinput_hist])
-        other_inputs = np.ravel(otherinput_hist[0].returnRelevant())
+        other_inputs = np.ravel(otherinput_hist[0].returnRelevant()); other_inputs = np.concatenate((other_inputs,flat_actions))
         stands_inputs = otherinput_hist[0].SpeedSteer.velocity < 10
         return None, other_inputs, stands_inputs
     
-    #Override
     def makeNetUsableOtherInputs(self, other_inputs): #normally, the otherinputs are stored as compact as possible. Networks may need to unpack that.
         return other_inputs
         

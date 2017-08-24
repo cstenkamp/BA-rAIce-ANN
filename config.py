@@ -26,7 +26,7 @@ class Config():
     
     #PRETRAIN STUFF
     pretrain_batch_size = 128
-    pretrain_iterations = 90     #90, 120
+    pretrain_iterations = 200
     pretrain_lrdecayafter = pretrain_iterations//2  #//3 für 90, 120
     pretrain_checkpointall = 10
     pretrain_summaryall = False
@@ -78,7 +78,7 @@ class Config():
     #GAME SETTINGS
     history_frame_nr = 4 #incl. dem jetzigem!
     action_repeat = 4
-    speed_neurons = 30 
+    speed_neurons = 20 
     SPEED_AS_ONEHOT = False    
     image_dims = [30,45] 
     msperframe = 100 #50   #ACHTUNG!!! Dieser wert wird von unity überschrieben!!!!! #TODO: dass soll mit unity abgeglichen werden!

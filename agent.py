@@ -16,6 +16,8 @@ from evaluator import evaluator
 from inefficientmemory import Memory
 from utils import random_unlike
 
+flatten = lambda l: [item for sublist in l for item in sublist]
+
 ###################################################################################################
 
 class AbstractAgent(object):
@@ -48,15 +50,18 @@ class AbstractAgent(object):
     ###########################################################################
     
     #creates the Agents state from the real state. this is the base version, other agents may overwrite it.
-    def getAgentState(self, vvec1_hist, vvec2_hist, otherinput_hist, action_hist): 
+    def getAgentState(self, *gameState): 
+        vvec1_hist, vvec2_hist, otherinput_hist, action_hist = gameState
         assert self.conf.use_cameras, "You disabled cameras in the config, which is impossible for this agent!"
         conv_inputs = np.concatenate([vvec1_hist, vvec2_hist]) if vvec2_hist is not None else vvec1_hist
-        other_inputs = otherinput_hist[0].SpeedSteer.velocity
+        other_inputs = [otherinput_hist[0].SpeedSteer.velocity, action_hist]
         stands_inputs = otherinput_hist[0].SpeedSteer.velocity < 10
         return conv_inputs, other_inputs, stands_inputs
     
     def makeNetUsableOtherInputs(self, other_inputs): #normally, the otherinputs are stored as compact as possible. Networks may need to unpack that.
-        other_inputs = self.inflate_speed(other_inputs)
+        speed = self.inflate_speed(other_inputs[0])
+        flat_actions = flatten([i if i != None else (0,0,0) for i in other_inputs[1]])
+        other_inputs = speed; other_inputs.extend(flat_actions)
         assert len(other_inputs) == self.ff_inputsize        
         return other_inputs
     

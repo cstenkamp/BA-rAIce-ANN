@@ -283,7 +283,7 @@ class InputValContainer(object):
             if self.conf.use_cameras and self.agent.usesConv:
                 self._append_vvec_hist(visionvec, vvec2)
             self.otherinput_hist = self._append_other(otherinputs, self.otherinput_hist)
-            self.containers.myAgent.humantakingcontrolstring = "(H)" if (self.action_hist[0] != tuple(otherinputs.Action)) else ""
+            self.containers.myAgent.humantakingcontrolstring = "(H)" if self.action_hist[0] is None or otherinputs.Action is None or np.any([abs(self.action_hist[0][i] - otherinputs.Action[i]) > 0.1 for i in range(len(otherinputs.Action))]) else ""
             self.action_hist[0] = tuple(otherinputs.Action) #it was already added in addAction, and will only overwritten here if humantakingcontrol changed it
             self.action_hist = self._append_other(None, self.action_hist)   #will be updated in addAction         
             
@@ -516,12 +516,7 @@ def main(conf, agentname, no_learn, show_screen, show_plots, start_fresh, nomemo
     
     containers.receiverportsocket = create_socket(TCP_RECEIVER_PORT)
     containers.senderportsocket = create_socket(TCP_SENDER_PORT)
-    
-    if show_screen:
-        screenroot = infoscreen.showScreen(containers)
-    else:
-        containers.showscreen = False
-    
+        
     if no_learn:
         conf.learnMode = ""
         conf.minepsilon = 0
@@ -531,6 +526,10 @@ def main(conf, agentname, no_learn, show_screen, show_plots, start_fresh, nomemo
     containers.myAgent = agentclass(conf, containers, isPretrain=False, start_fresh=start_fresh) 
     containers.myAgent.initForDriving(keep_memory = (not nomemorykeep), show_plots=show_plots)
     
+    if show_screen:
+        screenroot = infoscreen.showScreen(containers)
+    else:
+        containers.showscreen = False    
                                                                           
     containers.inputval = InputValContainer(conf, containers, containers.myAgent)
     containers.outputval = OutputValContainer(containers)  

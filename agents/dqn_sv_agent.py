@@ -18,7 +18,7 @@ class Agent(AbstractAgent):
     def __init__(self, conf, containers, isPretrain=False, start_fresh=False, *args, **kwargs): #der dummy ist da damit man playnet & reinfnet austauschen kan
         self.name = __file__[__file__.rfind("\\")+1:__file__.rfind(".")]
         super().__init__(conf, containers, *args, **kwargs)
-        self.ff_inputsize = 30
+        self.ff_inputsize = conf.speed_neurons + conf.num_actions * conf.ff_stacksize #32
         self.isSupervised = True
         session = tf.Session(config=tf.ConfigProto(intra_op_parallelism_threads=2, allow_soft_placement=True))
         self.model = DDDQN_model(self.conf, self, session, isPretrain=isPretrain)

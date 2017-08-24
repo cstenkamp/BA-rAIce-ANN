@@ -97,27 +97,25 @@ class lowdim_actorNet():
         self.ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS, scope=outerscope+"/"+self.name)      
 
 
-#set brake-value to zero if car stands and care for not braking & accelerating simultaneously
+#set brake-value to zero if car stands and care for not braking & accelerating simultaneously... however both apply ONLY in inference
 def apply_constraints(conf, outs, stands_input):
+    if not conf.INCLUDE_ACCPLUSBREAK: #if both throttle and brake are > 0.5, set brake to zero
+        brakeallzero =  tf.stack([outs[:,0], -tf.ones([tf.shape(outs)[0]]), outs[:,2]],axis=1) if conf.brake_index == 1 \
+                   else tf.stack([outs[:,0], outs[:,1], -tf.ones([tf.shape(outs)[0]])],axis=1) if conf.brake_index == 2 \
+                   else tf.stack([-tf.ones([tf.shape(outs)[0]]), outs[:,1], outs[:,2]],axis=1)
+        applywhere = tf.logical_and(tf.cast((outs[:,conf.throttle_index] > -0.1), tf.bool), tf.cast((outs[:,conf.brake_index] > -0.1), tf.bool))
+        outs = tf.cond(stands_input, lambda:tf.where(applywhere, brakeallzero, outs), lambda: outs)  
+    if conf.use_settozero:
+        brakeallzero =  tf.stack([outs[:,0], -tf.ones([tf.shape(outs)[0]]), outs[:,2]],axis=1) if conf.brake_index == 1 \
+                   else tf.stack([outs[:,0], outs[:,1], -tf.ones([tf.shape(outs)[0]])],axis=1) if conf.brake_index == 2 \
+                   else tf.stack([-tf.ones([tf.shape(outs)[0]]), outs[:,1], outs[:,2]],axis=1)
+        outs = tf.cond(stands_input,lambda: brakeallzero, lambda: outs)
+        throttlebig =  tf.stack([outs[:,0], tf.ones([tf.shape(outs)[0]]), outs[:,2]],axis=1) if conf.throttle_index == 1 \
+                  else tf.stack([outs[:,0], outs[:,1], tf.ones([tf.shape(outs)[0]])],axis=1) if conf.throttle_index == 2 \
+                  else tf.stack([tf.ones([tf.shape(outs)[0]]), outs[:,1], outs[:,2]],axis=1)
+        applywhere = tf.cast((outs[:,conf.throttle_index] < -0.1), tf.bool)
+        outs = tf.cond(stands_input, lambda: tf.where(applywhere, throttlebig, outs), lambda: outs)
     return outs
-#
-#    if not conf.INCLUDE_ACCPLUSBREAK: #if both throttle and brake are > 0.5, set brake to zero
-#        brakeallzero =  tf.stack([outs[:,0], -tf.ones([tf.shape(outs)[0]]), outs[:,2]],axis=1) if conf.brake_index == 1 \
-#                   else tf.stack([outs[:,0], outs[:,1], -tf.ones([tf.shape(outs)[0]])],axis=1) if conf.brake_index == 2 \
-#                   else tf.stack([-tf.ones([tf.shape(outs)[0]]), outs[:,1], outs[:,2]],axis=1)
-#        applywhere = tf.logical_and(tf.cast((outs[:,conf.throttle_index] > -0.1), tf.bool), tf.cast((outs[:,conf.brake_index] > -0.1), tf.bool))
-#        outs = tf.where(applywhere, brakeallzero, outs)  
-#    if conf.use_settozero:
-#        brakeallzero =  tf.stack([outs[:,0], -tf.ones([tf.shape(outs)[0]]), outs[:,2]],axis=1) if conf.brake_index == 1 \
-#                   else tf.stack([outs[:,0], outs[:,1], -tf.ones([tf.shape(outs)[0]])],axis=1) if conf.brake_index == 2 \
-#                   else tf.stack([-tf.ones([tf.shape(outs)[0]]), outs[:,1], outs[:,2]],axis=1)
-#        outs = tf.cond(stands_input,lambda: brakeallzero, lambda: outs)
-#        throttlebig =  tf.stack([outs[:,0], tf.ones([tf.shape(outs)[0]]), outs[:,2]],axis=1) if conf.throttle_index == 1 \
-#                  else tf.stack([outs[:,0], outs[:,1], tf.ones([tf.shape(outs)[0]])],axis=1) if conf.throttle_index == 2 \
-#                  else tf.stack([tf.ones([tf.shape(outs)[0]]), outs[:,1], outs[:,2]],axis=1)
-#        applywhere = tf.cast((outs[:,conf.throttle_index] < -0.1), tf.bool)
-#        outs = tf.cond(stands_input, lambda: tf.where(applywhere, throttlebig, outs), lambda: outs)
-#    return outs
 
 
 ##############################################################################################################################
@@ -240,17 +238,17 @@ class Actor(object):
     def train(self, inputs, a_gradient):
         self.session.run(self.optimize, feed_dict=self._make_inputs(inputs, self.online, {self.action_gradient: a_gradient}))
 
-    def predict(self, inputs, useOnline=True, is_training=True):
+    def predict(self, inputs, useOnline=True, is_training=True, is_inference=False):
         carstands = inputs[0][2] if len(inputs) == 1 and len(inputs[0]) > 2 else False
         net = self.online if useOnline else self.target
-        return self.session.run(net.scaled_out, feed_dict=self._make_inputs(inputs, net, is_training=is_training, carstands=carstands))
+        return self.session.run(net.scaled_out, feed_dict=self._make_inputs(inputs, net, is_training=is_training, carstands=carstands, is_inference=is_inference))
          
 
     def update_target_network(self):
         self.session.run(self.smoothTargetUpdate)
         
-    def _make_inputs(self, inputs, net, others={}, is_training=True, carstands=False):
-        if not is_training:   
+    def _make_inputs(self, inputs, net, others={}, is_training=True, carstands=False, is_inference=False):
+        if not is_training and is_inference:   
             self.stood_frames_ago = 0 if carstands else self.stood_frames_ago + 1
             if self.stood_frames_ago < 4: #wenn du vor einigen frames stands, gib jetzt auch gas
                 carstands = True
@@ -411,7 +409,7 @@ class DDPG_model():
     def inference(self, oldstates):
         assert not self.isPretrain, "Please reload this network as a non-pretrain-one!"
         self.run_inf += 1
-        action = self.actor.predict(oldstates, useOnline=False, is_training=False)
+        action = self.actor.predict(oldstates, useOnline=False, is_training=False, is_inference=True)
         value =  self.critic.predict(oldstates, action, useOnline=False)
         return action, value
         
@@ -419,7 +417,7 @@ class DDPG_model():
     #expects only a state 
     def statevalue(self, oldstates):                                                  
         action = self.actor.predict(oldstates, useOnline=False, is_training=False)  
-        return self.critic.predict(oldstates, action, useOnline=False)
+        return self.critic.predict(oldstates, action, useOnline=False)[0]
     
     
     

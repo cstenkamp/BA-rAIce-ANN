@@ -23,7 +23,7 @@ class Agent(AbstractRLAgent):
     def __init__(self, conf, containers, isPretrain=False, start_fresh=False, *args, **kwargs):
         self.name = "dqn_rl_agent" #__file__[__file__.rfind("\\")+1:__file__.rfind(".")]
         super().__init__(conf, containers, isPretrain, start_fresh, *args, **kwargs)
-        self.ff_inputsize = 30
+        self.ff_inputsize = conf.speed_neurons + conf.num_actions * conf.ff_stacksize #32
         session = tf.Session(config=tf.ConfigProto(intra_op_parallelism_threads=2, allow_soft_placement=True))
         self.model = DDDQN_model(self.conf, self, session, isPretrain=isPretrain)
         self.model.initNet(load=("preTrain" if (self.isPretrain and not start_fresh) else (not start_fresh)))
@@ -48,7 +48,6 @@ class Agent(AbstractRLAgent):
         self.showqvals(qvals[0])
         if self.containers.showscreen:
             infoscreen.print(toUse, containers=self.containers, wname="Last command")
-        if self.containers.showscreen:
             if self.model.run_inferences() % 100 == 0:
                 infoscreen.print(self.model.step(), "Iterations: >"+str(self.model.run_inferences()), containers=self.containers, wname="ReinfLearnSteps")
         return toUse, (throttle, brake, steer) #er returned immer toUse, toSave

@@ -14,15 +14,16 @@ from agent import AbstractRLAgent
 from myprint import myprint as print
 from efficientmemory import Memory as Efficientmemory
 from ddpg import DDPG_model 
+import infoscreen
 
-
+flatten = lambda l: [item for sublist in l for item in sublist]
 
 
 class Agent(AbstractRLAgent):
     def __init__(self, conf, containers, isPretrain=False, start_fresh=False, *args, **kwargs):
         self.name = "ddpg_novision_rl_agent" #__file__[__file__.rfind("\\")+1:__file__.rfind(".")]
         super().__init__(conf, containers, isPretrain, start_fresh, *args, **kwargs)
-        self.ff_inputsize = 49
+        self.ff_inputsize = 49 + conf.num_actions * conf.ff_stacksize #61
         self.isContinuous = True
         self.usesConv = False
         self._noiseState = np.array([0]*self.conf.num_actions)
@@ -41,8 +42,9 @@ class Agent(AbstractRLAgent):
 
     def getAgentState(self, *gameState):  
         vvec1_hist, vvec2_hist, otherinput_hist, action_hist = gameState
+        flat_actions = flatten([i if i != None else (0,0,0) for i in action_hist])
 #        other_inputs = np.ravel([i.returnRelevant() for i in otherinput_hist])
-        other_inputs = np.ravel(otherinput_hist[0].returnRelevant())
+        other_inputs = np.ravel(otherinput_hist[0].returnRelevant()); other_inputs = np.concatenate((other_inputs,flat_actions))
         stands_inputs = otherinput_hist[0].SpeedSteer.velocity < 10
         return None, other_inputs, stands_inputs
     
@@ -84,7 +86,13 @@ class Agent(AbstractRLAgent):
     def policyAction(self, agentState):
         action, _ = self.model.inference(self.makeInferenceUsable(agentState))
         action = self.make_noisy(action[0])
+        action = [round(i,3) for i in action]
         toUse = "["+str(action[0])+", "+str(action[1])+", "+str(action[2])+"]"
+        if self.containers.showscreen:
+            infoscreen.print(toUse, containers=self.containers, wname="Last command")
+            if self.model.run_inferences() % 100 == 0:
+                infoscreen.print(self.model.step(), "Iterations: >"+str(self.model.run_inferences()), containers=self.containers, wname="ReinfLearnSteps")
+                infoscreen.print(self.epsilon, containers=self.containers, wname="Epsilon")
         return toUse, action
 
 
@@ -120,4 +128,35 @@ class Agent(AbstractRLAgent):
             dataset.reset_batch()
             trainBatch = self.make_trainbatch(dataset,dataset.numsamples)
             print('Iteration %3d: Closeness = %.2f (%.1f sec)' % (self.model.pretrain_episode(), self.model.getAccuracy(trainBatch), time.time()-start_time), level=10)
+            
+
+
+    ###########################################################################
+    ########################overwritten functions##############################
+    ###########################################################################
+    
+    def eval_episodeVals(self, mem_epi_slice, gameState, endReason):
+        string = super().eval_episodeVals(mem_epi_slice, gameState, endReason)
+        if self.containers.showscreen: 
+            infoscreen.print(string, containers=self.containers, wname="Last Epsd")
+
+            
+    def punishLastAction(self, howmuch):
+        super().punishLastAction(howmuch)
+        if self.containers.showscreen:
+            infoscreen.print(str(-abs(howmuch)), time.strftime("%H:%M:%S", time.gmtime()), containers=self.containers, wname="Last big punish")
+            
+    def addToMemory(self, gameState, pastState):
+        a, r, stateval, changestring = super().addToMemory(gameState, pastState)
+        if self.containers.showscreen:
+            infoscreen.print(a, round(r,2), round(stateval,2), changestring, containers= self.containers, wname="Last memory")
+            if len(self.memory) % 20 == 0:
+                infoscreen.print(">"+str(len(self.memory)), containers= self.containers, wname="Memorysize")       
+                
+    def learnANN(self):  
+        super().learnANN()
+        print("ReinfLearnSteps:", self.model.step(), level=3)
+        if self.containers.showscreen:
+            infoscreen.print(self.model.step(), "Iterations: >"+str(self.model.run_inferences()), containers= self.containers, wname="ReinfLearnSteps")        
+            
             
