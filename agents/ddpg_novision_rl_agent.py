@@ -9,8 +9,6 @@ Created on Tue Aug  8 15:47:57 2017
 import numpy as np
 import tensorflow as tf
 import time
-import os
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 #====own classes====
 from agent import AbstractRLAgent
 from myprint import myprint as print
@@ -24,7 +22,7 @@ class Agent(AbstractRLAgent):
     def __init__(self, conf, containers, isPretrain=False, start_fresh=False, *args, **kwargs):
         self.name = "ddpg_novision_rl_agent" #__file__[__file__.rfind("\\")+1:__file__.rfind(".")]
         super().__init__(conf, containers, isPretrain, start_fresh, *args, **kwargs)
-        self.ff_inputsize = 30
+        self.ff_inputsize = 49
         self.isContinuous = True
         self.usesConv = False
         self._noiseState = np.array([0]*self.conf.num_actions)
@@ -91,7 +89,7 @@ class Agent(AbstractRLAgent):
     
     def policyAction(self, agentState):
         action, _ = self.model.inference(self.makeInferenceUsable(agentState))
-        action = self.make_noisy(action)
+        action = self.make_noisy(action[0])
         toUse = "["+str(action[0])+", "+str(action[1])+", "+str(action[2])+"]"
         return toUse, action
 
@@ -99,7 +97,19 @@ class Agent(AbstractRLAgent):
     def preTrain(self, dataset, Iterations, supervised=False):
         if supervised:
             raise ValueError("A DDPG-Model cannot learn supervisedly!")
-        raise NotImplementedError
+        super().preTrain( dataset, Iterations, supervised=False)
+
+
+    def make_trainbatch(self,dataset,batchsize,epsilon=0):
+        trainBatch = dataset.create_QLearnInputs_fromBatch(*dataset.next_batch(self.conf, self, batchsize), self)
+#        s,a,r,s2,t = trainBatch
+#        if np.random.random() < epsilon:
+#            r = np.zeros_like(r)
+#            a = np.array([random_unlike(i,self) for i in a])
+#            t = np.array([True]*len(t))
+#            trainBatch = s,a,r,s2,t
+        return trainBatch
+
 
 #    def preTrain(self, dataset, iterations, supervised=False):
         #assert self.model.step() == 0, "I dont pretrain if the model already learned on real data!"

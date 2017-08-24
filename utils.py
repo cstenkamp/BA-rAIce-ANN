@@ -6,8 +6,6 @@ Created on Fri Jul 21 22:15:47 2017
 """
 
 import tensorflow as tf
-import os
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' #so that TF doesn't show its warnings
 import numpy as np
 
 

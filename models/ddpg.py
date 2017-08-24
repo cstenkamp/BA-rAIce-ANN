@@ -2,7 +2,7 @@ import tensorflow as tf
 import numpy as np
 import time
 import tensorflow.contrib.slim as slim
-from myprint import printtofile as print
+from myprint import myprint as print
 from utils import netCopyOps
 import os
 from tensorflow.contrib.framework import get_variables
@@ -300,7 +300,7 @@ class DDPG_model():
         elif load == "noPreTrain":
             self._load(from_pretrain=False)   
         elif load != False: #versuche RLLearn, wenn das nicht geht pretrain
-            if not self.load(from_pretrain=False):
+            if not self._load(from_pretrain=False):
                 self._load(from_pretrain=True)                
                 
         self.session.run(netCopyOps(self.actor.target, self.actor.online))
@@ -330,11 +330,20 @@ class DDPG_model():
         print("Step:",self.actor.step_tf.eval(self.session))
         return True
         
+    def step(self): #TODO DO
+        return 0
+    def inc_episode(self): #TODO DO
+        return 0
+    def pretrain_episode(self):
+        return 0
+    def run_inferences(self):
+        return 0
+    
    
     #expects a whole s,a,r,s,t - tuple, needs however only s & a
-    def getAccuracy(self, batch):
+    def getAccuracy(self, batch, likeDDPG=True): #dummy for consistency to DDDQN
         oldstates, actions, _, _, _ = batch
-        predict = self.inference(oldstates)[0]
+        predict = self.actor.predict(oldstates, useOnline=False, is_training=False)
         return np.mean(np.array([abs(predict[i][0] -actions[i][0]) for i in range(len(actions))]))
 
     
@@ -354,7 +363,7 @@ class DDPG_model():
     
     
     #expects a whole s,a,r,s,t - tuple
-    def q_train_step(self, batch):
+    def q_train_step(self, batch, decay_lr = False): #TODO DO
         oldstates, actions, rewards, newstates, terminals = batch
         #Training the critic...
 #        update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
@@ -382,66 +391,66 @@ class DDPG_model():
     
 
 
-def TPSample(conf, agent, batchsize, trackingpoints):
-    import read_supervised
-    tmp = list(read_supervised.create_QLearnInputs_from_PTStateBatch(*trackingpoints.next_batch(conf, agent, batchsize), agent))
-    tmp[1] = [[i[2]] for i in tmp[1]]
-    return tmp         
-        
-    
-    
-def learn(conf, myAgent, batchsize, trackingpoints, iterations, actornorm="", criticnorm=""):
-    tf.reset_default_graph()
-    
-    model = DDPG_model(conf, myAgent, tf.Session(), actornorm, criticnorm)
-
-    print("ACTORNORM", actornorm, "  CRITICNORM", criticnorm)
-    
-    for i in range(iterations):
-        trackingpoints.reset_batch()
-        trainBatch = TPSample(conf, myAgent, trackingpoints.numsamples, trackingpoints)
-        print("Iteration", i, "Accuracy (0 is best)",model.evaluate(trainBatch))  
-        if i % 5 == 0:
-            print(np.array(model.inference(trainBatch[0][:6]))) #die ersten 2 states   
-            print(np.array(trainBatch[1][:6]))
-        trackingpoints.reset_batch()     
-        while trackingpoints.has_next(batchsize):
-            trainBatch = TPSample(conf, myAgent, batchsize, trackingpoints)
-            model.q_train_step(trainBatch)    
-                
-        
-
-
-def main():
-    import config
-    conf = config.Config()
-    conf.num_actions = 1    
-    conf.action_bounds = [(-1, 1)]
-    import read_supervised
-    from server import Containers
-    import ddpg_rl_agent
-    myAgent = ddpg_rl_agent.Agent(conf, Containers(), True)
-    
-    trackingpoints = read_supervised.TPList(conf.LapFolderName, conf.use_second_camera, conf.msperframe, conf.steering_steps, conf.INCLUDE_ACCPLUSBREAK)
-    BATCHSIZE = 128
-    
-    conf.actor_lr = 0.000001
-    conf.critic_lr = 0.0001
-    
-#    for i in range(64,128):     
-#        actornorm = str(bin(i))[2:].replace("0","f").replace("1","t") 
-#        for j in range(64,128):         
-#            criticnorm = str(bin(j))[2:].replace("0","f").replace("1","t")
-    
-    learn("tffffft", "tftftff", conf, myAgent, BATCHSIZE, trackingpoints, 200)    
-
-            
-            
-            
-    time.sleep(99999)    
-
-    
-    
-if __name__ == '__main__':
-    main()
-            
+#def TPSample(conf, agent, batchsize, trackingpoints):
+#    import read_supervised
+#    tmp = list(read_supervised.create_QLearnInputs_from_PTStateBatch(*trackingpoints.next_batch(conf, agent, batchsize), agent))
+#    tmp[1] = [[i[2]] for i in tmp[1]]
+#    return tmp         
+#        
+#    
+#    
+#def learn(conf, myAgent, batchsize, trackingpoints, iterations, actornorm="", criticnorm=""):
+#    tf.reset_default_graph()
+#    
+#    model = DDPG_model(conf, myAgent, tf.Session(), actornorm, criticnorm)
+#
+#    print("ACTORNORM", actornorm, "  CRITICNORM", criticnorm)
+#    
+#    for i in range(iterations):
+#        trackingpoints.reset_batch()
+#        trainBatch = TPSample(conf, myAgent, trackingpoints.numsamples, trackingpoints)
+#        print("Iteration", i, "Accuracy (0 is best)",model.evaluate(trainBatch))  
+#        if i % 5 == 0:
+#            print(np.array(model.inference(trainBatch[0][:6]))) #die ersten 2 states   
+#            print(np.array(trainBatch[1][:6]))
+#        trackingpoints.reset_batch()     
+#        while trackingpoints.has_next(batchsize):
+#            trainBatch = TPSample(conf, myAgent, batchsize, trackingpoints)
+#            model.q_train_step(trainBatch)    
+#                
+#        
+#
+#
+#def main():
+#    import config
+#    conf = config.Config()
+#    conf.num_actions = 1    
+#    conf.action_bounds = [(-1, 1)]
+#    import read_supervised
+#    from server import Containers
+#    import ddpg_rl_agent
+#    myAgent = ddpg_rl_agent.Agent(conf, Containers(), True)
+#    
+#    trackingpoints = read_supervised.TPList(conf.LapFolderName, conf.use_second_camera, conf.msperframe, conf.steering_steps, conf.INCLUDE_ACCPLUSBREAK)
+#    BATCHSIZE = 128
+#    
+#    conf.actor_lr = 0.000001
+#    conf.critic_lr = 0.0001
+#    
+##    for i in range(64,128):     
+##        actornorm = str(bin(i))[2:].replace("0","f").replace("1","t") 
+##        for j in range(64,128):         
+##            criticnorm = str(bin(j))[2:].replace("0","f").replace("1","t")
+#    
+#    learn("tffffft", "tftftff", conf, myAgent, BATCHSIZE, trackingpoints, 200)    
+#
+#            
+#            
+#            
+#    time.sleep(99999)    
+#
+#    
+#    
+#if __name__ == '__main__':
+#    main()
+#            
