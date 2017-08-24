@@ -4,6 +4,8 @@ Created on Tue Aug  1 15:36:29 2017
 
 @author: csten_000
 """
+import matplotlib
+matplotlib.use('WXAgg') #such that plots run in side threads (so pip install wxpython)
 import matplotlib.pyplot as plt
 import numpy as np
 import threading 
@@ -37,11 +39,8 @@ class evaluator():
             self.xml_saver.add_episode(new_vals, **kwargs)
             self.xml_saver.save()
         
-        try:
-            if self.show_plot:
-                self.plotter.update(*new_vals) 
-        except:
-            pass #manchmal klappt das updatennicht, ist aber egal, dann halt beim nächstem mal
+        if self.show_plot:
+            self.plotter.update(*new_vals) 
 
 
     def add_episode(self, *args, **kwargs):
@@ -166,37 +165,33 @@ class plotter():
         self.num_epis = self.episode if self.episode > self.num_epis else self.num_epis
         
         
-        try:
-            if not run_from_ipython():
-                if SHOW_IN_SUBPLOTS:
-                    [plt.sca(i) for i in self.ax]
-                else:
-                    plt.sca(self.ax)
-            
+        if not run_from_ipython():
             if SHOW_IN_SUBPLOTS:
-#                [i.cla() for i in self.ax]   
-                for i in range(len(self.all_vals)):
-                    self.ax[i].plot(range(self.episode), self.all_vals[i], self.colors[i])
-                    self.ax[i].axis([0, self.num_epis, self.minvals[i], self.maxvals[i]])
-                    self.ax[i].set_xlabel("Epoch")
-                    self.ax[i].xaxis.set_label_coords(0.5, 0.125)
-                    self.ax[i].set_ylabel(self.labels[i])
-                    self.ax[i].yaxis.set_label_coords(0.08, 0.5)
+                [plt.sca(i) for i in self.ax]
             else:
-                self.ax.cla()
-                for i in range(len(self.all_vals)):
-                    self.ax.plot(range(self.episode), self.all_vals[i], self.colors[i], label=self.labels[i])
-                self.ax.axis([0, self.num_epis, self.minval, self.maxval])
-                self.ax.legend()
-                plt.xlabel('Epoch')
-                
-            plt.suptitle(self.title, fontsize=16)
-               
-            self.figs.canvas.draw()       
-            plt.show()
-            plt.pause(0.00001) 
-        except ValueError: #dann wurde er geschlossen
-            pass
+                plt.sca(self.ax)
+        
+        if SHOW_IN_SUBPLOTS:
+#                [i.cla() for i in self.ax]   
+            for i in range(len(self.all_vals)):
+                self.ax[i].plot(range(self.episode), self.all_vals[i], self.colors[i])
+                self.ax[i].axis([0, self.num_epis, self.minvals[i], self.maxvals[i]])
+                self.ax[i].set_xlabel("Epoch")
+                self.ax[i].xaxis.set_label_coords(0.5, 0.125)
+                self.ax[i].set_ylabel(self.labels[i])
+                self.ax[i].yaxis.set_label_coords(0.08, 0.5)
+        else:
+            self.ax.cla()
+            for i in range(len(self.all_vals)):
+                self.ax.plot(range(self.episode), self.all_vals[i], self.colors[i], label=self.labels[i])
+            self.ax.axis([0, self.num_epis, self.minval, self.maxval])
+            self.ax.legend()
+            plt.xlabel('Epoch')
+            
+        plt.suptitle(self.title, fontsize=16)
+           
+        self.figs.canvas.draw()       
+        plt.show()
 
 
 

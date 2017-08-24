@@ -49,7 +49,7 @@ class Config():
     minimal_lr = 0.000001
     
     target_update_tau = 0.001 #0.001
-    batch_size = 32
+    batch_size = 64
     startepsilon = 0.2
     minepsilon = 0.005
     finalepsilonframe = 100000

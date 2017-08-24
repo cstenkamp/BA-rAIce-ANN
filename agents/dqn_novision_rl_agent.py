@@ -36,7 +36,7 @@ class Agent(AbstractRLAgent):
 
     def getAgentState(self, *gameState):  
         vvec1_hist, vvec2_hist, otherinput_hist, action_hist = gameState
-        flat_actions = flatten([i if i != None else (0,0,0) for i in action_hist])
+        flat_actions = flatten([i if i is not None else (0,0,0) for i in action_hist])
 #        other_inputs = np.ravel([i.returnRelevant() for i in otherinput_hist])
         other_inputs = np.ravel(otherinput_hist[0].returnRelevant()); other_inputs = np.concatenate((other_inputs,flat_actions))
         stands_inputs = otherinput_hist[0].SpeedSteer.velocity < 10

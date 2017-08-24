@@ -65,7 +65,7 @@ class conv_actorNet():
 
         
 class lowdim_actorNet():
-     def __init__(self, conf, agent, outerscope="actor", name="online", batchnorm = "ttt"):       
+     def __init__(self, conf, agent, outerscope="actor", name="online", batchnorm = "ftt"):       
         tanh_min_bounds,tanh_max_bounds = np.array([-1]), np.array([1])
         min_bounds, max_bounds = np.array(list(zip(*conf.action_bounds))) 
         self.name = name
@@ -167,7 +167,7 @@ class conv_criticNet():
         
         
 class lowdim_criticNet():
-     def __init__(self, conf, agent, outerscope="critic", name="online", batchnorm="ttt"):       
+     def __init__(self, conf, agent, outerscope="critic", name="online", batchnorm="ftt"):       
         self.conf = conf
         self.agent = agent
         self.name = name   
@@ -402,6 +402,9 @@ class DDPG_model():
         predict = self.actor.predict(oldstates, useOnline=False, is_training=False)
         print(predict[:5])
         print(actions[:5])
+        print("acc",np.mean(np.array([abs(np.linalg.norm(predict[i][0]-actions[i][0])) for i in range(len(actions))])))
+        print("brake",np.mean(np.array([abs(np.linalg.norm(predict[i][1]-actions[i][1])) for i in range(len(actions))])))
+        print("steer",np.mean(np.array([abs(np.linalg.norm(predict[i][2]-actions[i][2])) for i in range(len(actions))])))
         return np.mean(np.array([abs(np.linalg.norm(predict[i]-actions[i])) for i in range(len(actions))]))
 
     
