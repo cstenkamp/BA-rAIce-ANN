@@ -16,11 +16,11 @@ from dddqn import DDDQN_model
 from ddpg import DDPG_model
 
 
-ENV_NAME = "CarRacing-v0"
+ENV_NAME = "Pendulum-v0"
 RENDER_ENV = True
 IS_CONTINOUS = True
 NUM_EPISODES = 50000
-MAX_STEPS_EPISODE = 2000
+MAX_STEPS_EPISODE = 1000
 SAVEALL = 20
 SAVE_PATH = "data/"
 MEMORYSIZE = 44000 #max for carracing!
@@ -82,12 +82,12 @@ class config():
         self.ornstein_std = 0.2
         self.batchsize = 64
         self.use_settozero = False
+        self.INCLUDE_ACCPLUSBREAK = True
         self.pretrain_sv_initial_lr = 0.0
         self.initial_lr = 0.005
         self.throttle_index = 1
         self.brake_index = 2
         self.steer_index = 0
-        self.INCLUDE_ACCPLUSBREAK = False
         
         if ENV_NAME == "Pendulum-v0":
             self.update_frequency = 1   

@@ -275,8 +275,8 @@ class InputValContainer(object):
                 assert self.action_hist[0] is not None, "the output-val didn't add the last action before running again!"
                 self.has_past_state = True
             #20.7.: deleted the "if is_new..." functionality, as I think its absolutely not helpful
-            otherinputs = make_otherinputs(othervecs) #is now a namedtuple instead of an array
-                                          
+            otherinputs = make_otherinputs(othervecs).normalized() #is now a namedtuple instead of an array                   
+            
             if hasattr(self.containers.myAgent, "memory") and self.conf.time_ends_episode and  otherinputs.ProgressVec.Laptime >= self.conf.time_ends_episode:
                 self.containers.myAgent.endEpisode("timeover", self.read())
                                           
@@ -289,11 +289,11 @@ class InputValContainer(object):
             
                                                  
             #wenn otherinputs.CenterDist >= 10 war und seitdem keine neue action kam, muss er >= 10 bleiben!
-            if self.otherinput_hist[0].CenterDist >= 10:
-                self.hit_a_wall = True 
-            #wird erst sobald ne action kommt wieder false gesetzt.. und solange es true ist:
-            if self.hit_a_wall:
-                self.otherinput_hist[0] = self.otherinput_hist[0]._replace(CenterDist = 10)
+#            if self.otherinput_hist[0].CenterDist[0] >= 0.99: 
+#                self.hit_a_wall = True 
+#            #wird erst sobald ne action kommt wieder false gesetzt.. und solange es true ist:
+#            if self.hit_a_wall:
+#                self.otherinput_hist[0] = self.otherinput_hist[0]._replace(CenterDist = [1])
                 
             try:
                 if self.conf.reset_if_wrongdirection:

@@ -7,6 +7,7 @@ from math import floor
 from collections import namedtuple
 #====own classes====
 from myprint import myprint as print
+from config import Config
 
 flatten = lambda l: [item for sublist in l for item in sublist]
 DELAY_TO_CONSIDER = 100
@@ -44,22 +45,31 @@ class Otherinputs(Preotherinputs):
     def empty(self):
         return self.__eq__(empty_inputs())
     def returnRelevant(self):
-        return [self.CenterDist]+[i for i in self.SpeedSteer]+[i for i in self.StatusVector]+[i for i in self.LookAheadVec]
-        
+        return self.CenterDist+[i for i in self.SpeedSteer]+[i for i in self.StatusVector]+[i for i in self.LookAheadVec]
+    def as_list(self):
+        return [list(self.ProgressVec), list(self.SpeedSteer), list(self.StatusVector), self.CenterDist+self.CenterDistVec, self.LookAheadVec, self.FBDelta, self.Action]
+    def normalized(self):
+        x = self.as_list()
+        return make_otherinputs([[((x[i][j] - MINVALS.as_list()[i][j])/ (MAXVALS.as_list()[i][j]-MINVALS.as_list()[i][j])) for j in range(len(x[i]))] for i in range(len(x))])
                       
 empty_progressvec = lambda: Progressvec(0, 0, 0, 0)
 empty_speedsteer = lambda: Speedsteer(0, 0, 0, 0, 0, 0, 0, 0, 0)
 empty_statusvector = lambda: Statusvector(0, 0, 0, 0, 0, 0, 0, 0, 0)
-empty_inputs = lambda: Otherinputs(empty_progressvec(), empty_speedsteer(), empty_statusvector(), 0, np.zeros(15), np.zeros(30), np.zeros(2), np.zeros(3))
+empty_inputs = lambda: Otherinputs(empty_progressvec(), empty_speedsteer(), empty_statusvector(), [0], np.zeros(15), np.zeros(30), np.zeros(2), np.zeros(3))
 def make_otherinputs(othervecs):
     return Otherinputs(Progressvec(othervecs[0][0], othervecs[0][1], othervecs[0][2], othervecs[0][3]), \
                        Speedsteer(othervecs[1][0], othervecs[1][1], othervecs[1][2], othervecs[1][3], othervecs[1][4], othervecs[1][5], othervecs[1][6], othervecs[1][7], othervecs[1][8]), \
                        Statusvector(othervecs[2][0], othervecs[2][1], othervecs[2][2], othervecs[2][3], othervecs[2][4], othervecs[2][5], othervecs[2][6], othervecs[2][7], othervecs[2][8]), \
-                       othervecs[3][0], \
+                       [othervecs[3][0]], \
                        othervecs[3][1:], \
                        othervecs[4], \
                        othervecs[5],
                        othervecs[6])
+    
+#MINVALS = Otherinputs(Progressvec(-9,0,0,0), Speedsteer(0,0,-20,-20,0,0,0,0,0),Statusvector(0,-5,-5,-5,-5,-5,-5,-5,-5),[0],[0]*15,[-52]*30,[-Config().time_ends_episode]*2,[i[0] for i in Config().action_bounds])
+#MAXVALS = Otherinputs(Progressvec(100,Config().time_ends_episode,100,1), Speedsteer(1200,1200,20,20,Config().MAXSPEED,1,Config().MAXSPEED,180,Config().MAXSPEED),Statusvector(Config().MAXSPEED/200.0,5,5,5,5,5,5,5,5),[11],[0.3989]*15,[52]*30,[Config().time_ends_episode]*2,[i[1] for i in Config().action_bounds])
+MINVALS = Otherinputs(Progressvec(0,0,0,0), Speedsteer(0,0,-20,-20,0,0,0,0,0),Statusvector(0,-5,-5,-5,-5,-5,-5,-5,-5),[0],[0]*15,[-52]*30,[-Config().time_ends_episode]*2,[0 for i in Config().action_bounds])
+MAXVALS = Otherinputs(Progressvec(100,1,100,1), Speedsteer(1200,1200,20,20,Config().MAXSPEED,1,Config().MAXSPEED,180,Config().MAXSPEED),Statusvector(Config().MAXSPEED/200.0,5,5,5,5,5,5,5,5),[13],[0.3989]*15,[52]*30,[Config().time_ends_episode]*2,[1 for i in Config().action_bounds])
 #this very long part end
 
 ###############################################################################
@@ -81,8 +91,8 @@ class TrackingPoint(object):
        if self.vectors != "":
            _, _, self.visionvec, self.vvec2, othervecs = cutoutandreturnvectors(self.vectors)
            self.vectors = ""
-           self.otherinputs = make_otherinputs(othervecs)
-
+           self.otherinputs = make_otherinputs(othervecs).normalized()
+           
     def discretize_all(self, numcats, include_apb):
         self.discreteAll = discretize_all(self.throttlePedalValue, self.brakePedalValue, self.steeringValue, numcats, include_apb)
 

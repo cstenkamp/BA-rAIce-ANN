@@ -67,12 +67,23 @@ class Agent(AbstractRLAgent):
 
 
     #classical Ornstein-Uhlenbeck-process. The trick in that is, that the mu of the noise is always that one of the last iteration (->temporal correlation)
+#    def make_noisy(self, action):
+#        self._noiseState = self.conf.ornstein_theta * self._noiseState + (1-self.conf.ornstein_theta) * np.random.normal(np.zeros_like(self._noiseState), self.conf.ornstein_std)
+#        action = action + 10*self.epsilon * self._noiseState
+#        clip = lambda x,b: min(max(x,b[0]),b[1])
+#        action = np.array([clip(action[i],self.conf.action_bounds[i]) for i in range(len(action))])
+#        return action
+    
     def make_noisy(self, action):
-        self._noiseState = self.conf.ornstein_theta * self._noiseState + (1-self.conf.ornstein_theta) * np.random.normal(np.zeros_like(self._noiseState), self.conf.ornstein_std)
-        action = action + 10*self.epsilon * self._noiseState
+        def Ornstein(x,mu,theta,sigma):
+            return theta * (mu - x) + sigma * np.random.randn(1)
+        action[0] += max(self.epsilon, 0) * Ornstein(action[0],  0.5 , 1.00, 0.10)
+        action[1] += max(self.epsilon, 0) * Ornstein(action[1], -0.1 , 1.00, 0.05)  
+        action[2] += max(self.epsilon, 0) * Ornstein(action[2],  0.0 , 0.60, 0.30)
         clip = lambda x,b: min(max(x,b[0]),b[1])
         action = np.array([clip(action[i],self.conf.action_bounds[i]) for i in range(len(action))])
         return action
+    
 
 
     #because we don't do epsilon-greedy here but ONP, we let randomAction be policyAction... but only once we filled the memory enough
@@ -155,9 +166,9 @@ class Agent(AbstractRLAgent):
                 infoscreen.print(">"+str(len(self.memory)), containers= self.containers, wname="Memorysize")       
                 
     def learnANN(self):  
-        super().learnANN()
+        tmp = super().learnANN()
         print("ReinfLearnSteps:", self.model.step(), level=3)
         if self.containers.showscreen:
             infoscreen.print(self.model.step(), "Iterations: >"+str(self.model.run_inferences()), containers= self.containers, wname="ReinfLearnSteps")        
-            
+        return tmp
             

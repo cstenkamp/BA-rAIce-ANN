@@ -138,7 +138,7 @@ class AbstractAgent(object):
         return read_supervised.discretize_all(throttle, brake, steer, self.conf.steering_steps, self.conf.INCLUDE_ACCPLUSBREAK)
 
     def inflate_speed(self, speed):
-        return read_supervised.inflate_speed(speed, self.conf.speed_neurons, self.conf.SPEED_AS_ONEHOT, self.conf.MAXSPEED)
+        return read_supervised.inflate_speed(speed, self.conf.speed_neurons, self.conf.SPEED_AS_ONEHOT, 1) #is now normalized!
     
     def resetUnityAndServer(self):
         if self.containers.UnityConnected:
@@ -163,7 +163,7 @@ class AbstractRLAgent(AbstractAgent):
     def __init__(self, conf, containers, isPretrain=False, start_fresh=False, *args, **kwargs):
         super().__init__(conf, containers, *args, **kwargs)
         self.start_fresh = start_fresh
-        self.wallhitPunish = 5;
+        self.wallhitPunish = 2;
         self.wrongDirPunish = 10;
         self.isPretrain = isPretrain
         self.show_plots = False  #wird im initForDriving ggf überschrieben
@@ -207,14 +207,15 @@ class AbstractRLAgent(AbstractAgent):
         
     def calculateReward(self, *gameState):
         vvec1_hist, vvec2_hist, otherinput_hist, action_hist = gameState
-        dist = abs(otherinput_hist[0].CenterDist)
-        stay_on_street = min(1 if dist < 5 else -self.wallhitPunish if dist >= 10 else 1/((dist-5) if (dist-5) != 0 else 0.00001), 1)
-        speed = otherinput_hist[0].SpeedSteer.speedInStreetDir / self.conf.MAXSPEED
-        prog = otherinput_hist[0].ProgressVec.Progress/100 #"die dicken fische liegen hinten" <- extra reward for coming far
+        dist = abs(otherinput_hist[0].CenterDist[0])
+        stay_on_street = (1 if dist < 0.5 else -self.wallhitPunish if dist >= 0.95 else (1/(dist+0.5))**5 if (dist+0.5) != 0 else 0.00001) - 0.5
+        speed = otherinput_hist[0].SpeedSteer.speedInStreetDir 
+        prog = otherinput_hist[0].ProgressVec.Progress #"die dicken fische liegen hinten" <- extra reward for coming far
         prog = prog if prog > 0 else 0
-        direction_bonus = ((360-otherinput_hist[0].SpeedSteer.carAngle)/360)-0.5 if -otherinput_hist[0].SpeedSteer.rightDirection else -1
-        rew = speed + stay_on_street + prog + direction_bonus
+        direction_bonus = otherinput_hist[0].SpeedSteer.carAngle-0.5 if otherinput_hist[0].SpeedSteer.rightDirection else -1
+        rew = speed*3 + stay_on_street + prog + direction_bonus
         rew = min(max(rew, -5),5)
+#        rew = 1-abs(action_hist[1][2]) if action_hist[1] is not None else 0
         return rew 
 
 
@@ -225,7 +226,7 @@ class AbstractRLAgent(AbstractAgent):
 #        if progress_old > 90 and progress_new < 10:
 #            progress_new += 100
 #        progress = round(progress_new-progress_old,3)
-#        stay_on_street = abs(otherinput_hist[0].CenterDist)
+#        stay_on_street = abs(otherinput_hist[0].CenterDist[0])
 #        stay_on_street = round(0 if stay_on_street < 5 else self.wallhitPunish if stay_on_street >= 10 else stay_on_street/20, 3)
 #        return progress-stay_on_street
 
@@ -278,7 +279,7 @@ class AbstractRLAgent(AbstractAgent):
                 else:
                     toUse, toSave = self.randomAction(agentState)
                 self.last_action = toUse, toSave
-                
+            
             self.containers.outputval.update(toUse, toSave, self.containers.inputval.CTimestamp, self.containers.inputval.STimestamp)  
             if self.conf.learnMode == "between":
                 if self.numsteps % self.conf.ForEveryInf == 0 and self.canLearn():
@@ -344,6 +345,7 @@ class AbstractRLAgent(AbstractAgent):
 
     def dauerLearnANN(self, learnSteps):
         i = 0
+        res = 0
         while self.containers.KeepRunning and self.model.run_inferences() <= self.conf.train_for and i < learnSteps:
             cando = True
             #hier gehts darum das learnen zu freezen bis die Inference eingeholt hat. (falls update_frequency gesetzt)
@@ -362,10 +364,11 @@ class AbstractRLAgent(AbstractAgent):
                     else:
                         self.numInferencesAfterLearn = 0
             if cando and not self.containers.freezeLearn and self.canLearn():
-                self.learnANN()
+                res += self.learnANN()
                 if self.conf.ForEveryInf and self.conf.ComesALearn and self.conf.learnMode == "parallel":
                     self.numLearnAfterInference += 1
-            i += 1                
+            i += 1         
+        print(res/learnSteps)
         self.unFreezeInf("updateFrequency") #kann hier ruhig sein, da es eh nur unfreezed falls es aufgrund von diesem grund gefreezed war.
         if self.model.run_inferences() >= self.conf.train_for: #if you exited because you're completely done
             self.saveNet()
@@ -375,10 +378,10 @@ class AbstractRLAgent(AbstractAgent):
             
     def learnANN(self):
         QLearnInputs = self.create_QLearnInputs_from_MemoryBatch(self.memory.sample(self.conf.batch_size))
-        self.model.q_train_step(QLearnInputs, False)
+        tmp = self.model.q_train_step(QLearnInputs, False)
         if self.model.step() > 0 and self.model.step() % self.conf.checkpointall == 0 or self.model.run_inferences() >= self.conf.train_for:
             self.saveNet()          
-
+        return tmp
 
         
     def punishLastAction(self, howmuch):
@@ -410,7 +413,7 @@ class AbstractRLAgent(AbstractAgent):
         self.episode_statevals = []
         #other evaluation-values we need are time the agent took and percentage the agent made. However, becasue those values are not neccessarily
         #officially known to the agent (since agentstate != environmentstate), we need to take them from the environment-state
-        progress = round(otherinput_hist[0].ProgressVec.Progress if endReason != "lapdone" else 100, 2)
+        progress = round(otherinput_hist[0].ProgressVec.Progress*100 if endReason != "lapdone" else 100, 2)
         laptime = round(otherinput_hist[0].ProgressVec.Laptime,1)
         valid = otherinput_hist[0].ProgressVec.fValidLap
         evalstring = "Avg-r:",avg_rewards,"Avg-Q:",avg_values,"progress:",progress,"laptime:",laptime,"(valid)" if valid else ""

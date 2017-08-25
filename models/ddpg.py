@@ -231,7 +231,6 @@ class Actor(object):
                 self.optimize = tf.train.AdamOptimizer(self.conf.actor_lr).apply_gradients(zip(self.actor_gradients, self.online.trainables), global_step=self.pretrain_step_tf)
             else:
                 self.optimize = tf.train.AdamOptimizer(self.conf.actor_lr).apply_gradients(zip(self.actor_gradients, self.online.trainables), global_step=self.step_tf)
-                
             
         self.saver = tf.train.Saver(var_list=get_variables("actor/target"))
 
@@ -442,6 +441,7 @@ class DDPG_model():
         self.actor.update_target_network()
         self.critic.update_target_network()
         return np.max(target_Q)
+#        return np.mean(np.array([i[2] for i in grads[0]])) #
         
                
         
