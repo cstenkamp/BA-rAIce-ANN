@@ -15,6 +15,7 @@ import read_supervised
 from evaluator import evaluator
 from inefficientmemory import Memory
 from utils import random_unlike
+from collections import deque
 
 flatten = lambda l: [item for sublist in l for item in sublist]
 
@@ -163,13 +164,14 @@ class AbstractRLAgent(AbstractAgent):
     def __init__(self, conf, containers, isPretrain=False, start_fresh=False, *args, **kwargs):
         super().__init__(conf, containers, *args, **kwargs)
         self.start_fresh = start_fresh
-        self.wallhitPunish = 2;
-        self.wrongDirPunish = 10;
+        self.wallhitPunish = 1
+        self.wrongDirPunish = 0 #10
         self.isPretrain = isPretrain
         self.show_plots = False  #wird im initForDriving ggf überschrieben
         self.startepsilon = self.conf.startepsilon #standard from config, but may be overridden
         self.minepsilon = self.conf.minepsilon #standard from config, but may be overridden
         self.finalepsilonframe = self.conf.finalepsilonframe #standard from config, but may be overridden
+        self.steeraverage = deque(5*[0], 5)
         #memory will only be added in initfordriving
         
 
@@ -204,19 +206,35 @@ class AbstractRLAgent(AbstractAgent):
         #self.isinitialized = True  #muss jeder agent individuell am Ende machen!
     
         
-        
+    
+    #hard rule for rewards: steering away from bad states cannot be better than being in a good state!
     def calculateReward(self, *gameState):
         vvec1_hist, vvec2_hist, otherinput_hist, action_hist = gameState
-        dist = abs(otherinput_hist[0].CenterDist[0])
-        stay_on_street = (1 if dist < 0.5 else -self.wallhitPunish if dist >= 0.95 else (1/(dist+0.5))**5 if (dist+0.5) != 0 else 0.00001) - 0.5
-        speed = otherinput_hist[0].SpeedSteer.speedInStreetDir 
+        self.steeraverage.append(action_hist[1][2]) 
+        dist = otherinput_hist[0].CenterDist[0]-0.5  #abs davon ist 0 in der mitte, 0.15 vor dem curb, 0.25 mittig auf curb, 0.5 rand
+        angle = otherinput_hist[0].SpeedSteer.carAngle - 0.5
+               
+        speed = otherinput_hist[0].SpeedSteer.speedInStreetDir*3 #Beim maxspeed von 80 maximal 1
+        stay_on_street = ((0.5-abs(dist))*2)+0.35 #jetzt ist größer 1 auf der street
+        stay_on_street = stay_on_street**0.1 if stay_on_street > 1 else stay_on_street**2 #ON street not steep, OFF street very steep 
+        stay_on_street = ((1-((0.5-abs(dist))*2))**10) * -self.wallhitPunish + (1-(1-((0.5-abs(dist))*2))**10) *  stay_on_street #the influence of wallhitpunish is exponentially more relevant the closer to the wall you are
+        #in range [1,-1] for wallhitpunish=1
         prog = otherinput_hist[0].ProgressVec.Progress #"die dicken fische liegen hinten" <- extra reward for coming far
-        prog = prog if prog > 0 else 0
-        direction_bonus = otherinput_hist[0].SpeedSteer.carAngle-0.5 if otherinput_hist[0].SpeedSteer.rightDirection else -1
-        rew = speed*3 + stay_on_street + prog + direction_bonus
-        rew = min(max(rew, -5),5)
-#        rew = 1-abs(action_hist[1][2]) if action_hist[1] is not None else 0
-        return rew 
+        prog = prog/10 if prog > 0 else 0 #becomes in range [0,0.1]
+        direction_bonus = abs((0.5-(abs(angle)))*2/0.75) 
+        direction_bonus = (direction_bonus**0.4 if direction_bonus > 1 else direction_bonus**2) / 1.1 / 2 #no big difference until 45degrees, then BIG diff.
+        #maximally 0.5, minimally 0
+        tmp = (np.mean(self.steeraverage))        
+        steer_bonus1 = tmp/5 + angle #this one rewards sterering into street-direction if the cars angle is off...
+        steer_bonus1 = 0 if np.sign(steer_bonus1) != np.sign(angle) and abs(angle) > 0.15 else steer_bonus1
+        steer_bonus1 = (abs(dist*2)) * ((0.5-abs(angle)) * (1-abs(steer_bonus1))) + (1-abs(dist*2))*0.5  #more relevant the further off you are.
+        steer_bonus2 = (1-((0.5-abs(dist))*2))**10 * -abs(((tmp+np.sign(dist))*np.sign(dist)))/1.5   #more relevant the furhter off, steering away from wall is as valuable as doing nothing in center, doing nothing is worse, steering towards sucks 
+        #so steerbonus1+steerbonus2 is maximally 0.5
+        
+        rew = speed + 0.5 * stay_on_street + prog + 0.5 * direction_bonus + 0.5*(steer_bonus1+steer_bonus2)
+        rew = max(rew, 0) #logik dahinter: wenn das auto neben der wand steht, dann entscheidet es sich doch bei sonst nur negativen rewards freiwillig dafür in die wand zu fahren um sein leiden zu beenden (-2 + 0*negativerwert größer -2+gamma*negativerwert)
+        rew /= 2
+        return rew
 
 
 #    def calculateReward(self, *gameState):
@@ -386,13 +404,15 @@ class AbstractRLAgent(AbstractAgent):
         
     def punishLastAction(self, howmuch):
         assert hasattr(self, "memory")
-        self.memory.punishLastAction(howmuch)
+#        self.memory.punishLastAction(howmuch)
+        print("punishLastAction removed")
         
 
     def endEpisode(self, reason, gameState):  #reasons are: turnedaround, timeover, resetserver, wallhit, rounddone
         assert hasattr(self, "memory")
         #TODO: die ersten 2 zeilen kann auch der abstractagent schon, dann muss ich im server nicht immer nach hasattr(memory) fragen!
         self.resetUnityAndServer()
+        self.steeraverage = deque(5*[0], 5)
         self.episodes += 1        
         mem_epi_slice = self.memory.endEpisode() #bei actions, nach denen resettet wurde, soll er den folgestate nicht mehr beachten (später gucken wenn reset=true dann setze Q_DECAY auf quasi 100%)
         self.eval_episodeVals(mem_epi_slice, gameState, reason)

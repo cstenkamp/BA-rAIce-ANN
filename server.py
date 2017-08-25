@@ -275,7 +275,7 @@ class InputValContainer(object):
                 assert self.action_hist[0] is not None, "the output-val didn't add the last action before running again!"
                 self.has_past_state = True
             #20.7.: deleted the "if is_new..." functionality, as I think its absolutely not helpful
-            otherinputs = make_otherinputs(othervecs).normalized() #is now a namedtuple instead of an array                   
+            otherinputs = make_otherinputs(othervecs).normalized() #is now a namedtuple instead of an array            
             
             if hasattr(self.containers.myAgent, "memory") and self.conf.time_ends_episode and  otherinputs.ProgressVec.Laptime >= self.conf.time_ends_episode:
                 self.containers.myAgent.endEpisode("timeover", self.read())
