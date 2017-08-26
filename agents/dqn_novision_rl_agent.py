@@ -40,7 +40,7 @@ class Agent(AbstractRLAgent):
 #        other_inputs = np.ravel([i.returnRelevant() for i in otherinput_hist])
         other_inputs = np.ravel(otherinput_hist[0].returnRelevant()); 
         flat_actions = list(np.zeros_like(flat_actions))
-        print("Removed actions as input to network, as it only learns from them then")
+        print("Removed actions as input to network, as it only learns from them then", level=-1)
         other_inputs = np.concatenate((other_inputs,flat_actions))
         stands_inputs = otherinput_hist[0].SpeedSteer.velocity < 10
         return None, other_inputs, stands_inputs
