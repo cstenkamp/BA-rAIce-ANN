@@ -23,7 +23,7 @@ class Agent(AbstractRLAgent):
     def __init__(self, conf, containers, isPretrain=False, start_fresh=False, *args, **kwargs):
         self.name = "ddpg_novision_rl_agent" #__file__[__file__.rfind("\\")+1:__file__.rfind(".")]
         super().__init__(conf, containers, isPretrain, start_fresh, *args, **kwargs)
-        self.ff_inputsize = 63 + conf.num_actions * conf.ff_stacksize 
+        self.ff_inputsize = 65 + conf.num_actions * conf.ff_stacksize 
         self.isContinuous = True
         self.usesConv = False
         self._noiseState = np.array([0]*self.conf.num_actions)

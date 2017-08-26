@@ -95,7 +95,7 @@ class AbstractAgent(object):
         self.episodes = 0 #für evaluator, wird bei jedem neustart auf null gesetzt aber das ist ok dafür
         self.evaluator = evaluator(self.containers, self, self.show_plots, self.conf.save_xml,      \
                                    ["average rewards", "average Q-vals", "progress", "laptime"                    ], \
-                                   [(-0.5,2),          50,               100,         self.conf.time_ends_episode ] )                     
+                                   [(-0.1,1.3),        (-1,60),           100,        self.conf.time_ends_episode ] )                     
         
 
         
@@ -215,6 +215,8 @@ class AbstractRLAgent(AbstractAgent):
         angle = otherinput_hist[0].SpeedSteer.carAngle - 0.5
                
         speed = otherinput_hist[0].SpeedSteer.speedInStreetDir*3 #Beim maxspeed von 80 maximal 1
+        badspeed = abs(otherinput_hist[0].SpeedSteer.speedInTraverDir)*3
+        
         stay_on_street = ((0.5-abs(dist))*2)+0.35 #jetzt ist größer 1 auf der street
         stay_on_street = stay_on_street**0.1 if stay_on_street > 1 else stay_on_street**2 #ON street not steep, OFF street very steep 
         stay_on_street = ((1-((0.5-abs(dist))*2))**10) * -self.wallhitPunish + (1-(1-((0.5-abs(dist))*2))**10) *  stay_on_street #the influence of wallhitpunish is exponentially more relevant the closer to the wall you are
@@ -230,6 +232,14 @@ class AbstractRLAgent(AbstractAgent):
         steer_bonus1 = (abs(dist*2)) * ((0.5-abs(angle)) * (1-abs(steer_bonus1))) + (1-abs(dist*2))*0.5  #more relevant the further off you are.
         steer_bonus2 = (1-((0.5-abs(dist))*2))**10 * -abs(((tmp+np.sign(dist))*np.sign(dist)))/1.5   #more relevant the furhter off, steering away from wall is as valuable as doing nothing in center, doing nothing is worse, steering towards sucks 
         #so steerbonus1+steerbonus2 is maximally 0.5
+        
+        #vor den kurven sind bestimmte werte irrelevanter
+        curveMultiplier = 1-abs(otherinput_hist[0].SpeedSteer.CurvinessBeforeCar-0.5)
+        direction_bonus *= curveMultiplier
+        badspeed *= curveMultiplier 
+        
+        speed = speed-badspeed if speed-badspeed > 0 else 0
+        
         
         rew = speed + 0.5 * stay_on_street + prog + 0.5 * direction_bonus + 0.5*(steer_bonus1+steer_bonus2)
         rew = max(rew, 0) #logik dahinter: wenn das auto neben der wand steht, dann entscheidet es sich doch bei sonst nur negativen rewards freiwillig dafür in die wand zu fahren um sein leiden zu beenden (-2 + 0*negativerwert größer -2+gamma*negativerwert)

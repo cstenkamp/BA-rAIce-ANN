@@ -50,13 +50,13 @@ class Config():
     
     target_update_tau = 0.001 #0.001
     batch_size = 64
-    startepsilon = 0.2
-    minepsilon = 0.005
-    finalepsilonframe = 100000
+    startepsilon = 0.25
+    minepsilon = 0.001
+    finalepsilonframe = 300000
     q_decay = 0.99
-    checkpointall = 1000 #RLsteps, not inferences!
-    ornstein_theta = 0.6
-    ornstein_std = 0.2
+    checkpointall = 2000 #RLsteps, not inferences!
+#    ornstein_theta = 0.6
+#    ornstein_std = 0.2
     use_settozero = True
     
     #LEARN SETTINGS    
@@ -68,7 +68,7 @@ class Config():
     save_memory_on_exit = False
     save_memory_all_mins = False
     replaystartsize = 4000
-    memorysize = 50000
+    memorysize = 500000
     use_constantbutbigmemory = False
     visionvecdtype = np.int8 #wäre es np.bool würde er den rand als street sehen!
     keep_memory = True
@@ -77,7 +77,7 @@ class Config():
     
     #GAME SETTINGS
     history_frame_nr = 4 #incl. dem jetzigem!
-    action_repeat = 4
+    action_repeat = 2
     speed_neurons = 20 
     SPEED_AS_ONEHOT = False    
     image_dims = [30,45] 
