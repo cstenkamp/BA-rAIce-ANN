@@ -297,6 +297,11 @@ class AbstractRLAgent(AbstractAgent):
                 else:
                     toUse, toSave = self.randomAction(agentState)
                 self.last_action = toUse, toSave
+              
+#            print("####################")
+#            vvec1_hist, vvec2_hist, otherinput_hist, action_hist = gameState
+#            print(toSave)
+#            print(otherinput_hist[0].SpeedSteer)
             
             self.containers.outputval.update(toUse, toSave, self.containers.inputval.CTimestamp, self.containers.inputval.STimestamp)  
             if self.conf.learnMode == "between":

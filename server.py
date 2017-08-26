@@ -356,7 +356,7 @@ class InputValContainer(object):
         else:
             return None, None, self._read_other(self.otherinput_hist,pastState), self._read_other(self.action_hist,pastState)
         #like I said, this return everything that could be used by an agent. Not every agent uses that. The standard-agent for example uses...
-        #state = (vvec1_hist, vvec2_hist, otherinput_hist[0].SpeedSteer.velocity) #vision plus speed
+        #state = (vvec1_hist, vvec2_hist, otherinput_hist[0].SpeedSteer.velocity) #vision plus speed (not quite anymore, but you get the point)
         #action = action_hist[0]
  
         

@@ -45,7 +45,8 @@ class Otherinputs(Preotherinputs):
     def empty(self):
         return self.__eq__(empty_inputs())
     def returnRelevant(self):
-        return [i for i in self.CenterDistVec]+[i for i in self.SpeedSteer]+[i for i in self.StatusVector]+[i for i in self.LookAheadVec]
+        print("Removed 4 elements from speedsteer here, seems necessary")
+        return [i for i in self.CenterDistVec]+[0]*4+[i for i in self.SpeedSteer[4:]]+[i for i in self.StatusVector]+[i for i in self.LookAheadVec]
     def as_list(self):
         return [list(self.ProgressVec), list(self.SpeedSteer), list(self.StatusVector), self.CenterDist+self.CenterDistVec, self.LookAheadVec, self.FBDelta, self.Action]
     def normalized(self):

@@ -24,6 +24,7 @@ def main(conf, agentname, containers, start_fresh, fake_real, numiters, supervis
     
     tf.reset_default_graph()                                                          
     trackingpoints = read_supervised.TPList(conf.LapFolderName, conf.use_second_camera, conf.msperframe, conf.steering_steps, conf.INCLUDE_ACCPLUSBREAK)
+    
     print("Number of samples:",trackingpoints.numsamples)
     
     if not fake_real:
