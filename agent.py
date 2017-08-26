@@ -454,7 +454,11 @@ class AbstractRLAgent(AbstractAgent):
         return trainBatch
 
 
-    def preTrain(self, dataset, iterations=None, supervised=False):
+    def preTrain(self, dataset, iterations=None, supervised=False):    
+        dataset.reset_batch()
+        trainBatch = self.make_trainbatch(dataset,dataset.numsamples)
+        print('Iteration %3d: Accuracy = %.2f%%' % (self.model.pretrain_episode(), self.model.getAccuracy(trainBatch, likeDDPG=False)), level=10)
+        
         assert self.model.step() == 0, "I dont pretrain if the model already learned on real data!"
         iterations = self.conf.pretrain_iterations if iterations is None else iterations
         print("Starting pretraining", level=10)

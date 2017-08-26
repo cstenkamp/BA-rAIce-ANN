@@ -60,7 +60,7 @@ class Config():
     use_settozero = True
     
     #LEARN SETTINGS    
-    ForEveryInf, ComesALearn = 40000, 10
+    ForEveryInf, ComesALearn = 400, 100
     wallhit_ends_episode = True #problem: wenn es das nicht tun würde, würde er beim lernen den Q-val des folgestates mitbeachten und denken "oh, gegen die Wand fahren ist voll gut"...
     lapdone_ends_episode = True
     time_ends_episode = 60 #sekunden oder False
