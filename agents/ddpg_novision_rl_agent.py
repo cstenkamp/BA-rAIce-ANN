@@ -46,7 +46,7 @@ class Agent(AbstractRLAgent):
 #        other_inputs = np.ravel([i.returnRelevant() for i in otherinput_hist])
         other_inputs = np.ravel(otherinput_hist[0].returnRelevant()); 
         flat_actions = list(np.zeros_like(flat_actions))
-        print("Removed actions as input to network, as it only learns from them then")
+        print("Removed actions as input to network, as it only learns from them then", level=-1)
         other_inputs = np.concatenate((other_inputs,flat_actions))
         stands_inputs = otherinput_hist[0].SpeedSteer.velocity < 10
         return None, other_inputs, stands_inputs
@@ -80,9 +80,9 @@ class Agent(AbstractRLAgent):
     def make_noisy(self, action):
         def Ornstein(x,mu,theta,sigma):
             return theta * (mu - x) + sigma * np.random.randn(1)
-        action[0] += max(self.epsilon, 0) * Ornstein(action[0],  0.5 , 1.00, 0.10)
-        action[1] += max(self.epsilon, 0) * Ornstein(action[1], -0.1 , 1.00, 0.05)  
-        action[2] += max(self.epsilon, 0) * Ornstein(action[2],  0.0 , 0.60, 0.30)
+        action[0] += max(self.epsilon*4, 0) * Ornstein(action[0],  0.5 , 1.00, 0.10)
+        action[1] += max(self.epsilon*4, 0) * Ornstein(action[1], -0.1 , 1.00, 0.05)  
+        action[2] += max(self.epsilon*4, 0) * Ornstein(action[2],  0.0 , 0.60, 0.30)
         clip = lambda x,b: min(max(x,b[0]),b[1])
         action = np.array([clip(action[i],self.conf.action_bounds[i]) for i in range(len(action))])
         return action
