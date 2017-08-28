@@ -25,12 +25,12 @@ def myprint(*args, **kwargs):
            PRINTLEVEL = level
     except KeyError:
         level = 5
-    if level >= PRINTLEVEL:
-        print(*args)
     if level == ONLYONCELEVEL:
         if not args in onceprintedobjects:
             onceprintedobjects.append(args)
-            print(*args)
+            level = PRINTLEVEL
+    if level >= PRINTLEVEL:
+        print(*args)
        
         
         
@@ -44,6 +44,10 @@ def printtofile(*args, **kwargs):
            PRINTLEVEL = level
     except KeyError:
         level = 5
+    if level == ONLYONCELEVEL:
+        if not args in onceprintedobjects:
+            onceprintedobjects.append(args)
+            level = PRINTLEVEL
     if level >= PRINTLEVEL:
         with open("log.txt", "a") as myfile:
             args = [str(i) for i in args]

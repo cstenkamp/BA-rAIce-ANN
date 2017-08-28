@@ -178,6 +178,7 @@ class DuelDQN():
                 q_OP = q_trainer.minimize(loss, global_step=self.step_tf) 
         return q_OP
        
+    
     ############################METHODS FOR RUNNING############################
 
     def save(self, session):

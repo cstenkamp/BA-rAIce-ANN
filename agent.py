@@ -214,8 +214,8 @@ class AbstractRLAgent(AbstractAgent):
         dist = otherinput_hist[0].CenterDist[0]-0.5  #abs davon ist 0 in der mitte, 0.15 vor dem curb, 0.25 mittig auf curb, 0.5 rand
         angle = otherinput_hist[0].SpeedSteer.carAngle - 0.5
                
-        speed = otherinput_hist[0].SpeedSteer.speedInStreetDir*3 #Beim maxspeed von 80 maximal 1
-        badspeed = abs(otherinput_hist[0].SpeedSteer.speedInTraverDir)*3
+        speed = otherinput_hist[0].SpeedSteer.speedInStreetDir*1.5  #maximal realistic speed is ~1
+        badspeed = abs(2*otherinput_hist[0].SpeedSteer.speedInTraverDir-1)*1.5
         
         stay_on_street = ((0.5-abs(dist))*2)+0.35 #jetzt ist größer 1 auf der street
         stay_on_street = stay_on_street**0.1 if stay_on_street > 1 else stay_on_street**2 #ON street not steep, OFF street very steep 
@@ -237,10 +237,10 @@ class AbstractRLAgent(AbstractAgent):
         curveMultiplier = 1-abs(otherinput_hist[0].SpeedSteer.CurvinessBeforeCar-0.5)
         direction_bonus *= curveMultiplier
         badspeed *= curveMultiplier 
+        speed = max(speed,1) if speed > curveMultiplier else speed #dont require full speed in curves: we cap speed-rewards in curves at the percentile of the curviness, and if its bigger, its simply one
         
         speed = speed-badspeed if speed-badspeed > 0 else 0
-        
-        
+            
         rew = speed + 0.5 * stay_on_street + prog + 0.5 * direction_bonus + 0.5*(steer_bonus1+steer_bonus2)
         rew = max(rew, 0) #logik dahinter: wenn das auto neben der wand steht, dann entscheidet es sich doch bei sonst nur negativen rewards freiwillig dafür in die wand zu fahren um sein leiden zu beenden (-2 + 0*negativerwert größer -2+gamma*negativerwert)
         rew /= 2

@@ -7,10 +7,12 @@ from utils import netCopyOps
 import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' #so that TF doesn't show its warnings
 from tensorflow.contrib.framework import get_variables
+from utils import variable_summary
+flatten = lambda l: [item for sublist in l for item in sublist]
+
 
 #batchnorm doesnt really work, and if, only with huge minibatches https://www.reddit.com/r/MachineLearning/comments/671455/d_batch_normalization_in_reinforcement_learning/
 
-       
         
 def dense(x, units, activation=tf.identity, decay=None, minmax=None):
     if minmax is None:
@@ -65,7 +67,7 @@ class conv_actorNet():
 
         
 class lowdim_actorNet():
-     def __init__(self, conf, agent, outerscope="actor", name="online", batchnorm = "ttt"):       
+     def __init__(self, conf, agent, outerscope="actor", name="online", batchnorm = "ftt"):      
         tanh_min_bounds,tanh_max_bounds = np.array([-1]), np.array([1])
         min_bounds, max_bounds = np.array(list(zip(*conf.action_bounds))) 
         self.name = name
@@ -83,18 +85,21 @@ class lowdim_actorNet():
                 self.fc1 = dense(tf.contrib.layers.batch_norm(self.ff_inputs, updates_collections=None, is_training=self.phase), 400, tf.nn.relu, decay=decay) 
             else:
                 self.fc1 = dense(self.ff_inputs, 400, tf.nn.relu, decay=decay) 
-            self.fc1 = dense(self.ff_inputs, 400, tf.nn.relu, decay=decay)
             if batchnorm[1]=="t":
                 self.fc1 = tf.contrib.layers.batch_norm(self.fc1, updates_collections=None, is_training=self.phase, epsilon=1e-7)
+            variable_summary(self.fc1, "fc1AfterBN")
             self.fc2 = dense(self.fc1, 300, tf.nn.relu, decay=decay)
             if batchnorm[2]=="t":
                 self.fc2 = tf.contrib.layers.batch_norm(self.fc2, updates_collections=None, is_training=self.phase, epsilon=1e-7)
+            variable_summary(self.fc2, "fc1AfterBN")
             self.outs = dense(self.fc2, conf.num_actions, tf.nn.tanh, decay=decay, minmax = 3e-4)
+            variable_summary(self.outs, "outs")
             self.outs = apply_constraints(self.conf, self.outs, self.stands_input)
             self.scaled_out = (((self.outs - tanh_min_bounds)/ (tanh_max_bounds - tanh_min_bounds)) * (max_bounds - min_bounds) + min_bounds) #broadcasts the bound arrays
-                              
+            
         self.trainables = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope=outerscope+"/"+self.name)
-        self.ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS, scope=outerscope+"/"+self.name)      
+        self.ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS, scope=outerscope+"/"+self.name)     
+        self.summaryOps = tf.summary.merge(tf.get_collection(tf.GraphKeys.SUMMARIES, scope=outerscope+"/"+self.name)) 
 
 
 #set brake-value to zero if car stands and care for not braking & accelerating simultaneously... however both apply ONLY in inference
@@ -178,6 +183,7 @@ class lowdim_criticNet():
             self.ff_inputs =  tf.placeholder(tf.float32, shape=[None, ff_stacksize*self.agent.ff_inputsize], name="ff_inputs")  
             self.phase = tf.placeholder(tf.bool, name='phase') #for batchnorm, true heißt is_training
             self.actions = tf.placeholder(tf.float32, shape=[None, self.conf.num_actions], name="action_inputs")  
+            variable_summary(self.ff_inputs, "inputs")
             if batchnorm[0]=="t":
                 self.fc1 = dense(tf.contrib.layers.batch_norm(self.ff_inputs, updates_collections=None, is_training=self.phase, epsilon=1e-7), 400, tf.nn.relu, decay=True)
             else:
@@ -185,13 +191,17 @@ class lowdim_criticNet():
             if batchnorm[1]=="t":
                 self.fc1 = tf.contrib.layers.batch_norm(self.fc1, updates_collections=None, is_training=self.phase, epsilon=1e-7)
             self.fc1 =  tf.concat([self.fc1, self.actions], 1)   
+            variable_summary(self.fc1, "fc1AfterBNWithAction")
             self.fc2 = dense(self.fc1, 300, tf.nn.relu, decay=True)
             if batchnorm[2]=="t":
                 self.fc2 = tf.contrib.layers.batch_norm(self.fc2, updates_collections=None, is_training=self.phase, epsilon=1e-7)
+            variable_summary(self.fc2, "fc2AfterBN")
             self.Q = dense(self.fc2, 1, decay=True, minmax=3e-4)
+            variable_summary(self.Q, "Q")
             
         self.trainables = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope=outerscope+"/"+self.name)
         self.ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS, scope=outerscope+"/"+self.name)      
+        self.summaryOps = tf.summary.merge(tf.get_collection(tf.GraphKeys.SUMMARIES, scope=outerscope+"/"+self.name))
        
                 
         
@@ -234,8 +244,13 @@ class Actor(object):
             
         self.saver = tf.train.Saver(var_list=get_variables("actor/target"))
 
-    def train(self, inputs, a_gradient):
-        self.session.run(self.optimize, feed_dict=self._make_inputs(inputs, self.online, {self.action_gradient: a_gradient}))
+    def train(self, inputs, a_gradient, doSummary=False):
+        returns = [self.optimize]
+        if doSummary:
+            returns.append(self.online.summaryOps)
+        else:
+            returns.append(returns[0])
+        return self.session.run(returns, feed_dict=self._make_inputs(inputs, self.online, {self.action_gradient: a_gradient}))
 
     def predict(self, inputs, useOnline=True, is_training=True, is_inference=False):
         carstands = inputs[0][2] if len(inputs) == 1 and len(inputs[0]) > 2 else False
@@ -298,10 +313,15 @@ class Critic(object):
             self.action_grads = tf.gradients(self.online.Q, self.online.actions)
             
         self.saver = tf.train.Saver(var_list=get_variables("critic/target"))
+        
 
-
-    def train(self, inputs, action, target_Q):
-        return self.session.run([self.online.Q, self.optimize, self.loss], feed_dict=self._make_inputs(inputs, self.online, {self.online.actions: action, self.target_Q: target_Q}))
+    def train(self, inputs, action, target_Q, doSummary=False):
+        returns = [self.online.Q, self.optimize, self.loss] 
+        if doSummary:
+            returns.append(self.online.summaryOps)
+        else:
+            returns.append(returns[0])
+        return self.session.run(returns, feed_dict=self._make_inputs(inputs, self.online, {self.online.actions: action, self.target_Q: target_Q}))
 
     def predict(self, inputs, action, useOnline=True):
         net = self.online if useOnline else self.target
@@ -339,7 +359,10 @@ class DDPG_model():
         self.critic = Critic(self.conf, self.agent, self.session, criticbatchnorm, isPretrain) 
         self.run_inf = 0
         self.pretrain_ep = 0
-        
+        self.boardstep = 0
+        if conf.summarize_tensorboard_allstep:
+            self.writer = self.initTensorboard()
+            
         
     def initNet(self, load=False):
         self.session.run(tf.global_variables_initializer())
@@ -424,7 +447,9 @@ class DDPG_model():
     
     
     #expects a whole s,a,r,s,t - tuple
-    def q_train_step(self, batch, decay_lr = False): #TODO DO
+    def q_train_step(self, batch, decay_lr=False): #TODO DO decay_lr
+        self.boardstep += 1
+        doSummary = self.boardstep % self.conf.summarize_tensorboard_allstep == 0 if self.conf.summarize_tensorboard_allstep else False
         oldstates, actions, rewards, newstates, terminals = batch
         #Training the critic...
 #        update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
@@ -432,16 +457,21 @@ class DDPG_model():
         act = self.actor.predict(newstates, useOnline=False)
         target_q = self.critic.predict(newstates, act, useOnline=False)
         cumrewards = np.reshape([rewards[i] if terminals[i] else rewards[i]+self.conf.q_decay*target_q[i] for i in range(len(rewards))], (len(rewards),1))
-        target_Q, _, loss = self.critic.train(oldstates, actions, cumrewards)
+        target_Q, _, loss, sumCritic = self.critic.train(oldstates, actions, cumrewards, doSummary=doSummary)
         #training the actor...        
         a_outs = self.actor.predict(oldstates)
         grads = self.critic.action_gradients(oldstates, a_outs)
-        self.actor.train(oldstates, grads[0])
+        _, sumActor = self.actor.train(oldstates, grads[0], doSummary=doSummary)
         #updating the targetnets...
         self.actor.update_target_network()
         self.critic.update_target_network()
+        if doSummary:
+            self.writer.add_summary(sumCritic, self.critic.step_tf.eval(self.session))
+            self.writer.add_summary(sumActor, self.actor.step_tf.eval(self.session))
         return np.max(target_Q)
-#        return np.mean(np.array([i[2] for i in grads[0]])) #
         
                
-        
+    def initTensorboard(self):
+        folder = self.agent.folder(self.conf.pretrain_log_dir) if self.isPretrain else self.agent.folder(self.conf.log_dir)
+        writer = tf.summary.FileWriter(folder,self.session.graph)
+        return writer

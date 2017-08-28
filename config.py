@@ -58,6 +58,7 @@ class Config():
 #    ornstein_theta = 0.6
 #    ornstein_std = 0.2
     use_settozero = True
+    summarize_tensorboard_allstep = 500 #false or number
     
     #LEARN SETTINGS    
     ForEveryInf, ComesALearn = 400, 100
