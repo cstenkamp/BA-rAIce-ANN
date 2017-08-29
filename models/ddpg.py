@@ -105,20 +105,24 @@ class lowdim_actorNet():
 #set brake-value to zero if car stands and care for not braking & accelerating simultaneously... however both apply ONLY in inference
 def apply_constraints(conf, outs, stands_input):
     if not conf.INCLUDE_ACCPLUSBREAK: #if both throttle and brake are > 0.5, set brake to zero
-        brakeallzero =  tf.stack([outs[:,0], -tf.ones([tf.shape(outs)[0]]), outs[:,2]],axis=1) if conf.brake_index == 1 \
-                   else tf.stack([outs[:,0], outs[:,1], -tf.ones([tf.shape(outs)[0]])],axis=1) if conf.brake_index == 2 \
-                   else tf.stack([-tf.ones([tf.shape(outs)[0]]), outs[:,1], outs[:,2]],axis=1)
-        applywhere = tf.logical_and(tf.cast((outs[:,conf.throttle_index] > -0.1), tf.bool), tf.cast((outs[:,conf.brake_index] > -0.1), tf.bool))
-        outs = tf.cond(stands_input, lambda:tf.where(applywhere, brakeallzero, outs), lambda: outs)  
+        brakeallzero =  tf.stack([outs[:,0], -tf.random_uniform([tf.shape(outs)[0]], maxval=1), outs[:,2]],axis=1) if conf.brake_index == 1 \
+                   else tf.stack([outs[:,0], outs[:,1], -tf.random_uniform([tf.shape(outs)[0]], maxval=1)],axis=1) if conf.brake_index == 2 \
+                   else tf.stack([-tf.random_uniform([tf.shape(outs)[0]], maxval=1), outs[:,1], outs[:,2]],axis=1)
+        throttallzero=  tf.stack([outs[:,0], -tf.random_uniform([tf.shape(outs)[0]], maxval=1), outs[:,2]],axis=1) if conf.throttle_index == 1 \
+                   else tf.stack([outs[:,0], outs[:,1], -tf.random_uniform([tf.shape(outs)[0]], maxval=1)],axis=1) if conf.throttle_index == 2 \
+                   else tf.stack([-tf.random_uniform([tf.shape(outs)[0]], maxval=1), outs[:,1], outs[:,2]],axis=1)                                     
+        setone = tf.where(tf.random_normal([tf.shape(outs)[0]]) > 0, brakeallzero, throttallzero)
+        applywhere = tf.logical_and(tf.cast((outs[:,conf.throttle_index] > 0.5), tf.bool), tf.cast((outs[:,conf.brake_index] > 0.5), tf.bool))
+        outs = tf.cond(tf.equal(tf.shape(outs)[0], tf.constant(1)), lambda:tf.where(applywhere, setone, outs), lambda: outs)  
     if conf.use_settozero:
         brakeallzero =  tf.stack([outs[:,0], -tf.ones([tf.shape(outs)[0]]), outs[:,2]],axis=1) if conf.brake_index == 1 \
                    else tf.stack([outs[:,0], outs[:,1], -tf.ones([tf.shape(outs)[0]])],axis=1) if conf.brake_index == 2 \
                    else tf.stack([-tf.ones([tf.shape(outs)[0]]), outs[:,1], outs[:,2]],axis=1)
         outs = tf.cond(stands_input,lambda: brakeallzero, lambda: outs)
-        throttlebig =  tf.stack([outs[:,0], tf.ones([tf.shape(outs)[0]]), outs[:,2]],axis=1) if conf.throttle_index == 1 \
-                  else tf.stack([outs[:,0], outs[:,1], tf.ones([tf.shape(outs)[0]])],axis=1) if conf.throttle_index == 2 \
-                  else tf.stack([tf.ones([tf.shape(outs)[0]]), outs[:,1], outs[:,2]],axis=1)
-        applywhere = tf.cast((outs[:,conf.throttle_index] < -0.1), tf.bool)
+        throttlebig =  tf.stack([outs[:,0], tf.random_uniform([tf.shape(outs)[0]], maxval=1), outs[:,2]],axis=1) if conf.throttle_index == 1 \
+                  else tf.stack([outs[:,0], outs[:,1], tf.random_uniform([tf.shape(outs)[0]], maxval=1)],axis=1) if conf.throttle_index == 2 \
+                  else tf.stack([tf.random_uniform([tf.shape(outs)[0]], maxval=1), outs[:,1], outs[:,2]],axis=1)
+        applywhere = tf.cast((outs[:,conf.throttle_index] < -0.8), tf.bool)
         outs = tf.cond(stands_input, lambda: tf.where(applywhere, throttlebig, outs), lambda: outs)
     return outs
 
@@ -283,14 +287,14 @@ class Actor(object):
         
 
 class Critic(object):
-    def __init__(self, conf, agent, session, batchnormstring="", isPretrain=False):
+    def __init__(self, conf, agent, session, batchnormstring="", isPretrain=False, name="critic"):
         self.conf = conf
         self.agent = agent
         self.session = session
         self.isPretrain = isPretrain
         kwargs = {"batchnorm": batchnormstring} if len(batchnormstring) > 0 else {}
 
-        with tf.variable_scope("critic"):
+        with tf.variable_scope(name):
             
             with tf.variable_scope("target"): #damit der saver das mit saved
                 self.step_tf = tf.Variable(tf.constant(0), dtype=tf.int32, name='step_tf', trainable=False)
@@ -357,6 +361,7 @@ class DDPG_model():
         self.isPretrain = isPretrain
         self.actor = Actor(self.conf, self.agent, self.session, actorbatchnorm, isPretrain)
         self.critic = Critic(self.conf, self.agent, self.session, criticbatchnorm, isPretrain) 
+        self.statecounter = Critic(self.conf, self.agent, self.session, "", isPretrain, name="StateCounter") 
         self.run_inf = 0
         self.pretrain_ep = 0
         self.boardstep = 0
@@ -376,14 +381,17 @@ class DDPG_model():
                 self._load(from_pretrain=True)                
                 
         self.session.run(netCopyOps(self.actor.target, self.actor.online))
-        self.session.run(netCopyOps(self.critic.target, self.critic.online))      
+        self.session.run(netCopyOps(self.critic.target, self.critic.online))   
+        self.session.run(netCopyOps(self.statecounter.target, self.statecounter.online))      
         
     
     def save(self):
         folder = self.conf.pretrain_checkpoint_dir if self.isPretrain else self.conf.checkpoint_dir
         critic_file = os.path.join(self.agent.folder(os.path.join(folder,"critic")), 'model.ckpt')
         self.critic.saver.save(self.session, critic_file, global_step=self.critic.pretrain_step_tf if self.isPretrain else self.critic.step_tf)
-        actor_file = os.path.join(self.agent.folder(os.path.join(folder,"actor")), 'model.ckpt')
+        statecount_file = os.path.join(self.agent.folder(os.path.join(folder,"statecounter")), 'model.ckpt')
+        self.statecounter.saver.save(self.session, statecount_file, global_step=self.statecounter.pretrain_step_tf if self.isPretrain else self.statecounter.step_tf)
+        actor_file = os.path.join(self.agent.folder(os.path.join(folder,"actor")), 'model.ckpt')        
         self.session.run(self.actor.run_inferences_tf.assign(self.run_inf))
         self.session.run(self.actor.pretrain_episode_tf.assign(self.pretrain_ep))
         self.actor.saver.save(self.session, actor_file, global_step=self.actor.pretrain_step_tf if self.isPretrain else self.actor.step_tf)
@@ -394,9 +402,11 @@ class DDPG_model():
         folder = self.conf.pretrain_checkpoint_dir if from_pretrain else self.conf.checkpoint_dir
         critic_ckpt = tf.train.get_checkpoint_state(self.agent.folder(os.path.join(folder,"critic")))
         actor_ckpt = tf.train.get_checkpoint_state(self.agent.folder(os.path.join(folder,"actor")))
+        statecounter_ckpt = tf.train.get_checkpoint_state(self.agent.folder(os.path.join(folder,"statecounter")))
         if critic_ckpt and actor_ckpt and critic_ckpt.model_checkpoint_path and actor_ckpt.model_checkpoint_path:
             self.critic.saver.restore(self.session, critic_ckpt.model_checkpoint_path)
             self.actor.saver.restore(self.session, actor_ckpt.model_checkpoint_path)
+            self.statecounter.saver.restore(self.session, statecounter_ckpt.model_checkpoint_path)
             self.run_inf = self.actor.run_inferences_tf.eval(self.session)
             self.pretrain_ep = self.actor.pretrain_episode_tf.eval(self.session)
         else:
@@ -422,11 +432,9 @@ class DDPG_model():
     def getAccuracy(self, batch, likeDDPG=True): #dummy for consistency to DDDQN
         oldstates, actions, _, _, _ = batch
         predict = self.actor.predict(oldstates, useOnline=False, is_training=False)
-        print(predict[:5])
-        print(actions[:5])
-        print("throt",np.mean(np.array([abs(np.linalg.norm(predict[i][0]-actions[i][0])) for i in range(len(actions))])))
-        print("brake",np.mean(np.array([abs(np.linalg.norm(predict[i][1]-actions[i][1])) for i in range(len(actions))])))
-        print("steer",np.mean(np.array([abs(np.linalg.norm(predict[i][2]-actions[i][2])) for i in range(len(actions))])))
+#        print("throt",np.mean(np.array([abs(np.linalg.norm(predict[i][0]-actions[i][0])) for i in range(len(actions))])))
+#        print("brake",np.mean(np.array([abs(np.linalg.norm(predict[i][1]-actions[i][1])) for i in range(len(actions))])))
+#        print("steer",np.mean(np.array([abs(np.linalg.norm(predict[i][2]-actions[i][2])) for i in range(len(actions))])))
         return np.mean(np.array([abs(np.linalg.norm(predict[i]-actions[i])) for i in range(len(actions))]))
 
     
@@ -436,6 +444,8 @@ class DDPG_model():
         self.run_inf += 1
         action = self.actor.predict(oldstates, useOnline=False, is_training=False, is_inference=True)
         value =  self.critic.predict(oldstates, action, useOnline=False)
+        self.statecounter.train(oldstates, action, self.statecounter.predict(oldstates,action)+0.1, doSummary=False)
+        self.statecounter.update_target_network()
         return action, value
         
     
@@ -443,6 +453,11 @@ class DDPG_model():
     def statevalue(self, oldstates):                                                  
         action = self.actor.predict(oldstates, useOnline=False, is_training=False)  
         return self.critic.predict(oldstates, action, useOnline=False)[0]
+    
+    #deleteme
+    def pseudostatecount(self, oldstates, action):                                              
+        return self.statecounter.predict(oldstates, action, useOnline=False)[0]
+    
     
     
     

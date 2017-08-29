@@ -80,8 +80,8 @@ class Agent(AbstractRLAgent):
     def make_noisy(self, action):
         def Ornstein(x,mu,theta,sigma):
             return theta * (mu - x) + sigma * np.random.randn(1)
-        action[0] += max(self.epsilon*4, 0) * Ornstein(action[0],  0.5 , 1.00, 0.10)
-        action[1] += max(self.epsilon*4, 0) * Ornstein(action[1], -0.1 , 1.00, 0.05)  
+        action[0] += max(self.epsilon*4, 0) * Ornstein(action[0],  0.5 , 0.85, 0.10)
+        action[1] += max(self.epsilon*4, 0) * Ornstein(action[1],  0.1 , 0.85, 0.05)  
         action[2] += max(self.epsilon*4, 0) * Ornstein(action[2],  0.0 , 0.60, 0.30)
         clip = lambda x,b: min(max(x,b[0]),b[1])
         action = np.array([clip(action[i],self.conf.action_bounds[i]) for i in range(len(action))])
@@ -102,8 +102,13 @@ class Agent(AbstractRLAgent):
         action = self.make_noisy(action[0])
         action = [round(i,3) for i in action]
         toUse = "["+str(action[0])+", "+str(action[1])+", "+str(action[2])+"]"
+        
+        #deleteme
+        pseudocount = self.model.pseudostatecount(self.makeInferenceUsable(agentState), [self.makeNetUsableAction(action)])[0]
+                  
+                  
         if self.containers.showscreen:
-            infoscreen.print(toUse, containers=self.containers, wname="Last command")
+            infoscreen.print(toUse, "Pseudocount:",pseudocount, containers=self.containers, wname="Last command")
             if self.model.run_inferences() % 100 == 0:
                 infoscreen.print(self.model.step(), "Iterations: >"+str(self.model.run_inferences()), containers=self.containers, wname="ReinfLearnSteps")
                 infoscreen.print(self.epsilon, containers=self.containers, wname="Epsilon")
