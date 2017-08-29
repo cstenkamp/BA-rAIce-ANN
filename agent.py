@@ -214,8 +214,8 @@ class AbstractRLAgent(AbstractAgent):
         dist = otherinput_hist[0].CenterDist[0]-0.5  #abs davon ist 0 in der mitte, 0.15 vor dem curb, 0.25 mittig auf curb, 0.5 rand
         angle = otherinput_hist[0].SpeedSteer.carAngle - 0.5
                
-        speed = otherinput_hist[0].SpeedSteer.speedInStreetDir*1.5  #maximal realistic speed is ~1
-        badspeed = abs(2*otherinput_hist[0].SpeedSteer.speedInTraverDir-1)*1.5
+        speed = otherinput_hist[0].SpeedSteer.speedInStreetDir*3  #maximal realistic speed is ~2 
+        badspeed = abs(2*otherinput_hist[0].SpeedSteer.speedInTraverDir-1)*3
         
         stay_on_street = ((0.5-abs(dist))*2)+0.35 #jetzt ist größer 1 auf der street
         stay_on_street = stay_on_street**0.1 if stay_on_street > 1 else stay_on_street**2 #ON street not steep, OFF street very steep 
