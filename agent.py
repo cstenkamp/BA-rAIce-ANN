@@ -95,7 +95,7 @@ class AbstractAgent(object):
         self.episodes = 0 #für evaluator, wird bei jedem neustart auf null gesetzt aber das ist ok dafür
         self.evaluator = evaluator(self.containers, self, self.show_plots, self.conf.save_xml,      \
                                    ["average rewards", "average Q-vals", "progress", "laptime"                    ], \
-                                   [(-0.1,1.3),        (-1,60),           100,        self.conf.time_ends_episode ] )                     
+                                   [(-0.1,1.3),        (-1,100),          100,        self.conf.time_ends_episode ] )                     
         
 
         

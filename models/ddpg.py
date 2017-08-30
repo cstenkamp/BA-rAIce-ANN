@@ -292,7 +292,7 @@ class Critic(object):
         self.agent = agent
         self.session = session
         self.isPretrain = isPretrain
-        kwargs = {"batchnorm": batchnormstring} if len(batchnormstring) > 0 else {}
+        kwargs = {"batchnorm": batchnormstring, "outerscope": name} if len(batchnormstring) > 0 else {"outerscope": name}
 
         with tf.variable_scope(name):
             
@@ -316,7 +316,7 @@ class Critic(object):
                 self.optimize = tf.train.AdamOptimizer(self.conf.critic_lr).minimize(self.loss, global_step = self.step_tf)
             self.action_grads = tf.gradients(self.online.Q, self.online.actions)
             
-        self.saver = tf.train.Saver(var_list=get_variables("critic/target"))
+        self.saver = tf.train.Saver(var_list=get_variables(name+"/target"))
         
 
     def train(self, inputs, action, target_Q, doSummary=False):
@@ -444,7 +444,10 @@ class DDPG_model():
         self.run_inf += 1
         action = self.actor.predict(oldstates, useOnline=False, is_training=False, is_inference=True)
         value =  self.critic.predict(oldstates, action, useOnline=False)
-        self.statecounter.train(oldstates, action, self.statecounter.predict(oldstates,action)+0.1, doSummary=False)
+        doSummary = self.boardstep % self.conf.summarize_tensorboard_allstep == 0 if self.conf.summarize_tensorboard_allstep else False
+        _, _, _, sumCount = self.statecounter.train(oldstates, action, self.statecounter.predict(oldstates,action)+1, doSummary=doSummary)
+        if doSummary:
+            self.writer.add_summary(sumCount, self.statecounter.step_tf.eval(self.session))            
         self.statecounter.update_target_network()
         return action, value
         
