@@ -478,6 +478,7 @@ def showhelp():
 "-noplot" to turn off the plots evaluating each episode
 "-startfresh" to use a RL-agent without and (supervised or reinforcement) pretraining
 "-nomemorykeep" to not save the memory for this run.
+"-nomemoryload" to not LOAD the memory, which can save a lot of time
 "-help" shows this help and exits
 Concerning agents:
 Without any arguments, the agent defined in "dqn_rl_agent" is used
@@ -510,7 +511,7 @@ def create_socket(port):
 
 
 
-def main(conf, agentname, no_learn, show_screen, show_plots, start_fresh, nomemorykeep):
+def main(conf, agentname, no_learn, show_screen, show_plots, start_fresh, nomemorykeep, nomemoryload):
     containers = Containers()
     containers.conf = conf
     containers.no_learn = no_learn
@@ -524,7 +525,7 @@ def main(conf, agentname, no_learn, show_screen, show_plots, start_fresh, nomemo
         conf.startepsilon = 0 #or whatever random-value will be in 
             
     agentclass = __import__(agentname).Agent
-    containers.myAgent = agentclass(conf, containers, isPretrain=False, start_fresh=start_fresh) 
+    containers.myAgent = agentclass(conf, containers, isPretrain=False, start_fresh=start_fresh, nomemoryload=nomemoryload) 
     containers.myAgent.initForDriving(keep_memory = (not nomemorykeep), show_plots=show_plots)
     
     if show_screen:
@@ -616,4 +617,4 @@ if __name__ == '__main__':
         else:
             agentname = "dqn_rl_agent"
             
-    main(conf, agentname, ("-nolearn" in sys.argv), not ("-noscreen" in sys.argv), not ("-noplot" in sys.argv), ("-startfresh" in sys.argv), ("-nomemorykeep" in sys.argv))    
+    main(conf, agentname, ("-nolearn" in sys.argv), not ("-noscreen" in sys.argv), not ("-noplot" in sys.argv), ("-startfresh" in sys.argv), ("-nomemorykeep" in sys.argv), ("-nomemoryload" in sys.argv))    

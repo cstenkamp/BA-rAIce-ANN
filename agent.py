@@ -173,6 +173,7 @@ class AbstractAgent(object):
 class AbstractRLAgent(AbstractAgent):
     def __init__(self, conf, containers, isPretrain=False, start_fresh=False, *args, **kwargs):
         super().__init__(conf, containers, *args, **kwargs)
+        self.nomemoryload = kwargs["nomemoryload"] if "nomemoryload" in kwargs else False
         self.start_fresh = start_fresh
         self.wallhitPunish = 5
         self.wrongDirPunish = 10
@@ -205,7 +206,7 @@ class AbstractRLAgent(AbstractAgent):
             assert os.path.exists(self.folder(self.conf.pretrain_checkpoint_dir) or self.folder(self.conf.checkpoint_dir)), "I need any kind of pre-trained model"
         
         if not hasattr(self, "memory"): #einige agents haben bereits eine andere memory-implementation, die sollste nicht überschreiben
-            self.memory = Memory(self.conf.memorysize, self.conf, self)  
+            self.memory = Memory(self.conf.memorysize, self.conf, self, load=(not self.nomemoryload))  
         super().initForDriving(*args, **kwargs) 
         self.keep_memory = kwargs["keep_memory"] if "keep_memory" in kwargs else self.conf.keep_memory
         self.freezeInfReasons = []
@@ -224,7 +225,7 @@ class AbstractRLAgent(AbstractAgent):
         dist = otherinput_hist[0].CenterDist[0]-0.5  #abs davon ist 0 in der mitte, 0.15 vor dem curb, 0.25 mittig auf curb, 0.5 rand
         angle = otherinput_hist[0].SpeedSteer.carAngle - 0.5
                
-        speed = otherinput_hist[0].SpeedSteer.speedInStreetDir*3  #maximal realistic speed is ~2 
+        speed = otherinput_hist[0].SpeedSteer.speedInStreetDir*2.5  #maximal realistic speed is ~2 
         speed = min(speed,1)
         badspeed = abs(2*otherinput_hist[0].SpeedSteer.speedInTraverDir-1)*3
         
@@ -252,9 +253,23 @@ class AbstractRLAgent(AbstractAgent):
         
         speed = speed-badspeed if speed-badspeed > 0 else 0
             
-        rew = speed + stay_on_street + prog + 0.5 * direction_bonus + 0.5*(steer_bonus1+steer_bonus2)
+        #rew = (speed + stay_on_street + prog + 0.5 * direction_bonus + 0.5*(steer_bonus1+steer_bonus2)) / 2
+                
+        speedInRelationToWallDist = otherinput_hist[0].WallDistVec[6]-otherinput_hist[0].SpeedSteer.velocity+(100/250)
+        speedInRelationToWallDist = 1-(abs(speedInRelationToWallDist)*3) if speedInRelationToWallDist < 0 else (1-speedInRelationToWallDist)+0.33
+                              
+        rew = (2*speedInRelationToWallDist + stay_on_street + 0.5*direction_bonus + 0.5*(steer_bonus1+steer_bonus2))/4
+         
+        slidingToWall = (min(0.05, otherinput_hist[0].WallDistVec[2]) / 0.05)**3
+        toWallSpeed =  (1-slidingToWall) * ((min(0.1, otherinput_hist[0].SpeedSteer.velocity) / 0.1)) #kann grundsätzlich abgezogen werden, da er dann echt am arsch ist
+         
+        rew -= toWallSpeed
+                         
+        if self.containers.showscreen:
+            #if the reward is between 0 and 1, the ColorArea will turn from black to white, where white is perfect
+            self.containers.screenwidgets["ColorArea"].updateCol(rew)   
+        
         rew = max(rew, 0) #logik dahinter: wenn das auto neben der wand steht, dann entscheidet es sich doch bei sonst nur negativen rewards freiwillig dafür in die wand zu fahren um sein leiden zu beenden (-2 + 0*negativerwert größer -2+gamma*negativerwert)
-        rew /= 2
         return rew
 
 
@@ -331,13 +346,13 @@ class AbstractRLAgent(AbstractAgent):
                     self.freezeInf("LearningComes")
                     self.dauerLearnANN(self.conf.ComesALearn)
                     self.unFreezeInf("LearningComes")
-                
+        else:
+            toUse, toSave = self.randomAction(agentState)
             
         
     #gamestate and paststate sind jeweils (vvec1_hist, vvec2_hist, otherinputs_hist, action_hist) #TODO: nicht mit gamestate und paststate, direkt mit agentstate!
     def addToMemory(self, gameState, pastState): 
-        assert hasattr(self, "memory") and self.memory is not None, "I don't have a memory, that's fatal."
-        if type(pastState) in (np.ndarray, list, tuple): #nach reset/start ist pastState einfach False
+        if (type(pastState) in (np.ndarray, list, tuple)): #nach reset/start ist pastState einfach False
             past_conv_inputs, past_other_inputs, _ = self.getAgentState(*pastState)
             s  = (past_conv_inputs, past_other_inputs)
             a  = self.getAction(*pastState)  #das (throttle, brake, steer)-tuple. 
@@ -395,7 +410,7 @@ class AbstractRLAgent(AbstractAgent):
                 
     def canLearn(self):
         return len(self.memory) > self.conf.batch_size+self.conf.history_frame_nr+1 and \
-               len(self.memory) > self.conf.replaystartsize and self.model.run_inferences() < self.conf.train_for
+               len(self.memory) > self.conf.replaystartsize and self.model.run_inferences() < self.conf.train_for 
 
 
 
@@ -441,12 +456,11 @@ class AbstractRLAgent(AbstractAgent):
 
         
     def punishLastAction(self, howmuch):
-        assert hasattr(self, "memory")
-        self.memory.punishLastAction(howmuch)
+        if hasattr(self, "memory") and self.memory is not None:
+            self.memory.punishLastAction(howmuch)
         
 
     def endEpisode(self, reason, gameState):  #reasons are: turnedaround, timeover, resetserver, wallhit, rounddone
-        assert hasattr(self, "memory")
         #TODO: die ersten 2 zeilen kann auch der abstractagent schon, dann muss ich im server nicht immer nach hasattr(memory) fragen!
         self.resetUnityAndServer()
         self.steeraverage = deque(5*[0], 5)
@@ -456,11 +470,12 @@ class AbstractRLAgent(AbstractAgent):
 
            
     def saveNet(self):
-        self.freezeEverything("saveNet")
-        self.model.save()
-        if self.conf.save_memory_with_checkpoint and not self.model.isPretrain:
-            self.memory.save_memory()
-        self.unFreezeEverything("saveNet")
+        if hasattr(self, "model"):
+            self.freezeEverything("saveNet")
+            self.model.save()
+            if self.conf.save_memory_with_checkpoint and not self.model.isPretrain and hasattr(self, "memory") and self.memory is not None:
+                self.memory.save_memory()
+            self.unFreezeEverything("saveNet")
 
         
     def eval_episodeVals(self, mem_epi_slice, gameState, endReason):
@@ -492,7 +507,7 @@ class AbstractRLAgent(AbstractAgent):
         return trainBatch
 
 
-    def preTrain(self, dataset, iterations=None, supervised=False):    
+    def preTrain(self, dataset, iterations=None, supervised=False):  
         dataset.reset_batch()
         trainBatch = self.make_trainbatch(dataset,dataset.numsamples)
         print('Iteration %3d: Accuracy = %.2f%%' % (self.model.pretrain_episode(), self.model.getAccuracy(trainBatch, likeDDPG=False)), level=10)

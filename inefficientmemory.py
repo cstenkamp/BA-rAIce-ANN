@@ -25,7 +25,7 @@ SAVENAME = "memory"
 
 #TODO: not sure how thread-safe this is.. https://stackoverflow.com/questions/13610654/how-to-make-built-in-containers-sets-dicts-lists-thread-safe
 class Memory(object):
-    def __init__(self, capacity, conf, agent):
+    def __init__(self, capacity, conf, agent, load=True):
         self._lock = lock = threading.Lock()
         self.conf = conf
         self.agent = agent
@@ -37,7 +37,7 @@ class Memory(object):
         self.lastsavetime = current_milli_time()
         self._size = 0
         
-        if not self.agent.start_fresh:
+        if not self.agent.start_fresh and load:
             corrupted = False
             if os.path.exists(self.memorypath+SAVENAME+'.pkl'):
                 try:

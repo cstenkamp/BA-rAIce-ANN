@@ -1,4 +1,4 @@
-from tkinter import Text, END, Tk, X
+from tkinter import Text, END, Tk, X, Canvas
 import queue
 import time
 
@@ -24,6 +24,30 @@ class ThreadSafeConsole(Text):
         except queue.Empty:
             pass
         self.after(100, self.update_me)
+        
+        
+class ThreadSafeCanvas(Canvas):
+    def __init__(self, master, **options):
+        Canvas.__init__(self, master, **options)
+        self.queue = queue.Queue()
+        self.update_me()
+    def updateCol(self, content):
+        self.queue.put(content)
+    def clear(self):
+        self.queue.put(None)
+    def colorFromValue(self, val):
+        col = min(255,max(0,int(val*255)))
+        return '#%02x%02x%02x' % (col, col, col)
+    def update_me(self):
+        try:
+            while 1:
+                content = self.queue.get_nowait()
+                if content is not None:
+                    self.create_rectangle(10, 10, 190, 90, fill=self.colorFromValue(content)) 
+                    self.update_idletasks()
+        except queue.Empty:
+            pass
+        self.after(100, self.update_me)        
 
 # this function pipes input to a widget
 def print(*args, containers, wname):
@@ -53,6 +77,8 @@ def showScreen(containers):
     reinflearnsteps.pack(fill=X)
     lastepisode = ThreadSafeConsole(root, width=1, height=2)
     lastepisode.pack(fill=X)
+    colorarea = ThreadSafeCanvas(root, width=200, height=100)
+    colorarea.pack();
     if not containers.myAgent.isContinuous:
         currentqvals = ThreadSafeConsole(root, width=55, height=containers.conf.dnum_actions+1)
         currentqvals.pack(fill=X)
@@ -64,5 +90,5 @@ def showScreen(containers):
 
     containers.showscreen = True
     containers.screenwidgets = {"Last command": lastcommand, "Memorysize": memorysize, "Last memory": lastmemory, "Epsilon": epsilon, "Last big punish": lastpunish, \
-                                "ReinfLearnSteps": reinflearnsteps, "Current Q Vals": currentqvals, "Last Epsd": lastepisode}
+                                "ReinfLearnSteps": reinflearnsteps, "Current Q Vals": currentqvals, "Last Epsd": lastepisode, "ColorArea": colorarea}
     return root
