@@ -15,7 +15,7 @@ import read_supervised
 from evaluator import evaluator
 from inefficientmemory import Memory
 from utils import random_unlike
-from collections import deque
+from collections import deque, Counter
 
 flatten = lambda l: [item for sublist in l for item in sublist]
 
@@ -97,8 +97,16 @@ class AbstractAgent(object):
         if self.use_evaluator:
             self.evaluator = evaluator(self.containers, self, self.show_plots, self.conf.save_xml,      \
                                        ["average rewards", "average Q-vals", "progress", "laptime"                    ], \
-                                       [(-0.1,1.3),        (-1,100),          100,        self.conf.time_ends_episode ] )                     
-        
+                                       [(-0.1,1.3),        (-1,100),          100,        self.conf.time_ends_episode ] ) 
+
+        #statecounterstuff deleteme
+#        self.allN = len(self.memory)
+#        CompleteBatch = self.create_QLearnInputs_from_MemoryBatch(self.memory[0:len(self.memory)])
+#        allvecs = self.model.getstatecountfeaturevec(CompleteBatch[0],CompleteBatch[1])
+#        byElement = list(zip(*allvecs))
+#        allzeros = dict([(i,0) for i in range(-20,21)])
+#        self.CountsByElement = [{**allzeros, **dict(Counter(i).items())} for i in byElement]                    
+        #statecounterstuffdeleteme ende
 
         
     def performAction(self, gameState, pastState):
@@ -166,8 +174,8 @@ class AbstractRLAgent(AbstractAgent):
     def __init__(self, conf, containers, isPretrain=False, start_fresh=False, *args, **kwargs):
         super().__init__(conf, containers, *args, **kwargs)
         self.start_fresh = start_fresh
-        self.wallhitPunish = 1
-        self.wrongDirPunish = 0 #10
+        self.wallhitPunish = 5
+        self.wrongDirPunish = 10
         self.isPretrain = isPretrain
         self.show_plots = False  #wird im initForDriving ggf überschrieben
         self.startepsilon = self.conf.startepsilon #standard from config, but may be overridden
@@ -217,6 +225,7 @@ class AbstractRLAgent(AbstractAgent):
         angle = otherinput_hist[0].SpeedSteer.carAngle - 0.5
                
         speed = otherinput_hist[0].SpeedSteer.speedInStreetDir*3  #maximal realistic speed is ~2 
+        speed = min(speed,1)
         badspeed = abs(2*otherinput_hist[0].SpeedSteer.speedInTraverDir-1)*3
         
         stay_on_street = ((0.5-abs(dist))*2)+0.35 #jetzt ist größer 1 auf der street
@@ -243,7 +252,7 @@ class AbstractRLAgent(AbstractAgent):
         
         speed = speed-badspeed if speed-badspeed > 0 else 0
             
-        rew = speed + 0.5 * stay_on_street + prog + 0.5 * direction_bonus + 0.5*(steer_bonus1+steer_bonus2)
+        rew = speed + stay_on_street + prog + 0.5 * direction_bonus + 0.5*(steer_bonus1+steer_bonus2)
         rew = max(rew, 0) #logik dahinter: wenn das auto neben der wand steht, dann entscheidet es sich doch bei sonst nur negativen rewards freiwillig dafür in die wand zu fahren um sein leiden zu beenden (-2 + 0*negativerwert größer -2+gamma*negativerwert)
         rew /= 2
         return rew
@@ -339,11 +348,22 @@ class AbstractRLAgent(AbstractAgent):
             self.memory.append(markovtuple)  
             print("adding to Memory:",a, r, level=4) 
             #values for evalation:
+            
+#            statesample = np.array(self.model.getstatecountfeaturevec(self.makeInferenceUsable(s),[self.makeNetUsableAction(a)])[0])
+#                
+#            relativeNums = np.zeros_like(statesample)
+#            for i in range(len(statesample)):
+#                relativeNums[i] = (self.CountsByElement[i][statesample[i]]+0.5) / (self.allN+1)
+#        
+#            count = np.prod(np.array(relativeNums))*1e+23
+            
+            count = 0
+            
             stateval = self.model.statevalue(self.makeInferenceUsable(s))[0] 
             qval = self.model.qvalue(self.makeInferenceUsable(s),[self.makeNetUsableAction(a)])[0]
             self.episode_statevals.append(stateval)
-            return a, r, qval, self.humantakingcontrolstring #damit agents das printen können wenn sie wollen
-        return None, 0, 0, ""
+            return a, r, qval, count, self.humantakingcontrolstring #damit agents das printen können wenn sie wollen
+        return None, 0, 0, 0, ""
       
        
      
@@ -422,8 +442,7 @@ class AbstractRLAgent(AbstractAgent):
         
     def punishLastAction(self, howmuch):
         assert hasattr(self, "memory")
-#        self.memory.punishLastAction(howmuch)
-        print("punishLastAction removed")
+        self.memory.punishLastAction(howmuch)
         
 
     def endEpisode(self, reason, gameState):  #reasons are: turnedaround, timeover, resetserver, wallhit, rounddone

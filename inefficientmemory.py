@@ -133,7 +133,7 @@ class Memory(object):
 #            print(self._buffer[j][0][1][0], self.agent.dediscretize(self.agent.discretize(*self._buffer[j][1])), self._buffer[j][2], self._buffer[j][3][1][0], self._buffer[j][4])
         prev_epistart = self.epistart
         self.epistart = self._pointer
-        return prev_epistart, self.epistart
+        return prev_epistart, self.epistart-1
             
         
     def punishLastAction(self, howmuch):
@@ -152,6 +152,7 @@ class Memory(object):
             tmp = self._buffer[fromwhere:]+self._buffer[:towhere]
         else:
             tmp = [self._buffer[fromwhere]]
+            
         rewards = np.array(list(zip(*tmp))[2])
         return np.mean(rewards)
     

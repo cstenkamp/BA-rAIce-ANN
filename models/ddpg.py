@@ -194,19 +194,18 @@ class lowdim_criticNet():
                 self.fc1 = dense(self.ff_inputs, 400, tf.nn.relu, decay=True)
             if batchnorm[1]=="t":
                 self.fc1 = tf.contrib.layers.batch_norm(self.fc1, updates_collections=None, is_training=self.phase, epsilon=1e-7)
-            self.fc3 =  tf.concat([self.fc1, self.actions], 1)   
+            self.fc1 =  tf.concat([self.fc1, self.actions], 1)   
             variable_summary(self.fc1, "fc1AfterBNWithActions")
             self.fc2 = dense(self.fc1, 300, tf.nn.relu, decay=True)
             if batchnorm[2]=="t":
                 self.fc2 = tf.contrib.layers.batch_norm(self.fc2, updates_collections=None, is_training=self.phase, epsilon=1e-7)
             variable_summary(self.fc2, "fc2AfterBN")
-            self.fc3 = dense(self.fc2, 20, decay=True, minmax=3e-4)
+            self.fc3 = tf.clip_by_value(dense(self.fc2, 20, decay=True, minmax=3e-4), -20, 20) #TODO sollte die performance irgendwann stagnieren, hieran liegts^^
             if batchnorm[3]=="t":
                 self.fc3 = tf.contrib.layers.batch_norm(self.fc3, updates_collections=None, is_training=self.phase, epsilon=1e-7)
             variable_summary(self.fc3, "fc3AfterBN")
             self.Q = dense(self.fc3, 1, decay=True, minmax=3e-4)
             variable_summary(self.Q, "Q")
-            self.lastLayerWithActions =  tf.concat([self.fc3, self.actions], 1)   
             
         self.trainables = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope=outerscope+"/"+self.name)
         self.ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS, scope=outerscope+"/"+self.name)      
@@ -454,6 +453,13 @@ class DDPG_model():
     #expects only a state 
     def qvalue(self, oldstates, action):                                            
         return self.critic.predict(oldstates, action, useOnline=False)[0]    
+    
+    
+    def getstatecountfeaturevec(self, oldstates, action):
+        lastlay = np.array(self.session.run(self.critic.target.fc3, feed_dict=self.critic._make_inputs(oldstates, self.critic.target, {self.critic.target.actions: action})))
+        lastlay = np.round(np.concatenate([lastlay, np.array(action)*20], axis=1))
+        return lastlay
+    
     
     
     #expects a whole s,a,r,s,t - tuple

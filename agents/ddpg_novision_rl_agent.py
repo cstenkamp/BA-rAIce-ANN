@@ -23,7 +23,7 @@ class Agent(AbstractRLAgent):
     def __init__(self, conf, containers, isPretrain=False, start_fresh=False, *args, **kwargs):
         self.name = "ddpg_novision_rl_agent" #__file__[__file__.rfind("\\")+1:__file__.rfind(".")]
         super().__init__(conf, containers, isPretrain, start_fresh, *args, **kwargs)
-        self.ff_inputsize = 65 + conf.num_actions * conf.ff_stacksize 
+        self.ff_inputsize = 67 + conf.num_actions * conf.ff_stacksize 
         self.isContinuous = True
         self.usesConv = False
         self._noiseState = np.array([0]*self.conf.num_actions)
@@ -56,7 +56,7 @@ class Agent(AbstractRLAgent):
     
     def endEpisode(self, *args, **kwargs):
         self._noiseState = np.array([0]*self.conf.num_actions)
-        super().endEpisode(*args, **kwargs)
+        return super().endEpisode(*args, **kwargs)
 
 
     ###########################################################################
@@ -163,9 +163,9 @@ class Agent(AbstractRLAgent):
             infoscreen.print(str(-abs(howmuch)), time.strftime("%H:%M:%S", time.gmtime()), containers=self.containers, wname="Last big punish")
             
     def addToMemory(self, gameState, pastState):
-        a, r, qval, changestring = super().addToMemory(gameState, pastState)
+        a, r, qval, count, changestring = super().addToMemory(gameState, pastState)
         if self.containers.showscreen:
-            infoscreen.print(a, round(r,2), round(qval,2), changestring, containers= self.containers, wname="Last memory")
+            infoscreen.print(a, round(r,2), round(qval,2), "PS:", count, changestring, containers= self.containers, wname="Last memory")
             if len(self.memory) % 20 == 0:
                 infoscreen.print(">"+str(len(self.memory)), containers= self.containers, wname="Memorysize")       
                 
