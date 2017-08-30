@@ -163,9 +163,9 @@ class Agent(AbstractRLAgent):
             infoscreen.print(str(-abs(howmuch)), time.strftime("%H:%M:%S", time.gmtime()), containers=self.containers, wname="Last big punish")
             
     def addToMemory(self, gameState, pastState):
-        a, r, stateval, changestring = super().addToMemory(gameState, pastState)
+        a, r, qval, changestring = super().addToMemory(gameState, pastState)
         if self.containers.showscreen:
-            infoscreen.print(a, round(r,2), round(stateval,2), changestring, containers= self.containers, wname="Last memory")
+            infoscreen.print(a, round(r,2), round(qval,2), changestring, containers= self.containers, wname="Last memory")
             if len(self.memory) % 20 == 0:
                 infoscreen.print(">"+str(len(self.memory)), containers= self.containers, wname="Memorysize")       
                 

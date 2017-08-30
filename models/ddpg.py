@@ -194,7 +194,8 @@ class lowdim_criticNet():
                 self.fc1 = dense(self.ff_inputs, 400, tf.nn.relu, decay=True)
             if batchnorm[1]=="t":
                 self.fc1 = tf.contrib.layers.batch_norm(self.fc1, updates_collections=None, is_training=self.phase, epsilon=1e-7)
-            variable_summary(self.fc1, "fc1AfterBN")
+            self.fc3 =  tf.concat([self.fc1, self.actions], 1)   
+            variable_summary(self.fc1, "fc1AfterBNWithActions")
             self.fc2 = dense(self.fc1, 300, tf.nn.relu, decay=True)
             if batchnorm[2]=="t":
                 self.fc2 = tf.contrib.layers.batch_norm(self.fc2, updates_collections=None, is_training=self.phase, epsilon=1e-7)
@@ -202,10 +203,10 @@ class lowdim_criticNet():
             self.fc3 = dense(self.fc2, 20, decay=True, minmax=3e-4)
             if batchnorm[3]=="t":
                 self.fc3 = tf.contrib.layers.batch_norm(self.fc3, updates_collections=None, is_training=self.phase, epsilon=1e-7)
-            self.fc3 =  tf.concat([self.fc3, self.actions], 1)   
-            variable_summary(self.fc3, "fc3AfterBNWithActions")
+            variable_summary(self.fc3, "fc3AfterBN")
             self.Q = dense(self.fc3, 1, decay=True, minmax=3e-4)
             variable_summary(self.Q, "Q")
+            self.lastLayerWithActions =  tf.concat([self.fc3, self.actions], 1)   
             
         self.trainables = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope=outerscope+"/"+self.name)
         self.ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS, scope=outerscope+"/"+self.name)      
@@ -449,6 +450,10 @@ class DDPG_model():
     def statevalue(self, oldstates):                                                  
         action = self.actor.predict(oldstates, useOnline=False, is_training=False)  
         return self.critic.predict(oldstates, action, useOnline=False)[0]
+    
+    #expects only a state 
+    def qvalue(self, oldstates, action):                                            
+        return self.critic.predict(oldstates, action, useOnline=False)[0]    
     
     
     #expects a whole s,a,r,s,t - tuple

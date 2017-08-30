@@ -339,9 +339,10 @@ class AbstractRLAgent(AbstractAgent):
             self.memory.append(markovtuple)  
             print("adding to Memory:",a, r, level=4) 
             #values for evalation:
-            stateval = self.model.statevalue(self.makeInferenceUsable(s))[0] #TODO: gucken ob stateval richtig ist!
+            stateval = self.model.statevalue(self.makeInferenceUsable(s))[0] 
+            qval = self.model.qvalue(self.makeInferenceUsable(s),[self.makeNetUsableAction(a)])[0]
             self.episode_statevals.append(stateval)
-            return a, r, stateval, self.humantakingcontrolstring #damit agents das printen können wenn sie wollen
+            return a, r, qval, self.humantakingcontrolstring #damit agents das printen können wenn sie wollen
         return None, 0, 0, ""
       
        
