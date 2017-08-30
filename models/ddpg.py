@@ -176,7 +176,7 @@ class conv_criticNet():
         
         
 class lowdim_criticNet():
-     def __init__(self, conf, agent, outerscope="critic", name="online", batchnorm="fff"):       
+     def __init__(self, conf, agent, outerscope="critic", name="online", batchnorm="ffff"):       
         self.conf = conf
         self.agent = agent
         self.name = name   
@@ -194,13 +194,17 @@ class lowdim_criticNet():
                 self.fc1 = dense(self.ff_inputs, 400, tf.nn.relu, decay=True)
             if batchnorm[1]=="t":
                 self.fc1 = tf.contrib.layers.batch_norm(self.fc1, updates_collections=None, is_training=self.phase, epsilon=1e-7)
-            self.fc1 =  tf.concat([self.fc1, self.actions], 1)   
-            variable_summary(self.fc1, "fc1AfterBNWithAction")
+            variable_summary(self.fc1, "fc1AfterBN")
             self.fc2 = dense(self.fc1, 300, tf.nn.relu, decay=True)
             if batchnorm[2]=="t":
                 self.fc2 = tf.contrib.layers.batch_norm(self.fc2, updates_collections=None, is_training=self.phase, epsilon=1e-7)
             variable_summary(self.fc2, "fc2AfterBN")
-            self.Q = dense(self.fc2, 1, decay=True, minmax=3e-4)
+            self.fc3 = dense(self.fc2, 20, decay=True, minmax=3e-4)
+            if batchnorm[3]=="t":
+                self.fc3 = tf.contrib.layers.batch_norm(self.fc3, updates_collections=None, is_training=self.phase, epsilon=1e-7)
+            self.fc3 =  tf.concat([self.fc3, self.actions], 1)   
+            variable_summary(self.fc3, "fc3AfterBNWithActions")
+            self.Q = dense(self.fc3, 1, decay=True, minmax=3e-4)
             variable_summary(self.Q, "Q")
             
         self.trainables = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope=outerscope+"/"+self.name)
@@ -361,7 +365,6 @@ class DDPG_model():
         self.isPretrain = isPretrain
         self.actor = Actor(self.conf, self.agent, self.session, actorbatchnorm, isPretrain)
         self.critic = Critic(self.conf, self.agent, self.session, criticbatchnorm, isPretrain) 
-        self.statecounter = Critic(self.conf, self.agent, self.session, "", isPretrain, name="StateCounter") 
         self.run_inf = 0
         self.pretrain_ep = 0
         self.boardstep = 0
@@ -382,15 +385,12 @@ class DDPG_model():
                 
         self.session.run(netCopyOps(self.actor.target, self.actor.online))
         self.session.run(netCopyOps(self.critic.target, self.critic.online))   
-        self.session.run(netCopyOps(self.statecounter.target, self.statecounter.online))      
         
     
     def save(self):
         folder = self.conf.pretrain_checkpoint_dir if self.isPretrain else self.conf.checkpoint_dir
         critic_file = os.path.join(self.agent.folder(os.path.join(folder,"critic")), 'model.ckpt')
         self.critic.saver.save(self.session, critic_file, global_step=self.critic.pretrain_step_tf if self.isPretrain else self.critic.step_tf)
-        statecount_file = os.path.join(self.agent.folder(os.path.join(folder,"statecounter")), 'model.ckpt')
-        self.statecounter.saver.save(self.session, statecount_file, global_step=self.statecounter.pretrain_step_tf if self.isPretrain else self.statecounter.step_tf)
         actor_file = os.path.join(self.agent.folder(os.path.join(folder,"actor")), 'model.ckpt')        
         self.session.run(self.actor.run_inferences_tf.assign(self.run_inf))
         self.session.run(self.actor.pretrain_episode_tf.assign(self.pretrain_ep))
@@ -402,11 +402,9 @@ class DDPG_model():
         folder = self.conf.pretrain_checkpoint_dir if from_pretrain else self.conf.checkpoint_dir
         critic_ckpt = tf.train.get_checkpoint_state(self.agent.folder(os.path.join(folder,"critic")))
         actor_ckpt = tf.train.get_checkpoint_state(self.agent.folder(os.path.join(folder,"actor")))
-        statecounter_ckpt = tf.train.get_checkpoint_state(self.agent.folder(os.path.join(folder,"statecounter")))
         if critic_ckpt and actor_ckpt and critic_ckpt.model_checkpoint_path and actor_ckpt.model_checkpoint_path:
             self.critic.saver.restore(self.session, critic_ckpt.model_checkpoint_path)
             self.actor.saver.restore(self.session, actor_ckpt.model_checkpoint_path)
-            self.statecounter.saver.restore(self.session, statecounter_ckpt.model_checkpoint_path)
             self.run_inf = self.actor.run_inferences_tf.eval(self.session)
             self.pretrain_ep = self.actor.pretrain_episode_tf.eval(self.session)
         else:
@@ -444,11 +442,6 @@ class DDPG_model():
         self.run_inf += 1
         action = self.actor.predict(oldstates, useOnline=False, is_training=False, is_inference=True)
         value =  self.critic.predict(oldstates, action, useOnline=False)
-        doSummary = self.boardstep % self.conf.summarize_tensorboard_allstep == 0 if self.conf.summarize_tensorboard_allstep else False
-        _, _, _, sumCount = self.statecounter.train(oldstates, action, self.statecounter.predict(oldstates,action)+1, doSummary=doSummary)
-        if doSummary:
-            self.writer.add_summary(sumCount, self.statecounter.step_tf.eval(self.session))            
-        self.statecounter.update_target_network()
         return action, value
         
     
@@ -456,12 +449,6 @@ class DDPG_model():
     def statevalue(self, oldstates):                                                  
         action = self.actor.predict(oldstates, useOnline=False, is_training=False)  
         return self.critic.predict(oldstates, action, useOnline=False)[0]
-    
-    #deleteme
-    def pseudostatecount(self, oldstates, action):                                              
-        return self.statecounter.predict(oldstates, action, useOnline=False)[0]
-    
-    
     
     
     #expects a whole s,a,r,s,t - tuple

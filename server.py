@@ -498,6 +498,7 @@ class Containers():
         self.wrongdirectiontime = 0
         self.freezeInf = self.freezeLearn = False
         self.UnityConnected = False
+        self.showscreen = False
         
         
 def create_socket(port):

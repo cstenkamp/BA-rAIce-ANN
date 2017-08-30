@@ -88,14 +88,16 @@ class AbstractAgent(object):
                     
     def initForDriving(self, *args, **kwargs):
         self.show_plots = kwargs["show_plots"] if "show_plots" in kwargs else True 
+        self.use_evaluator = kwargs["use_evaluator"] if "use_evaluator" in kwargs else True 
         self.numsteps = 0
         self.last_action = None
         self.repeated_action_for = self.action_repeat
         self.episode_statevals = []  #für evaluator
         self.episodes = 0 #für evaluator, wird bei jedem neustart auf null gesetzt aber das ist ok dafür
-        self.evaluator = evaluator(self.containers, self, self.show_plots, self.conf.save_xml,      \
-                                   ["average rewards", "average Q-vals", "progress", "laptime"                    ], \
-                                   [(-0.1,1.3),        (-1,100),          100,        self.conf.time_ends_episode ] )                     
+        if self.use_evaluator:
+            self.evaluator = evaluator(self.containers, self, self.show_plots, self.conf.save_xml,      \
+                                       ["average rewards", "average Q-vals", "progress", "laptime"                    ], \
+                                       [(-0.1,1.3),        (-1,100),          100,        self.conf.time_ends_episode ] )                     
         
 
         
@@ -401,7 +403,7 @@ class AbstractRLAgent(AbstractAgent):
                 if self.conf.ForEveryInf and self.conf.ComesALearn and self.conf.learnMode == "parallel":
                     self.numLearnAfterInference += 1
             i += 1         
-        print(res/learnSteps)
+#        print(res/learnSteps)
         self.unFreezeInf("updateFrequency") #kann hier ruhig sein, da es eh nur unfreezed falls es aufgrund von diesem grund gefreezed war.
         if self.model.run_inferences() >= self.conf.train_for: #if you exited because you're completely done
             self.saveNet()
@@ -453,7 +455,8 @@ class AbstractRLAgent(AbstractAgent):
         valid = otherinput_hist[0].ProgressVec.fValidLap
         evalstring = "Avg-r:",avg_rewards,"Avg-Q:",avg_values,"progress:",progress,"laptime:",laptime,"(valid)" if valid else ""
         print(evalstring, level=8)
-        self.evaluator.add_episode([avg_rewards, avg_values, progress, laptime], nr=self.episodes, startMemoryEntry=mem_epi_slice[0], endMemoryEntry=mem_epi_slice[1], endIteration=self.model.run_inferences(), reinfNetSteps=self.model.step(), endEpsilon=self.epsilon)
+        if self.use_evaluator:
+            self.evaluator.add_episode([avg_rewards, avg_values, progress, laptime], nr=self.episodes, startMemoryEntry=mem_epi_slice[0], endMemoryEntry=mem_epi_slice[1], endIteration=self.model.run_inferences(), reinfNetSteps=self.model.step(), endEpsilon=self.epsilon)
         return evalstring
         
 

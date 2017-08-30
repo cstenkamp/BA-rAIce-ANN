@@ -19,27 +19,27 @@ def main(conf, agentname, containers, start_fresh, fake_real, numiters, supervis
 
     agentclass = __import__(agentname).Agent
     myAgent = agentclass(conf, containers, isPretrain=(not fake_real), start_fresh=start_fresh)    
-        
-    #TODO: das fake_real muss noch so geändert werden dass es ZWEI optionen gibt: fake_real UND dass man AUSSUCHEN KANN ob von memory oder von pretrain!!!!
     
     tf.reset_default_graph()                                                          
-    trackingpoints = read_supervised.TPList(conf.LapFolderName, conf.use_second_camera, conf.msperframe, conf.steering_steps, conf.INCLUDE_ACCPLUSBREAK)
-    
-    print("Number of samples:",trackingpoints.numsamples)
     
     if not fake_real:
+        trackingpoints = read_supervised.TPList(conf.LapFolderName, conf.use_second_camera, conf.msperframe, conf.steering_steps, conf.INCLUDE_ACCPLUSBREAK)
+        print("Number of samples:",trackingpoints.numsamples)   
+        assert trackingpoints.numsamples > 0, "You have no pre-training data!"
         if supervised:
             print("Training supervisedly! Not recommended!")
             myAgent.preTrain(trackingpoints, numiters, supervised=True)
         else:
             myAgent.preTrain(trackingpoints, numiters) #dann nimm die standard-einstellung! nicht epxlizit false
     else:
-        myAgent.initForDriving()
-        for i in range(20):
-            for i in range(numiters):
-                trainBatch = myAgent.create_QLearnInputs_from_MemoryBatch(myAgent.memory.sample(conf.batch_size))
-                myAgent.model.q_learn(trainBatch, False)
-            myAgent.model.save()        
+        assert not supervised, "Supervised fake_real training is not possible"
+        itperlearn = myAgent.conf.ForEveryInf / myAgent.conf.ComesALearn
+        iterations = int(myAgent.conf.train_for//itperlearn if numiters is None else numiters)
+        myAgent.initForDriving(keep_memory=False, show_plots=False, use_evaluator=False)
+        for i in range(iterations):
+            maxQ = myAgent.learnANN() 
+            if i % 250 == 0:
+                print("Iteration",i,"max-Q-Val:",maxQ)
     
 
 

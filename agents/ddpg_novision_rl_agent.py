@@ -103,12 +103,8 @@ class Agent(AbstractRLAgent):
         action = [round(i,3) for i in action]
         toUse = "["+str(action[0])+", "+str(action[1])+", "+str(action[2])+"]"
         
-        #deleteme
-        pseudocount = self.model.pseudostatecount(self.makeInferenceUsable(agentState), [self.makeNetUsableAction(action)])[0]
-                  
-                  
         if self.containers.showscreen:
-            infoscreen.print(toUse, "Pseudocount:",pseudocount, containers=self.containers, wname="Last command")
+            infoscreen.print(toUse, containers=self.containers, wname="Last command")
             if self.model.run_inferences() % 100 == 0:
                 infoscreen.print(self.model.step(), "Iterations: >"+str(self.model.run_inferences()), containers=self.containers, wname="ReinfLearnSteps")
                 infoscreen.print(self.epsilon, containers=self.containers, wname="Epsilon")
