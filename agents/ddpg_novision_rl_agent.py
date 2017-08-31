@@ -15,6 +15,7 @@ from myprint import myprint as print
 from efficientmemory import Memory as Efficientmemory
 from ddpg import DDPG_model 
 import infoscreen
+from read_supervised import empty_inputs
 
 flatten = lambda l: [item for sublist in l for item in sublist]
 
@@ -23,7 +24,7 @@ class Agent(AbstractRLAgent):
     def __init__(self, conf, containers, isPretrain=False, start_fresh=False, *args, **kwargs):
         self.name = "ddpg_novision_rl_agent" #__file__[__file__.rfind("\\")+1:__file__.rfind(".")]
         super().__init__(conf, containers, isPretrain, start_fresh, *args, **kwargs)
-        self.ff_inputsize = 72 + conf.num_actions * conf.ff_stacksize 
+        self.ff_inputsize = 2 * len(empty_inputs().returnRelevant()) + conf.num_actions * conf.ff_stacksize
         self.isContinuous = True
         self.usesConv = False
         self._noiseState = np.array([0]*self.conf.num_actions)
@@ -43,8 +44,8 @@ class Agent(AbstractRLAgent):
     def getAgentState(self, *gameState):  
         vvec1_hist, vvec2_hist, otherinput_hist, action_hist = gameState
         flat_actions = flatten([i if i is not None else (0,0,0) for i in action_hist])
-#        other_inputs = np.ravel([i.returnRelevant() for i in otherinput_hist])
-        other_inputs = np.ravel(otherinput_hist[0].returnRelevant()); 
+        other_inputs = np.ravel([i.returnRelevant() for i in otherinput_hist[:2]])
+#        other_inputs = np.ravel(otherinput_hist[0].returnRelevant()); 
         flat_actions = list(np.zeros_like(flat_actions))
         print("Removed actions as input to network, as it only learns from them then", level=-1)
         other_inputs = np.concatenate((other_inputs,flat_actions))
@@ -150,6 +151,14 @@ class Agent(AbstractRLAgent):
     ###########################################################################
     ########################overwritten functions##############################
     ###########################################################################
+    
+    
+    def calculateReward(self, *args):
+        tmp = super().calculateReward(*args)
+        if self.containers.showscreen and self.conf.showColorArea:
+            #if the reward is between 0 and 1, the ColorArea will turn from black to white, where white is perfect
+            self.containers.screenwidgets["ColorArea"].updateCol(tmp)   
+        return tmp
     
     def eval_episodeVals(self, mem_epi_slice, gameState, endReason):
         string = super().eval_episodeVals(mem_epi_slice, gameState, endReason)

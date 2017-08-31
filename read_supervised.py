@@ -19,7 +19,7 @@ DELAY_TO_CONSIDER = 100
 Preprogressvec = namedtuple('ProgressVec', ['Progress', 'Laptime', 'NumRounds', 'fValidLap'])
 Prespeedsteer = namedtuple('SpeedSteer', ['RLTorque', 'RRTorque', 'FLSteer', 'FRSteer', 'velocity', 'rightDirection', 'velocityOfPerpendiculars', 'carAngle', 'speedInStreetDir','speedInTraverDir', 'CurvinessBeforeCar'])
 Prestatusvector = namedtuple('StatusVector', ['velocity', 'FLSlip0', 'FRSlip0', 'RLSlip0', 'RRSlip0', 'FLSlip1', 'FRSlip1', 'RLSlip1', 'RRSlip1'])
-                                             #4 elems       11 elems      9 elems         1 elem        15 elems         7 elems        30 elems       2 elems    3 elems  = 77 elems
+                                             #4 elems       11 elems      9 elems         1 elem        15 elems         7 elems        30 elems       2 elems    3 elems  = 82 elems
 Preotherinputs = namedtuple('OtherInputs', ['ProgressVec', 'SpeedSteer', 'StatusVector', 'CenterDist', 'CenterDistVec', 'WallDistVec', 'LookAheadVec', 'FBDelta', 'Action'])
 class Progressvec(Preprogressvec):
     def __eq__(self, other):
@@ -54,7 +54,7 @@ class Otherinputs(Preotherinputs):
         x = self.as_list()
 #        tmp = flatten([[((x[i][j] - MINVALS.as_list()[i][j])/ (MAXVALS.as_list()[i][j]-MINVALS.as_list()[i][j])) for j in range(len(x[i]))] for i in range(len(x))])
 #        for i in tmp[2:]:
-#            if abs(i) > 2:
+#            if abs(i) > 1.2:
 #                print(make_otherinputs([[((x[i][j] - MINVALS.as_list()[i][j])/ (MAXVALS.as_list()[i][j]-MINVALS.as_list()[i][j])) for j in range(len(x[i]))] for i in range(len(x))]),level=100)
         return make_otherinputs([[((x[i][j] - MINVALS.as_list()[i][j])/ (MAXVALS.as_list()[i][j]-MINVALS.as_list()[i][j])) for j in range(len(x[i]))] for i in range(len(x))])
                       

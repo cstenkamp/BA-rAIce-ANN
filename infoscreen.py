@@ -29,7 +29,7 @@ class ThreadSafeConsole(Text):
 class ThreadSafeCanvas(Canvas):
     def __init__(self, master, **options):
         Canvas.__init__(self, master, **options)
-        self.queue = queue.Queue()
+        self.queue = queue.Queue(maxsize=1)
         self.update_me()
     def updateCol(self, content):
         self.queue.put(content)
@@ -77,8 +77,11 @@ def showScreen(containers):
     reinflearnsteps.pack(fill=X)
     lastepisode = ThreadSafeConsole(root, width=1, height=2)
     lastepisode.pack(fill=X)
-    colorarea = ThreadSafeCanvas(root, width=200, height=100)
-    colorarea.pack();
+    if containers.conf.showColorArea:
+        colorarea = ThreadSafeCanvas(root, width=200, height=100)
+        colorarea.pack();
+    else:
+        colorarea = None
     if not containers.myAgent.isContinuous:
         currentqvals = ThreadSafeConsole(root, width=55, height=containers.conf.dnum_actions+1)
         currentqvals.pack(fill=X)

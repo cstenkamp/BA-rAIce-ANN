@@ -1,0 +1,6 @@
+#files with "-diff" will be ignored by git diff 
+#(in fact its a bit cheated as it will simply compare it to a binary file and say 
+# that it differs without stating differences)
+
+log.txt -diff
+SavedLaps/* -diff

@@ -37,7 +37,7 @@ class Memory(object):
         self.lastsavetime = current_milli_time()
         self._size = 0
         
-        if not self.agent.start_fresh and load:
+        if (not self.agent.start_fresh) and load:
             corrupted = False
             if os.path.exists(self.memorypath+SAVENAME+'.pkl'):
                 try:
@@ -133,7 +133,7 @@ class Memory(object):
 #            print(self._buffer[j][0][1][0], self.agent.dediscretize(self.agent.discretize(*self._buffer[j][1])), self._buffer[j][2], self._buffer[j][3][1][0], self._buffer[j][4])
         prev_epistart = self.epistart
         self.epistart = self._pointer
-        return prev_epistart, self.epistart-1
+        return prev_epistart, self.epistart
             
         
     def punishLastAction(self, howmuch):

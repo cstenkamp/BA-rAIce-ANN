@@ -225,19 +225,20 @@ class AbstractRLAgent(AbstractAgent):
         dist = otherinput_hist[0].CenterDist[0]-0.5  #abs davon ist 0 in der mitte, 0.15 vor dem curb, 0.25 mittig auf curb, 0.5 rand
         angle = otherinput_hist[0].SpeedSteer.carAngle - 0.5
                
-        speed = otherinput_hist[0].SpeedSteer.speedInStreetDir*2.5  #maximal realistic speed is ~2 
-        speed = min(speed,1)
-        badspeed = abs(2*otherinput_hist[0].SpeedSteer.speedInTraverDir-1)*3
+#        speed = otherinput_hist[0].SpeedSteer.speedInStreetDir*2.5  #maximal realistic speed is ~2 
+#        speed = min(speed,1)
+        badspeed = abs(2*otherinput_hist[0].SpeedSteer.speedInTraverDir-1)*5
         
         stay_on_street = ((0.5-abs(dist))*2)+0.35 #jetzt ist größer 1 auf der street
         stay_on_street = stay_on_street**0.1 if stay_on_street > 1 else stay_on_street**2 #ON street not steep, OFF street very steep 
         stay_on_street = ((1-((0.5-abs(dist))*2))**10) * -self.wallhitPunish + (1-(1-((0.5-abs(dist))*2))**10) *  stay_on_street #the influence of wallhitpunish is exponentially more relevant the closer to the wall you are
-        #in range [1,-1] for wallhitpunish=1
+        stay_on_street -= 0.5
+        #in range [0.5,-1.5] for wallhitpunish=1
         prog = otherinput_hist[0].ProgressVec.Progress #"die dicken fische liegen hinten" <- extra reward for coming far
         prog = prog/10 if prog > 0 else 0 #becomes in range [0,0.1]
         direction_bonus = abs((0.5-(abs(angle)))*2/0.75) 
-        direction_bonus = (direction_bonus**0.4 if direction_bonus > 1 else direction_bonus**2) / 1.1 / 2 #no big difference until 45degrees, then BIG diff.
-        #maximally 0.5, minimally 0
+        direction_bonus = ((direction_bonus**0.4 if direction_bonus > 1 else direction_bonus**2) / 1.1 / 2) - 0.25 #no big difference until 45degrees, then BIG diff.
+        #maximally 0.25, minimally -0.25
         tmp = (np.mean(self.steeraverage))        
         steer_bonus1 = tmp/5 + angle #this one rewards sterering into street-direction if the cars angle is off...
         steer_bonus1 = 0 if np.sign(steer_bonus1) != np.sign(angle) and abs(angle) > 0.15 else steer_bonus1
@@ -249,26 +250,26 @@ class AbstractRLAgent(AbstractAgent):
         curveMultiplier = 1-abs(otherinput_hist[0].SpeedSteer.CurvinessBeforeCar-0.5)
         direction_bonus *= curveMultiplier
         badspeed *= curveMultiplier 
-        speed = max(speed,1) if speed > curveMultiplier else speed #dont require full speed in curves: we cap speed-rewards in curves at the percentile of the curviness, and if its bigger, its simply one
-        
-        speed = speed-badspeed if speed-badspeed > 0 else 0
+#        speed = max(speed,1) if speed > curveMultiplier else speed #dont require full speed in curves: we cap speed-rewards in curves at the percentile of the curviness, and if its bigger, its simply one
+#        speed = speed-badspeed if speed-badspeed > 0 else 0
             
         #rew = (speed + stay_on_street + prog + 0.5 * direction_bonus + 0.5*(steer_bonus1+steer_bonus2)) / 2
                 
-        speedInRelationToWallDist = otherinput_hist[0].WallDistVec[6]-otherinput_hist[0].SpeedSteer.velocity+(100/250)
+        speedInRelationToWallDist = otherinput_hist[0].WallDistVec[6]-otherinput_hist[0].SpeedSteer.speedInStreetDir+(100/250)
         speedInRelationToWallDist = 1-(abs(speedInRelationToWallDist)*3) if speedInRelationToWallDist < 0 else (1-speedInRelationToWallDist)+0.33
-                              
+        speedInRelationToWallDist += -badspeed + 0.1*otherinput_hist[0].SpeedSteer.speedInStreetDir
+                                      
         rew = (2*speedInRelationToWallDist + stay_on_street + 0.5*direction_bonus + 0.5*(steer_bonus1+steer_bonus2))/4
          
         slidingToWall = (min(0.05, otherinput_hist[0].WallDistVec[2]) / 0.05)**3
         toWallSpeed =  (1-slidingToWall) * ((min(0.1, otherinput_hist[0].SpeedSteer.velocity) / 0.1)) #kann grundsätzlich abgezogen werden, da er dann echt am arsch ist
-         
-        rew -= toWallSpeed
-                         
-        if self.containers.showscreen:
-            #if the reward is between 0 and 1, the ColorArea will turn from black to white, where white is perfect
-            self.containers.screenwidgets["ColorArea"].updateCol(rew)   
         
+        #but, at every point you should drive at least 0.2 of maxspeed...
+        tooslow = 1- ((min(0.2, otherinput_hist[0].SpeedSteer.speedInStreetDir) / 0.2) ** 3) #its easily possible to keep this at 0 at all times
+        
+        rew -= toWallSpeed
+        rew -= 0.5*tooslow
+                                 
         rew = max(rew, 0) #logik dahinter: wenn das auto neben der wand steht, dann entscheidet es sich doch bei sonst nur negativen rewards freiwillig dafür in die wand zu fahren um sein leiden zu beenden (-2 + 0*negativerwert größer -2+gamma*negativerwert)
         return rew
 

@@ -74,7 +74,8 @@ class Config():
     visionvecdtype = np.int8 #wäre es np.bool würde er den rand als street sehen!
     keep_memory = True
     learnMode = "between" #"parallel", "between", "remote" (the latter is tobedone)
-
+    
+    showColorArea = False
     
     #GAME SETTINGS
     history_frame_nr = 4 #incl. dem jetzigem!
