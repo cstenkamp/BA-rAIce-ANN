@@ -446,9 +446,9 @@ class SenderListenerThread(threading.Thread):
 
 
 class sender_thread(threading.Thread):
-    def __init__(self, clientsocket, containers):
+    def __init__(self, socket, containers):
         threading.Thread.__init__(self)
-        self.clientsocket = clientsocket
+        self.socket = socket
         self.containers = containers
         self.containers.UnityConnected = True
         
@@ -465,7 +465,7 @@ class sender_thread(threading.Thread):
     def send(self, result, CTimestamp, STimestamp):
         tosend = str(result) + "CTime(" +str(CTimestamp)+")"+ "STime(" +str(STimestamp)+")"
         print("Sending", tosend, level=3)
-        self.clientsocket.mysend(tosend)
+        self.socket.mysend(tosend)
 
 
 
@@ -528,7 +528,7 @@ def main(conf, agentname, no_learn, show_screen, show_plots, start_fresh, nomemo
     containers.myAgent = agentclass(conf, containers, isPretrain=False, start_fresh=start_fresh, nomemoryload=nomemoryload) 
     containers.myAgent.initForDriving(keep_memory = (not nomemorykeep), show_plots=show_plots)
     
-    if show_screen:
+    if show_screen and containers.myAgent.usesGUI:
         screenroot = infoscreen.showScreen(containers)
     else:
         containers.showscreen = False    
@@ -558,7 +558,7 @@ def main(conf, agentname, no_learn, show_screen, show_plots, start_fresh, nomemo
     
    #THREAD 4 (self/GUI)
     try:      
-        if show_screen:
+        if containers.showscreen:
             screenroot.mainloop()            
         else:
             while True:

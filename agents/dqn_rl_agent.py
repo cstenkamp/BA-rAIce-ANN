@@ -25,6 +25,7 @@ class Agent(AbstractRLAgent):
         super().__init__(conf, containers, isPretrain, start_fresh, *args, **kwargs)
         self.ff_inputsize = conf.speed_neurons + conf.num_actions * conf.ff_stacksize #32
         session = tf.Session(config=tf.ConfigProto(intra_op_parallelism_threads=2, allow_soft_placement=True))
+        self.usesGUI = True
         self.model = DDDQN_model(self.conf, self, session, isPretrain=isPretrain)
         self.model.initNet(load=("preTrain" if (self.isPretrain and not start_fresh) else (not start_fresh)))
 

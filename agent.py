@@ -36,6 +36,7 @@ class AbstractAgent(object):
         self.conv_stacked = True  #wird überschrieben
         self.ff_stacked = False   #wird überschrieben
         self.model = None         #wird überschrieben
+        self.usesGUI = False      #wird überschrieben
     
     ###########################################################################    
     #################### Necessary functions ##################################
@@ -175,8 +176,8 @@ class AbstractRLAgent(AbstractAgent):
         super().__init__(conf, containers, *args, **kwargs)
         self.nomemoryload = kwargs["nomemoryload"] if "nomemoryload" in kwargs else False
         self.start_fresh = start_fresh
-        self.wallhitPunish = 5
-        self.wrongDirPunish = 10
+        self.wallhitPunish = 1
+        self.wrongDirPunish = 5
         self.isPretrain = isPretrain
         self.show_plots = False  #wird im initForDriving ggf überschrieben
         self.startepsilon = self.conf.startepsilon #standard from config, but may be overridden
@@ -365,13 +366,13 @@ class AbstractRLAgent(AbstractAgent):
             print("adding to Memory:",a, r, level=4) 
             #values for evalation:
             
-#            statesample = np.array(self.model.getstatecountfeaturevec(self.makeInferenceUsable(s),[self.makeNetUsableAction(a)])[0])
-#                
-#            relativeNums = np.zeros_like(statesample)
-#            for i in range(len(statesample)):
-#                relativeNums[i] = (self.CountsByElement[i][statesample[i]]+0.5) / (self.allN+1)
-#        
-#            count = np.prod(np.array(relativeNums))*1e+23
+            statesample = np.array(self.model.getstatecountfeaturevec(self.makeInferenceUsable(s),[self.makeNetUsableAction(a)])[0])
+                
+            relativeNums = np.zeros_like(statesample)
+            for i in range(len(statesample)):
+                relativeNums[i] = (self.CountsByElement[i][statesample[i]]+0.5) / (self.allN+1)
+        
+            count = np.prod(np.array(relativeNums))*1e+23
             
             count = 0
             
