@@ -389,14 +389,14 @@ class AbstractRLAgent(AbstractAgent):
             print("adding to Memory:",a, r, level=4) 
             #values for evalation:
             
-            statesample = np.array(self.model.getstatecountfeaturevec(self.makeInferenceUsable(s),[self.makeNetUsableAction(a)])[0])
-                
-            relativeNums = np.zeros_like(statesample)
-            for i in range(len(statesample)):
-                relativeNums[i] = (self.CountsByElement[i][statesample[i]]+0.5) / (self.allN+1)
-        
-            count = np.prod(np.array(relativeNums))*1e+23
-            
+#            statesample = np.array(self.model.getstatecountfeaturevec(self.makeInferenceUsable(s),[self.makeNetUsableAction(a)])[0])
+#                
+#            relativeNums = np.zeros_like(statesample)
+#            for i in range(len(statesample)):
+#                relativeNums[i] = (self.CountsByElement[i][statesample[i]]+0.5) / (self.allN+1)
+#        
+#            count = np.prod(np.array(relativeNums))*1e+23
+#            
             count = 0
             
             stateval = self.model.statevalue(self.makeInferenceUsable(s))[0] 
