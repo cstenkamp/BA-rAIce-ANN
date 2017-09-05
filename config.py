@@ -77,6 +77,7 @@ class Config():
     #GAME SETTINGS
     history_frame_nr = 4 #incl. dem jetzigem!
     action_repeat = 2
+    headstart_num = 5
     speed_neurons = 20 
     SPEED_AS_ONEHOT = False    
     image_dims = [30,45] 

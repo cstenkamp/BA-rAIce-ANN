@@ -220,6 +220,7 @@ class AbstractRLAgent(AbstractAgent):
         self.freezeLearnReasons = [] 
         self.numInferencesAfterLearn = 0
         self.numLearnAfterInference = 0
+        self.stepsAfterStart = -1 #für headstart
         self.epsilon = self.startepsilon
         self.episode_statevals = []  #für evaluator
         self.episodes = 0 #für evaluator, wird bei jedem neustart auf null gesetzt aber das ist ok dafür
@@ -353,9 +354,12 @@ class AbstractRLAgent(AbstractAgent):
         if self.checkIfAction():
             self.numsteps += 1
             self.repeated_action_for += 1
+            self.stepsAfterStart += 1
             self.addToMemory(gameState, pastState)
-                
-            if self.repeated_action_for < self.action_repeat:
+            
+            if self.stepsAfterStart <= self.conf.headstart_num:
+                toUse, toSave = self.headstartAction() #weil der anderenfalls immer am anfang an den rand fahren will, denn die ersten states haben ne vollkommen atypische history
+            elif self.repeated_action_for < self.action_repeat:
                 toUse, toSave = self.last_action 
             else:
                 agentState = self.getAgentState(*gameState) #may be overridden
@@ -503,7 +507,8 @@ class AbstractRLAgent(AbstractAgent):
         self.episodes += 1        
         mem_epi_slice = self.memory.endEpisode() #bei actions, nach denen resettet wurde, soll er den folgestate nicht mehr beachten (später gucken wenn reset=true dann setze Q_DECAY auf quasi 100%)
         self.eval_episodeVals(mem_epi_slice, gameState, reason)
-
+        self.stepsAfterStart = -1
+        
            
     def saveNet(self):
         if hasattr(self, "model"):
@@ -570,6 +575,13 @@ class AbstractRLAgent(AbstractAgent):
     ###########################################################################
     ############################# Helper functions#############################
     ###########################################################################
+
+    def headstartAction(self):
+        print("Headstart-Action", level=2)
+        throttle, brake, steer = np.random.random(), 0, 0
+        result = "["+str(throttle)+", "+str(brake)+", "+str(steer)+"]"
+        return result, (throttle, brake, steer)  #er returned immer toUse, toSave    
+        
 
     #memoryBatch is [[s,a,r,s2,t],[s,a,r,s2,t],[s,a,r,s2,t],...], what we want as Q-Learn-Input is [[s],[a],[r],[s2],[t]] 
     #.. to be more precise: [[(c,f),a,r,(c,f),t],[(c,f),a,r,(c,f),t],...]  and [[(c,f)],[a],[r],[(c,f)],[t]]
