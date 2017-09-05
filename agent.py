@@ -67,7 +67,8 @@ class AbstractAgent(object):
         assert len(other_inputs) == self.ff_inputsize        
         return other_inputs
     
-    def getAction(self, _, __, ___, action_hist):
+    def getAction(self, *gameState):
+        _, _, _, action_hist = gameState
         return action_hist[0] 
     
     def makeNetUsableAction(self, action):
