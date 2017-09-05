@@ -154,9 +154,10 @@ class Agent(AbstractRLAgent):
                 infoscreen.print(">"+str(len(self.memory)), containers= self.containers, wname="Memorysize")       
                 
     def learnANN(self):  
-        super().learnANN()
+        tmp = super().learnANN()
         print("ReinfLearnSteps:", self.model.step(), level=3)
         if self.containers.showscreen:
             infoscreen.print(self.model.step(), "Iterations: >"+str(self.model.run_inferences()), containers= self.containers, wname="ReinfLearnSteps")        
+        return tmp
             
             

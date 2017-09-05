@@ -274,6 +274,8 @@ class AbstractRLAgent(AbstractAgent):
         
         #but, at every point you should drive at least 0.2 of maxspeed...
         tooslow = 1- ((min(0.2, otherinput_hist[0].SpeedSteer.speedInStreetDir) / 0.2) ** 3) #its easily possible to keep this at 0 at all times
+        tooslow *= max(0, min(1, (self.model.run_inferences()-10000)/20000)) #starting at 10.000 iterations, this gets more relevant
+        
         
         rew -= toWallSpeed
         rew -= 0.5*tooslow
