@@ -17,7 +17,11 @@ import os
 #====own classes====
 from utils import run_from_ipython
 flatten = lambda l: [item for sublist in l for item in sublist]
-
+def flatten2(l):
+    try:
+        return flatten(l)
+    except:
+        return l
 
 SHOW_IN_SUBPLOTS = True
 
@@ -25,6 +29,7 @@ class evaluator():
     def __init__(self, containers, agent, show_plot, save_xml, labels, val_bounds): 
         self.save_xml = save_xml
         self.show_plot = show_plot
+        self.internal_num = 0
         
         if self.save_xml:
             self.xml_saver = xml_saver(containers, agent, labels)
@@ -44,6 +49,9 @@ class evaluator():
 
 
     def add_episode(self, *args, **kwargs):
+        if not "nr" in kwargs:
+            self.internal_num += 1
+            kwargs["nr"] = self.internal_num
         t1 = threading.Thread(target=self._add_episode, args=(args), kwargs=(kwargs))
         t1.start()
 
@@ -148,7 +156,7 @@ class plotter():
             x = ceil(sqrt(len(labels)))
             y = ceil(len(labels)/x)
             self.figs, self.ax = plt.subplots(x,y)
-            self.ax = flatten(self.ax)
+            self.ax = flatten2(self.ax)
             self.maxvals = maxvals
             self.minvals = minvals
         self.num_epis = 100

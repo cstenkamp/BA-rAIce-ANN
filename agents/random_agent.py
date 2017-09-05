@@ -3,10 +3,11 @@ import numpy as np
 from agent import AbstractAgent
 
 class Agent(AbstractAgent):    
-    def init(self, conf, containers, isPretrain=False, start_fresh=False, *args, **kwargs):
+    def __init__(self, conf, containers, isPretrain=False, start_fresh=False, *args, **kwargs):
         self.name = "random_agent"
-        super().init(conf, containers, isPretrain, start_fresh, *args, **kwargs)
-
+        super().__init__(conf, containers, isPretrain, start_fresh, *args, **kwargs)
+        self.isSupervised = True
+        
 
     def policyAction(self, agentState):
         throttle = np.random.random()

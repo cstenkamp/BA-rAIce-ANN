@@ -35,7 +35,8 @@ class AbstractAgent(object):
         self.conv_stacked = True  #wird überschrieben
         self.ff_stacked = False   #wird überschrieben
         self.model = None         #wird überschrieben
-        self.usesGUI = False      #wird überschrieben
+        self.usesGUI = False      #wird überschrieben (GUI != plots)
+        self.show_plots = False   #wird im initForDriving ggf überschrieben
     
     ###########################################################################    
     #################### Necessary functions ##################################
@@ -87,15 +88,13 @@ class AbstractAgent(object):
                     
                     
     def initForDriving(self, *args, **kwargs):
-        self.show_plots = kwargs["show_plots"] if "show_plots" in kwargs else True 
-        self.use_evaluator = kwargs["use_evaluator"] if "use_evaluator" in kwargs else True 
         self.numsteps = 0
         self.last_action = None
         self.repeated_action_for = self.action_repeat
-        self.episode_statevals = []  #für evaluator
-        self.episodes = 0 #für evaluator, wird bei jedem neustart auf null gesetzt aber das ist ok dafür
-
-
+        self.use_evaluator = kwargs["use_evaluator"] if "use_evaluator" in kwargs else True 
+        self.show_plots = kwargs["show_plots"] if "show_plots" in kwargs else True 
+        if self.isSupervised and self.use_evaluator: #nur bei supervised-agents wird diese Variable explizit auf true gesetzt. Dann nutzen sie KLEINEN evalutor, sonst den von AbstractRLAgent
+            self.evaluator = evaluator(self.containers, self, self.show_plots, self.conf.save_xml, ["progress", "laptime"], [100, 60] ) 
 
         
     def performAction(self, gameState, pastState):
@@ -112,12 +111,23 @@ class AbstractAgent(object):
 
 
     def handle_special_commands(self, command):
+        self.eval_episodeVals(command)
         if command == "turnedaround":
             self.resetUnityAndServer()
         if command == "wallhit":   
             self.resetUnityAndServer()
+            
 
-                    
+
+    def eval_episodeVals(self, endReason): #ein bisschen hierher gecheatet aber whatever
+        _, _, otherinput_hist, _ = self.containers.inputval.read()
+        progress = round(otherinput_hist[0].ProgressVec.Progress*100 if endReason != "lapdone" else 100, 2)
+        laptime = round(otherinput_hist[0].ProgressVec.Laptime, 1)
+        valid = otherinput_hist[0].ProgressVec.fValidLap
+        evalstring = "progress:",progress,"laptime:",laptime,"(valid)" if valid else ""
+        print(evalstring, level=8)
+        if self.use_evaluator:
+            self.evaluator.add_episode([progress, laptime])               
             
     ###########################################################################
     ################functions that should be impemented########################
@@ -175,7 +185,6 @@ class AbstractRLAgent(AbstractAgent):
         self.wallhitPunish = 1
         self.wrongDirPunish = 5
         self.isPretrain = isPretrain
-        self.show_plots = False  #wird im initForDriving ggf überschrieben
         self.startepsilon = self.conf.startepsilon #standard from config, but may be overridden
         self.minepsilon = self.conf.minepsilon #standard from config, but may be overridden
         self.finalepsilonframe = self.conf.finalepsilonframe #standard from config, but may be overridden
@@ -211,6 +220,8 @@ class AbstractRLAgent(AbstractAgent):
         self.numInferencesAfterLearn = 0
         self.numLearnAfterInference = 0
         self.epsilon = self.startepsilon
+        self.episode_statevals = []  #für evaluator
+        self.episodes = 0 #für evaluator, wird bei jedem neustart auf null gesetzt aber das ist ok dafür
         if self.use_evaluator:
             self.evaluator = evaluator(self.containers, self, self.show_plots, self.conf.save_xml,      \
                                        ["average rewards", "average Q-vals", "progress", "laptime"               ], \
@@ -274,8 +285,6 @@ class AbstractRLAgent(AbstractAgent):
         
         #but, at every point you should drive at least 0.2 of maxspeed...
         tooslow = 1- ((min(0.2, otherinput_hist[0].SpeedSteer.speedInStreetDir) / 0.2) ** 3) #its easily possible to keep this at 0 at all times
-        tooslow *= max(0, min(1, (self.model.run_inferences()-10000)/20000)) #starting at 10.000 iterations, this gets more relevant
-        
         
         rew -= toWallSpeed
         rew -= 0.5*tooslow
@@ -294,7 +303,6 @@ class AbstractRLAgent(AbstractAgent):
 #        stay_on_street = abs(otherinput_hist[0].CenterDist[0])
 #        stay_on_street = round(0 if stay_on_street < 5 else self.wallhitPunish if stay_on_street >= 10 else stay_on_street/20, 3)
 #        return progress-stay_on_street
-
         
     
     def randomAction(self, agentState):
