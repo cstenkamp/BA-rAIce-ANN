@@ -37,7 +37,7 @@ class Agent(AbstractRLAgent):
     
     #im gegensatz zu den DQN-basierten agents muss er die action nicht diskretisieren
     def makeNetUsableAction(self, action):
-        return [-abs(action[2])]
+        return action
 
     def endEpisode(self, *args, **kwargs):
         self._noiseState = np.array([0]*self.conf.num_actions)
@@ -54,14 +54,24 @@ class Agent(AbstractRLAgent):
         self.isinitialized = True
 
 
-    #classical Ornstein-Uhlenbeck-process. The trick in that is, that the mu of the noise is always that one of the last iteration (->temporal correlation)
+#    #classical Ornstein-Uhlenbeck-process. The trick in that is, that the mu of the noise is always that one of the last iteration (->temporal correlation)
+#    def make_noisy(self, action):
+#        self._noiseState = self.conf.ornstein_theta * self._noiseState + (1-self.conf.ornstein_theta) * np.random.normal(np.zeros_like(self._noiseState), self.conf.ornstein_std)
+#        action = action + 10*self.epsilon * self._noiseState
+#        clip = lambda x,b: min(max(x,b[0]),b[1])
+#        action = np.array([clip(action[i],self.conf.action_bounds[i]) for i in range(len(action))])
+#        return action
+
     def make_noisy(self, action):
-        self._noiseState = self.conf.ornstein_theta * self._noiseState + (1-self.conf.ornstein_theta) * np.random.normal(np.zeros_like(self._noiseState), self.conf.ornstein_std)
-        action = action + 10*self.epsilon * self._noiseState
+        def Ornstein(x,mu,theta,sigma):
+            return theta * (mu - x) + sigma * np.random.randn(1)
+        action[0] += max(self.epsilon*4, 0) * Ornstein(action[0],  0.5 , 0.85, 0.10)
+        action[1] += max(self.epsilon*4, 0) * Ornstein(action[1],  0.1 , 0.85, 0.05)  
+        action[2] += max(self.epsilon*4, 0) * Ornstein(action[2],  0.0 , 0.60, 0.30)
         clip = lambda x,b: min(max(x,b[0]),b[1])
         action = np.array([clip(action[i],self.conf.action_bounds[i]) for i in range(len(action))])
         return action
-
+    
 
     #because we don't do epsilon-greedy here but ONP, we let randomAction be policyAction... but only once we filled the memory enough
     def randomAction(self, agentState):

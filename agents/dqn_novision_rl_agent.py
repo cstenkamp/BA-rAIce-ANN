@@ -14,6 +14,7 @@ from myprint import myprint as print
 import infoscreen
 from efficientmemory import Memory as Efficientmemory
 from dddqn import DDDQN_model 
+from read_supervised import empty_inputs
 
 current_milli_time = lambda: int(round(time.time() * 1000))
 flatten = lambda l: [item for sublist in l for item in sublist]
@@ -23,7 +24,7 @@ class Agent(AbstractRLAgent):
     def __init__(self, conf, containers, isPretrain=False, start_fresh=False, *args, **kwargs):
         self.name = "dqn_novision_rl_agent"#__file__[__file__.rfind("\\")+1:__file__.rfind(".")]
         super().__init__(conf, containers, isPretrain, start_fresh, *args, **kwargs)
-        self.ff_inputsize = 65 + conf.num_actions * conf.ff_stacksize #61
+        self.ff_inputsize = 2 * len(empty_inputs().returnRelevant()) + conf.num_actions * conf.ff_stacksize
         self.usesConv = False
         self.usesGUI = True
         session = tf.Session(config=tf.ConfigProto(intra_op_parallelism_threads=2, allow_soft_placement=True))
@@ -54,7 +55,6 @@ class Agent(AbstractRLAgent):
     ###########################################################################
     
     def initForDriving(self, *args, **kwargs): 
-#        self.memory = Efficientmemory(self.conf.memorysize, self.conf, self, self.conf.history_frame_nr, self.conf.use_constantbutbigmemory) #dieser agent unterstützt das effiziente memory        
         super().initForDriving(*args, **kwargs)
         self.isinitialized = True
 

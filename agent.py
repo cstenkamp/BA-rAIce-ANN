@@ -122,6 +122,11 @@ class AbstractAgent(object):
                 self.last_action = toUse, toSave                
             self.containers.outputval.update(toUse, toSave, self.containers.inputval.CTimestamp, self.containers.inputval.STimestamp)  
 
+
+    def handle_special_commands(self, command):
+        if command == "turnedaround":
+            self.resetUnityAndServer()
+
                     
             
     ###########################################################################
@@ -176,6 +181,7 @@ class AbstractRLAgent(AbstractAgent):
         super().__init__(conf, containers, *args, **kwargs)
         self.nomemoryload = kwargs["nomemoryload"] if "nomemoryload" in kwargs else False
         self.start_fresh = start_fresh
+        self.time_ends_episode = 60 #sekunden oder False
         self.wallhitPunish = 1
         self.wrongDirPunish = 5
         self.isPretrain = isPretrain
@@ -307,8 +313,24 @@ class AbstractRLAgent(AbstractAgent):
         #throttle, brake, steer = 1, 0, 0
         result = "["+str(throttle)+", "+str(brake)+", "+str(steer)+"]"
         return result, (throttle, brake, steer)  #er returned immer toUse, toSave     
-      
-
+    
+    
+    
+    def handle_special_commands(self, command, wasValid=False):
+        if command == "wallhit":
+            self.punishLastAction(self.wallhitPunish)   #ist das doppelt gemoppelt damit, dass er eh das if punish > 10 beibehält?       
+            self.endEpisode("wallhit", self.containers.inputval.read())
+        if command == "lapdone":
+            print("Lap finished", level=6)
+            #if wasValid gib +1000 reward?^^
+            self.endEpisode("lapdone", self.containers.inputval.read())
+        if command == "timeover":
+            self.endEpisode("timeover", self.containers.inputval.read())
+        if command == "turnedaround":
+            self.punishLastAction(self.wrongDirPunish)
+            self.endEpisode("turnedaround", self.containers.inputval.read())
+    
+    
     ###########################################################################
     ########################### Necessary functions ###########################
     ###########################################################################
@@ -341,7 +363,7 @@ class AbstractRLAgent(AbstractAgent):
 #            print(toSave)
 #            print(otherinput_hist[0].SpeedSteer)
             
-            self.containers.outputval.update(toUse, toSave, self.containers.inputval.CTimestamp, self.containers.inputval.STimestamp)  
+            self.containers.outputval.update(toUse, toSave, self.containers.inputval.CTimestamp, self.containers.inputval.STimestamp)   #note that his happens BEFORE it learns <- parallel
             if self.conf.learnMode == "between":
                 if self.numsteps % self.conf.ForEveryInf == 0 and self.canLearn():
                     print("freezing python because after", self.model.run_inferences(), "iterations I need to learn (between)", level=2)
@@ -350,6 +372,7 @@ class AbstractRLAgent(AbstractAgent):
                     self.unFreezeInf("LearningComes")
         else:
             toUse, toSave = self.randomAction(agentState)
+            self.containers.outputval.update(toUse, toSave, self.containers.inputval.CTimestamp, self.containers.inputval.STimestamp)  
             
         
     #gamestate and paststate sind jeweils (vvec1_hist, vvec2_hist, otherinputs_hist, action_hist) #TODO: nicht mit gamestate und paststate, direkt mit agentstate!

@@ -62,9 +62,6 @@ class Config():
     
     #LEARN SETTINGS    
     ForEveryInf, ComesALearn = 400, 100
-    wallhit_ends_episode = True #problem: wenn es das nicht tun würde, würde er beim lernen den Q-val des folgestates mitbeachten und denken "oh, gegen die Wand fahren ist voll gut"...
-    lapdone_ends_episode = True
-    time_ends_episode = 60 #sekunden oder False
     save_memory_with_checkpoint = True
     save_memory_on_exit = False
     save_memory_all_mins = False
@@ -101,7 +98,6 @@ class Config():
     
     #DEBUG STUFF
     UPDATE_ONLY_IF_NEW = False #sendet immer nach jedem update -> Wenn False sendet er wann immer er was kriegt
-    reset_if_wrongdirection = True
 
     
     def has_gpu(self):

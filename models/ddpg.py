@@ -370,7 +370,7 @@ class DDPG_model():
         self.pretrain_ep = 0
         self.boardstep = 0
         if conf.summarize_tensorboard_allstep:
-            self.writer = self.initTensorboard()
+            self.writer = self._initTensorboard()
             
         
     def initNet(self, load=False):
@@ -452,18 +452,18 @@ class DDPG_model():
         return self.critic.predict(oldstates, action, useOnline=False)[0]
     
     #expects state and action
-    def qvalue(self, oldstates, action):                                            
-        return self.critic.predict(oldstates, action, useOnline=False)[0]    
+    def qvalue(self, oldstates, actions):                                            
+        return self.critic.predict(oldstates, actions, useOnline=False)[0]    
     
     #expects state and action
-    def getstatecountfeaturevec(self, oldstates, action):
-        lastlay = np.array(self.session.run(self.critic.target.fc3, feed_dict=self.critic._make_inputs(oldstates, self.critic.target, {self.critic.target.actions: action})))
-        lastlay = np.round(np.concatenate([lastlay, np.array(action)*20], axis=1))
+    def getstatecountfeaturevec(self, oldstates, actions):
+        lastlay = np.array(self.session.run(self.critic.target.fc3, feed_dict=self.critic._make_inputs(oldstates, self.critic.target, {self.critic.target.actions: actions})))
+        lastlay = np.round(np.concatenate([lastlay, np.array(actions)*20], axis=1))
         return lastlay
     
     
     #expects a whole s,a,r,s,t - tuple
-    def q_train_step(self, batch, decay_lr=False): #TODO DO decay_lr
+    def q_train_step(self, batch): 
         self.boardstep += 1
         doSummary = self.boardstep % self.conf.summarize_tensorboard_allstep == 0 if self.conf.summarize_tensorboard_allstep else False
         oldstates, actions, rewards, newstates, terminals = batch
@@ -487,7 +487,7 @@ class DDPG_model():
         return np.max(target_Q)
         
                
-    def initTensorboard(self):
+    def _initTensorboard(self):
         folder = self.agent.folder(self.conf.pretrain_log_dir) if self.isPretrain else self.agent.folder(self.conf.log_dir)
         writer = tf.summary.FileWriter(folder,self.session.graph)
         return writer

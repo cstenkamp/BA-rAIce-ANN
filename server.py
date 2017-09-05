@@ -169,25 +169,18 @@ class receiver_thread(threading.Thread):
         specialcommand = False
         if data[:6] == "STime(":
             data = data[data.find(")")+1:]
-    
-        if data[:11] == "resetServer":
+            
+        if data[:11] == "resetServer": #this is forced and idependent of the agent
             if hasattr(self.containers.myAgent, "memory"):
                 self.containers.myAgent.endEpisode("resetserver", self.containers.inputval.read())
             resetServer(self.containers, data[11:]) 
             specialcommand = True    
         if data[:7] == "wallhit":
-            if hasattr(self.containers.myAgent, "memory"):
-                self.containers.myAgent.punishLastAction(self.containers.myAgent.wallhitPunish)   #ist das doppelt gemoppelt damit, dass er eh das if punish > 10 beibehält?       
-                if self.containers.conf.wallhit_ends_episode:
-                    self.containers.myAgent.endEpisode("wallhit", self.containers.inputval.read())
-            #resetServer(self.containers, self.containers.conf.msperframe) 
-            specialcommand = True 
+            self.containers.myAgent.handle_special_commands("wallhit")
+            specialcommand = True    
         if data[:8] == "endround":
-            print("Round finished", level=6)
-            #roundwasvalid = data[8]==1 #benötige ich momentan noch nicht
-            if hasattr(self.containers.myAgent, "memory") and self.containers.conf.lapdone_ends_episode:
-                self.containers.myAgent.endEpisode("lapdone", self.containers.inputval.read())
-            specialcommand = True        
+            self.containers.myAgent.handle_special_commands("lapdone", data[8]==1)
+            specialcommand = True    
         return specialcommand
     
 
@@ -277,8 +270,8 @@ class InputValContainer(object):
             #20.7.: deleted the "if is_new..." functionality, as I think its absolutely not helpful
             otherinputs = make_otherinputs(othervecs).normalized() #is now a namedtuple instead of an array            
             
-            if hasattr(self.containers.myAgent, "memory") and self.conf.time_ends_episode and  otherinputs.ProgressVec.Laptime >= self.conf.time_ends_episode:
-                self.containers.myAgent.endEpisode("timeover", self.read())
+            if hasattr(self.containers.myAgent, "time_ends_episode") and self.containers.myAgent.time_ends_episode and otherinputs.ProgressVec.Laptime >= self.containers.myAgent.time_ends_episode:
+                self.containers.myAgent.handle_special_commands("timeover") 
                                           
             if self.conf.use_cameras and self.agent.usesConv:
                 self._append_vvec_hist(visionvec, vvec2)
@@ -296,14 +289,12 @@ class InputValContainer(object):
 #                self.otherinput_hist[0] = self.otherinput_hist[0]._replace(CenterDist = [1])
                 
             try:
-                if self.conf.reset_if_wrongdirection:
-                    if not self.otherinput_hist[0].SpeedSteer.rightDirection:
-                        self.containers.wrongdirectiontime += self.containers.conf.msperframe
-                        if self.containers.wrongdirectiontime >= 2000: #bei 2 sekunden falsche richtung
-                            #resetUnityAndServer(self.containers, punish=self.containers.myAgent.wrongDirPunish)
-                            self.containers.myAgent.endEpisode("turnedaround", self.read())
-                    else:
-                        self.containers.wrongdirectiontime = 0
+                if not self.otherinput_hist[0].SpeedSteer.rightDirection:
+                    self.containers.wrongdirectiontime += self.containers.conf.msperframe
+                    if self.containers.wrongdirectiontime >= 2000: #bei 2 sekunden falsche richtung
+                        self.containers.myAgent.handle_special_commands("turnedaround")
+                else:
+                    self.containers.wrongdirectiontime = 0
             except IndexError:
                 self.containers.wrongdirectiontime = 0
                               

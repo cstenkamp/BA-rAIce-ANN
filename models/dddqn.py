@@ -320,7 +320,13 @@ class DDDQN_model():
         
     #expects only a state (and no stands_input)
     def statevalue(self, oldstates):                                                  
-        return self.session.run(self.targetQN.Qmax, feed_dict=self.targetQN.make_inputs(oldstates, is_training=False))
+        return self.session.run(self.targetQN.Qmax, feed_dict=self.targetQN.make_inputs(oldstates, is_training=False))[0]
+    
+    #expects state and action
+    def qvalue(self, oldstates, actions):           
+        carstands = oldstates[0][2] if len(oldstates) == 1 and len(oldstates[0]) > 2 else False                                 
+        predict, qout = self.session.run([self.targetQN.predict, self.targetQN.Qout], feed_dict=self.targetQN.make_inputs(oldstates, carstands = carstands, is_training=False))
+        return qout[0][predict[0]]
     
     
     #expects a whole s,a,r,s,t - tuple, needs however only s & a
@@ -356,23 +362,3 @@ class DDDQN_model():
         #print("Learning rate:",self.session.run(self.onlineQN.lr))
         return np.max(targetQ)
         
-###########################################################################################################
-###########################################################################################################
-###########################################################################################################
-    
-#sind die noch richtig?        
-############################## helper functions ###############################
-
-#takes as input a batch of ENV-STATES, and returns batch of AGENT-STATES
-#def EnvStateBatch_to_AgentStateBatch(self, agent, stateBatch):
-#    presentStates = list(zip(*stateBatch))
-#    conv_inputs, other_inputs, _ = list(zip(*[agent.getAgentState(*presentState) for presentState in presentStates]))
-#    other_inputs = [agent.makeNetUsableOtherInputs(i) for i in other_inputs]
-#    return conv_inputs, other_inputs, False
-#    
-##takes as input batch of ENV-STATES, and return batch of AGENT-ACTIONS
-#def EnvStateBatch_to_AgentActionBatch(self, agent, stateBatch):
-#    presentStates = list(zip(*stateBatch))
-#    targets = [agent.makeNetUsableAction(agent.getAction(*presentState)) for presentState in presentStates]
-#    return targets
-#                      

@@ -76,8 +76,8 @@ def make_otherinputs(othervecs):
 #MINVALS = Otherinputs(Progressvec(-9,0,0,0), Speedsteer(0,0,-20,-20,0,0,0,-180,0),Statusvector(0,-5,-5,-5,-5,-5,-5,-5,-5),[0],[0]*15,[-52]*30,[-Config().time_ends_episode]*2,[i[0] for i in Config().action_bounds])
 #MAXVALS = Otherinputs(Progressvec(100,Config().time_ends_episode,100,1), Speedsteer(1200,1200,20,20,Config().MAXSPEED,1,Config().MAXSPEED,180,Config().MAXSPEED),Statusvector(Config().MAXSPEED/200.0,5,5,5,5,5,5,5,5),[11],[0.3989]*15,[52]*30,[Config().time_ends_episode]*2,[i[1] for i in Config().action_bounds])
 maxspeed = Config().MAXSPEED                                                   
-MINVALS = Otherinputs(Progressvec(0,0,0,0), Speedsteer(0,0,-20,-20,0,0,0,-180,0,-maxspeed,-1),Statusvector(0,-5,-5,-5,-5,-5,-5,-5,-5),[-13],[0]*15,[0]*7,[-52]*30,[-Config().time_ends_episode]*2,[0 for i in Config().action_bounds])
-MAXVALS = Otherinputs(Progressvec(100,1,100,1), Speedsteer(1200,1200,20,20,maxspeed,1,maxspeed,180,maxspeed,maxspeed,1),Statusvector(maxspeed/200.0,5,5,5,5,5,5,5,5),[13],[0.3989]*15,[300]*7,[52]*30,[Config().time_ends_episode]*2,[1 for i in Config().action_bounds])
+MINVALS = Otherinputs(Progressvec(0,0,0,0), Speedsteer(0,0,-20,-20,0,0,0,-180,0,-maxspeed,-1),Statusvector(0,-5,-5,-5,-5,-5,-5,-5,-5),[-13],[0]*15,[0]*7,[-52]*30,[-60]*2,[0 for i in Config().action_bounds])
+MAXVALS = Otherinputs(Progressvec(100,1,100,1), Speedsteer(1200,1200,20,20,maxspeed,1,maxspeed,180,maxspeed,maxspeed,1),Statusvector(maxspeed/200.0,5,5,5,5,5,5,5,5),[13],[0.3989]*15,[300]*7,[52]*30,[60]*2,[1 for i in Config().action_bounds])
 #this very long part end
 
 ###############################################################################
