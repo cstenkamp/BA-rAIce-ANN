@@ -20,7 +20,7 @@ flatten = lambda l: [item for sublist in l for item in sublist]
 
 class Agent(AbstractRLAgent):
     def __init__(self, conf, containers, isPretrain=False, start_fresh=False, *args, **kwargs):
-        self.name = "ddpg_novision_rl_agent" #__file__[__file__.rfind("\\")+1:__file__.rfind(".")]
+        self.name = "ddpg_rl_agent" #__file__[__file__.rfind("\\")+1:__file__.rfind(".")]
         super().__init__(conf, containers, isPretrain, start_fresh, *args, **kwargs)
         self.ff_inputsize = 32 #conf.speed_neurons + conf.num_actions * conf.ff_stacksize #32
         self.isContinuous = True
