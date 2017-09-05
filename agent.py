@@ -110,7 +110,7 @@ class AbstractAgent(object):
             self.containers.outputval.update(toUse, toSave, self.containers.inputval.CTimestamp, self.containers.inputval.STimestamp)  
 
 
-    def handle_special_commands(self, command):
+    def handle_commands(self, command):
         self.eval_episodeVals(command)
         if command == "turnedaround":
             self.resetUnityAndServer()
@@ -326,7 +326,7 @@ class AbstractRLAgent(AbstractAgent):
         return result, (throttle, brake, steer)  #er returned immer toUse, toSave     
         
     
-    def handle_special_commands(self, command, wasValid=False):
+    def handle_commands(self, command, wasValid=False):
         if command == "wallhit":
             self.punishLastAction(self.wallhitPunish)   #ist das doppelt gemoppelt damit, dass er eh das if punish > 10 beibehält?       
             self.endEpisode("wallhit", self.containers.inputval.read())
@@ -449,10 +449,10 @@ class AbstractRLAgent(AbstractAgent):
 
 
 
-    def dauerLearnANN(self, learnSteps):
+    def dauerLearnANN(self, steps):
         i = 0
         res = 0
-        while self.containers.KeepRunning and self.model.run_inferences() <= self.conf.train_for and i < learnSteps:
+        while self.containers.KeepRunning and self.model.run_inferences() <= self.conf.train_for and i < steps:
             cando = True
             #hier gehts darum das learnen zu freezen bis die Inference eingeholt hat. (falls update_frequency gesetzt)
             if self.conf.ForEveryInf and self.conf.ComesALearn and self.conf.learnMode == "parallel":
@@ -474,7 +474,7 @@ class AbstractRLAgent(AbstractAgent):
                 if self.conf.ForEveryInf and self.conf.ComesALearn and self.conf.learnMode == "parallel":
                     self.numLearnAfterInference += 1
             i += 1         
-#        print(res/learnSteps)
+#        print(res/steps)
         self.unFreezeInf("updateFrequency") #kann hier ruhig sein, da es eh nur unfreezed falls es aufgrund von diesem grund gefreezed war.
         if self.model.run_inferences() >= self.conf.train_for: #if you exited because you're completely done
             self.saveNet()

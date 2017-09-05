@@ -176,10 +176,10 @@ class receiver_thread(threading.Thread):
             resetServer(self.containers, data[11:]) 
             specialcommand = True    
         if data[:7] == "wallhit":
-            self.containers.myAgent.handle_special_commands("wallhit")
+            self.containers.myAgent.handle_commands("wallhit")
             specialcommand = True    
         if data[:8] == "endround":
-            self.containers.myAgent.handle_special_commands("lapdone", data[8]==1)
+            self.containers.myAgent.handle_commands("lapdone", data[8]==1)
             specialcommand = True    
         return specialcommand
     
@@ -271,7 +271,7 @@ class InputValContainer(object):
             otherinputs = make_otherinputs(othervecs).normalized() #is now a namedtuple instead of an array            
             
             if hasattr(self.containers.myAgent, "time_ends_episode") and self.containers.myAgent.time_ends_episode and otherinputs.ProgressVec.Laptime >= self.containers.myAgent.time_ends_episode:
-                self.containers.myAgent.handle_special_commands("timeover") 
+                self.containers.myAgent.handle_commands("timeover") 
                                           
             if self.conf.use_cameras and self.agent.usesConv:
                 self._append_vvec_hist(visionvec, vvec2)
@@ -292,7 +292,7 @@ class InputValContainer(object):
                 if not self.otherinput_hist[0].SpeedSteer.rightDirection:
                     self.containers.wrongdirectiontime += self.containers.conf.msperframe
                     if self.containers.wrongdirectiontime >= 2000: #bei 2 sekunden falsche richtung
-                        self.containers.myAgent.handle_special_commands("turnedaround")
+                        self.containers.myAgent.handle_commands("turnedaround")
                 else:
                     self.containers.wrongdirectiontime = 0
             except IndexError:
