@@ -64,10 +64,6 @@ class Agent(AbstractRLAgent):
     ###########################################################################
     ########################functions that need to be implemented##############
     ###########################################################################
-    
-    def initForDriving(self, *args, **kwargs): 
-        super().initForDriving(*args, **kwargs)
-        self.isinitialized = True
 
 
     #classical Ornstein-Uhlenbeck-process. The trick in that is, that the mu of the noise is always that one of the last iteration (->temporal correlation)

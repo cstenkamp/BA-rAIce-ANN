@@ -31,10 +31,6 @@ class Agent(AbstractAgent):
         toUse = "["+str(throttle)+", "+str(brake)+", "+str(steer)+"]"
         return toUse, (throttle, brake, steer)
 
-
-    def initForDriving(self, *args, **kwargs): 
-        super().initForDriving()
-        self.isinitialized = True
             
         
     def preTrain(self, dataset, iterations, supervised=True):

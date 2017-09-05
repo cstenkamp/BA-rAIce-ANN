@@ -463,7 +463,8 @@ class DDPG_model():
     
     
     #expects a whole s,a,r,s,t - tuple
-    def q_train_step(self, batch): 
+    def q_train_step(self, batch, decay_lr=False): 
+        assert not decay_lr, "This function is not implemented in the DDPG, as it doesnt make too much sense"
         self.boardstep += 1
         doSummary = self.boardstep % self.conf.summarize_tensorboard_allstep == 0 if self.conf.summarize_tensorboard_allstep else False
         oldstates, actions, rewards, newstates, terminals = batch

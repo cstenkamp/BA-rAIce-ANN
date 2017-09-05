@@ -54,10 +54,6 @@ class Agent(AbstractRLAgent):
     ########################functions that need to be implemented##############
     ###########################################################################
     
-    def initForDriving(self, *args, **kwargs): 
-        super().initForDriving(*args, **kwargs)
-        self.isinitialized = True
-
         
         
     def policyAction(self, agentState):

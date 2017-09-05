@@ -38,7 +38,6 @@ class Agent(AbstractRLAgent):
     def initForDriving(self, *args, **kwargs): 
 #        self.memory = Efficientmemory(self.conf.memorysize, self.conf, self, self.conf.history_frame_nr, self.conf.use_constantbutbigmemory) #dieser agent unterstützt das effiziente memory        
         super().initForDriving(*args, **kwargs)
-        self.isinitialized = True
 
 
 

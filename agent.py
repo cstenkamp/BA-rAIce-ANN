@@ -25,7 +25,6 @@ class AbstractAgent(object):
     def __init__(self, conf, containers, *args, **kwargs):
         super().__init__()
         self.lock = threading.Lock()
-        self.isinitialized = False
         self.containers = containers  
         self.conf = conf
         self.action_repeat = self.conf.action_repeat #kann überschrieben werden
@@ -57,7 +56,7 @@ class AbstractAgent(object):
         assert self.conf.use_cameras, "You disabled cameras in the config, which is impossible for this agent!"
         conv_inputs = np.concatenate([vvec1_hist, vvec2_hist]) if vvec2_hist is not None else vvec1_hist
         other_inputs = [otherinput_hist[0].SpeedSteer.velocity, action_hist]
-        stands_inputs = otherinput_hist[0].SpeedSteer.velocity < 10
+        stands_inputs = otherinput_hist[0].SpeedSteer.velocity < 0.04
         return conv_inputs, other_inputs, stands_inputs
     
     def makeNetUsableOtherInputs(self, other_inputs): #normally, the otherinputs are stored as compact as possible. Networks may need to unpack that.
@@ -95,23 +94,12 @@ class AbstractAgent(object):
         self.repeated_action_for = self.action_repeat
         self.episode_statevals = []  #für evaluator
         self.episodes = 0 #für evaluator, wird bei jedem neustart auf null gesetzt aber das ist ok dafür
-        if self.use_evaluator:
-            self.evaluator = evaluator(self.containers, self, self.show_plots, self.conf.save_xml,      \
-                                       ["average rewards", "average Q-vals", "progress", "laptime"                    ], \
-                                       [(-0.1,1.3),        (-1,100),          100,        self.time_ends_episode ] ) 
 
-        #statecounterstuff deleteme
-#        self.allN = len(self.memory)
-#        CompleteBatch = self.create_QLearnInputs_from_MemoryBatch(self.memory[0:len(self.memory)])
-#        allvecs = self.model.getstatecountfeaturevec(CompleteBatch[0],CompleteBatch[1])
-#        byElement = list(zip(*allvecs))
-#        allzeros = dict([(i,0) for i in range(-20,21)])
-#        self.CountsByElement = [{**allzeros, **dict(Counter(i).items())} for i in byElement]                    
-        #statecounterstuffdeleteme ende
+
 
         
     def performAction(self, gameState, pastState):
-        if self.isinitialized and self.checkIfAction():
+        if self.checkIfAction():
             self.numsteps += 1
             self.repeated_action_for += 1                
             if self.repeated_action_for < self.action_repeat:
@@ -125,6 +113,8 @@ class AbstractAgent(object):
 
     def handle_special_commands(self, command):
         if command == "turnedaround":
+            self.resetUnityAndServer()
+        if command == "wallhit":   
             self.resetUnityAndServer()
 
                     
@@ -221,8 +211,19 @@ class AbstractRLAgent(AbstractAgent):
         self.numInferencesAfterLearn = 0
         self.numLearnAfterInference = 0
         self.epsilon = self.startepsilon
-        #self.isinitialized = True  #muss jeder agent individuell am Ende machen!
+        if self.use_evaluator:
+            self.evaluator = evaluator(self.containers, self, self.show_plots, self.conf.save_xml,      \
+                                       ["average rewards", "average Q-vals", "progress", "laptime"               ], \
+                                       [(-0.1,1.3),        (-1,100),          100,        self.time_ends_episode ] ) 
     
+        #statecounterstuff deleteme
+#        self.allN = len(self.memory)
+#        CompleteBatch = self.create_QLearnInputs_from_MemoryBatch(self.memory[0:len(self.memory)])
+#        allvecs = self.model.getstatecountfeaturevec(CompleteBatch[0],CompleteBatch[1])
+#        byElement = list(zip(*allvecs))
+#        allzeros = dict([(i,0) for i in range(-20,21)])
+#        self.CountsByElement = [{**allzeros, **dict(Counter(i).items())} for i in byElement]                    
+        #statecounterstuffdeleteme ende
         
     
     #hard rule for rewards: steering away from bad states cannot be better than being in a good state!
@@ -313,8 +314,7 @@ class AbstractRLAgent(AbstractAgent):
         #throttle, brake, steer = 1, 0, 0
         result = "["+str(throttle)+", "+str(brake)+", "+str(steer)+"]"
         return result, (throttle, brake, steer)  #er returned immer toUse, toSave     
-    
-    
+        
     
     def handle_special_commands(self, command, wasValid=False):
         if command == "wallhit":
@@ -339,7 +339,7 @@ class AbstractRLAgent(AbstractAgent):
     #overridden from AbstractAgent
     #this assumes standard epsilon-greedy. If agent's differ from that, they can let randomaction return policyaction and use self.epsilon therein if needed
     def performAction(self, gameState, pastState):
-        if self.isinitialized and self.checkIfAction():
+        if self.checkIfAction():
             self.numsteps += 1
             self.repeated_action_for += 1
             self.addToMemory(gameState, pastState)
