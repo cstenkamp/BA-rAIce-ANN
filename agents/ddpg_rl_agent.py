@@ -135,6 +135,13 @@ class Agent(AbstractRLAgent):
     ########################overwritten functions##############################
     ###########################################################################
     
+    def calculateReward(self, *args):
+        tmp = super().calculateReward(*args)
+        if self.containers.showscreen and self.conf.showColorArea:
+            #if the reward is between 0 and 1, the ColorArea will turn from black to white, where white is perfect
+            self.containers.screenwidgets["ColorArea"].updateCol(tmp)   
+        return tmp    
+    
     def eval_episodeVals(self, mem_epi_slice, gameState, endReason):
         string = super().eval_episodeVals(mem_epi_slice, gameState, endReason)
         if self.containers.showscreen: 

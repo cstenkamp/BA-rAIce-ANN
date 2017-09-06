@@ -506,7 +506,10 @@ class AbstractRLAgent(AbstractAgent):
         self.steeraverage = deque(5*[0], 5)
         self.episodes += 1        
         mem_epi_slice = self.memory.endEpisode() #bei actions, nach denen resettet wurde, soll er den folgestate nicht mehr beachten (später gucken wenn reset=true dann setze Q_DECAY auf quasi 100%)
-        self.eval_episodeVals(mem_epi_slice, gameState, reason)
+        try:
+            self.eval_episodeVals(mem_epi_slice, gameState, reason)
+        except:
+            pass
         self.stepsAfterStart = -1
         
            
@@ -610,7 +613,6 @@ class AbstractRLAgent(AbstractAgent):
                 print("freezing Unity because",reason, level=10)
                 self.containers.freezeInf = True
                 self.freezeInfReasons.append(reason)
-                self.containers.outputval.send_via_senderthread("pleaseFreeze", self.containers.inputval.CTimestamp, self.containers.inputval.STimestamp)        
                 try:
                     self.containers.outputval.freezeUnity()
                 except:
