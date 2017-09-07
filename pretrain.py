@@ -13,8 +13,8 @@ import sys
 import config
 import read_supervised
 from server import Containers
-from collections import Counter
-import numpy as np
+#from collections import Counter
+#import numpy as np
 
 
 def main(conf, agentname, containers, start_fresh, fake_real, numiters, supervised=False):
@@ -26,28 +26,28 @@ def main(conf, agentname, containers, start_fresh, fake_real, numiters, supervis
     
     
     #deleteme
-    allvecs = []
-    myAgent.initForDriving(keep_memory=False, show_plots=False, use_evaluator=False)
-    
-    allN = len(myAgent.memory)
-    CompleteBatch = myAgent.create_QLearnInputs_from_MemoryBatch(myAgent.memory[0:len(myAgent.memory)])
-    allvecs = myAgent.model.getstatecountfeaturevec(CompleteBatch[0],CompleteBatch[1])
-    byElement = list(zip(*allvecs))
-    CountsByElement = [(dict(Counter(i).items())) for i in byElement]
-    
-    
-    sample = myAgent.create_QLearnInputs_from_MemoryBatch(myAgent.memory.sample(1))
-    statesample = np.array(myAgent.model.getstatecountfeaturevec(sample[0],sample[1])[0])
-    
-    print(statesample)
-    
-    relativeNums = np.zeros_like(statesample)
-    for i in range(len(statesample)):
-        relativeNums[i] = (CountsByElement[i][statesample[i]]+0.5) / (allN+1)
-    
-    print(np.prod(np.array(relativeNums)))
-    
-    exit()
+#    allvecs = []
+#    myAgent.initForDriving(keep_memory=False, show_plots=False, use_evaluator=False)
+#    
+#    allN = len(myAgent.memory)
+#    CompleteBatch = myAgent.create_QLearnInputs_from_MemoryBatch(myAgent.memory[0:len(myAgent.memory)])
+#    allvecs = myAgent.model.getstatecountfeaturevec(CompleteBatch[0],CompleteBatch[1])
+#    byElement = list(zip(*allvecs))
+#    CountsByElement = [(dict(Counter(i).items())) for i in byElement]
+#    
+#    
+#    sample = myAgent.create_QLearnInputs_from_MemoryBatch(myAgent.memory.sample(1))
+#    statesample = np.array(myAgent.model.getstatecountfeaturevec(sample[0],sample[1])[0])
+#    
+#    print(statesample)
+#    
+#    relativeNums = np.zeros_like(statesample)
+#    for i in range(len(statesample)):
+#        relativeNums[i] = (CountsByElement[i][statesample[i]]+0.5) / (allN+1)
+#    
+#    print(np.prod(np.array(relativeNums)))
+#    
+#    exit()
     #deleteme ende
     
     if not fake_real:
