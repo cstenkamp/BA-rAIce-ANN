@@ -75,10 +75,13 @@ class Agent(AbstractRLAgent):
 #        return action
     
     def make_noisy(self, action):
+        brakemu = 0.1
+        if 50000 < self.model.step() < 100000:
+            brakemu = max(0.1, min(0.5, (self.model.step()-50000)/50000))
         def Ornstein(x,mu,theta,sigma):
             return theta * (mu - x) + sigma * np.random.randn(1)
         action[0] += max(self.epsilon*4, 0) * Ornstein(action[0],  0.5 , 0.85, 0.10)
-        action[1] += max(self.epsilon*4, 0) * Ornstein(action[1],  0.1 , 0.85, 0.05)  
+        action[1] += max(self.epsilon*4, 0) * Ornstein(action[1],  brakemu , 0.85, 0.05)  
         action[2] += max(self.epsilon*4, 0) * Ornstein(action[2],  0.0 , 0.60, 0.30)
         clip = lambda x,b: min(max(x,b[0]),b[1])
         action = np.array([clip(action[i],self.conf.action_bounds[i]) for i in range(len(action))])
