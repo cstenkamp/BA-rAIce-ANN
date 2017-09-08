@@ -53,7 +53,7 @@ class Config():
     startepsilon = 0.25
     minepsilon = 0.001
     finalepsilonframe = 300000
-    q_decay = 0.99
+    q_decay = 0.9
     checkpointall = 2000 #RLsteps, not inferences!
 #    ornstein_theta = 0.6
 #    ornstein_std = 0.2
