@@ -320,13 +320,13 @@ class DDDQN_model():
         
     #expects only a state (and no stands_input)
     def statevalue(self, oldstates):                                                  
-        return self.session.run(self.targetQN.Qmax, feed_dict=self.targetQN.make_inputs(oldstates, is_training=False))[0]
+        return self.session.run(self.targetQN.Qmax, feed_dict=self.targetQN.make_inputs(oldstates, is_training=False))
     
     #expects state and action
     def qvalue(self, oldstates, actions):           
         carstands = oldstates[0][2] if len(oldstates) == 1 and len(oldstates[0]) > 2 else False                                 
         predict, qout = self.session.run([self.targetQN.predict, self.targetQN.Qout], feed_dict=self.targetQN.make_inputs(oldstates, carstands = carstands, is_training=False))
-        return qout[0][predict[0]]
+        return [qout[i][predict[i]] for i in range(len(predict))]
     
     
     #expects a whole s,a,r,s,t - tuple, needs however only s & a

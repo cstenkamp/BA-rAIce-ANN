@@ -18,8 +18,8 @@ DELAY_TO_CONSIDER = 100
 #this very long part is the comparable namedtuple otherinputs!
 Preprogressvec = namedtuple('ProgressVec', ['Progress', 'Laptime', 'NumRounds', 'fValidLap'])
 Prespeedsteer = namedtuple('SpeedSteer', ['RLTorque', 'RRTorque', 'FLSteer', 'FRSteer', 'velocity', 'rightDirection', 'velocityOfPerpendiculars', 'carAngle', 'speedInStreetDir','speedInTraverDir', 'CurvinessBeforeCar'])
-Prestatusvector = namedtuple('StatusVector', ['velocity', 'FLSlip0', 'FRSlip0', 'RLSlip0', 'RRSlip0', 'FLSlip1', 'FRSlip1', 'RLSlip1', 'RRSlip1'])
-                                             #4 elems       11 elems      9 elems         1 elem        15 elems         7 elems        30 elems       2 elems    3 elems  = 82 elems
+Prestatusvector = namedtuple('StatusVector', ['FLSlip0', 'FRSlip0', 'RLSlip0', 'RRSlip0', 'FLSlip1', 'FRSlip1', 'RLSlip1', 'RRSlip1'])
+                                             #4 elems       11 elems      8 elems         1 elem        15 elems         7 elems        30 elems       2 elems    3 elems  = 81 elems
 Preotherinputs = namedtuple('OtherInputs', ['ProgressVec', 'SpeedSteer', 'StatusVector', 'CenterDist', 'CenterDistVec', 'WallDistVec', 'LookAheadVec', 'FBDelta', 'Action'])
 class Progressvec(Preprogressvec):
     def __eq__(self, other):
@@ -60,12 +60,12 @@ class Otherinputs(Preotherinputs):
                       
 empty_progressvec = lambda: Progressvec(0, 0, 0, 0)
 empty_speedsteer = lambda: Speedsteer(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
-empty_statusvector = lambda: Statusvector(0, 0, 0, 0, 0, 0, 0, 0, 0)
+empty_statusvector = lambda: Statusvector(0, 0, 0, 0, 0, 0, 0, 0)
 empty_inputs = lambda: Otherinputs(empty_progressvec(), empty_speedsteer(), empty_statusvector(), [0], np.zeros(15), np.zeros(7), np.zeros(30), np.zeros(2), np.zeros(3))
 def make_otherinputs(othervecs):
     return Otherinputs(Progressvec(othervecs[0][0], othervecs[0][1], othervecs[0][2], othervecs[0][3]), \
                        Speedsteer(othervecs[1][0], othervecs[1][1], othervecs[1][2], othervecs[1][3], othervecs[1][4], othervecs[1][5], othervecs[1][6], othervecs[1][7], othervecs[1][8], othervecs[1][9], othervecs[1][10]), \
-                       Statusvector(othervecs[2][0], othervecs[2][1], othervecs[2][2], othervecs[2][3], othervecs[2][4], othervecs[2][5], othervecs[2][6], othervecs[2][7], othervecs[2][8]), \
+                       Statusvector(othervecs[2][0], othervecs[2][1], othervecs[2][2], othervecs[2][3], othervecs[2][4], othervecs[2][5], othervecs[2][6], othervecs[2][7]), \
                        [othervecs[3][0]], \
                        othervecs[3][1:], \
                        othervecs[4], 
@@ -73,11 +73,9 @@ def make_otherinputs(othervecs):
                        othervecs[6],
                        othervecs[7])
     
-#MINVALS = Otherinputs(Progressvec(-9,0,0,0), Speedsteer(0,0,-20,-20,0,0,0,-180,0),Statusvector(0,-5,-5,-5,-5,-5,-5,-5,-5),[0],[0]*15,[-52]*30,[-Config().time_ends_episode]*2,[i[0] for i in Config().action_bounds])
-#MAXVALS = Otherinputs(Progressvec(100,Config().time_ends_episode,100,1), Speedsteer(1200,1200,20,20,Config().MAXSPEED,1,Config().MAXSPEED,180,Config().MAXSPEED),Statusvector(Config().MAXSPEED/200.0,5,5,5,5,5,5,5,5),[11],[0.3989]*15,[52]*30,[Config().time_ends_episode]*2,[i[1] for i in Config().action_bounds])
 maxspeed = Config().MAXSPEED                                                   
-MINVALS = Otherinputs(Progressvec(0,0,0,0), Speedsteer(0,0,-20,-20,0,0,0,-180,0,-maxspeed,-1),Statusvector(0,-5,-5,-5,-5,-5,-5,-5,-5),[-13],[0]*15,[0]*7,[-52]*30,[-60]*2,[0 for i in Config().action_bounds])
-MAXVALS = Otherinputs(Progressvec(100,1,100,1), Speedsteer(1200,1200,20,20,maxspeed,1,maxspeed,180,maxspeed,maxspeed,1),Statusvector(maxspeed/200.0,5,5,5,5,5,5,5,5),[13],[0.3989]*15,[300]*7,[52]*30,[60]*2,[1 for i in Config().action_bounds])
+MINVALS = Otherinputs(Progressvec(0,0,0,0), Speedsteer(0,0,-20,-20,0,0,0,-180,0,-maxspeed,-1),Statusvector(-5,-5,-5,-5,-5,-5,-5,-5),[-13],[0]*15,[0]*7,[-52]*30,[-60]*2,[0 for i in Config().action_bounds])
+MAXVALS = Otherinputs(Progressvec(100,1,100,1), Speedsteer(1200,1200,20,20,maxspeed,1,maxspeed,180,maxspeed,maxspeed,1),Statusvector(5,5,5,5,5,5,5,5),[13],[0.3989]*15,[300]*7,[52]*30,[60]*2,[1 for i in Config().action_bounds])
 #this very long part end
 
 ###############################################################################

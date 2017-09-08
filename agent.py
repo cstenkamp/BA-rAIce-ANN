@@ -554,7 +554,7 @@ class AbstractRLAgent(AbstractAgent):
     def preTrain(self, dataset, iterations=None, supervised=False):  
         dataset.reset_batch()
         trainBatch = self.make_trainbatch(dataset,dataset.numsamples)
-        print('Iteration %3d: Accuracy = %.2f%%' % (self.model.pretrain_episode(), self.model.getAccuracy(trainBatch, likeDDPG=False)), level=10)
+        print('Iteration %3d: Accuracy = %.2f%%' % (self.model.pretrain_episode(), self.model.getAccuracy(trainBatch)), level=10)
         
         assert self.model.step() == 0, "I dont pretrain if the model already learned on real data!"
         iterations = self.conf.pretrain_iterations if iterations is None else iterations
@@ -564,7 +564,7 @@ class AbstractRLAgent(AbstractAgent):
             self.model.inc_episode()
             dataset.reset_batch()
             while dataset.has_next(self.conf.pretrain_batch_size):
-                trainBatch = self.make_trainbatch(dataset,self.conf.pretrain_batch_size,0.8)
+                trainBatch = self.make_trainbatch(dataset,self.conf.pretrain_batch_size,0 if supervised else 0.8)
                 if supervised:
                     self.model.sv_train_step(trainBatch, True)
                 else:
@@ -573,7 +573,7 @@ class AbstractRLAgent(AbstractAgent):
                 self.model.save()    
             dataset.reset_batch()
             trainBatch = self.make_trainbatch(dataset,dataset.numsamples)
-            print('Iteration %3d: Accuracy = %.2f%% (%.1f sec)' % (self.model.pretrain_episode(), self.model.getAccuracy(trainBatch, likeDDPG=False), time.time()-start_time), level=10)
+            print('Iteration %3d: Accuracy = %.2f%% (%.1f sec)' % (self.model.pretrain_episode(), self.model.getAccuracy(trainBatch), time.time()-start_time), level=10)
 
     ###########################################################################
     ############################# Helper functions#############################
