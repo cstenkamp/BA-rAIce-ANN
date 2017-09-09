@@ -16,13 +16,7 @@ import math
 import sys
 #====own classes====
 from myprint import myprint as print
-from utils import convolutional_layer, fc_layer, variable_summary, netCopyOps
-
-
-def dense(x, units, activation=tf.identity, decay=None, minmax=None):
-    if minmax is None:
-        minmax = float(x.shape[1].value) ** -.5
-    return tf.layers.dense(x, units,activation=activation, kernel_initializer=tf.random_uniform_initializer(-minmax, minmax), kernel_regularizer=decay and tf.contrib.layers.l2_regularizer(1e-2))
+from utils import convolutional_layer, fc_layer, variable_summary, netCopyOps, dense
 
 
 

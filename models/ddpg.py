@@ -7,19 +7,13 @@ from utils import netCopyOps
 import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' #so that TF doesn't show its warnings
 from tensorflow.contrib.framework import get_variables
-from utils import variable_summary
+from utils import variable_summary, dense
 flatten = lambda l: [item for sublist in l for item in sublist]
 
 
 #batchnorm doesnt really work, and if, only with huge minibatches https://www.reddit.com/r/MachineLearning/comments/671455/d_batch_normalization_in_reinforcement_learning/
 
-        
-def dense(x, units, activation=tf.identity, decay=None, minmax=None):
-    if minmax is None:
-        minmax = float(x.shape[1].value) ** -.5
-    return tf.layers.dense(x, units,activation=activation, kernel_initializer=tf.random_uniform_initializer(-minmax, minmax), kernel_regularizer=decay and tf.contrib.layers.l2_regularizer(1e-2))
-
-    
+      
         
 class conv_actorNet():
      def __init__(self, conf, agent, outerscope="actor", name="online", batchnorm = "fffffff"):   #tffffft    

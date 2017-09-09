@@ -105,6 +105,11 @@ def netCopyOps(fromNet, toNet, tau = 1):
         op_holder.append(toNet.trainables[idx].assign((var.value()*tau) + ((1-tau)*toNet.trainables[idx].value())))
     return op_holder
 
+def dense(x, units, activation=tf.identity, decay=None, minmax=None):
+    if minmax is None:
+        minmax = float(x.shape[1].value) ** -.5
+    return tf.layers.dense(x, units,activation=activation, kernel_initializer=tf.random_uniform_initializer(-minmax, minmax), kernel_regularizer=decay and tf.contrib.layers.l2_regularizer(1e-2))
+
     
     
 def random_unlike(x,agent):
