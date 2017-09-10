@@ -101,8 +101,8 @@ if __name__ == '__main__':
             exit(0)
     else:
         if "-svplay" in sys.argv:
-            agentname = "dqn_sv_agent"
+            agentname = config.Config().standardSVAgent
         else:
-            agentname = "dqn_rl_agent"
+            agentname = config.Config().standardAgent
             
     main(conf, agentname, containers, ("-startfresh" in sys.argv), ("-fakereal" in sys.argv), numiters, ("-supervised" in sys.argv))

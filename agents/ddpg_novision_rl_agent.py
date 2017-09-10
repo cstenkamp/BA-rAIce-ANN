@@ -87,7 +87,6 @@ class Agent(AbstractRLAgent):
         self._noiseState[0] = Ornstein(self._noiseState[0],  self.OU_mu[0] , self.OU_theta[0], self.OU_sigma[0])
         self._noiseState[1] = Ornstein(self._noiseState[1],  brakemu,        self.OU_theta[1], self.OU_sigma[1])  
         self._noiseState[2] = Ornstein(self._noiseState[2],  self.OU_mu[2] , self.OU_theta[2], self.OU_sigma[2])
-        print(self._noiseState)
         action[0] += max(self.epsilon*2, 0) * self._noiseState[0]
         action[1] += max(self.epsilon*2, 0) * self._noiseState[1]
         action[2] += max(self.epsilon*2, 0) * self._noiseState[2]

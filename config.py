@@ -23,6 +23,8 @@ class Config():
     #wir haben super-über-ordner für RLLearn, checkpoint, summarylogdir & memory für jede kombi aus hframes, secondcam, mspersec... und dann der agent-folder
     agents_file_dir = "./agents/"
     models_file_dir = "./models/"
+    standardAgent = "ddpg_novision_rl_agent"
+    standardSVAgent = "dqn_sv_agent"
     
     #PRETRAIN STUFF
     pretrain_batch_size = 128
@@ -52,7 +54,7 @@ class Config():
     batch_size = 64
     startepsilon = 0.25
     minepsilon = 0.001
-    finalepsilonframe = 300000
+    finalepsilonframe = 500000
     q_decay = 0.9
     checkpointall = 2000 #RLsteps, not inferences!
 #    ornstein_theta = 0.6

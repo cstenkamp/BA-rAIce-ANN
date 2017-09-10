@@ -604,8 +604,8 @@ if __name__ == '__main__':
             exit(0)
     else:
         if "-svplay" in sys.argv:
-            agentname = "dqn_sv_agent"
+            agentname = config.Config().standardSVAgent
         else:
-            agentname = "dqn_rl_agent"
+            agentname = config.Config().standardAgent
             
     main(conf, agentname, ("-nolearn" in sys.argv), not ("-noscreen" in sys.argv), not ("-noplot" in sys.argv), ("-startfresh" in sys.argv), ("-nomemorykeep" in sys.argv), ("-nomemoryload" in sys.argv))    
