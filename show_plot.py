@@ -64,9 +64,9 @@ def plot(agentname, labels, val_bounds, all_vals):
     rng = [averageForPrint* i for i in rng]
     
     maxval = list(rng)[-1]
+    iters = aslist["iteration"][-1]
     
     colors = ['b', 'g', 'r', 'c', 'm', 'y', 'k','b','g','r']
-    
 
     x = ceil(sqrt(len(labels)))
     y = ceil(len(labels)/x)
@@ -93,6 +93,17 @@ def plot(agentname, labels, val_bounds, all_vals):
         ax[j].axis([0, maxval, val_bounds[i][0], val_bounds[i][1]])
         ax[j].set_xlabel("Epoch", fontsize=15)
         ax[j].xaxis.set_label_coords(0.5, 0.06)
+        
+        
+        ax3 = ax[j].twiny()
+        ax3.set_xlabel("iteration")
+        ax3.xaxis.set_label_coords(0.5, 0.94)
+        ax3.set_xlim(0, iters)
+        steps = [0.1, 0.4, 0.6, 0.9]
+        ax3.set_xticks([int(i*iters) for i in steps])
+        ax3.set_xticklabels([str(int(i*iters)) for i in steps])
+        
+        
         ax[j].set_ylabel(i, fontsize=12)
         ax[j].yaxis.set_label_coords(0.05, 0.5)
         print([l.get_label() for l in plots])
