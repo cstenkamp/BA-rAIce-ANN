@@ -50,7 +50,7 @@ class Agent(AbstractRLAgent):
         flat_actions = list(np.zeros_like(flat_actions))
         print("Removed actions as input to network, as it only learns from them then", level=-1)
         other_inputs = np.concatenate((other_inputs,flat_actions))
-        stands_inputs = otherinput_hist[0].SpeedSteer.velocity < 10
+        stands_inputs = otherinput_hist[0].SpeedSteer.velocity < 0.04
         return None, other_inputs, stands_inputs
     
     def makeNetUsableOtherInputs(self, other_inputs): #normally, the otherinputs are stored as compact as possible. Networks may need to unpack that.
