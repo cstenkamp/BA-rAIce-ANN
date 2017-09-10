@@ -28,7 +28,11 @@ class Agent(AbstractRLAgent):
         self.isContinuous = True
         self.usesConv = False
         self.usesGUI = True
-        self._noiseState = np.array([0]*self.conf.num_actions)
+        self.OU_mu = [0.5, 0.01, 0.0]
+        self.OU_theta = [0.85, 0.85, 0.6]
+        self.OU_sigma = [0.1, 0.05, 0.3]
+        self._noiseState = self.OU_mu
+        
         session = tf.Session(config=tf.ConfigProto(intra_op_parallelism_threads=2, allow_soft_placement=True))
         self.model = DDPG_model(self.conf, self, session, isPretrain=isPretrain)
         self.model.initNet(load=("preTrain" if (self.isPretrain and not start_fresh) else (not start_fresh)))
@@ -57,7 +61,7 @@ class Agent(AbstractRLAgent):
         return other_inputs
     
     def endEpisode(self, *args, **kwargs):
-        self._noiseState = np.array([0]*self.conf.num_actions)
+        self._noiseState = self.OU_mu
         return super().endEpisode(*args, **kwargs)
 
 
@@ -75,14 +79,18 @@ class Agent(AbstractRLAgent):
 #        return action
     
     def make_noisy(self, action):
-        brakemu = 0.1
-        if 50000 < self.model.step() < 100000:
-            brakemu = max(0.1, min(0.5, (self.model.step()-50000)/50000))
         def Ornstein(x,mu,theta,sigma):
             return theta * (mu - x) + sigma * np.random.randn(1)
-        action[0] += max(self.epsilon*4, 0) * Ornstein(action[0],  0.5 , 0.85, 0.10)
-        action[1] += max(self.epsilon*4, 0) * Ornstein(action[1],  brakemu , 0.85, 0.05)  
-        action[2] += max(self.epsilon*4, 0) * Ornstein(action[2],  0.0 , 0.60, 0.30)
+        brakemu = self.OU_mu[1]
+        if 50000 < self.model.step() < 100000:
+            brakemu = max(0.05, min(0.15, (self.model.step()-50000)/250000))
+        self._noiseState[0] = Ornstein(self._noiseState[0],  self.OU_mu[0] , self.OU_theta[0], self.OU_sigma[0])
+        self._noiseState[1] = Ornstein(self._noiseState[1],  brakemu,        self.OU_theta[1], self.OU_sigma[1])  
+        self._noiseState[2] = Ornstein(self._noiseState[2],  self.OU_mu[2] , self.OU_theta[2], self.OU_sigma[2])
+        print(self._noiseState)
+        action[0] += max(self.epsilon*2, 0) * self._noiseState[0]
+        action[1] += max(self.epsilon*2, 0) * self._noiseState[1]
+        action[2] += max(self.epsilon*2, 0) * self._noiseState[2]
         clip = lambda x,b: min(max(x,b[0]),b[1])
         action = np.array([clip(action[i],self.conf.action_bounds[i]) for i in range(len(action))])
         return action
