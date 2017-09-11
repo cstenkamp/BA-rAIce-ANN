@@ -573,7 +573,7 @@ class AbstractRLAgent(AbstractAgent):
                 self.model.save()    
             dataset.reset_batch()
             trainBatch = self.make_trainbatch(dataset,dataset.numsamples)
-            print('Iteration %3d: Accuracy = %.2f%% (%.1f sec)' % (self.model.pretrain_episode(), self.model.getAccuracy(trainBatch), time.time()-start_time), level=10)
+            print('Iteration %3d: Accuracy = %.2f%% (%.1f sec)' % (self.model.pretrain_episode(), self.model.getAccuracy(trainBatch, likeDDPG=False), time.time()-start_time), level=10)
 
     ###########################################################################
     ############################# Helper functions#############################

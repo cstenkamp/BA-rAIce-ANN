@@ -77,7 +77,6 @@ class Memory(object):
     
     
     def __getitem__(self, index): #if i had with self._lock here, I would get a deadlock in the sample-method. 
-        #Get a (s,a,r,s',fE) tuple  #TODO: Alex' Version... https://github.com/ahoereth/ddpg/blob/feature/rewrite/src/lib/memory.py#L28-L60. is it more efficient?
         
         if self._appendcount > self.capacity and (self._pointer <= index <= self._pointer+3): #I know that the values from _pointer to _pointer+3 are always wrong.
             return False
@@ -85,6 +84,10 @@ class Memory(object):
             return None
         
         action = self.make_floats_from_long(self._actions[index])
+        actHist = [self.make_floats_from_long(self._actions[(i % self.capacity)]) for i in range(index,index-4,-1)]
+        newest = self.make_floats_from_long(self._actions[((index+1) % self.capacity)]) 
+        newest = None if newest == (0, 0, 0) else newest
+        
         reward = self._rewards[index]
         speed = self._speeds[index]
         folgespeed = self._speeds[(index+1 % self.capacity)]
@@ -113,8 +116,8 @@ class Memory(object):
             state = np.concatenate([state, state2])
             folgestate = np.concatenate([folgestate, folgestate2])
 
-        state = (state, speed)
-        folgestate = (folgestate, folgespeed)
+        state = (state, [speed]+actHist)
+        folgestate = (folgestate, [folgespeed]+[newest]+actHist[:3])
                         
         return [state, action, reward, folgestate, fEnd]
 
@@ -124,16 +127,16 @@ class Memory(object):
         with self._lock:
             oldstate, action, reward, newstate, fEnd = obj
             action = self.make_long_from_floats(*action)
-            oldspeed = oldstate[1]
+            oldspeed = oldstate[1][0]
             oldstate = oldstate[0]
-            newspeed = newstate[1]
+            newspeed = newstate[1][0]
             newstate = newstate[0]
             if self.conf.use_second_camera:   
                 oldstat2 = oldstate[oldstate.shape[0]//2:,:,:]
                 oldstate = oldstate[:oldstate.shape[0]//2,:,:]
                 newstat2 = newstate[newstate.shape[0]//2:,:,:]
                 newstate = newstate[:newstate.shape[0]//2,:,:]
-            
+                
             if self._pointer == 0:
                 self._visionvecs[0:self._state_stacksize] = np.array(list(reversed(oldstate)), dtype=self.conf.visionvecdtype)
                 self._visionvecs[self._state_stacksize] = np.array(newstate[0], dtype=self.conf.visionvecdtype)
@@ -156,7 +159,7 @@ class Memory(object):
             self._actions[self._pointer] = action
             self._rewards[self._pointer] = reward
             self._fEnds[self._pointer] = fEnd 
-                
+                       
             self._pointer = (self._pointer+1) % self.capacity
             
             self._appendcount += 1

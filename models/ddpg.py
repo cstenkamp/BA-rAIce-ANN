@@ -440,9 +440,9 @@ class DDPG_model():
     def getAccuracy(self, batch, likeDDPG=True): #dummy for consistency to DDDQN
         oldstates, actions, _, _, _ = batch
         predict = self.actor.predict(oldstates, useOnline=False, is_training=False)
-#        print("throt",np.mean(np.array([abs(np.linalg.norm(predict[i][0]-actions[i][0])) for i in range(len(actions))])))
-#        print("brake",np.mean(np.array([abs(np.linalg.norm(predict[i][1]-actions[i][1])) for i in range(len(actions))])))
-#        print("steer",np.mean(np.array([abs(np.linalg.norm(predict[i][2]-actions[i][2])) for i in range(len(actions))])))
+        print("throt",np.mean(np.array([abs(np.linalg.norm(predict[i][0]-actions[i][0])) for i in range(len(actions))])))
+        print("brake",np.mean(np.array([abs(np.linalg.norm(predict[i][1]-actions[i][1])) for i in range(len(actions))])))
+        print("steer",np.mean(np.array([abs(np.linalg.norm(predict[i][2]-actions[i][2])) for i in range(len(actions))])))
         return np.mean(np.array([abs(np.linalg.norm(predict[i]-actions[i])) for i in range(len(actions))]))
 
     

@@ -160,7 +160,8 @@ class plotter():
             self.maxvals = maxvals
             self.minvals = minvals
         self.num_epis = 100
-        self.colors = ['C%i'%i for i in range(len(labels))] 
+#        self.colors = ['C%i'%i for i in range(len(labels))] 
+        self.colors = ['b', 'g', 'r', 'c', 'm', 'y', 'k','b','g','r']
 
 
     def update(self, *new_vals):
