@@ -1,0 +1,75 @@
+<?xml version="1.0" ?>
+<Evaluation agent="random_agent">
+  <run date="2017-09-05 15:56:40">
+    <runResults>
+      <Episode nr="1">
+        <laptime>0</laptime>
+        <progress>0</progress>
+      </Episode>
+      <Episode nr="2">
+        <laptime>0</laptime>
+        <progress>0</progress>
+      </Episode>
+      <Episode nr="3">
+        <laptime>0</laptime>
+        <progress>0</progress>
+      </Episode>
+      <Episode nr="4">
+        <laptime>0</laptime>
+        <progress>0</progress>
+      </Episode>
+    </runResults>
+  </run>
+  <run date="2017-09-05 15:59:06" memorysize="NaN">
+    <runResults>
+      <Episode nr="1">
+        <progress>0</progress>
+        <laptime>0</laptime>
+      </Episode>
+    </runResults>
+  </run>
+  <run date="2017-09-05 16:02:27" memorysize="NaN">
+    <runResults>
+      <Episode nr="1">
+        <progress>0</progress>
+        <laptime>0</laptime>
+      </Episode>
+    </runResults>
+  </run>
+  <run date="2017-09-05 16:03:55" memorysize="NaN">
+    <runResults>
+      <Episode nr="1">
+        <laptime>0</laptime>
+        <progress>0</progress>
+      </Episode>
+    </runResults>
+  </run>
+  <run date="2017-09-05 16:05:37" memorysize="NaN">
+    <runResults>
+      <Episode nr="1">
+        <laptime>0</laptime>
+        <progress>0</progress>
+      </Episode>
+      <Episode nr="2">
+        <laptime>0</laptime>
+        <progress>0</progress>
+      </Episode>
+    </runResults>
+  </run>
+  <run date="2017-09-05 16:06:06" memorysize="NaN">
+    <runResults>
+      <Episode nr="1">
+        <laptime>0.7</laptime>
+        <progress>2.57</progress>
+      </Episode>
+      <Episode nr="2">
+        <laptime>2.8</laptime>
+        <progress>4.47</progress>
+      </Episode>
+      <Episode nr="3">
+        <laptime>3.7</laptime>
+        <progress>15.2</progress>
+      </Episode>
+    </runResults>
+  </run>
+</Evaluation>

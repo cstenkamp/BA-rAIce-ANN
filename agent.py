@@ -111,7 +111,7 @@ class AbstractAgent(object):
             self.containers.outputval.update(toUse, toSave, self.containers.inputval.CTimestamp, self.containers.inputval.STimestamp)  
 
 
-    def handle_commands(self, command):
+    def handle_commands(self, command, wasValid=False):
         self.eval_episodeVals(command)
         if command == "turnedaround":
             self.resetUnityAndServer()
@@ -260,9 +260,10 @@ class AbstractRLAgent(AbstractAgent):
         direction_bonus = abs((0.5-(abs(angle)))*2/0.75) 
         direction_bonus = ((direction_bonus**0.4 if direction_bonus > 1 else direction_bonus**2) / 1.1 / 2) - 0.25 #no big difference until 45degrees, then BIG diff.
         #maximally 0.25, minimally -0.25
-        tmp = (np.mean(self.steeraverage))        
+        tmp = (np.mean(self.steeraverage)) 
         steer_bonus1 = tmp/5 + angle #this one rewards sterering into street-direction if the cars angle is off...
         steer_bonus1 = 0 if np.sign(steer_bonus1) != np.sign(angle) and abs(angle) > 0.15 else steer_bonus1
+#        print(((0.5-abs(angle)) * (1-abs(steer_bonus1))))
         steer_bonus1 = (abs(dist*2)) * ((0.5-abs(angle)) * (1-abs(steer_bonus1))) + (1-abs(dist*2))*0.5  #more relevant the further off you are.
         steer_bonus2 = (1-((0.5-abs(dist))*2))**10 * -abs(((tmp+np.sign(dist))*np.sign(dist)))/1.5   #more relevant the furhter off, steering away from wall is as valuable as doing nothing in center, doing nothing is worse, steering towards sucks 
         #so steerbonus1+steerbonus2 is maximally 0.5
@@ -276,9 +277,10 @@ class AbstractRLAgent(AbstractAgent):
             
         #rew = (speed + stay_on_street + prog + 0.5 * direction_bonus + 0.5*(steer_bonus1+steer_bonus2)) / 2
                 
-        speedInRelationToWallDist = otherinput_hist[0].WallDistVec[6]-otherinput_hist[0].SpeedSteer.speedInStreetDir+(100/250)
-        speedInRelationToWallDist = 1-(abs(speedInRelationToWallDist)*3) if speedInRelationToWallDist < 0 else (1-speedInRelationToWallDist)+0.33
-        speedInRelationToWallDist += -badspeed + 0.1*otherinput_hist[0].SpeedSteer.speedInStreetDir
+        speedInRelationToWallDist = otherinput_hist[0].WallDistVec[6]-otherinput_hist[0].SpeedSteer.speedInStreetDir+(80/250)
+        speedInRelationToWallDist = 1-(abs(speedInRelationToWallDist)*3) if speedInRelationToWallDist < 0 else (1-speedInRelationToWallDist)+0.33                                   
+        speedInRelationToWallDist = min(1,speedInRelationToWallDist)
+        speedInRelationToWallDist += -badspeed + 0.3*otherinput_hist[0].SpeedSteer.speedInStreetDir
                                       
         rew = (2*speedInRelationToWallDist + stay_on_street + 0.5*direction_bonus + 0.5*(steer_bonus1+steer_bonus2))/4
          

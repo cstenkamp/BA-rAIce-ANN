@@ -3,9 +3,19 @@ old_checkpoints
 **/settings.ini
 **.pkl
 **.rar
-data*
 dqn/
 gym_chkpt*
+
+#---data---
+*.rar
+*.zip
+*.pkl
+*.
+**/RL_Checkpoints*
+**/PT_Checkpoints*
+**/RL_SummaryLogs*
+**/PT_SummaryLogs*
+
 
 #-----------------------------------------DELPHI-FILES-----------------------------------------
 # Delphi compiler-generated binaries (safe to delete)

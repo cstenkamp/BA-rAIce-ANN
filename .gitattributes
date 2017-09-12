@@ -4,3 +4,4 @@
 
 log.txt -diff
 SavedLaps/* -diff
+data/* -diff

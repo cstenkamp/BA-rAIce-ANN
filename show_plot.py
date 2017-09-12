@@ -19,12 +19,12 @@ def flatten2(l):
     except:
         return l
 
-averageForPrint = 10
-print_epsilon_in = ["maxrew"]
+averageForPrint = 5
 epsiloncolor = "0.5"
-prettystrings = {"maxq": "best average Q", "maxrew": "best average reward", "avgtime": "average laptime", "maxprog": "best average progress"}
-
-
+prettystrings = {"maxq": "best average Q", "maxrew": "best average reward", "avgtime": "average laptime", "maxprog": "best progress"} if averageForPrint != 1 else {"maxq": "average Q", "maxrew": "average reward", "avgtime": "laptime", "maxprog": "progress"}
+                
+MINMAXOVERWRITE = {"maxprog":[-8, 100], "avgtime":[0,60]}
+MAXEPIPRINT = 1890
 
 def prettify(string):
     if string in prettystrings:
@@ -33,29 +33,33 @@ def prettify(string):
         return string
     
 
-def main(agentname):
+def main(agentname, nonrl=False):
+    global print_epsilon_in
     conf = config.Config()
     filename = os.path.join(conf.superfolder(), agentname, conf.xml_dir, agentname+"_eval.xml")
-    allruns = read_xml(filename)
-    toplot = average_and_extract(allruns)
-    minmax = extract_minmax(toplot)
+    allruns = read_xml(filename, nonrl)
+    toplot = average_and_extract(allruns, nonrl)
+    minmax = extract_minmax(toplot, MINMAXOVERWRITE)
 #    print(toplot)
 #    print([i["epsilon"] for i in toplot])
 #    labels = list(minmax.keys())
-    labels = ["maxprog", "maxrew", "avgtime", "maxq"]
-    plot(agentname, labels, minmax, toplot)
+    print_epsilon_in = [] if nonrl else ["maxrew"]
+    labels = ["maxprog", "avgtime"] if nonrl else ["maxprog", "maxrew", "avgtime", "maxq"] 
+    plot(agentname, labels, minmax, toplot, nonrl)
 
     
 
-def extract_minmax(ls):
+def extract_minmax(ls, overwrites):
     aslist = [list(i.values()) for i in ls]
     perval = list(zip(*aslist))
     minmax = [[np.min(i),np.max(i)] for i in perval]
-    return dict(zip(*[list(ls[0].keys()), minmax]))
+    tmp = dict(zip(*[list(ls[0].keys()), minmax]))
+    tmp = {**tmp, **overwrites}
+    return tmp
 
 
 
-def plot(agentname, labels, val_bounds, all_vals):
+def plot(agentname, labels, val_bounds, all_vals, nonrl=False):
     
     aslist = list(zip(*[list(i.values()) for i in all_vals]))
     aslist = dict(zip(*[list(all_vals[0].keys()), aslist]))
@@ -64,7 +68,6 @@ def plot(agentname, labels, val_bounds, all_vals):
     rng = [averageForPrint* i for i in rng]
     
     maxval = list(rng)[-1]
-    iters = aslist["iteration"][-1]
     
     colors = ['b', 'g', 'r', 'c', 'm', 'y', 'k','b','g','r']
 
@@ -94,14 +97,15 @@ def plot(agentname, labels, val_bounds, all_vals):
         ax[j].set_xlabel("Epoch", fontsize=15)
         ax[j].xaxis.set_label_coords(0.5, 0.06)
         
-        
-        ax3 = ax[j].twiny()
-        ax3.set_xlabel("iteration")
-        ax3.xaxis.set_label_coords(0.5, 0.94)
-        ax3.set_xlim(0, iters)
-        steps = [0.1, 0.4, 0.6, 0.9]
-        ax3.set_xticks([int(i*iters) for i in steps])
-        ax3.set_xticklabels([str(int(i*iters)) for i in steps])
+        if not nonrl:
+            iters = aslist["iteration"][-1]
+            ax3 = ax[j].twiny()
+            ax3.set_xlabel("iteration")
+            ax3.xaxis.set_label_coords(0.5, 0.94)
+            ax3.set_xlim(0, iters)
+            steps = [0.1, 0.4, 0.6, 0.9]
+            ax3.set_xticks([int(i*iters) for i in steps])
+            ax3.set_xticklabels([str(int(i*iters)) for i in steps])
         
         
         ax[j].set_ylabel(i, fontsize=12)
@@ -121,40 +125,46 @@ def plot(agentname, labels, val_bounds, all_vals):
 
 
 
-def average_and_extract(runs):
+def average_and_extract(runs, nonrl=False):
     onlyimportant = []
     for i in runs:
-        tmp = {"iteration": int(i["endIteration"]), 
-               "netsteps": int(i["reinfNetSteps"]), 
-               "progress": round(float(i["progress"]),2),
-               "laptime": round(float(i["laptime"]),2),
-               "epsilon": round(float(i["endEpsilon"]),5),
-               "Qvals": round(float(i["average_Q-vals"]),2),
-               "rewards": round(float(i["average_rewards"]),2)}
+        if nonrl:
+            tmp = {"progress": round(float(i["progress"]),2),
+                   "laptime": round(float(i["laptime"]),2)}
+        else:
+            tmp = {"iteration": int(i["endIteration"]), 
+                   "netsteps": int(i["reinfNetSteps"]), 
+                   "progress": round(float(i["progress"]),2),
+                   "laptime": round(float(i["laptime"]),2),
+                   "epsilon": round(float(i["endEpsilon"]),5),
+                   "Qvals": round(float(i["average_Q-vals"]),2),
+                   "rewards": round(float(i["average_rewards"]),2)}
         onlyimportant.append(tmp)
     
     
     averaged = []
     ind = 0
-    for i in range(-1, len(onlyimportant), averageForPrint):
+    print(len(onlyimportant), "episodes")
+    for i in range(-1, min(len(onlyimportant),MAXEPIPRINT), averageForPrint):
         ind += 1
         maxval = min(len(onlyimportant),i+averageForPrint)
 #        print([onlyimportant[j]["progress"] for j in  range(i,maxval)])
         tmp = {}
         tmp["maxprog"] = np.max([onlyimportant[j]["progress"] for j in  range(i,maxval)])
-        tmp["step"] = onlyimportant[maxval-1]["netsteps"]
-        tmp["iteration"] = onlyimportant[maxval-1]["iteration"]
-        tmp["maxq"] = np.max([onlyimportant[j]["Qvals"] for j in  range(i,maxval)])
-        tmp["maxrew"] = np.max([onlyimportant[j]["rewards"] for j in  range(i,maxval)])
         tmp["avgtime"] = np.mean([onlyimportant[j]["laptime"] for j in  range(i,maxval)])
-        tmp["epsilon"] = np.mean([onlyimportant[j]["epsilon"] for j in  range(i,maxval)])
         tmp["num"] = ind
+        if not nonrl:
+            tmp["step"] = onlyimportant[maxval-1]["netsteps"]
+            tmp["iteration"] = onlyimportant[maxval-1]["iteration"]
+            tmp["maxq"] = np.max([onlyimportant[j]["Qvals"] for j in  range(i,maxval)])
+            tmp["maxrew"] = np.max([onlyimportant[j]["rewards"] for j in  range(i,maxval)])
+            tmp["epsilon"] = np.mean([onlyimportant[j]["epsilon"] for j in  range(i,maxval)])
         averaged.append(tmp)
     
     return averaged
     
 
-def read_xml(FileName):
+def read_xml(FileName, nonrl=False):
     tree = ET.parse(FileName)
     root = tree.getroot()
     assert root.tag=="Evaluation", "that is not the kind of XML I thought it would be."
@@ -171,14 +181,15 @@ def read_xml(FileName):
                         currun.append(tmp)
             allruns.append(currun)
        
-    #sometimes, the last values of a run are not saved and need to be removed
-#    print([len(i) for i in allruns])
-    for i in range(1, len(allruns)):
-        maxi = allruns[i][0]["startMemoryEntry"]
-        for j in range(len(allruns[i-1])-1,-1,-1):
-            if allruns[i-1][j]["startMemoryEntry"] < maxi:
-                break
-        allruns[i-1] = allruns[i-1][:j]
+    if not nonrl:
+        #sometimes, the last values of a run are not saved and need to be removed
+    #    print([len(i) for i in allruns])
+        for i in range(1, len(allruns)):
+            maxi = allruns[i][0]["startMemoryEntry"]
+            for j in range(len(allruns[i-1])-1,-1,-1):
+                if allruns[i-1][j]["startMemoryEntry"] < maxi:
+                    break
+            allruns[i-1] = allruns[i-1][:j]
         
     allruns = [x for x in allruns if x != []]
     allruns = flatten2(allruns)
@@ -201,5 +212,5 @@ if __name__ == '__main__':
             agentname = config.Config().standardSVAgent
         else:
             agentname = config.Config().standardAgent
-            
-    main(agentname)
+    
+    main(agentname, ("-nonrl" in sys.argv))
