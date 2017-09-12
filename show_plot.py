@@ -19,12 +19,12 @@ def flatten2(l):
     except:
         return l
 
-averageForPrint = 5
+averageForPrint = 10
 epsiloncolor = "0.5"
 prettystrings = {"maxq": "best average Q", "maxrew": "best average reward", "avgtime": "average laptime", "maxprog": "best progress"} if averageForPrint != 1 else {"maxq": "average Q", "maxrew": "average reward", "avgtime": "laptime", "maxprog": "progress"}
                 
 MINMAXOVERWRITE = {"maxprog":[-8, 100], "avgtime":[0,60]}
-MAXEPIPRINT = 1890
+MAXEPIPRINT = 99999999999
 
 def prettify(string):
     if string in prettystrings:
