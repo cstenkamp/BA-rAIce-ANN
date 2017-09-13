@@ -248,8 +248,6 @@ class AbstractRLAgent(AbstractAgent):
         dist = otherinput_hist[0].CenterDist[0]-0.5  #abs davon ist 0 in der mitte, 0.15 vor dem curb, 0.25 mittig auf curb, 0.5 rand
         angle = otherinput_hist[0].SpeedSteer.carAngle - 0.5
                
-#        speed = otherinput_hist[0].SpeedSteer.speedInStreetDir*2.5  #maximal realistic speed is ~2 
-#        speed = min(speed,1)
         badspeed = abs(2*otherinput_hist[0].SpeedSteer.speedInTraverDir-1)*5
         
         stay_on_street = ((0.5-abs(dist))*2)+0.35 #jetzt ist größer 1 auf der street
@@ -265,7 +263,6 @@ class AbstractRLAgent(AbstractAgent):
         tmp = (np.mean(self.steeraverage)) 
         steer_bonus1 = tmp/5 + angle #this one rewards sterering into street-direction if the cars angle is off...
         steer_bonus1 = 0 if np.sign(steer_bonus1) != np.sign(angle) and abs(angle) > 0.15 else steer_bonus1
-#        print(((0.5-abs(angle)) * (1-abs(steer_bonus1))))
         steer_bonus1 = (abs(dist*2)) * ((0.5-abs(angle)) * (1-abs(steer_bonus1))) + (1-abs(dist*2))*0.5  #more relevant the further off you are.
         steer_bonus2 = (1-((0.5-abs(dist))*2))**10 * -abs(((tmp+np.sign(dist))*np.sign(dist)))/1.5   #more relevant the furhter off, steering away from wall is as valuable as doing nothing in center, doing nothing is worse, steering towards sucks 
         #so steerbonus1+steerbonus2 is maximally 0.5
@@ -274,10 +271,6 @@ class AbstractRLAgent(AbstractAgent):
         curveMultiplier = 1-abs(otherinput_hist[0].SpeedSteer.CurvinessBeforeCar-0.5)
         direction_bonus *= curveMultiplier
         badspeed *= curveMultiplier 
-#        speed = max(speed,1) if speed > curveMultiplier else speed #dont require full speed in curves: we cap speed-rewards in curves at the percentile of the curviness, and if its bigger, its simply one
-#        speed = speed-badspeed if speed-badspeed > 0 else 0
-            
-        #rew = (speed + stay_on_street + prog + 0.5 * direction_bonus + 0.5*(steer_bonus1+steer_bonus2)) / 2
                 
         speedInRelationToWallDist = otherinput_hist[0].WallDistVec[6]-otherinput_hist[0].SpeedSteer.speedInStreetDir+(80/250)
         speedInRelationToWallDist = 1-(abs(speedInRelationToWallDist)*3) if speedInRelationToWallDist < 0 else (1-speedInRelationToWallDist)+0.33                                   
@@ -376,12 +369,7 @@ class AbstractRLAgent(AbstractAgent):
                 else:
                     toUse, toSave = self.randomAction(agentState)
                 self.last_action = toUse, toSave
-              
-#            print("####################")
-#            vvec1_hist, vvec2_hist, otherinput_hist, action_hist = gameState
-#            print(toSave)
-#            print(otherinput_hist[0].SpeedSteer)
-            
+                          
             self.containers.outputval.update(toUse, toSave, self.containers.inputval.CTimestamp, self.containers.inputval.STimestamp)   #note that his happens BEFORE it learns <- parallel
             if self.conf.learnMode == "between":
                 if self.numsteps % self.conf.ForEveryInf == 0 and self.canLearn():

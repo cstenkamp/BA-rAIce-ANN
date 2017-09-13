@@ -1,3 +1,4 @@
+
 #!/usr/bin/env python
 #SERVER ist UNABHÄNGIG VOM AGENT, und sorgt dafür dass die passenden Dinge an den agent weitergeleitet werden!
 
@@ -463,7 +464,6 @@ class sender_thread(threading.Thread):
 def showhelp():
     print("""Command-line arguments:
 "-DQN" to run with the DQN-config
-"-half_DQN" to run with a custom config, corresponding roughly to half the DQN-config in all respects
 "-nolearn" to store agent's results to the memory, but not perform Reinforcement learning (sets the random-action-chance to 0)
 "-noscreen" to turn off the screen showing Q-vals etc.
 "-noplot" to turn off the plots evaluating each episode
@@ -588,8 +588,6 @@ if __name__ == '__main__':
         
     if ("-DQN" in sys.argv):
         conf = config.DQN_Config()
-    elif ("-half_DQN" in sys.argv):
-        conf = config.Half_DQN_Config()
     else:
         conf = config.Config()
             

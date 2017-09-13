@@ -1,6 +1,5 @@
 import tensorflow as tf
 import numpy as np
-import time
 import tensorflow.contrib.slim as slim
 from myprint import myprint as print
 from utils import netCopyOps
@@ -10,11 +9,8 @@ from tensorflow.contrib.framework import get_variables
 from utils import variable_summary, dense
 flatten = lambda l: [item for sublist in l for item in sublist]
 
+#batchnorm seems to need huge minibatches https://www.reddit.com/r/MachineLearning/comments/671455/d_batch_normalization_in_reinforcement_learning/
 
-#batchnorm doesnt really work, and if, only with huge minibatches https://www.reddit.com/r/MachineLearning/comments/671455/d_batch_normalization_in_reinforcement_learning/
-
-      
-        
 class conv_actorNet():
      def __init__(self, conf, agent, outerscope="actor", name="online", batchnorm = "ffffftt"):   #tffffft    
         tanh_min_bounds,tanh_max_bounds = np.array([-1]), np.array([1])
