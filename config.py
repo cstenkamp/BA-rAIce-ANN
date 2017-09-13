@@ -74,7 +74,7 @@ class Config():
     keep_memory = True
     learnMode = "between" #"parallel", "between", "remote" (the latter is tobedone)
     
-    showColorArea = True
+    showColorArea = False
     
     #GAME SETTINGS
     history_frame_nr = 4 #incl. dem jetzigem!

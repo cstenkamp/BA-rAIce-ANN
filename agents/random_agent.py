@@ -4,7 +4,7 @@ from agent import AbstractAgent
 
 class Agent(AbstractAgent):    
     def __init__(self, conf, containers, isPretrain=False, start_fresh=False, *args, **kwargs):
-        self.name = "human_driving"
+        self.name = "random_agent"
         super().__init__(conf, containers, isPretrain, start_fresh, *args, **kwargs)
         self.isSupervised = True
         

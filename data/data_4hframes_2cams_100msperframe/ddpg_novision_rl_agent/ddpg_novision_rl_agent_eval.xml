@@ -1,0 +1,3323 @@
+<?xml version="1.0" ?>
+<Evaluation agent="ddpg_novision_rl_agent">
+  <run date="2017-09-12 22:16:36">
+    <runResults>
+      <Episode endEpsilon="0.0" endIteration="144" endMemoryEntry="149" nr="1" reinfNetSteps="0" startMemoryEntry="0">
+        <average_rewards>0.37</average_rewards>
+        <progress>15.69</progress>
+        <average_Q-vals>5.431</average_Q-vals>
+        <laptime>9.1</laptime>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="358" endMemoryEntry="368" nr="2" reinfNetSteps="0" startMemoryEntry="149">
+        <average_rewards>0.459</average_rewards>
+        <progress>32.28</progress>
+        <average_Q-vals>5.49</average_Q-vals>
+        <laptime>15.8</laptime>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="487" endMemoryEntry="502" nr="3" reinfNetSteps="0" startMemoryEntry="368">
+        <average_rewards>0.403</average_rewards>
+        <progress>15.66</progress>
+        <average_Q-vals>5.274</average_Q-vals>
+        <laptime>7.5</laptime>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="636" endMemoryEntry="656" nr="4" reinfNetSteps="0" startMemoryEntry="502">
+        <average_rewards>0.32</average_rewards>
+        <progress>12.92</progress>
+        <average_Q-vals>4.892</average_Q-vals>
+        <laptime>8.8</laptime>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="777" endMemoryEntry="802" nr="5" reinfNetSteps="0" startMemoryEntry="656">
+        <average_rewards>0.348</average_rewards>
+        <progress>13.37</progress>
+        <average_Q-vals>5.35</average_Q-vals>
+        <laptime>8.9</laptime>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="907" endMemoryEntry="937" nr="6" reinfNetSteps="0" startMemoryEntry="802">
+        <average_rewards>0.353</average_rewards>
+        <progress>12.33</progress>
+        <average_Q-vals>5.239</average_Q-vals>
+        <laptime>7.5</laptime>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="1028" endMemoryEntry="1063" nr="7" reinfNetSteps="0" startMemoryEntry="937">
+        <average_rewards>0.432</average_rewards>
+        <progress>13.93</progress>
+        <average_Q-vals>5.455</average_Q-vals>
+        <laptime>7.0</laptime>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="1158" endMemoryEntry="1198" nr="8" reinfNetSteps="0" startMemoryEntry="1063">
+        <average_rewards>0.347</average_rewards>
+        <progress>11.79</progress>
+        <average_Q-vals>5.591</average_Q-vals>
+        <laptime>7.2</laptime>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="1219" endMemoryEntry="1264" nr="9" reinfNetSteps="0" startMemoryEntry="1198">
+        <average_rewards>0.275</average_rewards>
+        <progress>2.99</progress>
+        <average_Q-vals>6.197</average_Q-vals>
+        <laptime>0.8</laptime>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="1286" endMemoryEntry="1336" nr="10" reinfNetSteps="0" startMemoryEntry="1264">
+        <average_rewards>0.29</average_rewards>
+        <progress>4.83</progress>
+        <average_Q-vals>6.121</average_Q-vals>
+        <laptime>1.3</laptime>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="1352" endMemoryEntry="1407" nr="11" reinfNetSteps="0" startMemoryEntry="1336">
+        <average_rewards>0.277</average_rewards>
+        <progress>4.06</progress>
+        <average_Q-vals>6.212</average_Q-vals>
+        <laptime>1.2</laptime>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="1415" endMemoryEntry="1475" nr="12" reinfNetSteps="0" startMemoryEntry="1407">
+        <average_rewards>0.266</average_rewards>
+        <progress>2.72</progress>
+        <average_Q-vals>6.009</average_Q-vals>
+        <laptime>0.8</laptime>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="1499" endMemoryEntry="1564" nr="13" reinfNetSteps="0" startMemoryEntry="1475">
+        <average_rewards>0.295</average_rewards>
+        <progress>7.18</progress>
+        <average_Q-vals>5.204</average_Q-vals>
+        <laptime>2.8</laptime>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="1561" endMemoryEntry="1631" nr="14" reinfNetSteps="0" startMemoryEntry="1564">
+        <average_rewards>0.304</average_rewards>
+        <progress>3.43</progress>
+        <average_Q-vals>5.907</average_Q-vals>
+        <laptime>1.0</laptime>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="1685" endMemoryEntry="1760" nr="15" reinfNetSteps="0" startMemoryEntry="1631">
+        <average_rewards>0.318</average_rewards>
+        <progress>10.9</progress>
+        <average_Q-vals>4.652</average_Q-vals>
+        <laptime>7.1</laptime>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="1773" endMemoryEntry="1853" nr="16" reinfNetSteps="0" startMemoryEntry="1760">
+        <average_rewards>0.295</average_rewards>
+        <progress>8.93</progress>
+        <average_Q-vals>5.378</average_Q-vals>
+        <laptime>2.9</laptime>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="1858" endMemoryEntry="1943" nr="17" reinfNetSteps="0" startMemoryEntry="1853">
+        <average_rewards>0.287</average_rewards>
+        <progress>8.76</progress>
+        <average_Q-vals>5.552</average_Q-vals>
+        <laptime>2.6</laptime>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="1922" endMemoryEntry="2012" nr="18" reinfNetSteps="0" startMemoryEntry="1943">
+        <average_rewards>0.268</average_rewards>
+        <progress>3.13</progress>
+        <average_Q-vals>6.077</average_Q-vals>
+        <laptime>0.9</laptime>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="2009" endMemoryEntry="2104" nr="19" reinfNetSteps="0" startMemoryEntry="2012">
+        <average_rewards>0.292</average_rewards>
+        <progress>9.63</progress>
+        <average_Q-vals>5.423</average_Q-vals>
+        <laptime>2.8</laptime>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="2090" endMemoryEntry="2190" nr="20" reinfNetSteps="0" startMemoryEntry="2104">
+        <average_rewards>0.311</average_rewards>
+        <progress>9.62</progress>
+        <average_Q-vals>5.676</average_Q-vals>
+        <laptime>2.7</laptime>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="2187" endMemoryEntry="2292" nr="21" reinfNetSteps="0" startMemoryEntry="2190">
+        <average_rewards>0.268</average_rewards>
+        <progress>15.44</progress>
+        <average_Q-vals>5.571</average_Q-vals>
+        <laptime>4.2</laptime>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="2282" endMemoryEntry="2392" nr="22" reinfNetSteps="0" startMemoryEntry="2292">
+        <average_rewards>0.307</average_rewards>
+        <progress>15.44</progress>
+        <average_Q-vals>5.15</average_Q-vals>
+        <laptime>4.3</laptime>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="2369" endMemoryEntry="2484" nr="23" reinfNetSteps="0" startMemoryEntry="2392">
+        <average_rewards>0.302</average_rewards>
+        <progress>12.74</progress>
+        <average_Q-vals>5.529</average_Q-vals>
+        <laptime>3.4</laptime>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="2452" endMemoryEntry="2572" nr="24" reinfNetSteps="0" startMemoryEntry="2484">
+        <average_rewards>0.288</average_rewards>
+        <progress>9.42</progress>
+        <average_Q-vals>5.564</average_Q-vals>
+        <laptime>2.7</laptime>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="2518" endMemoryEntry="2643" nr="25" reinfNetSteps="0" startMemoryEntry="2572">
+        <average_rewards>0.287</average_rewards>
+        <progress>3.77</progress>
+        <average_Q-vals>5.981</average_Q-vals>
+        <laptime>1.1</laptime>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="2582" endMemoryEntry="2712" nr="26" reinfNetSteps="0" startMemoryEntry="2643">
+        <average_rewards>0.282</average_rewards>
+        <progress>3.24</progress>
+        <average_Q-vals>6.071</average_Q-vals>
+        <laptime>0.9</laptime>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="2669" endMemoryEntry="2804" nr="27" reinfNetSteps="0" startMemoryEntry="2712">
+        <average_rewards>0.292</average_rewards>
+        <progress>12.36</progress>
+        <average_Q-vals>5.327</average_Q-vals>
+        <laptime>3.2</laptime>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="2793" endMemoryEntry="2933" nr="28" reinfNetSteps="0" startMemoryEntry="2804">
+        <average_rewards>0.362</average_rewards>
+        <progress>13.62</progress>
+        <average_Q-vals>5.603</average_Q-vals>
+        <laptime>7.2</laptime>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="2851" endMemoryEntry="2996" nr="29" reinfNetSteps="0" startMemoryEntry="2933">
+        <average_rewards>0.247</average_rewards>
+        <progress>1.42</progress>
+        <average_Q-vals>6.188</average_Q-vals>
+        <laptime>0.4</laptime>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="2912" endMemoryEntry="3062" nr="31" reinfNetSteps="0" startMemoryEntry="2996">
+        <average_rewards>0.274</average_rewards>
+        <progress>2.73</progress>
+        <average_Q-vals>6.015</average_Q-vals>
+        <laptime>0.8</laptime>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="2998" endMemoryEntry="3153" nr="32" reinfNetSteps="0" startMemoryEntry="3062">
+        <average_rewards>0.31</average_rewards>
+        <progress>11.73</progress>
+        <average_Q-vals>5.197</average_Q-vals>
+        <laptime>3.3</laptime>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="3079" endMemoryEntry="3239" nr="33" reinfNetSteps="0" startMemoryEntry="3153">
+        <average_rewards>0.299</average_rewards>
+        <progress>7.64</progress>
+        <average_Q-vals>5.524</average_Q-vals>
+        <laptime>2.5</laptime>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="3202" endMemoryEntry="3367" nr="34" reinfNetSteps="0" startMemoryEntry="3239">
+        <average_rewards>0.402</average_rewards>
+        <progress>13.6</progress>
+        <average_Q-vals>5.491</average_Q-vals>
+        <laptime>7.1</laptime>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="3268" endMemoryEntry="3438" nr="35" reinfNetSteps="0" startMemoryEntry="3367">
+        <average_rewards>0.271</average_rewards>
+        <progress>3.43</progress>
+        <average_Q-vals>6.106</average_Q-vals>
+        <laptime>1.0</laptime>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="3359" endMemoryEntry="3534" nr="36" reinfNetSteps="0" startMemoryEntry="3438">
+        <average_rewards>0.303</average_rewards>
+        <progress>16.05</progress>
+        <average_Q-vals>5.398</average_Q-vals>
+        <laptime>3.9</laptime>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="3458" endMemoryEntry="3638" nr="37" reinfNetSteps="0" startMemoryEntry="3534">
+        <average_rewards>0.298</average_rewards>
+        <progress>16.51</progress>
+        <average_Q-vals>5.256</average_Q-vals>
+        <laptime>4.6</laptime>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="3517" endMemoryEntry="3702" nr="38" reinfNetSteps="0" startMemoryEntry="3638">
+        <average_rewards>0.275</average_rewards>
+        <progress>2.28</progress>
+        <average_Q-vals>6.147</average_Q-vals>
+        <laptime>0.7</laptime>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="3748" endMemoryEntry="3938" nr="39" reinfNetSteps="0" startMemoryEntry="3702">
+        <average_rewards>0.254</average_rewards>
+        <progress>17.95</progress>
+        <average_Q-vals>5.327</average_Q-vals>
+        <laptime>17.1</laptime>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="3850" endMemoryEntry="4045" nr="40" reinfNetSteps="0" startMemoryEntry="3938">
+        <average_rewards>0.369</average_rewards>
+        <progress>15.5</progress>
+        <average_Q-vals>5.522</average_Q-vals>
+        <laptime>4.8</laptime>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="3947" endMemoryEntry="4147" nr="41" reinfNetSteps="0" startMemoryEntry="4045">
+        <average_rewards>0.335</average_rewards>
+        <progress>15.45</progress>
+        <average_Q-vals>5.804</average_Q-vals>
+        <laptime>4.2</laptime>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="4033" endMemoryEntry="4238" nr="42" reinfNetSteps="0" startMemoryEntry="4147">
+        <average_rewards>0.344</average_rewards>
+        <progress>9.91</progress>
+        <average_Q-vals>5.064</average_Q-vals>
+        <laptime>3.6</laptime>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="4095" endMemoryEntry="4305" nr="43" reinfNetSteps="0" startMemoryEntry="4238">
+        <average_rewards>0.295</average_rewards>
+        <progress>3.08</progress>
+        <average_Q-vals>6.02</average_Q-vals>
+        <laptime>0.9</laptime>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="4181" endMemoryEntry="4396" nr="44" reinfNetSteps="0" startMemoryEntry="4305">
+        <average_rewards>0.311</average_rewards>
+        <progress>12.39</progress>
+        <average_Q-vals>5.258</average_Q-vals>
+        <laptime>3.3</laptime>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="4247" endMemoryEntry="4467" nr="45" reinfNetSteps="0" startMemoryEntry="4396">
+        <average_rewards>0.279</average_rewards>
+        <progress>3.18</progress>
+        <average_Q-vals>6.145</average_Q-vals>
+        <laptime>0.9</laptime>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="4313" endMemoryEntry="4538" nr="46" reinfNetSteps="0" startMemoryEntry="4467">
+        <average_rewards>0.298</average_rewards>
+        <progress>4.28</progress>
+        <average_Q-vals>5.905</average_Q-vals>
+        <laptime>1.2</laptime>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="4412" endMemoryEntry="4642" nr="48" reinfNetSteps="0" startMemoryEntry="4538">
+        <average_rewards>0.293</average_rewards>
+        <progress>16.44</progress>
+        <average_Q-vals>5.28</average_Q-vals>
+        <laptime>4.5</laptime>
+      </Episode>
+    </runResults>
+  </run>
+  <run date="2017-09-12 22:39:03" memorysize="0">
+    <runResults>
+      <Episode endEpsilon="0.0" endIteration="138" endMemoryEntry="143" nr="1" reinfNetSteps="0" startMemoryEntry="0">
+        <average_Q-vals>5.468</average_Q-vals>
+        <progress>13.06</progress>
+        <laptime>8.5</laptime>
+        <average_rewards>0.366</average_rewards>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="228" endMemoryEntry="238" nr="2" reinfNetSteps="0" startMemoryEntry="143">
+        <average_Q-vals>5.183</average_Q-vals>
+        <progress>12.24</progress>
+        <laptime>3.8</laptime>
+        <average_rewards>0.38</average_rewards>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="360" endMemoryEntry="375" nr="3" reinfNetSteps="0" startMemoryEntry="238">
+        <average_Q-vals>5.541</average_Q-vals>
+        <progress>13.55</progress>
+        <laptime>8.1</laptime>
+        <average_rewards>0.384</average_rewards>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="507" endMemoryEntry="527" nr="4" reinfNetSteps="0" startMemoryEntry="375">
+        <average_Q-vals>5.045</average_Q-vals>
+        <progress>13.36</progress>
+        <laptime>9.6</laptime>
+        <average_rewards>0.353</average_rewards>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="666" endMemoryEntry="691" nr="5" reinfNetSteps="0" startMemoryEntry="527">
+        <average_Q-vals>5.348</average_Q-vals>
+        <progress>17.07</progress>
+        <laptime>10.6</laptime>
+        <average_rewards>0.386</average_rewards>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="809" endMemoryEntry="839" nr="6" reinfNetSteps="0" startMemoryEntry="691">
+        <average_Q-vals>5.343</average_Q-vals>
+        <progress>15.55</progress>
+        <laptime>9.1</laptime>
+        <average_rewards>0.368</average_rewards>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="962" endMemoryEntry="997" nr="7" reinfNetSteps="0" startMemoryEntry="839">
+        <average_Q-vals>5.228</average_Q-vals>
+        <progress>16.74</progress>
+        <laptime>10.2</laptime>
+        <average_rewards>0.373</average_rewards>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="1030" endMemoryEntry="1070" nr="8" reinfNetSteps="0" startMemoryEntry="997">
+        <average_Q-vals>6.013</average_Q-vals>
+        <progress>5.45</progress>
+        <laptime>1.5</laptime>
+        <average_rewards>0.316</average_rewards>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="1086" endMemoryEntry="1131" nr="9" reinfNetSteps="0" startMemoryEntry="1070">
+        <average_Q-vals>6.164</average_Q-vals>
+        <progress>0.69</progress>
+        <laptime>0.2</laptime>
+        <average_rewards>0.233</average_rewards>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="1172" endMemoryEntry="1222" nr="10" reinfNetSteps="0" startMemoryEntry="1131">
+        <average_Q-vals>5.088</average_Q-vals>
+        <progress>9.89</progress>
+        <laptime>3.3</laptime>
+        <average_rewards>0.323</average_rewards>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="1242" endMemoryEntry="1297" nr="11" reinfNetSteps="0" startMemoryEntry="1222">
+        <average_Q-vals>6.059</average_Q-vals>
+        <progress>5.83</progress>
+        <laptime>1.6</laptime>
+        <average_rewards>0.299</average_rewards>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="1329" endMemoryEntry="1389" nr="12" reinfNetSteps="0" startMemoryEntry="1297">
+        <average_Q-vals>5.359</average_Q-vals>
+        <progress>8.25</progress>
+        <laptime>2.9</laptime>
+        <average_rewards>0.283</average_rewards>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="1498" endMemoryEntry="1563" nr="13" reinfNetSteps="0" startMemoryEntry="1389">
+        <average_Q-vals>4.865</average_Q-vals>
+        <progress>18.94</progress>
+        <laptime>11.6</laptime>
+        <average_rewards>0.344</average_rewards>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="1581" endMemoryEntry="1651" nr="14" reinfNetSteps="0" startMemoryEntry="1563">
+        <average_Q-vals>5.19</average_Q-vals>
+        <progress>11.03</progress>
+        <laptime>3.1</laptime>
+        <average_rewards>0.323</average_rewards>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="1665" endMemoryEntry="1740" nr="15" reinfNetSteps="0" startMemoryEntry="1651">
+        <average_Q-vals>5.684</average_Q-vals>
+        <progress>11.54</progress>
+        <laptime>3.2</laptime>
+        <average_rewards>0.307</average_rewards>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="1728" endMemoryEntry="1808" nr="16" reinfNetSteps="0" startMemoryEntry="1740">
+        <average_Q-vals>6.076</average_Q-vals>
+        <progress>3.1</progress>
+        <laptime>0.9</laptime>
+        <average_rewards>0.267</average_rewards>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="1831" endMemoryEntry="1916" nr="17" reinfNetSteps="0" startMemoryEntry="1808">
+        <average_Q-vals>4.983</average_Q-vals>
+        <progress>10.97</progress>
+        <laptime>5.2</laptime>
+        <average_rewards>0.372</average_rewards>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="1898" endMemoryEntry="1988" nr="18" reinfNetSteps="0" startMemoryEntry="1916">
+        <average_Q-vals>6.001</average_Q-vals>
+        <progress>4.13</progress>
+        <laptime>1.2</laptime>
+        <average_rewards>0.291</average_rewards>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="1995" endMemoryEntry="2090" nr="19" reinfNetSteps="0" startMemoryEntry="1988">
+        <average_Q-vals>5.778</average_Q-vals>
+        <progress>14.48</progress>
+        <laptime>4.3</laptime>
+        <average_rewards>0.334</average_rewards>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="2061" endMemoryEntry="2161" nr="20" reinfNetSteps="0" startMemoryEntry="2090">
+        <average_Q-vals>6.076</average_Q-vals>
+        <progress>4.32</progress>
+        <laptime>1.2</laptime>
+        <average_rewards>0.278</average_rewards>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="2125" endMemoryEntry="2230" nr="21" reinfNetSteps="0" startMemoryEntry="2161">
+        <average_Q-vals>5.956</average_Q-vals>
+        <progress>3.96</progress>
+        <laptime>1.1</laptime>
+        <average_rewards>0.296</average_rewards>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="2212" endMemoryEntry="2322" nr="22" reinfNetSteps="0" startMemoryEntry="2230">
+        <average_Q-vals>5.814</average_Q-vals>
+        <progress>11.29</progress>
+        <laptime>3.2</laptime>
+        <average_rewards>0.269</average_rewards>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="2274" endMemoryEntry="2389" nr="23" reinfNetSteps="0" startMemoryEntry="2322">
+        <average_Q-vals>6.124</average_Q-vals>
+        <progress>3.33</progress>
+        <laptime>0.9</laptime>
+        <average_rewards>0.297</average_rewards>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="2335" endMemoryEntry="2455" nr="24" reinfNetSteps="0" startMemoryEntry="2389">
+        <average_Q-vals>5.957</average_Q-vals>
+        <progress>2.81</progress>
+        <laptime>0.8</laptime>
+        <average_rewards>0.286</average_rewards>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="2397" endMemoryEntry="2522" nr="25" reinfNetSteps="0" startMemoryEntry="2455">
+        <average_Q-vals>5.966</average_Q-vals>
+        <progress>3.89</progress>
+        <laptime>1.1</laptime>
+        <average_rewards>0.301</average_rewards>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="2471" endMemoryEntry="2601" nr="26" reinfNetSteps="0" startMemoryEntry="2522">
+        <average_Q-vals>5.475</average_Q-vals>
+        <progress>6.51</progress>
+        <laptime>2.2</laptime>
+        <average_rewards>0.302</average_rewards>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="2535" endMemoryEntry="2670" nr="27" reinfNetSteps="0" startMemoryEntry="2601">
+        <average_Q-vals>5.913</average_Q-vals>
+        <progress>4.04</progress>
+        <laptime>1.1</laptime>
+        <average_rewards>0.299</average_rewards>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="2614" endMemoryEntry="2754" nr="28" reinfNetSteps="0" startMemoryEntry="2670">
+        <average_Q-vals>5.429</average_Q-vals>
+        <progress>9.09</progress>
+        <laptime>2.6</laptime>
+        <average_rewards>0.305</average_rewards>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="2705" endMemoryEntry="2850" nr="29" reinfNetSteps="0" startMemoryEntry="2754">
+        <average_Q-vals>5.524</average_Q-vals>
+        <progress>15.24</progress>
+        <laptime>3.8</laptime>
+        <average_rewards>0.295</average_rewards>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="2796" endMemoryEntry="2946" nr="30" reinfNetSteps="0" startMemoryEntry="2850">
+        <average_Q-vals>5.268</average_Q-vals>
+        <progress>11.54</progress>
+        <laptime>3.3</laptime>
+        <average_rewards>0.282</average_rewards>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="2859" endMemoryEntry="3014" nr="31" reinfNetSteps="0" startMemoryEntry="2946">
+        <average_Q-vals>6.12</average_Q-vals>
+        <progress>3.04</progress>
+        <laptime>0.9</laptime>
+        <average_rewards>0.274</average_rewards>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="2955" endMemoryEntry="3115" nr="32" reinfNetSteps="0" startMemoryEntry="3014">
+        <average_Q-vals>5.579</average_Q-vals>
+        <progress>16.17</progress>
+        <laptime>4.2</laptime>
+        <average_rewards>0.233</average_rewards>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="3016" endMemoryEntry="3181" nr="33" reinfNetSteps="0" startMemoryEntry="3115">
+        <average_Q-vals>6.074</average_Q-vals>
+        <progress>3.23</progress>
+        <laptime>0.9</laptime>
+        <average_rewards>0.29</average_rewards>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="3082" endMemoryEntry="3252" nr="34" reinfNetSteps="0" startMemoryEntry="3181">
+        <average_Q-vals>5.91</average_Q-vals>
+        <progress>4.4</progress>
+        <laptime>1.2</laptime>
+        <average_rewards>0.298</average_rewards>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="3149" endMemoryEntry="3324" nr="35" reinfNetSteps="0" startMemoryEntry="3252">
+        <average_Q-vals>5.98</average_Q-vals>
+        <progress>3.02</progress>
+        <laptime>0.8</laptime>
+        <average_rewards>0.256</average_rewards>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="3216" endMemoryEntry="3396" nr="36" reinfNetSteps="0" startMemoryEntry="3324">
+        <average_Q-vals>5.895</average_Q-vals>
+        <progress>4.49</progress>
+        <laptime>1.3</laptime>
+        <average_rewards>0.291</average_rewards>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="3351" endMemoryEntry="3536" nr="37" reinfNetSteps="0" startMemoryEntry="3396">
+        <average_Q-vals>4.332</average_Q-vals>
+        <progress>13.38</progress>
+        <laptime>7.6</laptime>
+        <average_rewards>0.334</average_rewards>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="3441" endMemoryEntry="3631" nr="38" reinfNetSteps="0" startMemoryEntry="3536">
+        <average_Q-vals>5.749</average_Q-vals>
+        <progress>11.82</progress>
+        <laptime>3.3</laptime>
+        <average_rewards>0.248</average_rewards>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="3507" endMemoryEntry="3702" nr="39" reinfNetSteps="0" startMemoryEntry="3631">
+        <average_Q-vals>6.082</average_Q-vals>
+        <progress>5.01</progress>
+        <laptime>1.4</laptime>
+        <average_rewards>0.317</average_rewards>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="3568" endMemoryEntry="3768" nr="40" reinfNetSteps="0" startMemoryEntry="3702">
+        <average_Q-vals>5.968</average_Q-vals>
+        <progress>2.41</progress>
+        <laptime>0.7</laptime>
+        <average_rewards>0.285</average_rewards>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="3653" endMemoryEntry="3858" nr="41" reinfNetSteps="0" startMemoryEntry="3768">
+        <average_Q-vals>5.566</average_Q-vals>
+        <progress>11.66</progress>
+        <laptime>3.2</laptime>
+        <average_rewards>0.334</average_rewards>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="3719" endMemoryEntry="3929" nr="42" reinfNetSteps="0" startMemoryEntry="3858">
+        <average_Q-vals>6.107</average_Q-vals>
+        <progress>3.88</progress>
+        <laptime>1.1</laptime>
+        <average_rewards>0.286</average_rewards>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="3805" endMemoryEntry="4020" nr="43" reinfNetSteps="0" startMemoryEntry="3929">
+        <average_Q-vals>5.535</average_Q-vals>
+        <progress>12.58</progress>
+        <laptime>3.2</laptime>
+        <average_rewards>0.271</average_rewards>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="3866" endMemoryEntry="4086" nr="44" reinfNetSteps="0" startMemoryEntry="4020">
+        <average_Q-vals>6.051</average_Q-vals>
+        <progress>2.73</progress>
+        <laptime>0.8</laptime>
+        <average_rewards>0.294</average_rewards>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="3941" endMemoryEntry="4166" nr="45" reinfNetSteps="0" startMemoryEntry="4086">
+        <average_Q-vals>5.556</average_Q-vals>
+        <progress>6.12</progress>
+        <laptime>1.9</laptime>
+        <average_rewards>0.295</average_rewards>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="4018" endMemoryEntry="4248" nr="46" reinfNetSteps="0" startMemoryEntry="4166">
+        <average_Q-vals>5.432</average_Q-vals>
+        <progress>6.17</progress>
+        <laptime>2.2</laptime>
+        <average_rewards>0.279</average_rewards>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="4083" endMemoryEntry="4318" nr="47" reinfNetSteps="0" startMemoryEntry="4248">
+        <average_Q-vals>6.184</average_Q-vals>
+        <progress>2.81</progress>
+        <laptime>0.8</laptime>
+        <average_rewards>0.271</average_rewards>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="4144" endMemoryEntry="4385" nr="49" reinfNetSteps="0" startMemoryEntry="4319">
+        <average_Q-vals>5.931</average_Q-vals>
+        <progress>3.14</progress>
+        <laptime>0.9</laptime>
+        <average_rewards>0.305</average_rewards>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="4205" endMemoryEntry="4451" nr="50" reinfNetSteps="0" startMemoryEntry="4385">
+        <average_Q-vals>5.945</average_Q-vals>
+        <progress>1.87</progress>
+        <laptime>0.5</laptime>
+        <average_rewards>0.231</average_rewards>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="4291" endMemoryEntry="4542" nr="51" reinfNetSteps="0" startMemoryEntry="4451">
+        <average_Q-vals>5.639</average_Q-vals>
+        <progress>11.26</progress>
+        <laptime>3.1</laptime>
+        <average_rewards>0.288</average_rewards>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="4377" endMemoryEntry="4633" nr="52" reinfNetSteps="0" startMemoryEntry="4542">
+        <average_Q-vals>5.432</average_Q-vals>
+        <progress>8.29</progress>
+        <laptime>2.5</laptime>
+        <average_rewards>0.271</average_rewards>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="4430" endMemoryEntry="4691" nr="53" reinfNetSteps="0" startMemoryEntry="4633">
+        <average_Q-vals>5.604</average_Q-vals>
+        <progress>-1.64</progress>
+        <laptime>0.0</laptime>
+        <average_rewards>0.162</average_rewards>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="4491" endMemoryEntry="4757" nr="54" reinfNetSteps="0" startMemoryEntry="4691">
+        <average_Q-vals>5.927</average_Q-vals>
+        <progress>3.04</progress>
+        <laptime>0.8</laptime>
+        <average_rewards>0.292</average_rewards>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="4558" endMemoryEntry="4829" nr="55" reinfNetSteps="0" startMemoryEntry="4757">
+        <average_Q-vals>5.89</average_Q-vals>
+        <progress>3.38</progress>
+        <laptime>1.0</laptime>
+        <average_rewards>0.257</average_rewards>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="4623" endMemoryEntry="4899" nr="56" reinfNetSteps="0" startMemoryEntry="4829">
+        <average_Q-vals>5.832</average_Q-vals>
+        <progress>3.65</progress>
+        <laptime>1.0</laptime>
+        <average_rewards>0.281</average_rewards>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="4688" endMemoryEntry="4969" nr="57" reinfNetSteps="0" startMemoryEntry="4899">
+        <average_Q-vals>5.894</average_Q-vals>
+        <progress>4.06</progress>
+        <laptime>1.1</laptime>
+        <average_rewards>0.328</average_rewards>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="4829" endMemoryEntry="5120" nr="59" reinfNetSteps="0" startMemoryEntry="5017">
+        <average_Q-vals>5.461</average_Q-vals>
+        <progress>16.3</progress>
+        <laptime>4.3</laptime>
+        <average_rewards>0.298</average_rewards>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="4900" endMemoryEntry="5196" nr="60" reinfNetSteps="0" startMemoryEntry="5120">
+        <average_Q-vals>5.809</average_Q-vals>
+        <progress>3.73</progress>
+        <laptime>1.1</laptime>
+        <average_rewards>0.277</average_rewards>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="4964" endMemoryEntry="5265" nr="61" reinfNetSteps="0" startMemoryEntry="5196">
+        <average_Q-vals>5.581</average_Q-vals>
+        <progress>2.23</progress>
+        <laptime>0.6</laptime>
+        <average_rewards>0.259</average_rewards>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="5024" endMemoryEntry="5330" nr="62" reinfNetSteps="0" startMemoryEntry="5265">
+        <average_Q-vals>6.009</average_Q-vals>
+        <progress>2.66</progress>
+        <laptime>0.7</laptime>
+        <average_rewards>0.283</average_rewards>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="5084" endMemoryEntry="5395" nr="63" reinfNetSteps="0" startMemoryEntry="5330">
+        <average_Q-vals>5.907</average_Q-vals>
+        <progress>2.09</progress>
+        <laptime>0.6</laptime>
+        <average_rewards>0.274</average_rewards>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="5150" endMemoryEntry="5466" nr="64" reinfNetSteps="0" startMemoryEntry="5395">
+        <average_Q-vals>5.954</average_Q-vals>
+        <progress>3.31</progress>
+        <laptime>0.9</laptime>
+        <average_rewards>0.277</average_rewards>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="5245" endMemoryEntry="5567" nr="66" reinfNetSteps="0" startMemoryEntry="5467">
+        <average_Q-vals>5.566</average_Q-vals>
+        <progress>12.98</progress>
+        <laptime>4.0</laptime>
+        <average_rewards>0.287</average_rewards>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="5377" endMemoryEntry="5709" nr="68" reinfNetSteps="0" startMemoryEntry="5606">
+        <average_Q-vals>5.223</average_Q-vals>
+        <progress>2.52</progress>
+        <laptime>0.8</laptime>
+        <average_rewards>0.171</average_rewards>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="5446" endMemoryEntry="5783" nr="69" reinfNetSteps="0" startMemoryEntry="5709">
+        <average_Q-vals>5.258</average_Q-vals>
+        <progress>2.41</progress>
+        <laptime>0.7</laptime>
+        <average_rewards>0.24</average_rewards>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="5510" endMemoryEntry="5852" nr="70" reinfNetSteps="0" startMemoryEntry="5783">
+        <average_Q-vals>5.965</average_Q-vals>
+        <progress>3.84</progress>
+        <laptime>1.1</laptime>
+        <average_rewards>0.299</average_rewards>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="5575" endMemoryEntry="5922" nr="71" reinfNetSteps="0" startMemoryEntry="5852">
+        <average_Q-vals>6.142</average_Q-vals>
+        <progress>4.35</progress>
+        <laptime>1.2</laptime>
+        <average_rewards>0.306</average_rewards>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="5662" endMemoryEntry="6014" nr="73" reinfNetSteps="0" startMemoryEntry="5922">
+        <average_Q-vals>5.713</average_Q-vals>
+        <progress>4.07</progress>
+        <laptime>1.1</laptime>
+        <average_rewards>0.244</average_rewards>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="6210" endMemoryEntry="6597" nr="81" reinfNetSteps="0" startMemoryEntry="6554">
+        <average_Q-vals>4.741</average_Q-vals>
+        <progress>-4.74</progress>
+        <laptime>0.0</laptime>
+        <average_rewards>0.07</average_rewards>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="5853" endMemoryEntry="6220" nr="76" reinfNetSteps="0" startMemoryEntry="6170">
+        <average_Q-vals>4.935</average_Q-vals>
+        <progress>-2.65</progress>
+        <laptime>0.0</laptime>
+        <average_rewards>0.137</average_rewards>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="6015" endMemoryEntry="6392" nr="78" reinfNetSteps="0" startMemoryEntry="6299">
+        <average_Q-vals>5.586</average_Q-vals>
+        <progress>10.93</progress>
+        <laptime>3.7</laptime>
+        <average_rewards>0.308</average_rewards>
+      </Episode>
+    </runResults>
+  </run>
+  <run date="2017-09-13 16:31:49" memorysize="0">
+    <runResults>
+      <Episode endEpsilon="0.24988" endIteration="275" endMemoryEntry="314" nr="1" reinfNetSteps="0" startMemoryEntry="0">
+        <average_rewards>0.105</average_rewards>
+        <progress>13.29</progress>
+        <laptime>12.0</laptime>
+        <average_Q-vals>4.079</average_Q-vals>
+      </Episode>
+      <Episode endEpsilon="0.24983" endIteration="383" endMemoryEntry="427" nr="2" reinfNetSteps="100" startMemoryEntry="314">
+        <average_rewards>0.338</average_rewards>
+        <progress>16.37</progress>
+        <laptime>5.3</laptime>
+        <average_Q-vals>5.867</average_Q-vals>
+      </Episode>
+      <Episode endEpsilon="0.24979" endIteration="457" endMemoryEntry="506" nr="3" reinfNetSteps="100" startMemoryEntry="427">
+        <average_rewards>0.295</average_rewards>
+        <progress>5.38</progress>
+        <laptime>1.9</laptime>
+        <average_Q-vals>5.948</average_Q-vals>
+      </Episode>
+      <Episode endEpsilon="0.24974" endIteration="556" endMemoryEntry="610" nr="4" reinfNetSteps="100" startMemoryEntry="506">
+        <average_rewards>0.254</average_rewards>
+        <progress>16.22</progress>
+        <laptime>4.2</laptime>
+        <average_Q-vals>5.659</average_Q-vals>
+      </Episode>
+      <Episode endEpsilon="0.2497" endIteration="648" endMemoryEntry="707" nr="5" reinfNetSteps="100" startMemoryEntry="610">
+        <average_rewards>0.28</average_rewards>
+        <progress>12.78</progress>
+        <laptime>3.5</laptime>
+        <average_Q-vals>5.911</average_Q-vals>
+      </Episode>
+      <Episode endEpsilon="0.24967" endIteration="698" endMemoryEntry="762" nr="6" reinfNetSteps="100" startMemoryEntry="707">
+        <average_rewards>0.218</average_rewards>
+        <progress>-0.66</progress>
+        <laptime>0.0</laptime>
+        <average_Q-vals>5.53</average_Q-vals>
+      </Episode>
+      <Episode endEpsilon="0.24963" endIteration="794" endMemoryEntry="863" nr="7" reinfNetSteps="200" startMemoryEntry="762">
+        <average_rewards>0.419</average_rewards>
+        <progress>15.03</progress>
+        <laptime>4.3</laptime>
+        <average_Q-vals>6.557</average_Q-vals>
+      </Episode>
+      <Episode endEpsilon="0.2496" endIteration="851" endMemoryEntry="925" nr="8" reinfNetSteps="200" startMemoryEntry="863">
+        <average_rewards>0.255</average_rewards>
+        <progress>1.02</progress>
+        <laptime>0.3</laptime>
+        <average_Q-vals>5.619</average_Q-vals>
+      </Episode>
+      <Episode endEpsilon="0.24955" endIteration="951" endMemoryEntry="1030" nr="9" reinfNetSteps="200" startMemoryEntry="925">
+        <average_rewards>0.254</average_rewards>
+        <progress>16.09</progress>
+        <laptime>4.2</laptime>
+        <average_Q-vals>5.609</average_Q-vals>
+      </Episode>
+      <Episode endEpsilon="0.2495" endIteration="1043" endMemoryEntry="1127" nr="10" reinfNetSteps="200" startMemoryEntry="1030">
+        <average_rewards>0.303</average_rewards>
+        <progress>10.63</progress>
+        <laptime>3.2</laptime>
+        <average_Q-vals>5.323</average_Q-vals>
+      </Episode>
+      <Episode endEpsilon="0.24945" endIteration="1140" endMemoryEntry="1229" nr="11" reinfNetSteps="300" startMemoryEntry="1127">
+        <average_rewards>0.324</average_rewards>
+        <progress>16.15</progress>
+        <laptime>4.2</laptime>
+        <average_Q-vals>5.706</average_Q-vals>
+      </Episode>
+    </runResults>
+  </run>
+  <run date="2017-09-13 16:36:40" memorysize="0">
+    <runResults>
+      <Episode endEpsilon="0.0" endIteration="83" endMemoryEntry="88" nr="1" reinfNetSteps="0" startMemoryEntry="0">
+        <progress>9.77</progress>
+        <average_Q-vals>5.489</average_Q-vals>
+        <average_rewards>0.359</average_rewards>
+        <laptime>3.2</laptime>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="230" endMemoryEntry="240" nr="2" reinfNetSteps="0" startMemoryEntry="88">
+        <progress>13.12</progress>
+        <average_Q-vals>5.323</average_Q-vals>
+        <average_rewards>0.341</average_rewards>
+        <laptime>9.5</laptime>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="316" endMemoryEntry="331" nr="3" reinfNetSteps="0" startMemoryEntry="240">
+        <progress>10.06</progress>
+        <average_Q-vals>5.458</average_Q-vals>
+        <average_rewards>0.354</average_rewards>
+        <laptime>3.3</laptime>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="452" endMemoryEntry="472" nr="4" reinfNetSteps="0" startMemoryEntry="331">
+        <progress>13.11</progress>
+        <average_Q-vals>5.308</average_Q-vals>
+        <average_rewards>0.364</average_rewards>
+        <laptime>8.4</laptime>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="549" endMemoryEntry="574" nr="5" reinfNetSteps="0" startMemoryEntry="472">
+        <progress>10.5</progress>
+        <average_Q-vals>4.958</average_Q-vals>
+        <average_rewards>0.391</average_rewards>
+        <laptime>4.5</laptime>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="633" endMemoryEntry="663" nr="6" reinfNetSteps="0" startMemoryEntry="574">
+        <progress>8.49</progress>
+        <average_Q-vals>5.161</average_Q-vals>
+        <average_rewards>0.35</average_rewards>
+        <laptime>3.2</laptime>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="730" endMemoryEntry="765" nr="7" reinfNetSteps="0" startMemoryEntry="663">
+        <progress>10.68</progress>
+        <average_Q-vals>4.931</average_Q-vals>
+        <average_rewards>0.395</average_rewards>
+        <laptime>4.6</laptime>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="817" endMemoryEntry="857" nr="8" reinfNetSteps="0" startMemoryEntry="765">
+        <progress>8.81</progress>
+        <average_Q-vals>5.025</average_Q-vals>
+        <average_rewards>0.346</average_rewards>
+        <laptime>3.3</laptime>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="903" endMemoryEntry="948" nr="9" reinfNetSteps="0" startMemoryEntry="857">
+        <progress>8.82</progress>
+        <average_Q-vals>5.125</average_Q-vals>
+        <average_rewards>0.355</average_rewards>
+        <laptime>3.4</laptime>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="1037" endMemoryEntry="1087" nr="10" reinfNetSteps="0" startMemoryEntry="948">
+        <progress>13.57</progress>
+        <average_Q-vals>5.345</average_Q-vals>
+        <average_rewards>0.379</average_rewards>
+        <laptime>8.2</laptime>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="1134" endMemoryEntry="1189" nr="11" reinfNetSteps="0" startMemoryEntry="1087">
+        <progress>10.44</progress>
+        <average_Q-vals>4.955</average_Q-vals>
+        <average_rewards>0.387</average_rewards>
+        <laptime>4.5</laptime>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="1226" endMemoryEntry="1286" nr="12" reinfNetSteps="0" startMemoryEntry="1189">
+        <progress>9.11</progress>
+        <average_Q-vals>5.068</average_Q-vals>
+        <average_rewards>0.356</average_rewards>
+        <laptime>3.7</laptime>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="1313" endMemoryEntry="1378" nr="13" reinfNetSteps="0" startMemoryEntry="1286">
+        <progress>8.82</progress>
+        <average_Q-vals>5.163</average_Q-vals>
+        <average_rewards>0.345</average_rewards>
+        <laptime>3.3</laptime>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="1398" endMemoryEntry="1468" nr="14" reinfNetSteps="0" startMemoryEntry="1378">
+        <progress>9.7</progress>
+        <average_Q-vals>5.489</average_Q-vals>
+        <average_rewards>0.349</average_rewards>
+        <laptime>3.2</laptime>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="1484" endMemoryEntry="1559" nr="15" reinfNetSteps="0" startMemoryEntry="1468">
+        <progress>8.65</progress>
+        <average_Q-vals>5.131</average_Q-vals>
+        <average_rewards>0.345</average_rewards>
+        <laptime>3.3</laptime>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="1627" endMemoryEntry="1707" nr="16" reinfNetSteps="0" startMemoryEntry="1559">
+        <progress>12.99</progress>
+        <average_Q-vals>4.919</average_Q-vals>
+        <average_rewards>0.338</average_rewards>
+        <laptime>9.0</laptime>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="1713" endMemoryEntry="1798" nr="17" reinfNetSteps="0" startMemoryEntry="1707">
+        <progress>8.68</progress>
+        <average_Q-vals>5.142</average_Q-vals>
+        <average_rewards>0.347</average_rewards>
+        <laptime>3.3</laptime>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="1803" endMemoryEntry="1893" nr="18" reinfNetSteps="0" startMemoryEntry="1798">
+        <progress>11.22</progress>
+        <average_Q-vals>5.46</average_Q-vals>
+        <average_rewards>0.367</average_rewards>
+        <laptime>3.7</laptime>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="1892" endMemoryEntry="1987" nr="19" reinfNetSteps="0" startMemoryEntry="1893">
+        <progress>9.18</progress>
+        <average_Q-vals>5.167</average_Q-vals>
+        <average_rewards>0.353</average_rewards>
+        <laptime>3.5</laptime>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="1979" endMemoryEntry="2079" nr="20" reinfNetSteps="0" startMemoryEntry="1987">
+        <progress>9.19</progress>
+        <average_Q-vals>5.158</average_Q-vals>
+        <average_rewards>0.358</average_rewards>
+        <laptime>3.5</laptime>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="2121" endMemoryEntry="2226" nr="21" reinfNetSteps="0" startMemoryEntry="2079">
+        <progress>12.98</progress>
+        <average_Q-vals>5.145</average_Q-vals>
+        <average_rewards>0.338</average_rewards>
+        <laptime>8.9</laptime>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="2210" endMemoryEntry="2320" nr="22" reinfNetSteps="0" startMemoryEntry="2226">
+        <progress>10.76</progress>
+        <average_Q-vals>5.292</average_Q-vals>
+        <average_rewards>0.359</average_rewards>
+        <laptime>3.5</laptime>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="2296" endMemoryEntry="2411" nr="23" reinfNetSteps="0" startMemoryEntry="2320">
+        <progress>8.79</progress>
+        <average_Q-vals>5.14</average_Q-vals>
+        <average_rewards>0.346</average_rewards>
+        <laptime>3.3</laptime>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="2392" endMemoryEntry="2512" nr="24" reinfNetSteps="0" startMemoryEntry="2411">
+        <progress>10.23</progress>
+        <average_Q-vals>4.966</average_Q-vals>
+        <average_rewards>0.384</average_rewards>
+        <laptime>4.3</laptime>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="2477" endMemoryEntry="2602" nr="25" reinfNetSteps="0" startMemoryEntry="2512">
+        <progress>8.47</progress>
+        <average_Q-vals>5.146</average_Q-vals>
+        <average_rewards>0.347</average_rewards>
+        <laptime>3.2</laptime>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="2568" endMemoryEntry="2698" nr="26" reinfNetSteps="0" startMemoryEntry="2602">
+        <progress>9.13</progress>
+        <average_Q-vals>5.044</average_Q-vals>
+        <average_rewards>0.361</average_rewards>
+        <laptime>3.8</laptime>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="2655" endMemoryEntry="2790" nr="27" reinfNetSteps="0" startMemoryEntry="2698">
+        <progress>8.79</progress>
+        <average_Q-vals>5.118</average_Q-vals>
+        <average_rewards>0.345</average_rewards>
+        <laptime>3.3</laptime>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="2843" endMemoryEntry="2983" nr="28" reinfNetSteps="0" startMemoryEntry="2790">
+        <progress>18.8</progress>
+        <average_Q-vals>5.363</average_Q-vals>
+        <average_rewards>0.364</average_rewards>
+        <laptime>13.6</laptime>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="2932" endMemoryEntry="3077" nr="29" reinfNetSteps="0" startMemoryEntry="2983">
+        <progress>10.89</progress>
+        <average_Q-vals>5.49</average_Q-vals>
+        <average_rewards>0.367</average_rewards>
+        <laptime>3.6</laptime>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="3025" endMemoryEntry="3175" nr="30" reinfNetSteps="0" startMemoryEntry="3077">
+        <progress>9.62</progress>
+        <average_Q-vals>4.97</average_Q-vals>
+        <average_rewards>0.371</average_rewards>
+        <laptime>4.0</laptime>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="3117" endMemoryEntry="3272" nr="31" reinfNetSteps="0" startMemoryEntry="3175">
+        <progress>9.28</progress>
+        <average_Q-vals>5.041</average_Q-vals>
+        <average_rewards>0.364</average_rewards>
+        <laptime>3.9</laptime>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="3201" endMemoryEntry="3361" nr="32" reinfNetSteps="0" startMemoryEntry="3272">
+        <progress>9.74</progress>
+        <average_Q-vals>5.474</average_Q-vals>
+        <average_rewards>0.35</average_rewards>
+        <laptime>3.2</laptime>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="3286" endMemoryEntry="3451" nr="33" reinfNetSteps="0" startMemoryEntry="3361">
+        <progress>8.44</progress>
+        <average_Q-vals>5.15</average_Q-vals>
+        <average_rewards>0.346</average_rewards>
+        <laptime>3.2</laptime>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="3372" endMemoryEntry="3542" nr="34" reinfNetSteps="0" startMemoryEntry="3451">
+        <progress>8.6</progress>
+        <average_Q-vals>5.2</average_Q-vals>
+        <average_rewards>0.344</average_rewards>
+        <laptime>3.2</laptime>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="3458" endMemoryEntry="3633" nr="35" reinfNetSteps="0" startMemoryEntry="3542">
+        <progress>8.72</progress>
+        <average_Q-vals>5.18</average_Q-vals>
+        <average_rewards>0.348</average_rewards>
+        <laptime>3.3</laptime>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="3551" endMemoryEntry="3731" nr="36" reinfNetSteps="0" startMemoryEntry="3633">
+        <progress>9.64</progress>
+        <average_Q-vals>4.964</average_Q-vals>
+        <average_rewards>0.373</average_rewards>
+        <laptime>4.1</laptime>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="3636" endMemoryEntry="3821" nr="37" reinfNetSteps="0" startMemoryEntry="3731">
+        <progress>8.47</progress>
+        <average_Q-vals>5.161</average_Q-vals>
+        <average_rewards>0.345</average_rewards>
+        <laptime>3.2</laptime>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="3722" endMemoryEntry="3912" nr="38" reinfNetSteps="0" startMemoryEntry="3821">
+        <progress>8.66</progress>
+        <average_Q-vals>5.127</average_Q-vals>
+        <average_rewards>0.345</average_rewards>
+        <laptime>3.3</laptime>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="3808" endMemoryEntry="4003" nr="39" reinfNetSteps="0" startMemoryEntry="3912">
+        <progress>8.66</progress>
+        <average_Q-vals>5.144</average_Q-vals>
+        <average_rewards>0.347</average_rewards>
+        <laptime>3.3</laptime>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="3946" endMemoryEntry="4146" nr="40" reinfNetSteps="0" startMemoryEntry="4003">
+        <progress>13.01</progress>
+        <average_Q-vals>5.028</average_Q-vals>
+        <average_rewards>0.346</average_rewards>
+        <laptime>8.5</laptime>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="4033" endMemoryEntry="4238" nr="41" reinfNetSteps="0" startMemoryEntry="4146">
+        <progress>8.75</progress>
+        <average_Q-vals>5.189</average_Q-vals>
+        <average_rewards>0.341</average_rewards>
+        <laptime>3.3</laptime>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="4124" endMemoryEntry="4334" nr="42" reinfNetSteps="0" startMemoryEntry="4238">
+        <progress>9.69</progress>
+        <average_Q-vals>5.078</average_Q-vals>
+        <average_rewards>0.364</average_rewards>
+        <laptime>3.8</laptime>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="4211" endMemoryEntry="4426" nr="43" reinfNetSteps="0" startMemoryEntry="4334">
+        <progress>9.81</progress>
+        <average_Q-vals>5.328</average_Q-vals>
+        <average_rewards>0.344</average_rewards>
+        <laptime>3.2</laptime>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="4306" endMemoryEntry="4526" nr="44" reinfNetSteps="0" startMemoryEntry="4426">
+        <progress>10.04</progress>
+        <average_Q-vals>4.954</average_Q-vals>
+        <average_rewards>0.382</average_rewards>
+        <laptime>4.2</laptime>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="4391" endMemoryEntry="4616" nr="45" reinfNetSteps="0" startMemoryEntry="4526">
+        <progress>9.84</progress>
+        <average_Q-vals>5.494</average_Q-vals>
+        <average_rewards>0.351</average_rewards>
+        <laptime>3.2</laptime>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="4494" endMemoryEntry="4724" nr="46" reinfNetSteps="0" startMemoryEntry="4616">
+        <progress>11.76</progress>
+        <average_Q-vals>5.101</average_Q-vals>
+        <average_rewards>0.397</average_rewards>
+        <laptime>4.9</laptime>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="4679" endMemoryEntry="4914" nr="47" reinfNetSteps="0" startMemoryEntry="4724">
+        <progress>16.93</progress>
+        <average_Q-vals>4.762</average_Q-vals>
+        <average_rewards>0.314</average_rewards>
+        <laptime>13.3</laptime>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="4849" endMemoryEntry="5089" nr="48" reinfNetSteps="0" startMemoryEntry="4914">
+        <progress>16.64</progress>
+        <average_Q-vals>5.029</average_Q-vals>
+        <average_rewards>0.351</average_rewards>
+        <laptime>11.8</laptime>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="4988" endMemoryEntry="5233" nr="49" reinfNetSteps="0" startMemoryEntry="5089">
+        <progress>15.11</progress>
+        <average_Q-vals>5.463</average_Q-vals>
+        <average_rewards>0.371</average_rewards>
+        <laptime>8.7</laptime>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="5073" endMemoryEntry="5323" nr="50" reinfNetSteps="0" startMemoryEntry="5233">
+        <progress>10.06</progress>
+        <average_Q-vals>5.434</average_Q-vals>
+        <average_rewards>0.355</average_rewards>
+        <laptime>3.3</laptime>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="5160" endMemoryEntry="5415" nr="51" reinfNetSteps="0" startMemoryEntry="5323">
+        <progress>8.64</progress>
+        <average_Q-vals>5.146</average_Q-vals>
+        <average_rewards>0.344</average_rewards>
+        <laptime>3.3</laptime>
+      </Episode>
+    </runResults>
+  </run>
+  <run date="2017-09-13 16:47:40" memorysize="0">
+    <runResults>
+      <Episode endEpsilon="0.0" endIteration="196" endMemoryEntry="201" nr="1" reinfNetSteps="0" startMemoryEntry="0">
+        <average_Q-vals>5.023</average_Q-vals>
+        <average_rewards>0.369</average_rewards>
+        <laptime>14.2</laptime>
+        <progress>20.27</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="281" endMemoryEntry="291" nr="2" reinfNetSteps="0" startMemoryEntry="201">
+        <average_Q-vals>5.176</average_Q-vals>
+        <average_rewards>0.347</average_rewards>
+        <laptime>3.2</laptime>
+        <progress>8.55</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="366" endMemoryEntry="381" nr="3" reinfNetSteps="0" startMemoryEntry="291">
+        <average_Q-vals>5.164</average_Q-vals>
+        <average_rewards>0.348</average_rewards>
+        <laptime>3.2</laptime>
+        <progress>8.51</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="452" endMemoryEntry="472" nr="4" reinfNetSteps="0" startMemoryEntry="381">
+        <average_Q-vals>5.123</average_Q-vals>
+        <average_rewards>0.346</average_rewards>
+        <laptime>3.3</laptime>
+        <progress>8.69</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="817" endMemoryEntry="842" nr="5" reinfNetSteps="0" startMemoryEntry="472">
+        <average_Q-vals>5.0</average_Q-vals>
+        <average_rewards>0.386</average_rewards>
+        <laptime>31.3</laptime>
+        <progress>48.33</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="953" endMemoryEntry="983" nr="6" reinfNetSteps="0" startMemoryEntry="842">
+        <average_Q-vals>5.422</average_Q-vals>
+        <average_rewards>0.383</average_rewards>
+        <laptime>8.4</laptime>
+        <progress>13.66</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="1142" endMemoryEntry="1177" nr="7" reinfNetSteps="0" startMemoryEntry="983">
+        <average_Q-vals>5.279</average_Q-vals>
+        <average_rewards>0.365</average_rewards>
+        <laptime>13.5</laptime>
+        <progress>18.82</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="1227" endMemoryEntry="1267" nr="8" reinfNetSteps="0" startMemoryEntry="1177">
+        <average_Q-vals>5.182</average_Q-vals>
+        <average_rewards>0.349</average_rewards>
+        <laptime>3.2</laptime>
+        <progress>8.48</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="1362" endMemoryEntry="1407" nr="9" reinfNetSteps="0" startMemoryEntry="1267">
+        <average_Q-vals>5.406</average_Q-vals>
+        <average_rewards>0.353</average_rewards>
+        <laptime>8.2</laptime>
+        <progress>12.6</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="1446" endMemoryEntry="1496" nr="10" reinfNetSteps="0" startMemoryEntry="1407">
+        <average_Q-vals>5.144</average_Q-vals>
+        <average_rewards>0.351</average_rewards>
+        <laptime>3.2</laptime>
+        <progress>8.45</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="1535" endMemoryEntry="1590" nr="11" reinfNetSteps="0" startMemoryEntry="1496">
+        <average_Q-vals>5.056</average_Q-vals>
+        <average_rewards>0.361</average_rewards>
+        <laptime>3.6</laptime>
+        <progress>8.98</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="1619" endMemoryEntry="1679" nr="12" reinfNetSteps="0" startMemoryEntry="1590">
+        <average_Q-vals>5.488</average_Q-vals>
+        <average_rewards>0.353</average_rewards>
+        <laptime>3.2</laptime>
+        <progress>9.76</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="1705" endMemoryEntry="1770" nr="13" reinfNetSteps="0" startMemoryEntry="1679">
+        <average_Q-vals>5.445</average_Q-vals>
+        <average_rewards>0.35</average_rewards>
+        <laptime>3.3</laptime>
+        <progress>10.04</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="1791" endMemoryEntry="1861" nr="14" reinfNetSteps="0" startMemoryEntry="1770">
+        <average_Q-vals>5.204</average_Q-vals>
+        <average_rewards>0.349</average_rewards>
+        <laptime>3.3</laptime>
+        <progress>8.77</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="1888" endMemoryEntry="1963" nr="15" reinfNetSteps="0" startMemoryEntry="1861">
+        <average_Q-vals>4.985</average_Q-vals>
+        <average_rewards>0.391</average_rewards>
+        <laptime>4.5</laptime>
+        <progress>10.44</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="1974" endMemoryEntry="2054" nr="16" reinfNetSteps="0" startMemoryEntry="1963">
+        <average_Q-vals>5.212</average_Q-vals>
+        <average_rewards>0.345</average_rewards>
+        <laptime>3.2</laptime>
+        <progress>8.55</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="2112" endMemoryEntry="2197" nr="17" reinfNetSteps="0" startMemoryEntry="2054">
+        <average_Q-vals>5.023</average_Q-vals>
+        <average_rewards>0.339</average_rewards>
+        <laptime>8.5</laptime>
+        <progress>12.7</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="2198" endMemoryEntry="2288" nr="18" reinfNetSteps="0" startMemoryEntry="2197">
+        <average_Q-vals>5.159</average_Q-vals>
+        <average_rewards>0.349</average_rewards>
+        <laptime>3.3</laptime>
+        <progress>8.7</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="2348" endMemoryEntry="2443" nr="19" reinfNetSteps="0" startMemoryEntry="2288">
+        <average_Q-vals>5.175</average_Q-vals>
+        <average_rewards>0.365</average_rewards>
+        <laptime>9.7</laptime>
+        <progress>16.5</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="2481" endMemoryEntry="2581" nr="20" reinfNetSteps="0" startMemoryEntry="2443">
+        <average_Q-vals>5.351</average_Q-vals>
+        <average_rewards>0.372</average_rewards>
+        <laptime>8.0</laptime>
+        <progress>13.1</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="2569" endMemoryEntry="2674" nr="21" reinfNetSteps="0" startMemoryEntry="2581">
+        <average_Q-vals>5.153</average_Q-vals>
+        <average_rewards>0.35</average_rewards>
+        <laptime>3.4</laptime>
+        <progress>9.02</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="2704" endMemoryEntry="2814" nr="22" reinfNetSteps="0" startMemoryEntry="2674">
+        <average_Q-vals>5.143</average_Q-vals>
+        <average_rewards>0.355</average_rewards>
+        <laptime>8.2</laptime>
+        <progress>12.99</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="2793" endMemoryEntry="2908" nr="23" reinfNetSteps="0" startMemoryEntry="2814">
+        <average_Q-vals>5.47</average_Q-vals>
+        <average_rewards>0.36</average_rewards>
+        <laptime>3.5</laptime>
+        <progress>10.78</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="2879" endMemoryEntry="2999" nr="24" reinfNetSteps="0" startMemoryEntry="2908">
+        <average_Q-vals>5.159</average_Q-vals>
+        <average_rewards>0.344</average_rewards>
+        <laptime>3.2</laptime>
+        <progress>8.46</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="3022" endMemoryEntry="3147" nr="25" reinfNetSteps="0" startMemoryEntry="2999">
+        <average_Q-vals>4.977</average_Q-vals>
+        <average_rewards>0.336</average_rewards>
+        <laptime>8.9</laptime>
+        <progress>12.97</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="3112" endMemoryEntry="3242" nr="26" reinfNetSteps="0" startMemoryEntry="3147">
+        <average_Q-vals>5.095</average_Q-vals>
+        <average_rewards>0.354</average_rewards>
+        <laptime>3.6</laptime>
+        <progress>8.96</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="3204" endMemoryEntry="3339" nr="27" reinfNetSteps="0" startMemoryEntry="3242">
+        <average_Q-vals>4.881</average_Q-vals>
+        <average_rewards>0.356</average_rewards>
+        <laptime>3.8</laptime>
+        <progress>9.19</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="3290" endMemoryEntry="3430" nr="28" reinfNetSteps="0" startMemoryEntry="3339">
+        <average_Q-vals>5.153</average_Q-vals>
+        <average_rewards>0.343</average_rewards>
+        <laptime>3.2</laptime>
+        <progress>8.45</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="3423" endMemoryEntry="3568" nr="29" reinfNetSteps="0" startMemoryEntry="3430">
+        <average_Q-vals>5.483</average_Q-vals>
+        <average_rewards>0.389</average_rewards>
+        <laptime>8.1</laptime>
+        <progress>13.64</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="3610" endMemoryEntry="3760" nr="30" reinfNetSteps="0" startMemoryEntry="3568">
+        <average_Q-vals>5.419</average_Q-vals>
+        <average_rewards>0.372</average_rewards>
+        <laptime>13.4</laptime>
+        <progress>18.8</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="3696" endMemoryEntry="3851" nr="31" reinfNetSteps="0" startMemoryEntry="3760">
+        <average_Q-vals>5.133</average_Q-vals>
+        <average_rewards>0.345</average_rewards>
+        <laptime>3.3</laptime>
+        <progress>8.64</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="3784" endMemoryEntry="3944" nr="32" reinfNetSteps="0" startMemoryEntry="3851">
+        <average_Q-vals>5.469</average_Q-vals>
+        <average_rewards>0.373</average_rewards>
+        <laptime>3.6</laptime>
+        <progress>10.93</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="3868" endMemoryEntry="4033" nr="33" reinfNetSteps="0" startMemoryEntry="3944">
+        <average_Q-vals>5.49</average_Q-vals>
+        <average_rewards>0.355</average_rewards>
+        <laptime>3.2</laptime>
+        <progress>9.78</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="3952" endMemoryEntry="4122" nr="34" reinfNetSteps="0" startMemoryEntry="4033">
+        <average_Q-vals>5.537</average_Q-vals>
+        <average_rewards>0.349</average_rewards>
+        <laptime>3.1</laptime>
+        <progress>9.48</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="4103" endMemoryEntry="4278" nr="35" reinfNetSteps="0" startMemoryEntry="4122">
+        <average_Q-vals>4.69</average_Q-vals>
+        <average_rewards>0.401</average_rewards>
+        <laptime>9.9</laptime>
+        <progress>16.32</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="4237" endMemoryEntry="4417" nr="36" reinfNetSteps="0" startMemoryEntry="4278">
+        <average_Q-vals>5.257</average_Q-vals>
+        <average_rewards>0.358</average_rewards>
+        <laptime>8.2</laptime>
+        <progress>12.69</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="4330" endMemoryEntry="4515" nr="37" reinfNetSteps="0" startMemoryEntry="4417">
+        <average_Q-vals>5.017</average_Q-vals>
+        <average_rewards>0.364</average_rewards>
+        <laptime>4.0</laptime>
+        <progress>9.42</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="4573" endMemoryEntry="4763" nr="38" reinfNetSteps="0" startMemoryEntry="4515">
+        <average_Q-vals>5.455</average_Q-vals>
+        <average_rewards>0.457</average_rewards>
+        <laptime>18.8</laptime>
+        <progress>36.58</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="4707" endMemoryEntry="4902" nr="39" reinfNetSteps="0" startMemoryEntry="4763">
+        <average_Q-vals>5.024</average_Q-vals>
+        <average_rewards>0.349</average_rewards>
+        <laptime>8.2</laptime>
+        <progress>12.77</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="4799" endMemoryEntry="4999" nr="40" reinfNetSteps="0" startMemoryEntry="4902">
+        <average_Q-vals>5.087</average_Q-vals>
+        <average_rewards>0.369</average_rewards>
+        <laptime>3.9</laptime>
+        <progress>9.83</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="4884" endMemoryEntry="5089" nr="41" reinfNetSteps="0" startMemoryEntry="4999">
+        <average_Q-vals>5.176</average_Q-vals>
+        <average_rewards>0.349</average_rewards>
+        <laptime>3.2</laptime>
+        <progress>8.41</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="5026" endMemoryEntry="5236" nr="42" reinfNetSteps="0" startMemoryEntry="5089">
+        <average_Q-vals>5.562</average_Q-vals>
+        <average_rewards>0.331</average_rewards>
+        <laptime>8.9</laptime>
+        <progress>12.68</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="5113" endMemoryEntry="5328" nr="43" reinfNetSteps="0" startMemoryEntry="5236">
+        <average_Q-vals>5.461</average_Q-vals>
+        <average_rewards>0.365</average_rewards>
+        <laptime>3.5</laptime>
+        <progress>10.75</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="5205" endMemoryEntry="5425" nr="44" reinfNetSteps="0" startMemoryEntry="5328">
+        <average_Q-vals>5.028</average_Q-vals>
+        <average_rewards>0.36</average_rewards>
+        <laptime>3.8</laptime>
+        <progress>9.25</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="5291" endMemoryEntry="5516" nr="45" reinfNetSteps="0" startMemoryEntry="5425">
+        <average_Q-vals>5.128</average_Q-vals>
+        <average_rewards>0.343</average_rewards>
+        <laptime>3.2</laptime>
+        <progress>8.47</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="5375" endMemoryEntry="5605" nr="46" reinfNetSteps="0" startMemoryEntry="5516">
+        <average_Q-vals>5.467</average_Q-vals>
+        <average_rewards>0.35</average_rewards>
+        <laptime>3.2</laptime>
+        <progress>9.75</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="5518" endMemoryEntry="5753" nr="47" reinfNetSteps="0" startMemoryEntry="5605">
+        <average_Q-vals>5.337</average_Q-vals>
+        <average_rewards>0.351</average_rewards>
+        <laptime>9.1</laptime>
+        <progress>13.0</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="5614" endMemoryEntry="5854" nr="48" reinfNetSteps="0" startMemoryEntry="5753">
+        <average_Q-vals>4.972</average_Q-vals>
+        <average_rewards>0.379</average_rewards>
+        <laptime>4.3</laptime>
+        <progress>10.12</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="5704" endMemoryEntry="5949" nr="49" reinfNetSteps="0" startMemoryEntry="5854">
+        <average_Q-vals>5.055</average_Q-vals>
+        <average_rewards>0.364</average_rewards>
+        <laptime>3.7</laptime>
+        <progress>9.13</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="5839" endMemoryEntry="6089" nr="50" reinfNetSteps="0" startMemoryEntry="5949">
+        <average_Q-vals>5.229</average_Q-vals>
+        <average_rewards>0.383</average_rewards>
+        <laptime>8.3</laptime>
+        <progress>13.4</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="5944" endMemoryEntry="6199" nr="51" reinfNetSteps="0" startMemoryEntry="6089">
+        <average_Q-vals>4.99</average_Q-vals>
+        <average_rewards>0.398</average_rewards>
+        <laptime>5.1</laptime>
+        <progress>11.67</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="6085" endMemoryEntry="6345" nr="52" reinfNetSteps="0" startMemoryEntry="6199">
+        <average_Q-vals>4.976</average_Q-vals>
+        <average_rewards>0.342</average_rewards>
+        <laptime>8.9</laptime>
+        <progress>12.99</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="6215" endMemoryEntry="6480" nr="53" reinfNetSteps="0" startMemoryEntry="6345">
+        <average_Q-vals>5.297</average_Q-vals>
+        <average_rewards>0.377</average_rewards>
+        <laptime>7.7</laptime>
+        <progress>12.89</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="6300" endMemoryEntry="6570" nr="54" reinfNetSteps="0" startMemoryEntry="6480">
+        <average_Q-vals>5.15</average_Q-vals>
+        <average_rewards>0.348</average_rewards>
+        <laptime>3.2</laptime>
+        <progress>8.49</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="6390" endMemoryEntry="6665" nr="55" reinfNetSteps="0" startMemoryEntry="6570">
+        <average_Q-vals>5.116</average_Q-vals>
+        <average_rewards>0.364</average_rewards>
+        <laptime>3.7</laptime>
+        <progress>9.49</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="6540" endMemoryEntry="6820" nr="56" reinfNetSteps="0" startMemoryEntry="6665">
+        <average_Q-vals>5.345</average_Q-vals>
+        <average_rewards>0.33</average_rewards>
+        <laptime>9.8</laptime>
+        <progress>12.96</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="6628" endMemoryEntry="6913" nr="57" reinfNetSteps="0" startMemoryEntry="6820">
+        <average_Q-vals>5.128</average_Q-vals>
+        <average_rewards>0.369</average_rewards>
+        <laptime>3.7</laptime>
+        <progress>9.47</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="6716" endMemoryEntry="7006" nr="58" reinfNetSteps="0" startMemoryEntry="6913">
+        <average_Q-vals>5.162</average_Q-vals>
+        <average_rewards>0.354</average_rewards>
+        <laptime>3.5</laptime>
+        <progress>9.11</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="6888" endMemoryEntry="7183" nr="59" reinfNetSteps="0" startMemoryEntry="7006">
+        <average_Q-vals>5.457</average_Q-vals>
+        <average_rewards>0.409</average_rewards>
+        <laptime>11.9</laptime>
+        <progress>19.8</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="6973" endMemoryEntry="7273" nr="60" reinfNetSteps="0" startMemoryEntry="7183">
+        <average_Q-vals>5.124</average_Q-vals>
+        <average_rewards>0.346</average_rewards>
+        <laptime>3.2</laptime>
+        <progress>8.46</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="7070" endMemoryEntry="7375" nr="61" reinfNetSteps="0" startMemoryEntry="7273">
+        <average_Q-vals>4.963</average_Q-vals>
+        <average_rewards>0.379</average_rewards>
+        <laptime>4.3</laptime>
+        <progress>10.2</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="7200" endMemoryEntry="7510" nr="62" reinfNetSteps="0" startMemoryEntry="7375">
+        <average_Q-vals>5.45</average_Q-vals>
+        <average_rewards>0.369</average_rewards>
+        <laptime>7.8</laptime>
+        <progress>13.21</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="7285" endMemoryEntry="7600" nr="63" reinfNetSteps="0" startMemoryEntry="7510">
+        <average_Q-vals>5.195</average_Q-vals>
+        <average_rewards>0.356</average_rewards>
+        <laptime>3.3</laptime>
+        <progress>8.78</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="7371" endMemoryEntry="7691" nr="64" reinfNetSteps="0" startMemoryEntry="7600">
+        <average_Q-vals>5.151</average_Q-vals>
+        <average_rewards>0.345</average_rewards>
+        <laptime>3.2</laptime>
+        <progress>8.55</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="7508" endMemoryEntry="7833" nr="65" reinfNetSteps="0" startMemoryEntry="7691">
+        <average_Q-vals>5.231</average_Q-vals>
+        <average_rewards>0.363</average_rewards>
+        <laptime>8.5</laptime>
+        <progress>12.93</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="7587" endMemoryEntry="7917" nr="66" reinfNetSteps="0" startMemoryEntry="7833">
+        <average_Q-vals>5.465</average_Q-vals>
+        <average_rewards>0.317</average_rewards>
+        <laptime>2.5</laptime>
+        <progress>7.51</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="7676" endMemoryEntry="8011" nr="67" reinfNetSteps="0" startMemoryEntry="7917">
+        <average_Q-vals>4.896</average_Q-vals>
+        <average_rewards>0.343</average_rewards>
+        <laptime>3.5</laptime>
+        <progress>8.66</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="7813" endMemoryEntry="8153" nr="68" reinfNetSteps="0" startMemoryEntry="8011">
+        <average_Q-vals>5.358</average_Q-vals>
+        <average_rewards>0.373</average_rewards>
+        <laptime>8.5</laptime>
+        <progress>13.35</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="7899" endMemoryEntry="8244" nr="69" reinfNetSteps="0" startMemoryEntry="8153">
+        <average_Q-vals>5.131</average_Q-vals>
+        <average_rewards>0.358</average_rewards>
+        <laptime>3.4</laptime>
+        <progress>8.93</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="7985" endMemoryEntry="8335" nr="70" reinfNetSteps="0" startMemoryEntry="8244">
+        <average_Q-vals>5.225</average_Q-vals>
+        <average_rewards>0.346</average_rewards>
+        <laptime>3.3</laptime>
+        <progress>8.79</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="8072" endMemoryEntry="8427" nr="71" reinfNetSteps="0" startMemoryEntry="8335">
+        <average_Q-vals>5.167</average_Q-vals>
+        <average_rewards>0.34</average_rewards>
+        <laptime>3.3</laptime>
+        <progress>8.37</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="8209" endMemoryEntry="8569" nr="72" reinfNetSteps="0" startMemoryEntry="8427">
+        <average_Q-vals>5.516</average_Q-vals>
+        <average_rewards>0.381</average_rewards>
+        <laptime>8.5</laptime>
+        <progress>13.27</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="8295" endMemoryEntry="8660" nr="73" reinfNetSteps="0" startMemoryEntry="8569">
+        <average_Q-vals>5.203</average_Q-vals>
+        <average_rewards>0.343</average_rewards>
+        <laptime>3.2</laptime>
+        <progress>8.43</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="8446" endMemoryEntry="8816" nr="74" reinfNetSteps="0" startMemoryEntry="8660">
+        <average_Q-vals>5.286</average_Q-vals>
+        <average_rewards>0.35</average_rewards>
+        <laptime>9.8</laptime>
+        <progress>16.1</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="8531" endMemoryEntry="8906" nr="75" reinfNetSteps="0" startMemoryEntry="8816">
+        <average_Q-vals>5.481</average_Q-vals>
+        <average_rewards>0.35</average_rewards>
+        <laptime>3.2</laptime>
+        <progress>9.84</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="8619" endMemoryEntry="8999" nr="76" reinfNetSteps="0" startMemoryEntry="8906">
+        <average_Q-vals>5.049</average_Q-vals>
+        <average_rewards>0.364</average_rewards>
+        <laptime>3.6</laptime>
+        <progress>8.8</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="8703" endMemoryEntry="9088" nr="77" reinfNetSteps="0" startMemoryEntry="8999">
+        <average_Q-vals>5.101</average_Q-vals>
+        <average_rewards>0.349</average_rewards>
+        <laptime>3.2</laptime>
+        <progress>8.44</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="8866" endMemoryEntry="9256" nr="78" reinfNetSteps="0" startMemoryEntry="9088">
+        <average_Q-vals>5.306</average_Q-vals>
+        <average_rewards>0.354</average_rewards>
+        <laptime>10.9</laptime>
+        <progress>16.87</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="8953" endMemoryEntry="9348" nr="79" reinfNetSteps="0" startMemoryEntry="9256">
+        <average_Q-vals>5.147</average_Q-vals>
+        <average_rewards>0.34</average_rewards>
+        <laptime>3.3</laptime>
+        <progress>8.63</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="9042" endMemoryEntry="9442" nr="80" reinfNetSteps="0" startMemoryEntry="9348">
+        <average_Q-vals>5.14</average_Q-vals>
+        <average_rewards>0.363</average_rewards>
+        <laptime>3.6</laptime>
+        <progress>9.36</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="9411" endMemoryEntry="9816" nr="81" reinfNetSteps="0" startMemoryEntry="9442">
+        <average_Q-vals>3.379</average_Q-vals>
+        <average_rewards>0.214</average_rewards>
+        <laptime>31.6</laptime>
+        <progress>25.35</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="9499" endMemoryEntry="9909" nr="82" reinfNetSteps="0" startMemoryEntry="9816">
+        <average_Q-vals>5.15</average_Q-vals>
+        <average_rewards>0.356</average_rewards>
+        <laptime>3.5</laptime>
+        <progress>9.16</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="9644" endMemoryEntry="10059" nr="83" reinfNetSteps="0" startMemoryEntry="9909">
+        <average_Q-vals>5.674</average_Q-vals>
+        <average_rewards>0.36</average_rewards>
+        <laptime>9.3</laptime>
+        <progress>13.26</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="9871" endMemoryEntry="10291" nr="84" reinfNetSteps="0" startMemoryEntry="10059">
+        <average_Q-vals>5.516</average_Q-vals>
+        <average_rewards>0.453</average_rewards>
+        <laptime>17.5</laptime>
+        <progress>32.17</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="9960" endMemoryEntry="10385" nr="85" reinfNetSteps="0" startMemoryEntry="10291">
+        <average_Q-vals>5.113</average_Q-vals>
+        <average_rewards>0.34</average_rewards>
+        <laptime>3.4</laptime>
+        <progress>8.82</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="10105" endMemoryEntry="10535" nr="86" reinfNetSteps="0" startMemoryEntry="10385">
+        <average_Q-vals>5.288</average_Q-vals>
+        <average_rewards>0.368</average_rewards>
+        <laptime>9.3</laptime>
+        <progress>15.59</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="10278" endMemoryEntry="10713" nr="87" reinfNetSteps="0" startMemoryEntry="10535">
+        <average_Q-vals>5.598</average_Q-vals>
+        <average_rewards>0.434</average_rewards>
+        <laptime>12.0</laptime>
+        <progress>21.15</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="10376" endMemoryEntry="10816" nr="88" reinfNetSteps="0" startMemoryEntry="10713">
+        <average_Q-vals>5.015</average_Q-vals>
+        <average_rewards>0.388</average_rewards>
+        <laptime>4.5</laptime>
+        <progress>10.66</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="10473" endMemoryEntry="10918" nr="89" reinfNetSteps="0" startMemoryEntry="10816">
+        <average_Q-vals>4.963</average_Q-vals>
+        <average_rewards>0.39</average_rewards>
+        <laptime>4.5</laptime>
+        <progress>10.52</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="10558" endMemoryEntry="11008" nr="90" reinfNetSteps="0" startMemoryEntry="10918">
+        <average_Q-vals>5.131</average_Q-vals>
+        <average_rewards>0.349</average_rewards>
+        <laptime>3.3</laptime>
+        <progress>8.57</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="10654" endMemoryEntry="11109" nr="91" reinfNetSteps="0" startMemoryEntry="11008">
+        <average_Q-vals>4.982</average_Q-vals>
+        <average_rewards>0.376</average_rewards>
+        <laptime>4.2</laptime>
+        <progress>9.97</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="10749" endMemoryEntry="11209" nr="92" reinfNetSteps="0" startMemoryEntry="11109">
+        <average_Q-vals>4.975</average_Q-vals>
+        <average_rewards>0.383</average_rewards>
+        <laptime>4.3</laptime>
+        <progress>10.08</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="10843" endMemoryEntry="11308" nr="93" reinfNetSteps="0" startMemoryEntry="11209">
+        <average_Q-vals>4.962</average_Q-vals>
+        <average_rewards>0.384</average_rewards>
+        <laptime>4.3</laptime>
+        <progress>9.96</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="10978" endMemoryEntry="11448" nr="94" reinfNetSteps="0" startMemoryEntry="11308">
+        <average_Q-vals>5.507</average_Q-vals>
+        <average_rewards>0.344</average_rewards>
+        <laptime>8.3</laptime>
+        <progress>12.73</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="11064" endMemoryEntry="11539" nr="95" reinfNetSteps="0" startMemoryEntry="11448">
+        <average_Q-vals>5.096</average_Q-vals>
+        <average_rewards>0.348</average_rewards>
+        <laptime>3.4</laptime>
+        <progress>8.74</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="11193" endMemoryEntry="11673" nr="96" reinfNetSteps="0" startMemoryEntry="11539">
+        <average_Q-vals>5.335</average_Q-vals>
+        <average_rewards>0.376</average_rewards>
+        <laptime>7.7</laptime>
+        <progress>12.78</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="11278" endMemoryEntry="11763" nr="97" reinfNetSteps="0" startMemoryEntry="11673">
+        <average_Q-vals>5.164</average_Q-vals>
+        <average_rewards>0.346</average_rewards>
+        <laptime>3.2</laptime>
+        <progress>8.42</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="11364" endMemoryEntry="11854" nr="98" reinfNetSteps="0" startMemoryEntry="11763">
+        <average_Q-vals>5.183</average_Q-vals>
+        <average_rewards>0.351</average_rewards>
+        <laptime>3.3</laptime>
+        <progress>8.74</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="11461" endMemoryEntry="11956" nr="99" reinfNetSteps="0" startMemoryEntry="11854">
+        <average_Q-vals>4.917</average_Q-vals>
+        <average_rewards>0.397</average_rewards>
+        <laptime>4.6</laptime>
+        <progress>10.72</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="11548" endMemoryEntry="12048" nr="100" reinfNetSteps="0" startMemoryEntry="11956">
+        <average_Q-vals>5.19</average_Q-vals>
+        <average_rewards>0.349</average_rewards>
+        <laptime>3.4</laptime>
+        <progress>9.02</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="11684" endMemoryEntry="12189" nr="101" reinfNetSteps="0" startMemoryEntry="12048">
+        <average_Q-vals>5.312</average_Q-vals>
+        <average_rewards>0.362</average_rewards>
+        <laptime>8.4</laptime>
+        <progress>12.96</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="11820" endMemoryEntry="12330" nr="102" reinfNetSteps="0" startMemoryEntry="12189">
+        <average_Q-vals>5.485</average_Q-vals>
+        <average_rewards>0.373</average_rewards>
+        <laptime>8.3</laptime>
+        <progress>13.23</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="11949" endMemoryEntry="12464" nr="103" reinfNetSteps="0" startMemoryEntry="12330">
+        <average_Q-vals>5.259</average_Q-vals>
+        <average_rewards>0.371</average_rewards>
+        <laptime>7.7</laptime>
+        <progress>12.87</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="12026" endMemoryEntry="12546" nr="104" reinfNetSteps="0" startMemoryEntry="12464">
+        <average_Q-vals>5.31</average_Q-vals>
+        <average_rewards>0.299</average_rewards>
+        <laptime>2.2</laptime>
+        <progress>6.53</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="12164" endMemoryEntry="12689" nr="105" reinfNetSteps="0" startMemoryEntry="12546">
+        <average_Q-vals>5.266</average_Q-vals>
+        <average_rewards>0.367</average_rewards>
+        <laptime>8.5</laptime>
+        <progress>13.21</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="12251" endMemoryEntry="12781" nr="106" reinfNetSteps="0" startMemoryEntry="12689">
+        <average_Q-vals>5.1</average_Q-vals>
+        <average_rewards>0.344</average_rewards>
+        <laptime>3.4</laptime>
+        <progress>8.75</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="12337" endMemoryEntry="12872" nr="107" reinfNetSteps="0" startMemoryEntry="12781">
+        <average_Q-vals>5.177</average_Q-vals>
+        <average_rewards>0.36</average_rewards>
+        <laptime>3.4</laptime>
+        <progress>8.96</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="12422" endMemoryEntry="12962" nr="108" reinfNetSteps="0" startMemoryEntry="12872">
+        <average_Q-vals>5.16</average_Q-vals>
+        <average_rewards>0.348</average_rewards>
+        <laptime>3.2</laptime>
+        <progress>8.53</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="12555" endMemoryEntry="13100" nr="109" reinfNetSteps="0" startMemoryEntry="12962">
+        <average_Q-vals>5.3</average_Q-vals>
+        <average_rewards>0.382</average_rewards>
+        <laptime>8.0</laptime>
+        <progress>13.38</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="12640" endMemoryEntry="13190" nr="110" reinfNetSteps="0" startMemoryEntry="13100">
+        <average_Q-vals>5.177</average_Q-vals>
+        <average_rewards>0.347</average_rewards>
+        <laptime>3.2</laptime>
+        <progress>8.5</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="12779" endMemoryEntry="13334" nr="111" reinfNetSteps="0" startMemoryEntry="13190">
+        <average_Q-vals>5.343</average_Q-vals>
+        <average_rewards>0.372</average_rewards>
+        <laptime>8.6</laptime>
+        <progress>13.66</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="12867" endMemoryEntry="13427" nr="112" reinfNetSteps="0" startMemoryEntry="13334">
+        <average_Q-vals>5.09</average_Q-vals>
+        <average_rewards>0.349</average_rewards>
+        <laptime>3.5</laptime>
+        <progress>8.93</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="12948" endMemoryEntry="13513" nr="113" reinfNetSteps="0" startMemoryEntry="13427">
+        <average_Q-vals>5.089</average_Q-vals>
+        <average_rewards>0.313</average_rewards>
+        <laptime>2.6</laptime>
+        <progress>7.74</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="13046" endMemoryEntry="13616" nr="114" reinfNetSteps="0" startMemoryEntry="13513">
+        <average_Q-vals>5.054</average_Q-vals>
+        <average_rewards>0.382</average_rewards>
+        <laptime>4.4</laptime>
+        <progress>10.47</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="13180" endMemoryEntry="13755" nr="115" reinfNetSteps="0" startMemoryEntry="13616">
+        <average_Q-vals>5.376</average_Q-vals>
+        <average_rewards>0.374</average_rewards>
+        <laptime>8.1</laptime>
+        <progress>13.36</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="13266" endMemoryEntry="13846" nr="116" reinfNetSteps="0" startMemoryEntry="13755">
+        <average_Q-vals>5.215</average_Q-vals>
+        <average_rewards>0.343</average_rewards>
+        <laptime>3.2</laptime>
+        <progress>8.2</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="13349" endMemoryEntry="13934" nr="117" reinfNetSteps="0" startMemoryEntry="13846">
+        <average_Q-vals>5.479</average_Q-vals>
+        <average_rewards>0.352</average_rewards>
+        <laptime>3.1</laptime>
+        <progress>9.54</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="13436" endMemoryEntry="14026" nr="118" reinfNetSteps="0" startMemoryEntry="13934">
+        <average_Q-vals>5.08</average_Q-vals>
+        <average_rewards>0.35</average_rewards>
+        <laptime>3.5</laptime>
+        <progress>8.93</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="13567" endMemoryEntry="14162" nr="119" reinfNetSteps="0" startMemoryEntry="14026">
+        <average_Q-vals>5.381</average_Q-vals>
+        <average_rewards>0.392</average_rewards>
+        <laptime>7.9</laptime>
+        <progress>13.3</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="13667" endMemoryEntry="14267" nr="120" reinfNetSteps="0" startMemoryEntry="14162">
+        <average_Q-vals>4.96</average_Q-vals>
+        <average_rewards>0.391</average_rewards>
+        <laptime>4.7</laptime>
+        <progress>10.95</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="13751" endMemoryEntry="14356" nr="121" reinfNetSteps="0" startMemoryEntry="14267">
+        <average_Q-vals>5.114</average_Q-vals>
+        <average_rewards>0.346</average_rewards>
+        <laptime>3.2</laptime>
+        <progress>8.6</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="13832" endMemoryEntry="14442" nr="122" reinfNetSteps="0" startMemoryEntry="14356">
+        <average_Q-vals>5.425</average_Q-vals>
+        <average_rewards>0.329</average_rewards>
+        <laptime>2.8</laptime>
+        <progress>8.4</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="13969" endMemoryEntry="14584" nr="123" reinfNetSteps="0" startMemoryEntry="14442">
+        <average_Q-vals>5.203</average_Q-vals>
+        <average_rewards>0.352</average_rewards>
+        <laptime>8.3</laptime>
+        <progress>12.55</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="14053" endMemoryEntry="14673" nr="124" reinfNetSteps="0" startMemoryEntry="14584">
+        <average_Q-vals>5.497</average_Q-vals>
+        <average_rewards>0.355</average_rewards>
+        <laptime>3.2</laptime>
+        <progress>9.78</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="14200" endMemoryEntry="14825" nr="125" reinfNetSteps="0" startMemoryEntry="14673">
+        <average_Q-vals>5.493</average_Q-vals>
+        <average_rewards>0.353</average_rewards>
+        <laptime>9.5</laptime>
+        <progress>13.05</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="14293" endMemoryEntry="14923" nr="126" reinfNetSteps="0" startMemoryEntry="14825">
+        <average_Q-vals>5.014</average_Q-vals>
+        <average_rewards>0.366</average_rewards>
+        <laptime>4.0</laptime>
+        <progress>9.53</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="14380" endMemoryEntry="15015" nr="127" reinfNetSteps="0" startMemoryEntry="14923">
+        <average_Q-vals>5.113</average_Q-vals>
+        <average_rewards>0.345</average_rewards>
+        <laptime>3.4</laptime>
+        <progress>8.78</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="14522" endMemoryEntry="15162" nr="128" reinfNetSteps="0" startMemoryEntry="15015">
+        <average_Q-vals>5.411</average_Q-vals>
+        <average_rewards>0.347</average_rewards>
+        <laptime>9.0</laptime>
+        <progress>12.96</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="14608" endMemoryEntry="15253" nr="129" reinfNetSteps="0" startMemoryEntry="15162">
+        <average_Q-vals>5.098</average_Q-vals>
+        <average_rewards>0.347</average_rewards>
+        <laptime>3.4</laptime>
+        <progress>8.78</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="14693" endMemoryEntry="15343" nr="130" reinfNetSteps="0" startMemoryEntry="15253">
+        <average_Q-vals>5.171</average_Q-vals>
+        <average_rewards>0.349</average_rewards>
+        <laptime>3.2</laptime>
+        <progress>8.48</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="14830" endMemoryEntry="15485" nr="131" reinfNetSteps="0" startMemoryEntry="15343">
+        <average_Q-vals>5.037</average_Q-vals>
+        <average_rewards>0.356</average_rewards>
+        <laptime>8.5</laptime>
+        <progress>13.1</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="14973" endMemoryEntry="15633" nr="132" reinfNetSteps="0" startMemoryEntry="15485">
+        <average_Q-vals>5.37</average_Q-vals>
+        <average_rewards>0.367</average_rewards>
+        <laptime>9.1</laptime>
+        <progress>15.56</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="15092" endMemoryEntry="15757" nr="133" reinfNetSteps="0" startMemoryEntry="15633">
+        <average_Q-vals>5.471</average_Q-vals>
+        <average_rewards>0.406</average_rewards>
+        <laptime>6.5</laptime>
+        <progress>13.39</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="15186" endMemoryEntry="15856" nr="134" reinfNetSteps="0" startMemoryEntry="15757">
+        <average_Q-vals>5.074</average_Q-vals>
+        <average_rewards>0.385</average_rewards>
+        <laptime>4.2</laptime>
+        <progress>10.61</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="15274" endMemoryEntry="15949" nr="135" reinfNetSteps="0" startMemoryEntry="15856">
+        <average_Q-vals>5.082</average_Q-vals>
+        <average_rewards>0.345</average_rewards>
+        <laptime>3.4</laptime>
+        <progress>8.92</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="15361" endMemoryEntry="16041" nr="136" reinfNetSteps="0" startMemoryEntry="15949">
+        <average_Q-vals>5.139</average_Q-vals>
+        <average_rewards>0.348</average_rewards>
+        <laptime>3.4</laptime>
+        <progress>8.79</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="15502" endMemoryEntry="16187" nr="137" reinfNetSteps="0" startMemoryEntry="16041">
+        <average_Q-vals>4.969</average_Q-vals>
+        <average_rewards>0.335</average_rewards>
+        <laptime>8.8</laptime>
+        <progress>12.69</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="15634" endMemoryEntry="16324" nr="138" reinfNetSteps="0" startMemoryEntry="16187">
+        <average_Q-vals>5.32</average_Q-vals>
+        <average_rewards>0.379</average_rewards>
+        <laptime>8.1</laptime>
+        <progress>13.24</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="15780" endMemoryEntry="16475" nr="139" reinfNetSteps="0" startMemoryEntry="16324">
+        <average_Q-vals>5.431</average_Q-vals>
+        <average_rewards>0.358</average_rewards>
+        <laptime>9.3</laptime>
+        <progress>14.35</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="15877" endMemoryEntry="16577" nr="140" reinfNetSteps="0" startMemoryEntry="16475">
+        <average_Q-vals>4.968</average_Q-vals>
+        <average_rewards>0.388</average_rewards>
+        <laptime>4.5</laptime>
+        <progress>10.39</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="16011" endMemoryEntry="16716" nr="141" reinfNetSteps="0" startMemoryEntry="16577">
+        <average_Q-vals>5.266</average_Q-vals>
+        <average_rewards>0.372</average_rewards>
+        <laptime>8.2</laptime>
+        <progress>13.26</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="16108" endMemoryEntry="16818" nr="142" reinfNetSteps="0" startMemoryEntry="16716">
+        <average_Q-vals>4.954</average_Q-vals>
+        <average_rewards>0.385</average_rewards>
+        <laptime>4.5</laptime>
+        <progress>10.01</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="16195" endMemoryEntry="16910" nr="143" reinfNetSteps="0" startMemoryEntry="16818">
+        <average_Q-vals>5.13</average_Q-vals>
+        <average_rewards>0.346</average_rewards>
+        <laptime>3.3</laptime>
+        <progress>8.68</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="16430" endMemoryEntry="17150" nr="144" reinfNetSteps="0" startMemoryEntry="16910">
+        <average_Q-vals>5.612</average_Q-vals>
+        <average_rewards>0.458</average_rewards>
+        <laptime>18.2</laptime>
+        <progress>34.83</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="16520" endMemoryEntry="17245" nr="145" reinfNetSteps="0" startMemoryEntry="17150">
+        <average_Q-vals>5.132</average_Q-vals>
+        <average_rewards>0.362</average_rewards>
+        <laptime>3.7</laptime>
+        <progress>9.5</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="16606" endMemoryEntry="17336" nr="146" reinfNetSteps="0" startMemoryEntry="17245">
+        <average_Q-vals>5.141</average_Q-vals>
+        <average_rewards>0.357</average_rewards>
+        <laptime>3.4</laptime>
+        <progress>8.84</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="16689" endMemoryEntry="17424" nr="147" reinfNetSteps="0" startMemoryEntry="17336">
+        <average_Q-vals>5.479</average_Q-vals>
+        <average_rewards>0.351</average_rewards>
+        <laptime>3.1</laptime>
+        <progress>9.52</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="16777" endMemoryEntry="17517" nr="148" reinfNetSteps="0" startMemoryEntry="17424">
+        <average_Q-vals>4.882</average_Q-vals>
+        <average_rewards>0.335</average_rewards>
+        <laptime>3.2</laptime>
+        <progress>8.44</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="16877" endMemoryEntry="17622" nr="149" reinfNetSteps="0" startMemoryEntry="17517">
+        <average_Q-vals>4.963</average_Q-vals>
+        <average_rewards>0.405</average_rewards>
+        <laptime>4.9</laptime>
+        <progress>11.26</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="16963" endMemoryEntry="17713" nr="150" reinfNetSteps="0" startMemoryEntry="17622">
+        <average_Q-vals>5.183</average_Q-vals>
+        <average_rewards>0.35</average_rewards>
+        <laptime>3.3</laptime>
+        <progress>8.71</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="17041" endMemoryEntry="17796" nr="151" reinfNetSteps="0" startMemoryEntry="17713">
+        <average_Q-vals>5.526</average_Q-vals>
+        <average_rewards>0.321</average_rewards>
+        <laptime>2.5</laptime>
+        <progress>7.49</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="17125" endMemoryEntry="17885" nr="152" reinfNetSteps="0" startMemoryEntry="17796">
+        <average_Q-vals>5.505</average_Q-vals>
+        <average_rewards>0.356</average_rewards>
+        <laptime>3.2</laptime>
+        <progress>9.74</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="17204" endMemoryEntry="17969" nr="153" reinfNetSteps="0" startMemoryEntry="17885">
+        <average_Q-vals>5.382</average_Q-vals>
+        <average_rewards>0.322</average_rewards>
+        <laptime>2.6</laptime>
+        <progress>7.79</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="17300" endMemoryEntry="18070" nr="154" reinfNetSteps="0" startMemoryEntry="17969">
+        <average_Q-vals>4.99</average_Q-vals>
+        <average_rewards>0.379</average_rewards>
+        <laptime>4.3</laptime>
+        <progress>10.09</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="17436" endMemoryEntry="18211" nr="155" reinfNetSteps="0" startMemoryEntry="18070">
+        <average_Q-vals>5.237</average_Q-vals>
+        <average_rewards>0.36</average_rewards>
+        <laptime>8.4</laptime>
+        <progress>12.94</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="17642" endMemoryEntry="18422" nr="156" reinfNetSteps="0" startMemoryEntry="18211">
+        <average_Q-vals>4.821</average_Q-vals>
+        <average_rewards>0.329</average_rewards>
+        <laptime>15.1</laptime>
+        <progress>18.43</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="17727" endMemoryEntry="18512" nr="157" reinfNetSteps="0" startMemoryEntry="18422">
+        <average_Q-vals>5.19</average_Q-vals>
+        <average_rewards>0.348</average_rewards>
+        <laptime>3.2</laptime>
+        <progress>8.57</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="17817" endMemoryEntry="18607" nr="158" reinfNetSteps="0" startMemoryEntry="18512">
+        <average_Q-vals>5.137</average_Q-vals>
+        <average_rewards>0.368</average_rewards>
+        <laptime>3.7</laptime>
+        <progress>9.58</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="17966" endMemoryEntry="18761" nr="159" reinfNetSteps="0" startMemoryEntry="18607">
+        <average_Q-vals>5.099</average_Q-vals>
+        <average_rewards>0.338</average_rewards>
+        <laptime>9.5</laptime>
+        <progress>13.27</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="18053" endMemoryEntry="18853" nr="160" reinfNetSteps="0" startMemoryEntry="18761">
+        <average_Q-vals>5.131</average_Q-vals>
+        <average_rewards>0.341</average_rewards>
+        <laptime>3.3</laptime>
+        <progress>8.64</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="18195" endMemoryEntry="19000" nr="161" reinfNetSteps="0" startMemoryEntry="18853">
+        <average_Q-vals>5.03</average_Q-vals>
+        <average_rewards>0.336</average_rewards>
+        <laptime>8.9</laptime>
+        <progress>12.87</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="18291" endMemoryEntry="19101" nr="162" reinfNetSteps="0" startMemoryEntry="19000">
+        <average_Q-vals>5.009</average_Q-vals>
+        <average_rewards>0.386</average_rewards>
+        <laptime>4.4</laptime>
+        <progress>11.05</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="18376" endMemoryEntry="19191" nr="163" reinfNetSteps="0" startMemoryEntry="19101">
+        <average_Q-vals>5.147</average_Q-vals>
+        <average_rewards>0.347</average_rewards>
+        <laptime>3.2</laptime>
+        <progress>8.46</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="18459" endMemoryEntry="19279" nr="164" reinfNetSteps="0" startMemoryEntry="19191">
+        <average_Q-vals>5.498</average_Q-vals>
+        <average_rewards>0.351</average_rewards>
+        <laptime>3.1</laptime>
+        <progress>9.51</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="18613" endMemoryEntry="19438" nr="165" reinfNetSteps="0" startMemoryEntry="19279">
+        <average_Q-vals>5.026</average_Q-vals>
+        <average_rewards>0.353</average_rewards>
+        <laptime>10.2</laptime>
+        <progress>16.74</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="18704" endMemoryEntry="19534" nr="166" reinfNetSteps="0" startMemoryEntry="19438">
+        <average_Q-vals>5.022</average_Q-vals>
+        <average_rewards>0.366</average_rewards>
+        <laptime>3.9</laptime>
+        <progress>9.26</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="18841" endMemoryEntry="19676" nr="167" reinfNetSteps="0" startMemoryEntry="19534">
+        <average_Q-vals>5.167</average_Q-vals>
+        <average_rewards>0.36</average_rewards>
+        <laptime>8.4</laptime>
+        <progress>12.93</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="18916" endMemoryEntry="19756" nr="168" reinfNetSteps="0" startMemoryEntry="19676">
+        <average_Q-vals>5.693</average_Q-vals>
+        <average_rewards>0.31</average_rewards>
+        <laptime>2.2</laptime>
+        <progress>6.71</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="19000" endMemoryEntry="19845" nr="169" reinfNetSteps="0" startMemoryEntry="19756">
+        <average_Q-vals>5.479</average_Q-vals>
+        <average_rewards>0.35</average_rewards>
+        <laptime>3.2</laptime>
+        <progress>9.77</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="19087" endMemoryEntry="19937" nr="170" reinfNetSteps="0" startMemoryEntry="19845">
+        <average_Q-vals>5.157</average_Q-vals>
+        <average_rewards>0.355</average_rewards>
+        <laptime>3.4</laptime>
+        <progress>8.9</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="19173" endMemoryEntry="20028" nr="171" reinfNetSteps="0" startMemoryEntry="19937">
+        <average_Q-vals>5.124</average_Q-vals>
+        <average_rewards>0.345</average_rewards>
+        <laptime>3.3</laptime>
+        <progress>8.63</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="19331" endMemoryEntry="20191" nr="172" reinfNetSteps="0" startMemoryEntry="20028">
+        <average_Q-vals>4.964</average_Q-vals>
+        <average_rewards>0.341</average_rewards>
+        <laptime>10.7</laptime>
+        <progress>16.32</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="19418" endMemoryEntry="20283" nr="173" reinfNetSteps="0" startMemoryEntry="20191">
+        <average_Q-vals>5.164</average_Q-vals>
+        <average_rewards>0.342</average_rewards>
+        <laptime>3.3</laptime>
+        <progress>8.64</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="19561" endMemoryEntry="20431" nr="174" reinfNetSteps="0" startMemoryEntry="20283">
+        <average_Q-vals>4.88</average_Q-vals>
+        <average_rewards>0.343</average_rewards>
+        <laptime>9.0</laptime>
+        <progress>12.97</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="19695" endMemoryEntry="20570" nr="175" reinfNetSteps="0" startMemoryEntry="20431">
+        <average_Q-vals>5.33</average_Q-vals>
+        <average_rewards>0.383</average_rewards>
+        <laptime>8.1</laptime>
+        <progress>13.66</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="19823" endMemoryEntry="20703" nr="176" reinfNetSteps="0" startMemoryEntry="20570">
+        <average_Q-vals>5.567</average_Q-vals>
+        <average_rewards>0.435</average_rewards>
+        <laptime>7.5</laptime>
+        <progress>13.65</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="19914" endMemoryEntry="20799" nr="177" reinfNetSteps="0" startMemoryEntry="20703">
+        <average_Q-vals>4.974</average_Q-vals>
+        <average_rewards>0.366</average_rewards>
+        <laptime>3.9</laptime>
+        <progress>9.28</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="19988" endMemoryEntry="20878" nr="178" reinfNetSteps="0" startMemoryEntry="20799">
+        <average_Q-vals>5.732</average_Q-vals>
+        <average_rewards>0.305</average_rewards>
+        <laptime>2.1</laptime>
+        <progress>6.46</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="20224" endMemoryEntry="21119" nr="179" reinfNetSteps="0" startMemoryEntry="20878">
+        <average_Q-vals>5.598</average_Q-vals>
+        <average_rewards>0.456</average_rewards>
+        <laptime>18.3</laptime>
+        <progress>34.5</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="20309" endMemoryEntry="21209" nr="180" reinfNetSteps="0" startMemoryEntry="21119">
+        <average_Q-vals>5.158</average_Q-vals>
+        <average_rewards>0.349</average_rewards>
+        <laptime>3.2</laptime>
+        <progress>8.52</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="20399" endMemoryEntry="21304" nr="181" reinfNetSteps="0" startMemoryEntry="21209">
+        <average_Q-vals>4.674</average_Q-vals>
+        <average_rewards>0.329</average_rewards>
+        <laptime>3.3</laptime>
+        <progress>8.69</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="20477" endMemoryEntry="21387" nr="182" reinfNetSteps="0" startMemoryEntry="21304">
+        <average_Q-vals>5.359</average_Q-vals>
+        <average_rewards>0.33</average_rewards>
+        <laptime>2.6</laptime>
+        <progress>7.83</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="20569" endMemoryEntry="21484" nr="183" reinfNetSteps="0" startMemoryEntry="21387">
+        <average_Q-vals>4.997</average_Q-vals>
+        <average_rewards>0.368</average_rewards>
+        <laptime>4.0</laptime>
+        <progress>9.44</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="20658" endMemoryEntry="21578" nr="184" reinfNetSteps="0" startMemoryEntry="21484">
+        <average_Q-vals>5.089</average_Q-vals>
+        <average_rewards>0.364</average_rewards>
+        <laptime>3.7</laptime>
+        <progress>9.46</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="20792" endMemoryEntry="21717" nr="185" reinfNetSteps="0" startMemoryEntry="21578">
+        <average_Q-vals>5.113</average_Q-vals>
+        <average_rewards>0.359</average_rewards>
+        <laptime>8.2</laptime>
+        <progress>13.02</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="20930" endMemoryEntry="21860" nr="186" reinfNetSteps="0" startMemoryEntry="21717">
+        <average_Q-vals>5.294</average_Q-vals>
+        <average_rewards>0.362</average_rewards>
+        <laptime>8.4</laptime>
+        <progress>13.03</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="21017" endMemoryEntry="21952" nr="187" reinfNetSteps="0" startMemoryEntry="21860">
+        <average_Q-vals>5.112</average_Q-vals>
+        <average_rewards>0.355</average_rewards>
+        <laptime>3.4</laptime>
+        <progress>9.09</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="21116" endMemoryEntry="22056" nr="188" reinfNetSteps="0" startMemoryEntry="21952">
+        <average_Q-vals>5.493</average_Q-vals>
+        <average_rewards>0.359</average_rewards>
+        <laptime>4.6</laptime>
+        <progress>15.52</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="21203" endMemoryEntry="22148" nr="189" reinfNetSteps="0" startMemoryEntry="22056">
+        <average_Q-vals>5.181</average_Q-vals>
+        <average_rewards>0.339</average_rewards>
+        <laptime>3.2</laptime>
+        <progress>9.76</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="21283" endMemoryEntry="22233" nr="190" reinfNetSteps="0" startMemoryEntry="22148">
+        <average_Q-vals>5.409</average_Q-vals>
+        <average_rewards>0.327</average_rewards>
+        <laptime>2.7</laptime>
+        <progress>8.12</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="21412" endMemoryEntry="22367" nr="191" reinfNetSteps="0" startMemoryEntry="22233">
+        <average_Q-vals>5.214</average_Q-vals>
+        <average_rewards>0.377</average_rewards>
+        <laptime>7.7</laptime>
+        <progress>12.73</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="21544" endMemoryEntry="22504" nr="192" reinfNetSteps="0" startMemoryEntry="22367">
+        <average_Q-vals>5.508</average_Q-vals>
+        <average_rewards>0.415</average_rewards>
+        <laptime>7.9</laptime>
+        <progress>15.4</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="21680" endMemoryEntry="22645" nr="193" reinfNetSteps="0" startMemoryEntry="22504">
+        <average_Q-vals>5.415</average_Q-vals>
+        <average_rewards>0.368</average_rewards>
+        <laptime>8.4</laptime>
+        <progress>13.04</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="21822" endMemoryEntry="22792" nr="194" reinfNetSteps="0" startMemoryEntry="22645">
+        <average_Q-vals>5.373</average_Q-vals>
+        <average_rewards>0.372</average_rewards>
+        <laptime>8.9</laptime>
+        <progress>15.33</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="21971" endMemoryEntry="22946" nr="195" reinfNetSteps="0" startMemoryEntry="22792">
+        <average_Q-vals>5.317</average_Q-vals>
+        <average_rewards>0.365</average_rewards>
+        <laptime>9.7</laptime>
+        <progress>16.02</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="22072" endMemoryEntry="23052" nr="196" reinfNetSteps="0" startMemoryEntry="22946">
+        <average_Q-vals>4.977</average_Q-vals>
+        <average_rewards>0.396</average_rewards>
+        <laptime>4.8</laptime>
+        <progress>11.05</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="22164" endMemoryEntry="23149" nr="197" reinfNetSteps="0" startMemoryEntry="23052">
+        <average_Q-vals>4.606</average_Q-vals>
+        <average_rewards>0.336</average_rewards>
+        <laptime>3.5</laptime>
+        <progress>9.03</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="22304" endMemoryEntry="23294" nr="198" reinfNetSteps="0" startMemoryEntry="23149">
+        <average_Q-vals>4.962</average_Q-vals>
+        <average_rewards>0.341</average_rewards>
+        <laptime>8.7</laptime>
+        <progress>12.95</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="22385" endMemoryEntry="23380" nr="199" reinfNetSteps="0" startMemoryEntry="23294">
+        <average_Q-vals>5.452</average_Q-vals>
+        <average_rewards>0.322</average_rewards>
+        <laptime>2.7</laptime>
+        <progress>8.13</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="22470" endMemoryEntry="23470" nr="200" reinfNetSteps="0" startMemoryEntry="23380">
+        <average_Q-vals>5.219</average_Q-vals>
+        <average_rewards>0.341</average_rewards>
+        <laptime>3.2</laptime>
+        <progress>8.1</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="22604" endMemoryEntry="23609" nr="201" reinfNetSteps="0" startMemoryEntry="23470">
+        <average_Q-vals>5.071</average_Q-vals>
+        <average_rewards>0.361</average_rewards>
+        <laptime>8.2</laptime>
+        <progress>13.07</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="22738" endMemoryEntry="23748" nr="202" reinfNetSteps="0" startMemoryEntry="23609">
+        <average_Q-vals>5.137</average_Q-vals>
+        <average_rewards>0.364</average_rewards>
+        <laptime>8.1</laptime>
+        <progress>13.2</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="22825" endMemoryEntry="23840" nr="203" reinfNetSteps="0" startMemoryEntry="23748">
+        <average_Q-vals>5.119</average_Q-vals>
+        <average_rewards>0.346</average_rewards>
+        <laptime>3.3</laptime>
+        <progress>8.8</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="22910" endMemoryEntry="23930" nr="204" reinfNetSteps="0" startMemoryEntry="23840">
+        <average_Q-vals>5.172</average_Q-vals>
+        <average_rewards>0.345</average_rewards>
+        <laptime>3.2</laptime>
+        <progress>8.44</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="23035" endMemoryEntry="24060" nr="205" reinfNetSteps="0" startMemoryEntry="23930">
+        <average_Q-vals>5.13</average_Q-vals>
+        <average_rewards>0.416</average_rewards>
+        <laptime>7.4</laptime>
+        <progress>15.66</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="23172" endMemoryEntry="24202" nr="206" reinfNetSteps="0" startMemoryEntry="24060">
+        <average_Q-vals>4.996</average_Q-vals>
+        <average_rewards>0.353</average_rewards>
+        <laptime>8.4</laptime>
+        <progress>13.01</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="23259" endMemoryEntry="24294" nr="207" reinfNetSteps="0" startMemoryEntry="24202">
+        <average_Q-vals>5.103</average_Q-vals>
+        <average_rewards>0.362</average_rewards>
+        <laptime>3.5</laptime>
+        <progress>9.28</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="23391" endMemoryEntry="24431" nr="208" reinfNetSteps="0" startMemoryEntry="24294">
+        <average_Q-vals>5.28</average_Q-vals>
+        <average_rewards>0.369</average_rewards>
+        <laptime>8.1</laptime>
+        <progress>13.26</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="23476" endMemoryEntry="24521" nr="209" reinfNetSteps="0" startMemoryEntry="24431">
+        <average_Q-vals>5.192</average_Q-vals>
+        <average_rewards>0.342</average_rewards>
+        <laptime>3.2</laptime>
+        <progress>8.08</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="23561" endMemoryEntry="24611" nr="210" reinfNetSteps="0" startMemoryEntry="24521">
+        <average_Q-vals>5.152</average_Q-vals>
+        <average_rewards>0.354</average_rewards>
+        <laptime>3.3</laptime>
+        <progress>8.79</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="23649" endMemoryEntry="24704" nr="211" reinfNetSteps="0" startMemoryEntry="24611">
+        <average_Q-vals>5.079</average_Q-vals>
+        <average_rewards>0.356</average_rewards>
+        <laptime>3.5</laptime>
+        <progress>9.09</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="23779" endMemoryEntry="24839" nr="212" reinfNetSteps="0" startMemoryEntry="24704">
+        <average_Q-vals>5.703</average_Q-vals>
+        <average_rewards>0.412</average_rewards>
+        <laptime>7.7</laptime>
+        <progress>15.12</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="23861" endMemoryEntry="24926" nr="213" reinfNetSteps="0" startMemoryEntry="24839">
+        <average_Q-vals>5.383</average_Q-vals>
+        <average_rewards>0.309</average_rewards>
+        <laptime>2.6</laptime>
+        <progress>7.77</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="24105" endMemoryEntry="25175" nr="214" reinfNetSteps="0" startMemoryEntry="24926">
+        <average_Q-vals>5.455</average_Q-vals>
+        <average_rewards>0.427</average_rewards>
+        <laptime>19.2</laptime>
+        <progress>34.65</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="24183" endMemoryEntry="25258" nr="215" reinfNetSteps="0" startMemoryEntry="25175">
+        <average_Q-vals>5.467</average_Q-vals>
+        <average_rewards>0.322</average_rewards>
+        <laptime>2.5</laptime>
+        <progress>7.5</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="24273" endMemoryEntry="25353" nr="216" reinfNetSteps="0" startMemoryEntry="25258">
+        <average_Q-vals>5.05</average_Q-vals>
+        <average_rewards>0.357</average_rewards>
+        <laptime>3.6</laptime>
+        <progress>8.94</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="24412" endMemoryEntry="25497" nr="217" reinfNetSteps="0" startMemoryEntry="25353">
+        <average_Q-vals>5.295</average_Q-vals>
+        <average_rewards>0.409</average_rewards>
+        <laptime>8.7</laptime>
+        <progress>15.92</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="24548" endMemoryEntry="25638" nr="218" reinfNetSteps="0" startMemoryEntry="25497">
+        <average_Q-vals>5.104</average_Q-vals>
+        <average_rewards>0.345</average_rewards>
+        <laptime>8.4</laptime>
+        <progress>12.95</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="24693" endMemoryEntry="25788" nr="219" reinfNetSteps="0" startMemoryEntry="25638">
+        <average_Q-vals>5.232</average_Q-vals>
+        <average_rewards>0.361</average_rewards>
+        <laptime>9.3</laptime>
+        <progress>15.65</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="24780" endMemoryEntry="25880" nr="220" reinfNetSteps="0" startMemoryEntry="25788">
+        <average_Q-vals>5.172</average_Q-vals>
+        <average_rewards>0.351</average_rewards>
+        <laptime>3.4</laptime>
+        <progress>8.89</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="25046" endMemoryEntry="26151" nr="221" reinfNetSteps="0" startMemoryEntry="25880">
+        <average_Q-vals>5.745</average_Q-vals>
+        <average_rewards>0.48</average_rewards>
+        <laptime>21.4</laptime>
+        <progress>44.09</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="25245" endMemoryEntry="26355" nr="222" reinfNetSteps="0" startMemoryEntry="26151">
+        <average_Q-vals>5.234</average_Q-vals>
+        <average_rewards>0.368</average_rewards>
+        <laptime>14.6</laptime>
+        <progress>20.21</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="25330" endMemoryEntry="26445" nr="223" reinfNetSteps="0" startMemoryEntry="26355">
+        <average_Q-vals>5.126</average_Q-vals>
+        <average_rewards>0.356</average_rewards>
+        <laptime>3.3</laptime>
+        <progress>8.68</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="25415" endMemoryEntry="26535" nr="224" reinfNetSteps="0" startMemoryEntry="26445">
+        <average_Q-vals>5.174</average_Q-vals>
+        <average_rewards>0.346</average_rewards>
+        <laptime>3.2</laptime>
+        <progress>8.47</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="25500" endMemoryEntry="26625" nr="225" reinfNetSteps="0" startMemoryEntry="26535">
+        <average_Q-vals>5.138</average_Q-vals>
+        <average_rewards>0.35</average_rewards>
+        <laptime>3.3</laptime>
+        <progress>8.74</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="25633" endMemoryEntry="26763" nr="226" reinfNetSteps="0" startMemoryEntry="26625">
+        <average_Q-vals>5.661</average_Q-vals>
+        <average_rewards>0.386</average_rewards>
+        <laptime>8.1</laptime>
+        <progress>13.54</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="25713" endMemoryEntry="26848" nr="227" reinfNetSteps="0" startMemoryEntry="26763">
+        <average_Q-vals>5.481</average_Q-vals>
+        <average_rewards>0.333</average_rewards>
+        <laptime>2.7</laptime>
+        <progress>8.15</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="25808" endMemoryEntry="26948" nr="228" reinfNetSteps="0" startMemoryEntry="26848">
+        <average_Q-vals>5.017</average_Q-vals>
+        <average_rewards>0.372</average_rewards>
+        <laptime>4.1</laptime>
+        <progress>10.2</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="25980" endMemoryEntry="27125" nr="229" reinfNetSteps="0" startMemoryEntry="26948">
+        <average_Q-vals>4.687</average_Q-vals>
+        <average_rewards>0.343</average_rewards>
+        <laptime>11.3</laptime>
+        <progress>16.85</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="26138" endMemoryEntry="27288" nr="230" reinfNetSteps="0" startMemoryEntry="27125">
+        <average_Q-vals>5.049</average_Q-vals>
+        <average_rewards>0.359</average_rewards>
+        <laptime>10.4</laptime>
+        <progress>17.07</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="26223" endMemoryEntry="27378" nr="231" reinfNetSteps="0" startMemoryEntry="27288">
+        <average_Q-vals>5.198</average_Q-vals>
+        <average_rewards>0.347</average_rewards>
+        <laptime>3.2</laptime>
+        <progress>8.48</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="26355" endMemoryEntry="27515" nr="232" reinfNetSteps="0" startMemoryEntry="27378">
+        <average_Q-vals>5.295</average_Q-vals>
+        <average_rewards>0.34</average_rewards>
+        <laptime>7.8</laptime>
+        <progress>13.01</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="26449" endMemoryEntry="27614" nr="233" reinfNetSteps="0" startMemoryEntry="27515">
+        <average_Q-vals>5.106</average_Q-vals>
+        <average_rewards>0.377</average_rewards>
+        <laptime>4.1</laptime>
+        <progress>10.47</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="26580" endMemoryEntry="27750" nr="234" reinfNetSteps="0" startMemoryEntry="27614">
+        <average_Q-vals>5.185</average_Q-vals>
+        <average_rewards>0.37</average_rewards>
+        <laptime>7.8</laptime>
+        <progress>12.72</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="26745" endMemoryEntry="27920" nr="235" reinfNetSteps="0" startMemoryEntry="27750">
+        <average_Q-vals>5.077</average_Q-vals>
+        <average_rewards>0.35</average_rewards>
+        <laptime>11.1</laptime>
+        <progress>16.39</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="26882" endMemoryEntry="28062" nr="236" reinfNetSteps="0" startMemoryEntry="27920">
+        <average_Q-vals>5.092</average_Q-vals>
+        <average_rewards>0.353</average_rewards>
+        <laptime>8.1</laptime>
+        <progress>13.11</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="26967" endMemoryEntry="28152" nr="237" reinfNetSteps="0" startMemoryEntry="28062">
+        <average_Q-vals>5.191</average_Q-vals>
+        <average_rewards>0.348</average_rewards>
+        <laptime>3.2</laptime>
+        <progress>8.52</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="27052" endMemoryEntry="28242" nr="238" reinfNetSteps="0" startMemoryEntry="28152">
+        <average_Q-vals>5.224</average_Q-vals>
+        <average_rewards>0.341</average_rewards>
+        <laptime>3.2</laptime>
+        <progress>8.1</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="27215" endMemoryEntry="28410" nr="239" reinfNetSteps="0" startMemoryEntry="28242">
+        <average_Q-vals>5.143</average_Q-vals>
+        <average_rewards>0.348</average_rewards>
+        <laptime>11.0</laptime>
+        <progress>16.07</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="27304" endMemoryEntry="28504" nr="240" reinfNetSteps="0" startMemoryEntry="28410">
+        <average_Q-vals>5.078</average_Q-vals>
+        <average_rewards>0.363</average_rewards>
+        <laptime>3.6</laptime>
+        <progress>8.91</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="27400" endMemoryEntry="28605" nr="241" reinfNetSteps="0" startMemoryEntry="28504">
+        <average_Q-vals>4.962</average_Q-vals>
+        <average_rewards>0.385</average_rewards>
+        <laptime>4.4</laptime>
+        <progress>10.21</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="27532" endMemoryEntry="28742" nr="242" reinfNetSteps="0" startMemoryEntry="28605">
+        <average_Q-vals>5.596</average_Q-vals>
+        <average_rewards>0.384</average_rewards>
+        <laptime>8.0</laptime>
+        <progress>13.86</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="27698" endMemoryEntry="28913" nr="243" reinfNetSteps="0" startMemoryEntry="28742">
+        <average_Q-vals>5.107</average_Q-vals>
+        <average_rewards>0.343</average_rewards>
+        <laptime>11.4</laptime>
+        <progress>16.33</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="27836" endMemoryEntry="29056" nr="244" reinfNetSteps="0" startMemoryEntry="28913">
+        <average_Q-vals>5.151</average_Q-vals>
+        <average_rewards>0.352</average_rewards>
+        <laptime>8.2</laptime>
+        <progress>13.08</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="27970" endMemoryEntry="29195" nr="245" reinfNetSteps="0" startMemoryEntry="29056">
+        <average_Q-vals>5.334</average_Q-vals>
+        <average_rewards>0.414</average_rewards>
+        <laptime>8.2</laptime>
+        <progress>15.57</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="28071" endMemoryEntry="29301" nr="246" reinfNetSteps="0" startMemoryEntry="29195">
+        <average_Q-vals>5.042</average_Q-vals>
+        <average_rewards>0.397</average_rewards>
+        <laptime>4.8</laptime>
+        <progress>11.08</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="28157" endMemoryEntry="29392" nr="247" reinfNetSteps="0" startMemoryEntry="29301">
+        <average_Q-vals>5.112</average_Q-vals>
+        <average_rewards>0.345</average_rewards>
+        <laptime>3.3</laptime>
+        <progress>8.37</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="28292" endMemoryEntry="29532" nr="248" reinfNetSteps="0" startMemoryEntry="29392">
+        <average_Q-vals>5.059</average_Q-vals>
+        <average_rewards>0.351</average_rewards>
+        <laptime>8.3</laptime>
+        <progress>12.94</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="28446" endMemoryEntry="29691" nr="249" reinfNetSteps="0" startMemoryEntry="29532">
+        <average_Q-vals>5.514</average_Q-vals>
+        <average_rewards>0.328</average_rewards>
+        <laptime>10.1</laptime>
+        <progress>13.1</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="28540" endMemoryEntry="29790" nr="250" reinfNetSteps="0" startMemoryEntry="29691">
+        <average_Q-vals>5.04</average_Q-vals>
+        <average_rewards>0.371</average_rewards>
+        <laptime>4.1</laptime>
+        <progress>9.6</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="28692" endMemoryEntry="29947" nr="251" reinfNetSteps="0" startMemoryEntry="29790">
+        <average_Q-vals>5.488</average_Q-vals>
+        <average_rewards>0.372</average_rewards>
+        <laptime>9.9</laptime>
+        <progress>16.74</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="28793" endMemoryEntry="30053" nr="252" reinfNetSteps="0" startMemoryEntry="29947">
+        <average_Q-vals>4.577</average_Q-vals>
+        <average_rewards>0.37</average_rewards>
+        <laptime>4.3</laptime>
+        <progress>10.35</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="28926" endMemoryEntry="30191" nr="253" reinfNetSteps="0" startMemoryEntry="30053">
+        <average_Q-vals>5.395</average_Q-vals>
+        <average_rewards>0.404</average_rewards>
+        <laptime>8.0</laptime>
+        <progress>15.41</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="29069" endMemoryEntry="30339" nr="254" reinfNetSteps="0" startMemoryEntry="30191">
+        <average_Q-vals>5.057</average_Q-vals>
+        <average_rewards>0.341</average_rewards>
+        <laptime>9.1</laptime>
+        <progress>13.01</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="29155" endMemoryEntry="30430" nr="255" reinfNetSteps="0" startMemoryEntry="30339">
+        <average_Q-vals>5.139</average_Q-vals>
+        <average_rewards>0.344</average_rewards>
+        <laptime>3.2</laptime>
+        <progress>8.38</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="29241" endMemoryEntry="30521" nr="256" reinfNetSteps="0" startMemoryEntry="30430">
+        <average_Q-vals>5.127</average_Q-vals>
+        <average_rewards>0.345</average_rewards>
+        <laptime>3.3</laptime>
+        <progress>8.62</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="29440" endMemoryEntry="30725" nr="257" reinfNetSteps="0" startMemoryEntry="30521">
+        <average_Q-vals>5.069</average_Q-vals>
+        <average_rewards>0.36</average_rewards>
+        <laptime>14.8</laptime>
+        <progress>20.13</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="29524" endMemoryEntry="30814" nr="258" reinfNetSteps="0" startMemoryEntry="30725">
+        <average_Q-vals>5.184</average_Q-vals>
+        <average_rewards>0.337</average_rewards>
+        <laptime>3.1</laptime>
+        <progress>7.98</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="29665" endMemoryEntry="30960" nr="259" reinfNetSteps="0" startMemoryEntry="30814">
+        <average_Q-vals>4.804</average_Q-vals>
+        <average_rewards>0.418</average_rewards>
+        <laptime>8.7</laptime>
+        <progress>16.32</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="29743" endMemoryEntry="31043" nr="260" reinfNetSteps="0" startMemoryEntry="30960">
+        <average_Q-vals>5.525</average_Q-vals>
+        <average_rewards>0.321</average_rewards>
+        <laptime>2.5</laptime>
+        <progress>7.55</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="29882" endMemoryEntry="31187" nr="261" reinfNetSteps="0" startMemoryEntry="31043">
+        <average_Q-vals>5.353</average_Q-vals>
+        <average_rewards>0.365</average_rewards>
+        <laptime>8.6</laptime>
+        <progress>13.1</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="29977" endMemoryEntry="31287" nr="262" reinfNetSteps="0" startMemoryEntry="31187">
+        <average_Q-vals>4.964</average_Q-vals>
+        <average_rewards>0.39</average_rewards>
+        <laptime>4.4</laptime>
+        <progress>10.25</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="30063" endMemoryEntry="31378" nr="263" reinfNetSteps="0" startMemoryEntry="31287">
+        <average_Q-vals>5.091</average_Q-vals>
+        <average_rewards>0.351</average_rewards>
+        <laptime>3.4</laptime>
+        <progress>8.75</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="30193" endMemoryEntry="31513" nr="264" reinfNetSteps="0" startMemoryEntry="31378">
+        <average_Q-vals>5.268</average_Q-vals>
+        <average_rewards>0.381</average_rewards>
+        <laptime>7.8</laptime>
+        <progress>13.05</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="30279" endMemoryEntry="31604" nr="265" reinfNetSteps="0" startMemoryEntry="31513">
+        <average_Q-vals>5.14</average_Q-vals>
+        <average_rewards>0.345</average_rewards>
+        <laptime>3.3</laptime>
+        <progress>8.62</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="30364" endMemoryEntry="31694" nr="266" reinfNetSteps="0" startMemoryEntry="31604">
+        <average_Q-vals>5.135</average_Q-vals>
+        <average_rewards>0.349</average_rewards>
+        <laptime>3.2</laptime>
+        <progress>8.54</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="30455" endMemoryEntry="31790" nr="267" reinfNetSteps="0" startMemoryEntry="31694">
+        <average_Q-vals>5.124</average_Q-vals>
+        <average_rewards>0.356</average_rewards>
+        <laptime>3.7</laptime>
+        <progress>9.48</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="30589" endMemoryEntry="31929" nr="268" reinfNetSteps="0" startMemoryEntry="31790">
+        <average_Q-vals>5.372</average_Q-vals>
+        <average_rewards>0.357</average_rewards>
+        <laptime>8.2</laptime>
+        <progress>13.08</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="30675" endMemoryEntry="32020" nr="269" reinfNetSteps="0" startMemoryEntry="31929">
+        <average_Q-vals>5.152</average_Q-vals>
+        <average_rewards>0.344</average_rewards>
+        <laptime>3.3</laptime>
+        <progress>8.32</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="30822" endMemoryEntry="32172" nr="270" reinfNetSteps="0" startMemoryEntry="32020">
+        <average_Q-vals>5.255</average_Q-vals>
+        <average_rewards>0.34</average_rewards>
+        <laptime>9.4</laptime>
+        <progress>13.27</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="30920" endMemoryEntry="32275" nr="271" reinfNetSteps="0" startMemoryEntry="32172">
+        <average_Q-vals>4.94</average_Q-vals>
+        <average_rewards>0.39</average_rewards>
+        <laptime>4.6</laptime>
+        <progress>10.59</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="30996" endMemoryEntry="32356" nr="272" reinfNetSteps="0" startMemoryEntry="32275">
+        <average_Q-vals>5.678</average_Q-vals>
+        <average_rewards>0.307</average_rewards>
+        <laptime>2.2</laptime>
+        <progress>6.55</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="31084" endMemoryEntry="32449" nr="273" reinfNetSteps="0" startMemoryEntry="32356">
+        <average_Q-vals>5.101</average_Q-vals>
+        <average_rewards>0.348</average_rewards>
+        <laptime>3.4</laptime>
+        <progress>8.93</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="31168" endMemoryEntry="32538" nr="274" reinfNetSteps="0" startMemoryEntry="32449">
+        <average_Q-vals>5.192</average_Q-vals>
+        <average_rewards>0.353</average_rewards>
+        <laptime>3.2</laptime>
+        <progress>8.53</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="31253" endMemoryEntry="32628" nr="275" reinfNetSteps="0" startMemoryEntry="32538">
+        <average_Q-vals>5.186</average_Q-vals>
+        <average_rewards>0.344</average_rewards>
+        <laptime>3.2</laptime>
+        <progress>8.18</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="31329" endMemoryEntry="32709" nr="276" reinfNetSteps="0" startMemoryEntry="32628">
+        <average_Q-vals>5.668</average_Q-vals>
+        <average_rewards>0.303</average_rewards>
+        <laptime>2.2</laptime>
+        <progress>6.62</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="31461" endMemoryEntry="32846" nr="277" reinfNetSteps="0" startMemoryEntry="32709">
+        <average_Q-vals>5.38</average_Q-vals>
+        <average_rewards>0.347</average_rewards>
+        <laptime>7.9</laptime>
+        <progress>13.04</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="31589" endMemoryEntry="32979" nr="278" reinfNetSteps="0" startMemoryEntry="32846">
+        <average_Q-vals>5.376</average_Q-vals>
+        <average_rewards>0.368</average_rewards>
+        <laptime>7.6</laptime>
+        <progress>12.59</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="31678" endMemoryEntry="33073" nr="279" reinfNetSteps="0" startMemoryEntry="32979">
+        <average_Q-vals>5.433</average_Q-vals>
+        <average_rewards>0.355</average_rewards>
+        <laptime>3.5</laptime>
+        <progress>10.74</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="31852" endMemoryEntry="33252" nr="280" reinfNetSteps="0" startMemoryEntry="33073">
+        <average_Q-vals>5.098</average_Q-vals>
+        <average_rewards>0.33</average_rewards>
+        <laptime>12.2</laptime>
+        <progress>16.55</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="31943" endMemoryEntry="33348" nr="281" reinfNetSteps="0" startMemoryEntry="33252">
+        <average_Q-vals>5.008</average_Q-vals>
+        <average_rewards>0.366</average_rewards>
+        <laptime>3.9</laptime>
+        <progress>9.29</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="32084" endMemoryEntry="33494" nr="282" reinfNetSteps="0" startMemoryEntry="33348">
+        <average_Q-vals>4.771</average_Q-vals>
+        <average_rewards>0.334</average_rewards>
+        <laptime>8.3</laptime>
+        <progress>12.98</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="32170" endMemoryEntry="33585" nr="283" reinfNetSteps="0" startMemoryEntry="33494">
+        <average_Q-vals>5.156</average_Q-vals>
+        <average_rewards>0.343</average_rewards>
+        <laptime>3.2</laptime>
+        <progress>8.43</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="32248" endMemoryEntry="33668" nr="284" reinfNetSteps="0" startMemoryEntry="33585">
+        <average_Q-vals>5.403</average_Q-vals>
+        <average_rewards>0.326</average_rewards>
+        <laptime>2.6</laptime>
+        <progress>7.66</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="32380" endMemoryEntry="33805" nr="285" reinfNetSteps="0" startMemoryEntry="33668">
+        <average_Q-vals>5.571</average_Q-vals>
+        <average_rewards>0.382</average_rewards>
+        <laptime>8.0</laptime>
+        <progress>13.61</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="32465" endMemoryEntry="33895" nr="286" reinfNetSteps="0" startMemoryEntry="33805">
+        <average_Q-vals>5.196</average_Q-vals>
+        <average_rewards>0.347</average_rewards>
+        <laptime>3.2</laptime>
+        <progress>8.16</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="32552" endMemoryEntry="33987" nr="287" reinfNetSteps="0" startMemoryEntry="33895">
+        <average_Q-vals>5.145</average_Q-vals>
+        <average_rewards>0.339</average_rewards>
+        <laptime>3.2</laptime>
+        <progress>8.52</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="32639" endMemoryEntry="34079" nr="288" reinfNetSteps="0" startMemoryEntry="33987">
+        <average_Q-vals>5.149</average_Q-vals>
+        <average_rewards>0.349</average_rewards>
+        <laptime>3.4</laptime>
+        <progress>8.92</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="32800" endMemoryEntry="34245" nr="289" reinfNetSteps="0" startMemoryEntry="34079">
+        <average_Q-vals>5.162</average_Q-vals>
+        <average_rewards>0.34</average_rewards>
+        <laptime>10.7</laptime>
+        <progress>16.14</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="32888" endMemoryEntry="34338" nr="290" reinfNetSteps="0" startMemoryEntry="34245">
+        <average_Q-vals>5.398</average_Q-vals>
+        <average_rewards>0.373</average_rewards>
+        <laptime>3.6</laptime>
+        <progress>11.01</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="32966" endMemoryEntry="34421" nr="291" reinfNetSteps="0" startMemoryEntry="34338">
+        <average_Q-vals>5.37</average_Q-vals>
+        <average_rewards>0.325</average_rewards>
+        <laptime>2.6</laptime>
+        <progress>7.8</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="33051" endMemoryEntry="34511" nr="292" reinfNetSteps="0" startMemoryEntry="34421">
+        <average_Q-vals>5.186</average_Q-vals>
+        <average_rewards>0.348</average_rewards>
+        <laptime>3.2</laptime>
+        <progress>8.58</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="33168" endMemoryEntry="34633" nr="293" reinfNetSteps="0" startMemoryEntry="34511">
+        <average_Q-vals>5.497</average_Q-vals>
+        <average_rewards>0.41</average_rewards>
+        <laptime>6.5</laptime>
+        <progress>13.58</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="33307" endMemoryEntry="34777" nr="294" reinfNetSteps="0" startMemoryEntry="34633">
+        <average_Q-vals>5.281</average_Q-vals>
+        <average_rewards>0.369</average_rewards>
+        <laptime>8.7</laptime>
+        <progress>13.26</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="33383" endMemoryEntry="34858" nr="295" reinfNetSteps="0" startMemoryEntry="34777">
+        <average_Q-vals>5.677</average_Q-vals>
+        <average_rewards>0.303</average_rewards>
+        <laptime>2.2</laptime>
+        <progress>6.55</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="33536" endMemoryEntry="35016" nr="296" reinfNetSteps="0" startMemoryEntry="34858">
+        <average_Q-vals>5.077</average_Q-vals>
+        <average_rewards>0.347</average_rewards>
+        <laptime>10.2</laptime>
+        <progress>16.0</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="33674" endMemoryEntry="35159" nr="297" reinfNetSteps="0" startMemoryEntry="35016">
+        <average_Q-vals>5.08</average_Q-vals>
+        <average_rewards>0.349</average_rewards>
+        <laptime>8.4</laptime>
+        <progress>13.02</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="33812" endMemoryEntry="35302" nr="298" reinfNetSteps="0" startMemoryEntry="35159">
+        <average_Q-vals>5.274</average_Q-vals>
+        <average_rewards>0.369</average_rewards>
+        <laptime>8.6</laptime>
+        <progress>13.2</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="33904" endMemoryEntry="35399" nr="299" reinfNetSteps="0" startMemoryEntry="35302">
+        <average_Q-vals>5.078</average_Q-vals>
+        <average_rewards>0.369</average_rewards>
+        <laptime>3.9</laptime>
+        <progress>9.88</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="33992" endMemoryEntry="35492" nr="300" reinfNetSteps="0" startMemoryEntry="35399">
+        <average_Q-vals>5.128</average_Q-vals>
+        <average_rewards>0.361</average_rewards>
+        <laptime>3.5</laptime>
+        <progress>9.05</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="34218" endMemoryEntry="35723" nr="301" reinfNetSteps="0" startMemoryEntry="35492">
+        <average_Q-vals>5.507</average_Q-vals>
+        <average_rewards>0.451</average_rewards>
+        <laptime>17.3</laptime>
+        <progress>30.67</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="34304" endMemoryEntry="35814" nr="302" reinfNetSteps="0" startMemoryEntry="35723">
+        <average_Q-vals>5.066</average_Q-vals>
+        <average_rewards>0.341</average_rewards>
+        <laptime>3.2</laptime>
+        <progress>8.27</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="34452" endMemoryEntry="35967" nr="303" reinfNetSteps="0" startMemoryEntry="35814">
+        <average_Q-vals>5.171</average_Q-vals>
+        <average_rewards>0.361</average_rewards>
+        <laptime>9.5</laptime>
+        <progress>15.69</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="34550" endMemoryEntry="36070" nr="304" reinfNetSteps="0" startMemoryEntry="35967">
+        <average_Q-vals>5.284</average_Q-vals>
+        <average_rewards>0.259</average_rewards>
+        <laptime>4.0</laptime>
+        <progress>16.18</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="34683" endMemoryEntry="36208" nr="305" reinfNetSteps="0" startMemoryEntry="36070">
+        <average_Q-vals>5.22</average_Q-vals>
+        <average_rewards>0.364</average_rewards>
+        <laptime>8.1</laptime>
+        <progress>13.11</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="34830" endMemoryEntry="36360" nr="306" reinfNetSteps="0" startMemoryEntry="36208">
+        <average_Q-vals>5.451</average_Q-vals>
+        <average_rewards>0.354</average_rewards>
+        <laptime>9.5</laptime>
+        <progress>13.33</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="34921" endMemoryEntry="36456" nr="307" reinfNetSteps="0" startMemoryEntry="36360">
+        <average_Q-vals>5.042</average_Q-vals>
+        <average_rewards>0.365</average_rewards>
+        <laptime>3.8</laptime>
+        <progress>9.59</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="35051" endMemoryEntry="36591" nr="308" reinfNetSteps="0" startMemoryEntry="36456">
+        <average_Q-vals>5.414</average_Q-vals>
+        <average_rewards>0.37</average_rewards>
+        <laptime>7.7</laptime>
+        <progress>13.26</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="35131" endMemoryEntry="36676" nr="309" reinfNetSteps="0" startMemoryEntry="36591">
+        <average_Q-vals>5.483</average_Q-vals>
+        <average_rewards>0.323</average_rewards>
+        <laptime>2.6</laptime>
+        <progress>7.86</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="35405" endMemoryEntry="36955" nr="310" reinfNetSteps="0" startMemoryEntry="36676">
+        <average_Q-vals>5.582</average_Q-vals>
+        <average_rewards>0.426</average_rewards>
+        <laptime>22.0</laptime>
+        <progress>43.03</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="35587" endMemoryEntry="37142" nr="311" reinfNetSteps="0" startMemoryEntry="36955">
+        <average_Q-vals>4.729</average_Q-vals>
+        <average_rewards>0.331</average_rewards>
+        <laptime>12.7</laptime>
+        <progress>16.91</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="35669" endMemoryEntry="37229" nr="312" reinfNetSteps="0" startMemoryEntry="37142">
+        <average_Q-vals>5.218</average_Q-vals>
+        <average_rewards>0.341</average_rewards>
+        <laptime>3.0</laptime>
+        <progress>8.07</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="35770" endMemoryEntry="37335" nr="313" reinfNetSteps="0" startMemoryEntry="37229">
+        <average_Q-vals>4.962</average_Q-vals>
+        <average_rewards>0.393</average_rewards>
+        <laptime>4.8</laptime>
+        <progress>11.06</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="35861" endMemoryEntry="37431" nr="314" reinfNetSteps="0" startMemoryEntry="37335">
+        <average_Q-vals>5.121</average_Q-vals>
+        <average_rewards>0.37</average_rewards>
+        <laptime>3.8</laptime>
+        <progress>9.73</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="35935" endMemoryEntry="37510" nr="315" reinfNetSteps="0" startMemoryEntry="37431">
+        <average_Q-vals>5.73</average_Q-vals>
+        <average_rewards>0.315</average_rewards>
+        <laptime>2.2</laptime>
+        <progress>6.71</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="36022" endMemoryEntry="37602" nr="316" reinfNetSteps="0" startMemoryEntry="37510">
+        <average_Q-vals>5.123</average_Q-vals>
+        <average_rewards>0.355</average_rewards>
+        <laptime>3.4</laptime>
+        <progress>9.04</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="36156" endMemoryEntry="37741" nr="317" reinfNetSteps="0" startMemoryEntry="37602">
+        <average_Q-vals>5.277</average_Q-vals>
+        <average_rewards>0.37</average_rewards>
+        <laptime>8.2</laptime>
+        <progress>13.29</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="36293" endMemoryEntry="37883" nr="318" reinfNetSteps="0" startMemoryEntry="37741">
+        <average_Q-vals>5.07</average_Q-vals>
+        <average_rewards>0.353</average_rewards>
+        <laptime>8.3</laptime>
+        <progress>13.07</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="36387" endMemoryEntry="37982" nr="319" reinfNetSteps="0" startMemoryEntry="37883">
+        <average_Q-vals>5.106</average_Q-vals>
+        <average_rewards>0.381</average_rewards>
+        <laptime>4.2</laptime>
+        <progress>10.58</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="36522" endMemoryEntry="38122" nr="320" reinfNetSteps="0" startMemoryEntry="37982">
+        <average_Q-vals>5.335</average_Q-vals>
+        <average_rewards>0.359</average_rewards>
+        <laptime>8.3</laptime>
+        <progress>12.77</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="36597" endMemoryEntry="38202" nr="321" reinfNetSteps="0" startMemoryEntry="38122">
+        <average_Q-vals>5.679</average_Q-vals>
+        <average_rewards>0.31</average_rewards>
+        <laptime>2.2</laptime>
+        <progress>6.55</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="36728" endMemoryEntry="38338" nr="322" reinfNetSteps="0" startMemoryEntry="38202">
+        <average_Q-vals>5.652</average_Q-vals>
+        <average_rewards>0.403</average_rewards>
+        <laptime>7.8</laptime>
+        <progress>13.88</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="36813" endMemoryEntry="38428" nr="323" reinfNetSteps="0" startMemoryEntry="38338">
+        <average_Q-vals>5.151</average_Q-vals>
+        <average_rewards>0.348</average_rewards>
+        <laptime>3.2</laptime>
+        <progress>8.47</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="36902" endMemoryEntry="38522" nr="324" reinfNetSteps="0" startMemoryEntry="38428">
+        <average_Q-vals>5.051</average_Q-vals>
+        <average_rewards>0.358</average_rewards>
+        <laptime>3.6</laptime>
+        <progress>9.26</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="36995" endMemoryEntry="38620" nr="325" reinfNetSteps="0" startMemoryEntry="38522">
+        <average_Q-vals>5.382</average_Q-vals>
+        <average_rewards>0.379</average_rewards>
+        <laptime>3.9</laptime>
+        <progress>11.99</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="37079" endMemoryEntry="38709" nr="326" reinfNetSteps="0" startMemoryEntry="38620">
+        <average_Q-vals>5.495</average_Q-vals>
+        <average_rewards>0.345</average_rewards>
+        <laptime>3.1</laptime>
+        <progress>9.51</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="37265" endMemoryEntry="38900" nr="327" reinfNetSteps="0" startMemoryEntry="38709">
+        <average_Q-vals>5.337</average_Q-vals>
+        <average_rewards>0.375</average_rewards>
+        <laptime>13.2</laptime>
+        <progress>18.92</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="37375" endMemoryEntry="39015" nr="328" reinfNetSteps="0" startMemoryEntry="38900">
+        <average_Q-vals>5.077</average_Q-vals>
+        <average_rewards>0.419</average_rewards>
+        <laptime>5.7</laptime>
+        <progress>12.64</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="37469" endMemoryEntry="39114" nr="329" reinfNetSteps="0" startMemoryEntry="39015">
+        <average_Q-vals>5.015</average_Q-vals>
+        <average_rewards>0.37</average_rewards>
+        <laptime>4.1</laptime>
+        <progress>9.6</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="37624" endMemoryEntry="39274" nr="330" reinfNetSteps="0" startMemoryEntry="39114">
+        <average_Q-vals>5.519</average_Q-vals>
+        <average_rewards>0.323</average_rewards>
+        <laptime>10.2</laptime>
+        <progress>12.92</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="37708" endMemoryEntry="39363" nr="331" reinfNetSteps="0" startMemoryEntry="39274">
+        <average_Q-vals>5.486</average_Q-vals>
+        <average_rewards>0.347</average_rewards>
+        <laptime>3.1</laptime>
+        <progress>9.52</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="37852" endMemoryEntry="39512" nr="332" reinfNetSteps="0" startMemoryEntry="39363">
+        <average_Q-vals>4.992</average_Q-vals>
+        <average_rewards>0.335</average_rewards>
+        <laptime>8.8</laptime>
+        <progress>12.95</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="37940" endMemoryEntry="39605" nr="333" reinfNetSteps="0" startMemoryEntry="39512">
+        <average_Q-vals>5.131</average_Q-vals>
+        <average_rewards>0.357</average_rewards>
+        <laptime>3.5</laptime>
+        <progress>9.09</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="38097" endMemoryEntry="39767" nr="334" reinfNetSteps="0" startMemoryEntry="39605">
+        <average_Q-vals>5.123</average_Q-vals>
+        <average_rewards>0.349</average_rewards>
+        <laptime>10.4</laptime>
+        <progress>16.01</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="38241" endMemoryEntry="39916" nr="335" reinfNetSteps="0" startMemoryEntry="39767">
+        <average_Q-vals>5.218</average_Q-vals>
+        <average_rewards>0.344</average_rewards>
+        <laptime>9.2</laptime>
+        <progress>13.09</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="38394" endMemoryEntry="40074" nr="336" reinfNetSteps="0" startMemoryEntry="39916">
+        <average_Q-vals>5.193</average_Q-vals>
+        <average_rewards>0.361</average_rewards>
+        <laptime>10.0</laptime>
+        <progress>16.4</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="38480" endMemoryEntry="40165" nr="337" reinfNetSteps="0" startMemoryEntry="40074">
+        <average_Q-vals>5.238</average_Q-vals>
+        <average_rewards>0.337</average_rewards>
+        <laptime>3.2</laptime>
+        <progress>8.2</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="38563" endMemoryEntry="40253" nr="338" reinfNetSteps="0" startMemoryEntry="40165">
+        <average_Q-vals>5.271</average_Q-vals>
+        <average_rewards>0.343</average_rewards>
+        <laptime>3.1</laptime>
+        <progress>7.93</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="38718" endMemoryEntry="40413" nr="339" reinfNetSteps="0" startMemoryEntry="40253">
+        <average_Q-vals>5.039</average_Q-vals>
+        <average_rewards>0.347</average_rewards>
+        <laptime>9.9</laptime>
+        <progress>15.93</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="38851" endMemoryEntry="40551" nr="340" reinfNetSteps="0" startMemoryEntry="40413">
+        <average_Q-vals>5.542</average_Q-vals>
+        <average_rewards>0.361</average_rewards>
+        <laptime>8.0</laptime>
+        <progress>13.11</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="38939" endMemoryEntry="40644" nr="341" reinfNetSteps="0" startMemoryEntry="40551">
+        <average_Q-vals>5.111</average_Q-vals>
+        <average_rewards>0.359</average_rewards>
+        <laptime>3.5</laptime>
+        <progress>8.8</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="39031" endMemoryEntry="40741" nr="342" reinfNetSteps="0" startMemoryEntry="40644">
+        <average_Q-vals>5.139</average_Q-vals>
+        <average_rewards>0.359</average_rewards>
+        <laptime>3.8</laptime>
+        <progress>8.97</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="39164" endMemoryEntry="40879" nr="343" reinfNetSteps="0" startMemoryEntry="40741">
+        <average_Q-vals>5.585</average_Q-vals>
+        <average_rewards>0.378</average_rewards>
+        <laptime>8.1</laptime>
+        <progress>13.56</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="39250" endMemoryEntry="40970" nr="344" reinfNetSteps="0" startMemoryEntry="40879">
+        <average_Q-vals>5.19</average_Q-vals>
+        <average_rewards>0.352</average_rewards>
+        <laptime>3.3</laptime>
+        <progress>8.8</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="39336" endMemoryEntry="41061" nr="345" reinfNetSteps="0" startMemoryEntry="40970">
+        <average_Q-vals>5.129</average_Q-vals>
+        <average_rewards>0.346</average_rewards>
+        <laptime>3.3</laptime>
+        <progress>8.48</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="39458" endMemoryEntry="41188" nr="346" reinfNetSteps="0" startMemoryEntry="41061">
+        <average_Q-vals>5.496</average_Q-vals>
+        <average_rewards>0.382</average_rewards>
+        <laptime>6.8</laptime>
+        <progress>13.29</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="39537" endMemoryEntry="41272" nr="347" reinfNetSteps="0" startMemoryEntry="41188">
+        <average_Q-vals>5.426</average_Q-vals>
+        <average_rewards>0.326</average_rewards>
+        <laptime>2.6</laptime>
+        <progress>7.86</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="39677" endMemoryEntry="41417" nr="348" reinfNetSteps="0" startMemoryEntry="41272">
+        <average_Q-vals>4.985</average_Q-vals>
+        <average_rewards>0.4</average_rewards>
+        <laptime>8.7</laptime>
+        <progress>16.11</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="39757" endMemoryEntry="41502" nr="349" reinfNetSteps="0" startMemoryEntry="41417">
+        <average_Q-vals>5.379</average_Q-vals>
+        <average_rewards>0.342</average_rewards>
+        <laptime>2.8</laptime>
+        <progress>8.48</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="39842" endMemoryEntry="41592" nr="350" reinfNetSteps="0" startMemoryEntry="41502">
+        <average_Q-vals>5.164</average_Q-vals>
+        <average_rewards>0.34</average_rewards>
+        <laptime>3.2</laptime>
+        <progress>8.22</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="40041" endMemoryEntry="41796" nr="351" reinfNetSteps="0" startMemoryEntry="41592">
+        <average_Q-vals>5.033</average_Q-vals>
+        <average_rewards>0.356</average_rewards>
+        <laptime>14.7</laptime>
+        <progress>20.25</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="40175" endMemoryEntry="41935" nr="352" reinfNetSteps="0" startMemoryEntry="41796">
+        <average_Q-vals>5.823</average_Q-vals>
+        <average_rewards>0.379</average_rewards>
+        <laptime>8.2</laptime>
+        <progress>13.31</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="40314" endMemoryEntry="42079" nr="353" reinfNetSteps="0" startMemoryEntry="41935">
+        <average_Q-vals>5.067</average_Q-vals>
+        <average_rewards>0.37</average_rewards>
+        <laptime>8.8</laptime>
+        <progress>13.55</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="40390" endMemoryEntry="42160" nr="354" reinfNetSteps="0" startMemoryEntry="42079">
+        <average_Q-vals>5.675</average_Q-vals>
+        <average_rewards>0.303</average_rewards>
+        <laptime>2.2</laptime>
+        <progress>6.71</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="40530" endMemoryEntry="42305" nr="355" reinfNetSteps="0" startMemoryEntry="42160">
+        <average_Q-vals>5.356</average_Q-vals>
+        <average_rewards>0.369</average_rewards>
+        <laptime>8.7</laptime>
+        <progress>13.56</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="40627" endMemoryEntry="42407" nr="356" reinfNetSteps="0" startMemoryEntry="42305">
+        <average_Q-vals>4.961</average_Q-vals>
+        <average_rewards>0.398</average_rewards>
+        <laptime>4.5</laptime>
+        <progress>10.66</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="40706" endMemoryEntry="42491" nr="357" reinfNetSteps="0" startMemoryEntry="42407">
+        <average_Q-vals>5.447</average_Q-vals>
+        <average_rewards>0.323</average_rewards>
+        <laptime>2.6</laptime>
+        <progress>7.82</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="40897" endMemoryEntry="42687" nr="358" reinfNetSteps="0" startMemoryEntry="42491">
+        <average_Q-vals>5.109</average_Q-vals>
+        <average_rewards>0.373</average_rewards>
+        <laptime>13.8</laptime>
+        <progress>19.85</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="41025" endMemoryEntry="42820" nr="359" reinfNetSteps="0" startMemoryEntry="42687">
+        <average_Q-vals>5.416</average_Q-vals>
+        <average_rewards>0.371</average_rewards>
+        <laptime>7.6</laptime>
+        <progress>13.07</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="41222" endMemoryEntry="43022" nr="360" reinfNetSteps="0" startMemoryEntry="42820">
+        <average_Q-vals>5.084</average_Q-vals>
+        <average_rewards>0.344</average_rewards>
+        <laptime>14.2</laptime>
+        <progress>18.75</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="41417" endMemoryEntry="43222" nr="361" reinfNetSteps="0" startMemoryEntry="43022">
+        <average_Q-vals>4.732</average_Q-vals>
+        <average_rewards>0.413</average_rewards>
+        <laptime>14.2</laptime>
+        <progress>23.41</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="41496" endMemoryEntry="43306" nr="362" reinfNetSteps="0" startMemoryEntry="43222">
+        <average_Q-vals>5.459</average_Q-vals>
+        <average_rewards>0.326</average_rewards>
+        <laptime>2.6</laptime>
+        <progress>7.96</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="41575" endMemoryEntry="43390" nr="363" reinfNetSteps="0" startMemoryEntry="43306">
+        <average_Q-vals>5.575</average_Q-vals>
+        <average_rewards>0.319</average_rewards>
+        <laptime>2.5</laptime>
+        <progress>7.53</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="41662" endMemoryEntry="43482" nr="364" reinfNetSteps="0" startMemoryEntry="43390">
+        <average_Q-vals>5.195</average_Q-vals>
+        <average_rewards>0.345</average_rewards>
+        <laptime>3.3</laptime>
+        <progress>8.45</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="41825" endMemoryEntry="43650" nr="365" reinfNetSteps="0" startMemoryEntry="43482">
+        <average_Q-vals>5.647</average_Q-vals>
+        <average_rewards>0.311</average_rewards>
+        <laptime>11.0</laptime>
+        <progress>13.11</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="41910" endMemoryEntry="43740" nr="366" reinfNetSteps="0" startMemoryEntry="43650">
+        <average_Q-vals>5.167</average_Q-vals>
+        <average_rewards>0.351</average_rewards>
+        <laptime>3.3</laptime>
+        <progress>8.46</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="41996" endMemoryEntry="43831" nr="367" reinfNetSteps="0" startMemoryEntry="43740">
+        <average_Q-vals>5.159</average_Q-vals>
+        <average_rewards>0.35</average_rewards>
+        <laptime>3.3</laptime>
+        <progress>8.75</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="42088" endMemoryEntry="43928" nr="368" reinfNetSteps="0" startMemoryEntry="43831">
+        <average_Q-vals>5.098</average_Q-vals>
+        <average_rewards>0.369</average_rewards>
+        <laptime>3.9</laptime>
+        <progress>9.79</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="42240" endMemoryEntry="44085" nr="369" reinfNetSteps="0" startMemoryEntry="43928">
+        <average_Q-vals>5.593</average_Q-vals>
+        <average_rewards>0.336</average_rewards>
+        <laptime>9.8</laptime>
+        <progress>13.08</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="42384" endMemoryEntry="44234" nr="370" reinfNetSteps="0" startMemoryEntry="44085">
+        <average_Q-vals>5.416</average_Q-vals>
+        <average_rewards>0.357</average_rewards>
+        <laptime>9.2</laptime>
+        <progress>13.05</progress>
+      </Episode>
+      <Episode endEpsilon="0.0" endIteration="42480" endMemoryEntry="44335" nr="371" reinfNetSteps="0" startMemoryEntry="44234">
+        <average_Q-vals>5.048</average_Q-vals>
+        <average_rewards>0.383</average_rewards>
+        <laptime>4.3</laptime>
+        <progress>10.79</progress>
+      </Episode>
+    </runResults>
+  </run>
+</Evaluation>

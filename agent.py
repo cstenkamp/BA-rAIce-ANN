@@ -56,7 +56,9 @@ class AbstractAgent(object):
         vvec1_hist, vvec2_hist, otherinput_hist, action_hist = gameState
         assert self.conf.use_cameras, "You disabled cameras in the config, which is impossible for this agent!"
         conv_inputs = np.concatenate([vvec1_hist, vvec2_hist]) if vvec2_hist is not None else vvec1_hist
-        other_inputs = [otherinput_hist[0].SpeedSteer.velocity, action_hist]
+#        other_inputs = [otherinput_hist[0].SpeedSteer.velocity, action_hist]
+        other_inputs = [otherinput_hist[0].SpeedSteer.velocity, [np.zeros_like(i) if i != None else None for i in action_hist]]
+        print("Removed actions as input to network, as it only learns from them then", level=-1)
         stands_inputs = otherinput_hist[0].SpeedSteer.velocity < 0.04
         return conv_inputs, other_inputs, stands_inputs
     

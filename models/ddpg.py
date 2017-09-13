@@ -16,7 +16,7 @@ flatten = lambda l: [item for sublist in l for item in sublist]
       
         
 class conv_actorNet():
-     def __init__(self, conf, agent, outerscope="actor", name="online", batchnorm = "fffffff"):   #tffffft    
+     def __init__(self, conf, agent, outerscope="actor", name="online", batchnorm = "ffffftt"):   #tffffft    
         tanh_min_bounds,tanh_max_bounds = np.array([-1]), np.array([1])
         min_bounds, max_bounds = np.array(list(zip(*conf.action_bounds))) 
         self.name = name

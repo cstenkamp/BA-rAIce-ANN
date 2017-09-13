@@ -1,0 +1,511 @@
+<?xml version="1.0" ?>
+<Evaluation agent="dqn_sv_agent">
+  <run date="2017-09-13 01:23:50">
+    <runResults>
+      <Episode nr="1">
+        <laptime>10.7</laptime>
+        <progress>26.92</progress>
+      </Episode>
+      <Episode nr="2">
+        <laptime>4.9</laptime>
+        <progress>17.02</progress>
+      </Episode>
+      <Episode nr="3">
+        <laptime>12.9</laptime>
+        <progress>42.72</progress>
+      </Episode>
+      <Episode nr="4">
+        <laptime>10.3</laptime>
+        <progress>25.62</progress>
+      </Episode>
+      <Episode nr="5">
+        <laptime>10.4</laptime>
+        <progress>28.58</progress>
+      </Episode>
+      <Episode nr="6">
+        <laptime>10.1</laptime>
+        <progress>33.52</progress>
+      </Episode>
+      <Episode nr="7">
+        <laptime>5.4</laptime>
+        <progress>17.58</progress>
+      </Episode>
+      <Episode nr="8">
+        <laptime>15.3</laptime>
+        <progress>42.92</progress>
+      </Episode>
+      <Episode nr="9">
+        <laptime>9.8</laptime>
+        <progress>29.68</progress>
+      </Episode>
+      <Episode nr="10">
+        <laptime>5.2</laptime>
+        <progress>14.34</progress>
+      </Episode>
+      <Episode nr="11">
+        <laptime>4.7</laptime>
+        <progress>17.22</progress>
+      </Episode>
+      <Episode nr="12">
+        <laptime>8.3</laptime>
+        <progress>25.72</progress>
+      </Episode>
+      <Episode nr="13">
+        <laptime>11.8</laptime>
+        <progress>31.56</progress>
+      </Episode>
+      <Episode nr="14">
+        <laptime>4.7</laptime>
+        <progress>15.96</progress>
+      </Episode>
+      <Episode nr="15">
+        <laptime>4.8</laptime>
+        <progress>16.01</progress>
+      </Episode>
+      <Episode nr="16">
+        <laptime>9.0</laptime>
+        <progress>27.58</progress>
+      </Episode>
+      <Episode nr="17">
+        <laptime>5.1</laptime>
+        <progress>14.15</progress>
+      </Episode>
+      <Episode nr="18">
+        <laptime>3.0</laptime>
+        <progress>10.62</progress>
+      </Episode>
+      <Episode nr="19">
+        <laptime>0</laptime>
+        <progress>0</progress>
+      </Episode>
+      <Episode nr="20">
+        <laptime>14.7</laptime>
+        <progress>35.93</progress>
+      </Episode>
+      <Episode nr="21">
+        <laptime>3.7</laptime>
+        <progress>14.71</progress>
+      </Episode>
+      <Episode nr="22">
+        <laptime>7.4</laptime>
+        <progress>22.75</progress>
+      </Episode>
+      <Episode nr="23">
+        <laptime>25.4</laptime>
+        <progress>64.45</progress>
+      </Episode>
+      <Episode nr="24">
+        <laptime>25.5</laptime>
+        <progress>64.75</progress>
+      </Episode>
+      <Episode nr="25">
+        <laptime>4.0</laptime>
+        <progress>15.66</progress>
+      </Episode>
+      <Episode nr="26">
+        <laptime>8.0</laptime>
+        <progress>22.99</progress>
+      </Episode>
+    </runResults>
+  </run>
+  <run date="2017-09-13 01:33:56" memorysize="NaN">
+    <runResults>
+      <Episode nr="1">
+        <progress>19.1</progress>
+        <laptime>6.4</laptime>
+      </Episode>
+      <Episode nr="2">
+        <progress>21.61</progress>
+        <laptime>6.7</laptime>
+      </Episode>
+      <Episode nr="3">
+        <progress>33.22</progress>
+        <laptime>11.2</laptime>
+      </Episode>
+      <Episode nr="4">
+        <progress>14.95</progress>
+        <laptime>4.5</laptime>
+      </Episode>
+      <Episode nr="5">
+        <progress>14.96</progress>
+        <laptime>4.5</laptime>
+      </Episode>
+      <Episode nr="6">
+        <progress>58.45</progress>
+        <laptime>20.9</laptime>
+      </Episode>
+      <Episode nr="7">
+        <progress>16.88</progress>
+        <laptime>5.1</laptime>
+      </Episode>
+      <Episode nr="8">
+        <progress>31.92</progress>
+        <laptime>9.8</laptime>
+      </Episode>
+      <Episode nr="9">
+        <progress>14.86</progress>
+        <laptime>3.7</laptime>
+      </Episode>
+      <Episode nr="10">
+        <progress>16.34</progress>
+        <laptime>6.1</laptime>
+      </Episode>
+      <Episode nr="11">
+        <progress>42.72</progress>
+        <laptime>18.2</laptime>
+      </Episode>
+      <Episode nr="12">
+        <progress>30.75</progress>
+        <laptime>9.9</laptime>
+      </Episode>
+      <Episode nr="13">
+        <progress>14.71</progress>
+        <laptime>3.6</laptime>
+      </Episode>
+      <Episode nr="14">
+        <progress>14.98</progress>
+        <laptime>4.0</laptime>
+      </Episode>
+      <Episode nr="15">
+        <progress>25.25</progress>
+        <laptime>8.1</laptime>
+      </Episode>
+      <Episode nr="16">
+        <progress>32.35</progress>
+        <laptime>10.4</laptime>
+      </Episode>
+      <Episode nr="17">
+        <progress>24.45</progress>
+        <laptime>8.1</laptime>
+      </Episode>
+      <Episode nr="18">
+        <progress>15.03</progress>
+        <laptime>3.9</laptime>
+      </Episode>
+      <Episode nr="19">
+        <progress>15.38</progress>
+        <laptime>4.1</laptime>
+      </Episode>
+      <Episode nr="20">
+        <progress>30.97</progress>
+        <laptime>10.7</laptime>
+      </Episode>
+      <Episode nr="21">
+        <progress>30.36</progress>
+        <laptime>9.9</laptime>
+      </Episode>
+      <Episode nr="22">
+        <progress>14.95</progress>
+        <laptime>3.9</laptime>
+      </Episode>
+      <Episode nr="23">
+        <progress>22.06</progress>
+        <laptime>8.7</laptime>
+      </Episode>
+      <Episode nr="24">
+        <progress>11.85</progress>
+        <laptime>3.0</laptime>
+      </Episode>
+      <Episode nr="25">
+        <progress>16.93</progress>
+        <laptime>5.0</laptime>
+      </Episode>
+      <Episode nr="26">
+        <progress>17.62</progress>
+        <laptime>6.2</laptime>
+      </Episode>
+      <Episode nr="27">
+        <progress>16.08</progress>
+        <laptime>4.5</laptime>
+      </Episode>
+      <Episode nr="28">
+        <progress>15.18</progress>
+        <laptime>4.6</laptime>
+      </Episode>
+      <Episode nr="29">
+        <progress>15.21</progress>
+        <laptime>4.7</laptime>
+      </Episode>
+      <Episode nr="30">
+        <progress>42.02</progress>
+        <laptime>13.2</laptime>
+      </Episode>
+      <Episode nr="31">
+        <progress>42.11</progress>
+        <laptime>13.3</laptime>
+      </Episode>
+      <Episode nr="32">
+        <progress>16.68</progress>
+        <laptime>5.6</laptime>
+      </Episode>
+      <Episode nr="33">
+        <progress>18.3</progress>
+        <laptime>5.4</laptime>
+      </Episode>
+      <Episode nr="34">
+        <progress>29.66</progress>
+        <laptime>10.6</laptime>
+      </Episode>
+      <Episode nr="35">
+        <progress>29.73</progress>
+        <laptime>10.7</laptime>
+      </Episode>
+      <Episode nr="36">
+        <progress>24.97</progress>
+        <laptime>8.7</laptime>
+      </Episode>
+      <Episode nr="37">
+        <progress>15.38</progress>
+        <laptime>5.9</laptime>
+      </Episode>
+      <Episode nr="38">
+        <progress>15.72</progress>
+        <laptime>4.4</laptime>
+      </Episode>
+      <Episode nr="39">
+        <progress>8.11</progress>
+        <laptime>2.4</laptime>
+      </Episode>
+      <Episode nr="40">
+        <progress>16.84</progress>
+        <laptime>5.1</laptime>
+      </Episode>
+      <Episode nr="41">
+        <progress>25.48</progress>
+        <laptime>8.3</laptime>
+      </Episode>
+      <Episode nr="42">
+        <progress>15.75</progress>
+        <laptime>4.2</laptime>
+      </Episode>
+      <Episode nr="43">
+        <progress>14.48</progress>
+        <laptime>4.3</laptime>
+      </Episode>
+      <Episode nr="44">
+        <progress>23.6</progress>
+        <laptime>7.7</laptime>
+      </Episode>
+      <Episode nr="45">
+        <progress>15.14</progress>
+        <laptime>4.0</laptime>
+      </Episode>
+      <Episode nr="46">
+        <progress>17.19</progress>
+        <laptime>5.3</laptime>
+      </Episode>
+      <Episode nr="47">
+        <progress>17.37</progress>
+        <laptime>5.5</laptime>
+      </Episode>
+      <Episode nr="48">
+        <progress>18.7</progress>
+        <laptime>6.7</laptime>
+      </Episode>
+      <Episode nr="49">
+        <progress>15.0</progress>
+        <laptime>3.9</laptime>
+      </Episode>
+      <Episode nr="50">
+        <progress>27.19</progress>
+        <laptime>9.0</laptime>
+      </Episode>
+      <Episode nr="51">
+        <progress>21.94</progress>
+        <laptime>8.5</laptime>
+      </Episode>
+      <Episode nr="52">
+        <progress>22.2</progress>
+        <laptime>8.6</laptime>
+      </Episode>
+      <Episode nr="53">
+        <progress>16.29</progress>
+        <laptime>5.8</laptime>
+      </Episode>
+      <Episode nr="54">
+        <progress>12.61</progress>
+        <laptime>3.1</laptime>
+      </Episode>
+      <Episode nr="55">
+        <progress>15.33</progress>
+        <laptime>5.7</laptime>
+      </Episode>
+      <Episode nr="56">
+        <progress>18.45</progress>
+        <laptime>6.0</laptime>
+      </Episode>
+      <Episode nr="57">
+        <progress>14.95</progress>
+        <laptime>4.1</laptime>
+      </Episode>
+      <Episode nr="58">
+        <progress>15.31</progress>
+        <laptime>4.2</laptime>
+      </Episode>
+      <Episode nr="59">
+        <progress>14.89</progress>
+        <laptime>4.0</laptime>
+      </Episode>
+      <Episode nr="60">
+        <progress>15.01</progress>
+        <laptime>4.0</laptime>
+      </Episode>
+      <Episode nr="61">
+        <progress>16.55</progress>
+        <laptime>4.8</laptime>
+      </Episode>
+      <Episode nr="62">
+        <progress>16.63</progress>
+        <laptime>7.7</laptime>
+      </Episode>
+      <Episode nr="63">
+        <progress>33.42</progress>
+        <laptime>12.2</laptime>
+      </Episode>
+      <Episode nr="64">
+        <progress>20.1</progress>
+        <laptime>8.5</laptime>
+      </Episode>
+      <Episode nr="65">
+        <progress>1.93</progress>
+        <laptime>0.6</laptime>
+      </Episode>
+      <Episode nr="66">
+        <progress>15.32</progress>
+        <laptime>4.4</laptime>
+      </Episode>
+      <Episode nr="67">
+        <progress>27.29</progress>
+        <laptime>8.8</laptime>
+      </Episode>
+      <Episode nr="68">
+        <progress>27.59</progress>
+        <laptime>8.8</laptime>
+      </Episode>
+      <Episode nr="69">
+        <progress>33.26</progress>
+        <laptime>12.1</laptime>
+      </Episode>
+      <Episode nr="70">
+        <progress>14.89</progress>
+        <laptime>4.0</laptime>
+      </Episode>
+      <Episode nr="71">
+        <progress>15.78</progress>
+        <laptime>4.5</laptime>
+      </Episode>
+      <Episode nr="72">
+        <progress>34.66</progress>
+        <laptime>11.5</laptime>
+      </Episode>
+      <Episode nr="73">
+        <progress>15.31</progress>
+        <laptime>5.7</laptime>
+      </Episode>
+      <Episode nr="74">
+        <progress>42.11</progress>
+        <laptime>12.2</laptime>
+      </Episode>
+      <Episode nr="75">
+        <progress>20.65</progress>
+        <laptime>6.8</laptime>
+      </Episode>
+      <Episode nr="76">
+        <progress>16.45</progress>
+        <laptime>4.5</laptime>
+      </Episode>
+      <Episode nr="77">
+        <progress>14.95</progress>
+        <laptime>3.8</laptime>
+      </Episode>
+      <Episode nr="78">
+        <progress>15.82</progress>
+        <laptime>4.8</laptime>
+      </Episode>
+      <Episode nr="79">
+        <progress>32.86</progress>
+        <laptime>9.9</laptime>
+      </Episode>
+      <Episode nr="80">
+        <progress>14.95</progress>
+        <laptime>3.7</laptime>
+      </Episode>
+      <Episode nr="81">
+        <progress>32.79</progress>
+        <laptime>10.4</laptime>
+      </Episode>
+      <Episode nr="82">
+        <progress>6.02</progress>
+        <laptime>1.8</laptime>
+      </Episode>
+      <Episode nr="83">
+        <progress>25.29</progress>
+        <laptime>8.1</laptime>
+      </Episode>
+      <Episode nr="84">
+        <progress>32.58</progress>
+        <laptime>9.6</laptime>
+      </Episode>
+      <Episode nr="85">
+        <progress>16.34</progress>
+        <laptime>4.9</laptime>
+      </Episode>
+      <Episode nr="86">
+        <progress>42.99</progress>
+        <laptime>12.8</laptime>
+      </Episode>
+      <Episode nr="87">
+        <progress>25.04</progress>
+        <laptime>8.6</laptime>
+      </Episode>
+      <Episode nr="88">
+        <progress>43.45</progress>
+        <laptime>14.4</laptime>
+      </Episode>
+      <Episode nr="89">
+        <progress>14.5</progress>
+        <laptime>3.9</laptime>
+      </Episode>
+      <Episode nr="90">
+        <progress>14.71</progress>
+        <laptime>4.2</laptime>
+      </Episode>
+      <Episode nr="91">
+        <progress>21.42</progress>
+        <laptime>7.2</laptime>
+      </Episode>
+      <Episode nr="92">
+        <progress>0</progress>
+        <laptime>0</laptime>
+      </Episode>
+      <Episode nr="93">
+        <progress>15.93</progress>
+        <laptime>4.4</laptime>
+      </Episode>
+      <Episode nr="94">
+        <progress>42.61</progress>
+        <laptime>14.9</laptime>
+      </Episode>
+      <Episode nr="95">
+        <progress>42.71</progress>
+        <laptime>15.0</laptime>
+      </Episode>
+      <Episode nr="96">
+        <progress>17.28</progress>
+        <laptime>5.3</laptime>
+      </Episode>
+      <Episode nr="97">
+        <progress>14.95</progress>
+        <laptime>4.0</laptime>
+      </Episode>
+      <Episode nr="98">
+        <progress>16.59</progress>
+        <laptime>4.8</laptime>
+      </Episode>
+      <Episode nr="99">
+        <progress>17.89</progress>
+        <laptime>5.4</laptime>
+      </Episode>
+    </runResults>
+  </run>
+</Evaluation>

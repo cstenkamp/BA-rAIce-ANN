@@ -27,6 +27,7 @@ class Agent(AbstractAgent):
         
     def policyAction(self, agentState):
         action, qvals = self.model.inference(self.makeInferenceUsable(agentState)) #former is argmax, latter are individual qvals
+        print(action)
         throttle, brake, steer = self.dediscretize(action[0])
         toUse = "["+str(throttle)+", "+str(brake)+", "+str(steer)+"]"
         return toUse, (throttle, brake, steer)
