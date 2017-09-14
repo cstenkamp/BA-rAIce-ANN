@@ -2,7 +2,7 @@
 """
 Created on Tue Aug 22 16:19:33 2017
 
-@author: csten_000
+@author: Christoph Stenkamp
 """
 import numpy as np
 from collections import deque

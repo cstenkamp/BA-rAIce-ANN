@@ -2,7 +2,7 @@
 """
 Created on Sun Sep 10 11:40:12 2017
 
-@author: csten_000
+@author: Christoph Stenkamp
 """
 
 from mpl_toolkits.mplot3d import Axes3D

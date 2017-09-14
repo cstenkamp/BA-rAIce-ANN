@@ -2,7 +2,7 @@
 """
 Created on Fri Jul  7 16:16:35 2017
 
-@author: csten_000
+@author: Christoph Stenkamp
 """
 
 

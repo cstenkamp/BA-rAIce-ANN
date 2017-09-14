@@ -2,7 +2,7 @@
 """
 Created on Tue Aug  8 15:47:57 2017
 
-@author: nivradmin
+@author: Christoph Stenkamp
 """
 
 

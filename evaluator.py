@@ -2,7 +2,7 @@
 """
 Created on Tue Aug  1 15:36:29 2017
 
-@author: csten_000
+@author: Christoph Stenkamp
 """
 import matplotlib
 matplotlib.use('WXAgg') #such that plots run in side threads (so pip install wxpython)

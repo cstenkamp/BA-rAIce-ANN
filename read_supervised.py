@@ -1,3 +1,6 @@
+"""
+@author: Christoph Stenkamp
+"""
 import xml.etree.ElementTree as ET
 import os
 import numpy as np

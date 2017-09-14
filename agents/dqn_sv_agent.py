@@ -2,7 +2,7 @@
 """
 Created on Wed May 10 13:33:46 2017
 
-@author: nivradmin
+@author: Christoph Stenkamp
 """
 
 import tensorflow as tf

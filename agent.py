@@ -2,7 +2,7 @@
 """
 Created on Fri Jun  2 16:11:04 2017
 
-@author: csten_000
+@author: Christoph Stenkamp
 """
 import time
 current_milli_time = lambda: int(round(time.time() * 1000))

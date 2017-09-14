@@ -1,3 +1,6 @@
+"""
+@author: Christoph Stenkamp
+"""
 from tkinter import Text, END, Tk, X, Canvas
 import queue
 import time

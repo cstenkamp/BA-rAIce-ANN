@@ -1,4 +1,6 @@
-
+"""
+@author: Christoph Stenkamp
+"""
 #!/usr/bin/env python
 #SERVER ist UNABHÄNGIG VOM AGENT, und sorgt dafür dass die passenden Dinge an den agent weitergeleitet werden!
 

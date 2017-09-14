@@ -1,3 +1,6 @@
+"""
+@author: Christoph Stenkamp
+"""
 import numpy as np
 #====own classes====
 from agent import AbstractAgent

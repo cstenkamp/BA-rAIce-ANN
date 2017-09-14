@@ -2,7 +2,7 @@
 """
 Created on Thu Jul 20 22:09:03 2017
 
-@author: csten_000
+@author: Christoph Stenkamp
 """
 
 import sys
