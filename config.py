@@ -52,7 +52,7 @@ class Config():
     startepsilon = 0.25
     minepsilon = 0.001
     finalepsilonframe = 500000
-    q_decay = 0.9
+    q_decay = 0.99
     checkpointall = 2000 #RLsteps, not inferences!
     summarize_tensorboard_allstep = 500 #false or number
     
